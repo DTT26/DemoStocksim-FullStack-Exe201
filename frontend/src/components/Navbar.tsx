@@ -14,7 +14,7 @@ export const Navbar = () => {
       </div>
       
       <div className="flex items-center gap-6">
-        <div className="flex items-center gap-4 text-slate-400">
+        <div className="flex items-center gap-4 text-[#787b86]">
           <button className="hover:text-white transition-colors"><Bell className="w-5 h-5" /></button>
           <button className="hover:text-white transition-colors"><Settings className="w-5 h-5" /></button>
         </div>
@@ -25,7 +25,7 @@ export const Navbar = () => {
           </div>
           <div className="flex flex-col">
             <span className="text-sm font-medium text-slate-200 leading-none">Student 01</span>
-            <span className="text-xs text-slate-500 mt-1">100,000,000 VND</span>
+            <span className="text-xs text-[#787b86] mt-1">100,000,000 VND</span>
           </div>
         </div>
       </div>

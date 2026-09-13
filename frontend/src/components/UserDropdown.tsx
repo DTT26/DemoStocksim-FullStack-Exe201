@@ -1,0 +1,111 @@
+import { useState, useRef, useEffect } from 'react';
+import { LogOut, Sun, Globe, Keyboard, LayoutDashboard } from 'lucide-react';
+import { googleLogout } from '@react-oauth/google';
+import { Link } from 'react-router-dom';
+
+interface User {
+  name: string;
+  email: string;
+  picture: string;
+  balance?: number;
+  role?: string;
+}
+
+interface UserDropdownProps {
+  user: User;
+  onLogout: () => void;
+}
+
+export const UserDropdown = ({ user, onLogout }: UserDropdownProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleLogout = () => {
+    googleLogout();
+    onLogout();
+  };
+
+  const dashboardRoute = user.role === 'admin' ? '/admin' : user.role === 'lecturer' ? '/lecturer' : '/student';
+
+  return (
+    <div className="relative shrink-0" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-8 h-8 rounded-full overflow-hidden hover:ring-2 hover:ring-[#2a2e39] transition-all focus:outline-none"
+      >
+        {user.picture ? (
+          <img src={user.picture} alt={user.name} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full bg-slate-600 flex items-center justify-center text-white font-bold">
+            {user.name.charAt(0)}
+          </div>
+        )}
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 mt-2 w-72 bg-[#1e222d] border border-[#2a2e39] rounded shadow-xl z-50 text-sm text-[#d1d4dc] font-sans flex flex-col py-1">
+          {/* User Info */}
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-[#2a2e39]">
+            <img src={user.picture || ''} alt="avatar" className="w-10 h-10 rounded-full object-cover bg-slate-600" />
+            <div className="flex flex-col">
+              <span className="text-white font-bold text-base">{user.name} <span className="text-xs text-blue-400 cursor-pointer ml-1">📝</span></span>
+              <span className="text-xs text-[#787b86]">{user.email}</span>
+            </div>
+          </div>
+
+          {/* Balance (Nếu có) */}
+          {user.balance !== undefined && (
+            <div className="px-4 py-2 border-b border-[#2a2e39] hover:bg-[#2a2e39] cursor-pointer flex items-center gap-3">
+              <span className="w-4 h-4 rounded-full border border-gray-400 flex items-center justify-center text-[10px]">C</span>
+              <span className="font-semibold text-white">{user.balance.toLocaleString('vi-VN')} ₫</span>
+            </div>
+          )}
+
+          {/* Menu Items */}
+          <div className="py-1 border-b border-[#2a2e39]">
+            <Link to={dashboardRoute} className="w-full text-left px-4 py-2 hover:bg-[#2a2e39] flex items-center gap-3 transition-colors text-blue-400 font-medium">
+              <LayoutDashboard className="w-4 h-4" />
+              <span>My Dashboard</span>
+            </Link>
+            <button className="w-full text-left px-4 py-2 hover:bg-[#2a2e39] flex items-center justify-between transition-colors">
+              <div className="flex items-center gap-3">
+                <Globe className="w-4 h-4 text-[#787b86]" />
+                <span>Ngôn ngữ</span>
+              </div>
+              <span className="text-xs text-[#787b86]">{'>'}</span>
+            </button>
+            <button className="w-full text-left px-4 py-2 hover:bg-[#2a2e39] flex items-center gap-3 transition-colors">
+              <Sun className="w-4 h-4 text-[#787b86]" />
+              <span>Giao diện sáng</span>
+            </button>
+            <button className="w-full text-left px-4 py-2 hover:bg-[#2a2e39] flex items-center gap-3 transition-colors">
+              <Keyboard className="w-4 h-4 text-[#787b86]" />
+              <span>Phím tắt</span>
+            </button>
+          </div>
+
+          <div className="py-1">
+            <button 
+              onClick={handleLogout}
+              className="w-full text-left px-4 py-2 hover:bg-[#2a2e39] flex items-center gap-3 transition-colors text-red-400"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Đăng xuất</span>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+

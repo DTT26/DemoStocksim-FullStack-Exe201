@@ -95,6 +95,29 @@ export const TradingTerminal = () => {
         onReplayNext={handleReplayNext}
         onStopReplay={handleStopReplay}
       />
+      {/* Simulation Header */}
+      <div className="h-8 bg-[#1e222d] border-b border-[#2a2e39] flex items-center px-4 justify-between text-xs text-[#d1d4dc] shrink-0">
+        <div className="flex items-center gap-3">
+          <span className="font-semibold text-white">Vietnam Stock Challenge #01</span>
+          <span className="flex items-center gap-1 text-emerald-400 font-bold bg-emerald-900/30 px-1.5 py-0.5 rounded">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> LIVE
+          </span>
+        </div>
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[#787b86]">Rank</span>
+            <span className="font-bold text-blue-400">#7 / 42</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[#787b86]">Return</span>
+            <span className="font-bold text-emerald-400">+8.52%</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[#787b86]">Simulation Time</span>
+            <span className="font-mono text-slate-300">2026-09-12 14:30</span>
+          </div>
+        </div>
+      </div>
       <div className="flex flex-1 overflow-hidden">
         <LeftToolbar activeTool={activeTool} onToolClick={handleToolClick} />
         <ChartArea
