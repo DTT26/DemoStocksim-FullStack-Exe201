@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Wallet } from 'lucide-react';
-import { STOCKS, type Stock, generateOHLCV } from '../data';
+import { STOCKS, type Stock } from '../data';
+import { AssetAvatar } from './AssetAvatar';
 
 interface RightSidebarProps {
   selectedStock: Stock;
@@ -61,22 +62,34 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
           <div
             key={stock.symbol}
             onClick={() => { onStockSelect(stock); setPrice(stock.price.toString()); }}
-            className={`flex items-center px-3 py-2 text-xs cursor-pointer transition-colors border-b border-[#2a2e39]/40 ${
+            className={`flex items-center px-3 py-2 text-xs cursor-pointer transition-all border-b border-[#2a2e39]/40 ${
               selectedStock.symbol === stock.symbol
                 ? 'bg-blue-900/20 border-l-2 border-l-blue-500'
                 : 'hover:bg-[#1e222d]'
             }`}
           >
-            <div className="flex-1 flex flex-col">
-              <span className="text-[#d1d4dc] font-semibold">{stock.symbol}</span>
-              <span className="text-[#787b86] text-[10px]">{stock.name}</span>
+            {/* Asset Avatar */}
+            <div className="mr-2 shrink-0">
+              <AssetAvatar stock={stock} size="sm" showExchangeBadge />
             </div>
-            <div className={`w-20 text-right font-mono font-semibold ${stock.type === 'up' ? 'text-[#089981]' : 'text-[#f23645]'}`}>
-              {stock.price.toLocaleString('vi-VN')}
+
+            <div className="flex-1 flex flex-col truncate pr-1 min-w-0">
+              <span className="text-[#d1d4dc] font-bold truncate text-[11px] leading-tight">{stock.symbol}</span>
+              <span className="text-[#787b86] text-[9px] truncate leading-tight">{stock.name}</span>
             </div>
-            <div className={`w-14 text-right flex items-center justify-end gap-0.5 ${stock.type === 'up' ? 'text-[#089981]' : 'text-[#f23645]'}`}>
-              {stock.type === 'up' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              <span>{Math.abs(stock.percent).toFixed(2)}%</span>
+
+            <div className="flex flex-col items-end shrink-0">
+              <span className={`font-mono font-semibold text-[10px] ${
+                stock.type === 'up' ? 'text-[#089981]' : 'text-[#f23645]'
+              }`}>
+                {stock.price.toLocaleString('vi-VN')}
+              </span>
+              <div className={`flex items-center gap-0.5 text-[9px] ${
+                stock.type === 'up' ? 'text-[#089981]' : 'text-[#f23645]'
+              }`}>
+                {stock.type === 'up' ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
+                <span>{Math.abs(stock.percent).toFixed(2)}%</span>
+              </div>
             </div>
           </div>
         ))}

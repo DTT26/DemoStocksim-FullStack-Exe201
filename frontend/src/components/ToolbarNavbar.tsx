@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Search, Settings, BarChart2, Play, Pause, SkipForward, Square, ChevronRight } from 'lucide-react';
 import type { Stock } from '../features/market/data';
 import { TIMEFRAMES } from '../features/market/data';
+import { AssetAvatar, ExchangeBadge } from '../features/market/components/AssetAvatar';
 
 const TOTAL_BARS = 300;
 const DEFAULT_REPLAY_START = 50; // show first 50 bars, then advance
@@ -16,11 +17,15 @@ interface ToolbarNavbarProps {
   onStartReplay: (fromIndex: number) => void;
   onReplayNext: () => void;
   onStopReplay: () => void;
+  onOpenSearch: () => void;
+  onOpenIndicator: () => void;
+  activeIndicatorCount: number;
 }
 
 export const ToolbarNavbar = ({
   selectedStock, activeTimeframe, onTimeframeChange, balance,
-  isReplaying, replayIndex, onStartReplay, onReplayNext, onStopReplay
+  isReplaying, replayIndex, onStartReplay, onReplayNext, onStopReplay, onOpenSearch,
+  onOpenIndicator, activeIndicatorCount
 }: ToolbarNavbarProps) => {
   const [autoPlay, setAutoPlay] = useState(false);
   const [intervalId, setIntervalId] = useState<ReturnType<typeof setInterval> | null>(null);
@@ -49,10 +54,27 @@ export const ToolbarNavbar = ({
   return (
     <nav className="h-12 bg-[#131722] border-b border-[#2a2e39] flex items-center px-3 gap-2 text-[#d1d4dc] text-sm shrink-0">
 
-      {/* Symbol */}
-      <div className="flex items-center gap-2 hover:bg-[#2a2e39] px-2 py-1 rounded cursor-pointer transition-colors shrink-0">
-        <Search className="w-3.5 h-3.5 text-[#787b86]" />
-        <span className="font-bold text-sm text-white">{selectedStock.symbol}</span>
+      {/* Logo AITRADEX */}
+      <div className="flex items-center shrink-0 pr-2 border-r border-[#2a2e39] mr-1">
+        <img src="/images/logo.jpg" alt="AITRADEX" className="h-7 object-contain rounded" />
+      </div>
+
+      {/* Symbol Search Trigger */}
+      <div 
+        onClick={onOpenSearch}
+        className="flex items-center gap-2 hover:bg-[#2a2e39] px-2 py-1 rounded cursor-pointer transition-colors shrink-0 group"
+        title="Tìm kiếm mã giao dịch"
+      >
+        <AssetAvatar stock={selectedStock} size="sm" showExchangeBadge={false} />
+        <div className="flex flex-col">
+          <div className="flex items-center gap-1.5">
+            <span className="font-bold text-sm text-white group-hover:text-blue-400 transition-colors leading-tight">
+              {selectedStock.symbol}
+            </span>
+            <ExchangeBadge exchange={selectedStock.exchange} size="sm" />
+          </div>
+        </div>
+        <Search className="w-3 h-3 text-[#787b86] group-hover:text-blue-400 transition-colors ml-0.5" />
       </div>
 
       {/* Live price */}
@@ -85,9 +107,17 @@ export const ToolbarNavbar = ({
       <div className="w-px h-6 bg-[#2a2e39] shrink-0 mx-1" />
 
       {/* Indicators */}
-      <button className="flex items-center gap-1 hover:bg-[#2a2e39] px-2 py-1 rounded transition-colors text-xs shrink-0">
+      <button
+        onClick={onOpenIndicator}
+        className="flex items-center gap-1 hover:bg-[#2a2e39] px-2 py-1 rounded transition-colors text-xs shrink-0 relative"
+      >
         <BarChart2 className="w-3.5 h-3.5 text-blue-500" />
         <span className="hidden md:block">Chỉ báo</span>
+        {activeIndicatorCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
+            {activeIndicatorCount}
+          </span>
+        )}
       </button>
 
       <div className="w-px h-6 bg-[#2a2e39] shrink-0 mx-1" />

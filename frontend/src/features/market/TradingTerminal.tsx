@@ -4,6 +4,8 @@ import { RightSidebar } from './components/RightSidebar';
 import { LeftToolbar } from './components/LeftToolbar';
 import { ToolbarNavbar } from '../../components/ToolbarNavbar';
 import { STOCKS, type Stock } from './data';
+import { SymbolSearchModal } from './components/SymbolSearchModal';
+import { IndicatorModal } from './components/IndicatorModal';
 
 export interface TradeOrder {
   id: string;
@@ -23,6 +25,15 @@ export const TradingTerminal = () => {
   const [activeTimeframe, setActiveTimeframe] = useState<string>('D');
   const [balance, setBalance] = useState<number>(100_000_000);
   const [positions, setPositions] = useState<Record<string, number>>({});
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isIndicatorModalOpen, setIsIndicatorModalOpen] = useState(false);
+  const [activeIndicators, setActiveIndicators] = useState<string[]>([]);
+
+  const handleToggleIndicator = (name: string) => {
+    setActiveIndicators(prev =>
+      prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]
+    );
+  };
 
   // Bar Replay state
   const [isReplaying, setIsReplaying] = useState(false);
@@ -94,6 +105,9 @@ export const TradingTerminal = () => {
         onStartReplay={handleStartReplay}
         onReplayNext={handleReplayNext}
         onStopReplay={handleStopReplay}
+        onOpenSearch={() => setIsSearchModalOpen(true)}
+        onOpenIndicator={() => setIsIndicatorModalOpen(true)}
+        activeIndicatorCount={activeIndicators.length}
       />
       <div className="flex flex-1 overflow-hidden">
         <LeftToolbar activeTool={activeTool} onToolClick={handleToolClick} />
@@ -104,6 +118,7 @@ export const TradingTerminal = () => {
           isReplaying={isReplaying}
           replayIndex={replayIndex}
           tradeOrders={tradeOrders.filter(o => o.symbol === selectedStock.symbol)}
+          activeIndicators={activeIndicators}
         />
         <RightSidebar
           selectedStock={selectedStock}
@@ -113,6 +128,18 @@ export const TradingTerminal = () => {
           onTrade={handleTrade}
         />
       </div>
+
+      <SymbolSearchModal 
+        isOpen={isSearchModalOpen} 
+        onClose={() => setIsSearchModalOpen(false)} 
+        onSelect={handleStockSelect} 
+      />
+      <IndicatorModal
+        isOpen={isIndicatorModalOpen}
+        onClose={() => setIsIndicatorModalOpen(false)}
+        activeIndicators={activeIndicators}
+        onToggle={handleToggleIndicator}
+      />
     </div>
   );
 };
