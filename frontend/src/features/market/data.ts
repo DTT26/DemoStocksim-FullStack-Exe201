@@ -17,24 +17,41 @@ export type Stock = typeof STOCKS[0];
 
 export const TIMEFRAMES = ['1m', '5m', '15m', '30m', '1h', '4h', 'D', 'W', 'M'];
 
-export const generateOHLCV = (basePrice: number, count = 200) => {
+export const generateOHLCV = (basePrice: number, count = 300) => {
   const data = [];
-  let time = Date.now() - 86400 * 1000 * count;
+  
+  // Dùng basePrice làm Seed để mỗi cổ phiếu luôn ra 1 biểu đồ cố định
+  let seed = basePrice * 1000;
+  const random = () => {
+    const x = Math.sin(seed++) * 10000;
+    return x - Math.floor(x);
+  };
+
+  // Cố định thời điểm kết thúc (Tránh trục thời gian bị trôi)
+  let endTime = 1784030400000; // Tương đương đâu đó năm 2026
+  
+  // Đi ngược từ giá hiện tại về quá khứ để đảm bảo nến cuối cùng luôn khớp chuẩn giá thị trường
   let close = basePrice;
+
   for (let i = 0; i < count; i++) {
-    const open = close + (Math.random() - 0.5) * basePrice * 0.015;
-    const high = Math.max(open, close) + Math.random() * basePrice * 0.008;
-    const low  = Math.min(open, close) - Math.random() * basePrice * 0.008;
-    close = open + (Math.random() - 0.5) * basePrice * 0.012;
-    data.push({
-      timestamp: time,
+    // Random biến động (giả lập)
+    const open = close - (random() - 0.5) * basePrice * 0.015;
+    const high = Math.max(open, close) + random() * basePrice * 0.008;
+    const low  = Math.min(open, close) - random() * basePrice * 0.008;
+    
+    // Thêm vào đầu mảng (vì đang đi lùi thời gian)
+    data.unshift({
+      timestamp: endTime,
       open:   parseFloat(open.toFixed(2)),
       high:   parseFloat(high.toFixed(2)),
       low:    parseFloat(low.toFixed(2)),
       close:  parseFloat(close.toFixed(2)),
-      volume: Math.random() * 500000 + 50000,
+      volume: random() * 500000 + 50000,
     });
-    time += 86400 * 1000;
+    
+    close = open - (random() - 0.5) * basePrice * 0.012; // Giá đóng cửa của nến trước đó
+    endTime -= 86400 * 1000; // Đi lùi 1 ngày
   }
+  
   return data;
 };

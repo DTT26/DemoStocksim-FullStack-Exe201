@@ -11,6 +11,8 @@ interface ChartAreaProps {
   isReplaying: boolean;
   replayIndex: number;
   tradeOrders: TradeOrder[];
+  activePosition?: { quantity: number; averagePrice: number; side: 'LONG'|'SHORT'; leverage: number; tp?: number; sl?: number };
+  onPriceChange?: (price: number) => void;
 }
 
 // Cache data per stock to avoid re-generating every render
@@ -23,10 +25,15 @@ const getStockData = (stock: Stock): KLineData[] => {
   return dataCache.get(stock.symbol)!;
 };
 
-export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplaying, replayIndex, tradeOrders }: ChartAreaProps) => {
+export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplaying, replayIndex, tradeOrders, activePosition, onPriceChange }: ChartAreaProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<Chart | null>(null);
   const activeToolRef = useRef<string>('cursor');
+  const onPriceChangeRef = useRef(onPriceChange);
+  
+  useEffect(() => {
+    onPriceChangeRef.current = onPriceChange;
+  }, [onPriceChange]);
 
   // Init chart ONCE
   useEffect(() => {
@@ -93,9 +100,14 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
     const allData = getStockData(selectedStock);
 
     // In replay mode: slice data up to replayIndex
+    const currentDataIndex = isReplaying ? Math.max(0, replayIndex - 1) : allData.length - 1;
     const visibleData = isReplaying
       ? allData.slice(0, Math.max(30, replayIndex))
       : allData;
+
+    if (isReplaying && onPriceChangeRef.current && visibleData.length > 0) {
+      onPriceChangeRef.current(visibleData[visibleData.length - 1].close);
+    }
 
     chart.setSymbol({ name: selectedStock.symbol });
     
@@ -125,6 +137,9 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
           // Apply tick
           allData[allData.length - 1] = newCandle;
           params.callback(newCandle);
+          if (onPriceChangeRef.current) {
+            onPriceChangeRef.current(newCandle.close);
+          }
         }, 1000);
       },
       unsubscribeBar: () => {
@@ -136,29 +151,32 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
     return () => {
       if (tickerInterval) clearInterval(tickerInterval);
     };
-  }, [selectedStock, activeTimeframe, isReplaying, replayIndex]);
+  }, [selectedStock.symbol, activeTimeframe, isReplaying, replayIndex]);
 
-  // Draw price lines for ALL trade orders
+  // Draw price lines for active position and trade orders
   useEffect(() => {
     const chart = chartRef.current;
-    if (!chart || tradeOrders.length === 0) return;
+    if (!chart) return;
 
     const allData = getStockData(selectedStock);
     if (allData.length === 0) return;
-    const lastDataIndex = allData.length - 1;
+    
+    // Trong chế độ Replay, lấy timestamp của cây nến hiện tại đang chiếu tới
+    const currentDataIndex = isReplaying ? Math.max(0, Math.min(replayIndex - 1, allData.length - 1)) : allData.length - 1;
+    const currentTimestamp = allData[currentDataIndex].timestamp;
 
     // Clear previous order overlays to prevent duplicates if this runs multiple times
     chart.removeOverlay({ name: 'horizontalStraightLine' });
 
-    tradeOrders.forEach(order => {
-      const isBuy = order.type === 'buy';
+    // Draw active position line
+    if (activePosition && activePosition.quantity > 0) {
+      const isBuy = activePosition.side === 'LONG';
       const color = isBuy ? '#089981' : '#f23645';
 
-      // 1. Draw main entry price line
       chart.createOverlay({
         name: 'horizontalStraightLine',
         lock: true,
-        points: [{ dataIndex: lastDataIndex, value: order.price }],
+        points: [{ timestamp: currentTimestamp, value: activePosition.averagePrice }],
         styles: {
           line: { color, size: 2, style: 'dashed', dashedValue: [5, 5] },
           text: {
@@ -174,56 +192,48 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
             weight: 'bold',
           },
         },
-        extendData: `${isBuy ? '▲ MUA' : '▼ BÁN'} ${order.qty} @ ${order.price.toLocaleString('vi-VN')}₫`,
+        extendData: `${isBuy ? '▲ LONG' : '▼ SHORT'} ${activePosition.quantity.toFixed(2)} @ ${activePosition.averagePrice.toLocaleString('vi-VN')}₫`,
       });
 
-      // 2. Draw Take Profit line (TP)
-      if (order.tp) {
+      // Draw TP Line
+      if (activePosition.tp) {
         chart.createOverlay({
           name: 'horizontalStraightLine',
           lock: true,
-          points: [{ dataIndex: lastDataIndex, value: order.tp }],
+          points: [{ timestamp: currentTimestamp, value: activePosition.tp }],
           styles: {
             line: { color: '#089981', size: 1, style: 'solid' },
             text: {
               color: '#ffffff',
               backgroundColor: '#089981',
-              paddingLeft: 6,
-              paddingRight: 6,
-              paddingTop: 3,
-              paddingBottom: 3,
-              borderRadius: 4,
-              size: 10,
+              paddingLeft: 4, paddingRight: 4, paddingTop: 2, paddingBottom: 2,
+              borderRadius: 2, size: 10, family: 'Inter', weight: 'bold',
             },
           },
-          extendData: `TP @ ${order.tp.toLocaleString('vi-VN')}₫`,
+          extendData: `TP: ${activePosition.tp.toLocaleString('vi-VN')}₫`,
         });
       }
 
-      // 3. Draw Stop Loss line (SL)
-      if (order.sl) {
+      // Draw SL Line
+      if (activePosition.sl) {
         chart.createOverlay({
           name: 'horizontalStraightLine',
           lock: true,
-          points: [{ dataIndex: lastDataIndex, value: order.sl }],
+          points: [{ timestamp: currentTimestamp, value: activePosition.sl }],
           styles: {
             line: { color: '#f23645', size: 1, style: 'solid' },
             text: {
               color: '#ffffff',
               backgroundColor: '#f23645',
-              paddingLeft: 6,
-              paddingRight: 6,
-              paddingTop: 3,
-              paddingBottom: 3,
-              borderRadius: 4,
-              size: 10,
+              paddingLeft: 4, paddingRight: 4, paddingTop: 2, paddingBottom: 2,
+              borderRadius: 2, size: 10, family: 'Inter', weight: 'bold',
             },
           },
-          extendData: `SL @ ${order.sl.toLocaleString('vi-VN')}₫`,
+          extendData: `SL: ${activePosition.sl.toLocaleString('vi-VN')}₫`,
         });
       }
-    });
-  }, [tradeOrders]);
+    }
+  }, [activePosition, isReplaying, replayIndex, selectedStock]);
 
   const priceColor = selectedStock.type === 'up' ? 'text-[#089981]' : 'text-[#f23645]';
 
