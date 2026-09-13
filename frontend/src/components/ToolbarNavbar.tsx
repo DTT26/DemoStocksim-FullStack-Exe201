@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Search, Settings, BarChart2, Play, Pause, SkipForward, Square, ChevronRight } from 'lucide-react';
+import { Search, Settings, BarChart2, Play, Pause, SkipForward, Square, ChevronRight, User } from 'lucide-react';
 import type { Stock } from '../features/market/data';
 import { TIMEFRAMES } from '../features/market/data';
+import { UserDropdown } from './UserDropdown';
+import { useAuth } from '../contexts/AuthContext';
 
 const TOTAL_BARS = 300;
 const DEFAULT_REPLAY_START = 50; // show first 50 bars, then advance
@@ -24,6 +26,9 @@ export const ToolbarNavbar = ({
 }: ToolbarNavbarProps) => {
   const [autoPlay, setAutoPlay] = useState(false);
   const [intervalId, setIntervalId] = useState<ReturnType<typeof setInterval> | null>(null);
+  
+  // Use global auth state instead of local state
+  const { user, login, logout } = useAuth();
 
   const startAutoPlay = () => {
     setAutoPlay(true);
@@ -143,15 +148,23 @@ export const ToolbarNavbar = ({
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Balance */}
-      <div className="hidden lg:flex items-center gap-1.5 bg-[#1e222d] border border-[#2a2e39] px-3 py-1 rounded text-xs shrink-0">
-        <span className="text-[#787b86]">Số dư:</span>
-        <span className="text-green-400 font-mono font-semibold">{balance.toLocaleString('vi-VN')} ₫</span>
-      </div>
+      {/* Right side controls */}
+      <div className="flex items-center gap-2">
+        <button className="hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0">
+          <Settings className="w-5 h-5" />
+        </button>
 
-      <button className="hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0">
-        <Settings className="w-4 h-4" />
-      </button>
+        {user ? (
+          <UserDropdown user={{ ...user, balance }} onLogout={logout} />
+        ) : (
+          <button 
+            onClick={() => login()} 
+            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#2a2e39] transition-colors focus:outline-none"
+          >
+            <User className="w-5 h-5 text-[#d1d4dc]" />
+          </button>
+        )}
+      </div>
     </nav>
   );
 };

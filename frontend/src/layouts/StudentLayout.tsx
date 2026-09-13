@@ -2,7 +2,7 @@ import React from 'react';
 
 const StudentLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-[#131722] flex flex-col">
       <header className="bg-blue-600 text-white p-4">
         <h1>StockSim - Student Portal</h1>
         {/* Navigation placeholder */}
