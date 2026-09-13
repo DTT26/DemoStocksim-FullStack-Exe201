@@ -6,6 +6,7 @@ import { ToolbarNavbar } from '../../components/ToolbarNavbar';
 import { STOCKS, type Stock } from './data';
 import { SymbolSearchModal } from './components/SymbolSearchModal';
 import { IndicatorModal } from './components/IndicatorModal';
+import { TickerHeader } from './components/TickerHeader';
 
 export interface TradeOrder {
   id: string;
@@ -18,7 +19,11 @@ export interface TradeOrder {
   sl?: number;
 }
 
+import { CoinInfoPanel } from './components/CoinInfoPanel';
+import { ContractInfoPanel } from './components/ContractInfoPanel';
+
 export const TradingTerminal = () => {
+  const [activeTab, setActiveTab] = useState<'chart' | 'coin_info' | 'info'>('chart');
   const [activeTool, setActiveTool] = useState<string>('cursor');
   const [selectedStock, setSelectedStock] = useState<Stock>(STOCKS[0]);
   const [tradeOrders, setTradeOrders] = useState<TradeOrder[]>([]);
@@ -94,55 +99,57 @@ export const TradingTerminal = () => {
   };
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden">
-      <ToolbarNavbar
-        selectedStock={selectedStock}
-        activeTimeframe={activeTimeframe}
-        onTimeframeChange={setActiveTimeframe}
-        balance={balance}
-        isReplaying={isReplaying}
-        replayIndex={replayIndex}
-        onStartReplay={handleStartReplay}
-        onReplayNext={handleReplayNext}
-        onStopReplay={handleStopReplay}
-        onOpenSearch={() => setIsSearchModalOpen(true)}
-        onOpenIndicator={() => setIsIndicatorModalOpen(true)}
-        activeIndicatorCount={activeIndicators.length}
-      />
-      {/* Simulation Header */}
-      <div className="h-8 bg-[#1e222d] border-b border-[#2a2e39] flex items-center px-4 justify-between text-xs text-[#d1d4dc] shrink-0">
-        <div className="flex items-center gap-3">
-          <span className="font-semibold text-white">Vietnam Stock Challenge #01</span>
-          <span className="flex items-center gap-1 text-emerald-400 font-bold bg-emerald-900/30 px-1.5 py-0.5 rounded">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> LIVE
-          </span>
-        </div>
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[#787b86]">Rank</span>
-            <span className="font-bold text-blue-400">#7 / 42</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[#787b86]">Return</span>
-            <span className="font-bold text-emerald-400">+8.52%</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[#787b86]">Simulation Time</span>
-            <span className="font-mono text-slate-300">2026-09-12 14:30</span>
-          </div>
-        </div>
-      </div>
+    <div className="flex flex-col flex-1 overflow-hidden bg-white dark:bg-[#131722] text-[#1e2329] dark:text-[#d1d4dc]">
+      <ToolbarNavbar balance={balance} />
+
       <div className="flex flex-1 overflow-hidden">
-        <LeftToolbar activeTool={activeTool} onToolClick={handleToolClick} />
-        <ChartArea
-          activeTool={activeTool}
-          selectedStock={selectedStock}
-          activeTimeframe={activeTimeframe}
-          isReplaying={isReplaying}
-          replayIndex={replayIndex}
-          tradeOrders={tradeOrders.filter(o => o.symbol === selectedStock.symbol)}
-          activeIndicators={activeIndicators}
-        />
+        <LeftToolbar activeTool={activeTool} onToolSelect={handleToolClick} />
+        
+        <div className="flex flex-col flex-1 overflow-hidden min-w-0">
+          <TickerHeader 
+            stock={selectedStock}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            activeTimeframe={activeTimeframe}
+            onTimeframeChange={setActiveTimeframe}
+            isReplaying={isReplaying}
+            replayIndex={replayIndex}
+            onStartReplay={handleStartReplay}
+            onReplayNext={handleReplayNext}
+            onStopReplay={handleStopReplay}
+            onOpenSearch={() => setIsSearchModalOpen(true)}
+            onOpenIndicator={() => setIsIndicatorModalOpen(true)}
+            activeIndicatorCount={activeIndicators.length}
+          />
+          {activeTab === 'chart' && (
+            <ChartArea
+              activeTool={activeTool}
+              selectedStock={selectedStock}
+              activeTimeframe={activeTimeframe}
+              isReplaying={isReplaying}
+              replayIndex={replayIndex}
+              tradeOrders={tradeOrders.filter(o => o.symbol === selectedStock.symbol)}
+              activeIndicators={activeIndicators}
+              onPriceUpdate={(price) => {
+                setSelectedStock(prev => {
+                  if (prev.price === price) return prev;
+                  // Tính toán % dựa trên giá tham chiếu ban đầu (mock)
+                  const basePrice = STOCKS.find(s => s.symbol === prev.symbol)?.price || prev.price;
+                  const change = price - basePrice;
+                  const percent = (change / basePrice) * 100;
+                  return { ...prev, price, change, percent, type: change >= 0 ? 'up' : 'down' };
+                });
+              }}
+            />
+          )}
+          {activeTab === 'coin_info' && (
+            <CoinInfoPanel stock={selectedStock} />
+          )}
+          {activeTab === 'info' && (
+            <ContractInfoPanel stock={selectedStock} />
+          )}
+        </div>
+
         <RightSidebar
           selectedStock={selectedStock}
           positions={positions}

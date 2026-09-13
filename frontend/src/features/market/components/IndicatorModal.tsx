@@ -43,14 +43,14 @@ export const IndicatorModal = ({ isOpen, onClose, activeIndicators, onToggle }: 
       className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] bg-black/60 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-[#1e222d] w-full max-w-xl rounded-lg shadow-2xl border border-[#2a2e39] overflow-hidden">
+      <div className="bg-white dark:bg-[#1e222d] w-full max-w-xl rounded-lg shadow-2xl border border-[#e6e8ea] dark:border-[#2a2e39] overflow-hidden transition-colors">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#2a2e39]">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <BarChart2 className="w-5 h-5 text-blue-400" />
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e6e8ea] dark:border-[#2a2e39]">
+          <h2 className="text-lg font-bold text-[#1e2329] dark:text-white flex items-center gap-2">
+            <BarChart2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             Chỉ báo kỹ thuật
           </h2>
-          <button onClick={onClose} className="text-[#787b86] hover:text-white transition-colors">
+          <button onClick={onClose} className="text-[#787b86] hover:text-[#1e2329] dark:hover:text-white transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -75,16 +75,16 @@ export const IndicatorModal = ({ isOpen, onClose, activeIndicators, onToggle }: 
                         onClick={() => onToggle(ind.name)}
                         className={`flex items-center justify-between px-4 py-3 rounded-lg border transition-all text-left ${
                           isActive
-                            ? 'bg-blue-600/20 border-blue-500/50 text-white'
-                            : 'bg-[#131722] border-[#2a2e39] text-[#d1d4dc] hover:border-[#787b86]'
+                            ? 'bg-blue-50 dark:bg-blue-600/20 border-blue-500/50 text-[#1e2329] dark:text-white'
+                            : 'bg-[#f5f5f5] dark:bg-[#131722] border-[#e6e8ea] dark:border-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc] hover:border-blue-500 dark:hover:border-[#787b86]'
                         }`}
                       >
                         <div>
-                          <span className={`font-bold text-sm ${isActive ? 'text-blue-300' : ''}`}>{ind.label}</span>
+                          <span className={`font-bold text-sm ${isActive ? 'text-blue-600 dark:text-blue-300' : ''}`}>{ind.label}</span>
                           <p className="text-[#787b86] text-xs mt-0.5">{ind.description}</p>
                         </div>
-                        <div className={`w-10 h-5 rounded-full transition-colors shrink-0 ${isActive ? 'bg-blue-600' : 'bg-[#2a2e39]'}`}>
-                          <div className={`w-4 h-4 bg-white rounded-full mt-0.5 transition-transform ${isActive ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                        <div className={`w-10 h-5 rounded-full transition-colors shrink-0 ${isActive ? 'bg-blue-600' : 'bg-[#e6e8ea] dark:bg-[#2a2e39]'}`}>
+                          <div className={`w-4 h-4 bg-white rounded-full mt-0.5 transition-transform ${isActive ? 'translate-x-5' : 'translate-x-0.5 shadow-sm'}`} />
                         </div>
                       </button>
                     );
@@ -96,12 +96,12 @@ export const IndicatorModal = ({ isOpen, onClose, activeIndicators, onToggle }: 
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-[#2a2e39] text-xs text-[#787b86] flex items-center justify-between">
+        <div className="px-5 py-3 border-t border-[#e6e8ea] dark:border-[#2a2e39] text-xs text-[#787b86] flex items-center justify-between">
           <span>{activeIndicators.length} chỉ báo đang bật</span>
           {activeIndicators.length > 0 && (
             <button
               onClick={() => activeIndicators.forEach(n => onToggle(n))}
-              className="text-red-400 hover:text-red-300 transition-colors"
+              className="text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors"
             >
               Tắt tất cả
             </button>

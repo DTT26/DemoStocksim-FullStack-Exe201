@@ -50,11 +50,11 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
   const held = positions[selectedStock.symbol] || 0;
 
   return (
-    <div className="w-[280px] border-l border-[#2a2e39] flex flex-col bg-[#131722] shrink-0 overflow-hidden">
+    <div className="w-[280px] border-l border-[#e6e8ea] dark:border-[#2a2e39] flex flex-col bg-white dark:bg-[#131722] shrink-0 overflow-hidden transition-colors">
 
       {/* Watchlist */}
       <div className="flex-1 overflow-y-auto">
-        <div className="flex px-3 py-2 border-b border-[#2a2e39] text-[10px] uppercase tracking-wider text-[#787b86] font-semibold">
+        <div className="flex px-3 py-2 border-b border-[#e6e8ea] dark:border-[#2a2e39] text-[10px] uppercase tracking-wider text-[#787b86] font-semibold">
           <div className="flex-1">Symbol</div>
           <div className="w-20 text-right">Price</div>
           <div className="w-14 text-right">Chg%</div>
@@ -64,10 +64,10 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
           <div
             key={stock.symbol}
             onClick={() => { onStockSelect(stock); setPrice(stock.price.toString()); }}
-            className={`flex items-center px-3 py-2 text-xs cursor-pointer transition-all border-b border-[#2a2e39]/40 ${
+            className={`flex items-center px-3 py-2 text-xs cursor-pointer transition-all border-b border-[#e6e8ea] dark:border-[#2a2e39]/40 ${
               selectedStock.symbol === stock.symbol
-                ? 'bg-blue-900/20 border-l-2 border-l-blue-500'
-                : 'hover:bg-[#1e222d]'
+                ? 'bg-blue-50 dark:bg-blue-900/20 border-l-2 border-l-blue-600'
+                : 'hover:bg-[#f5f5f5] dark:hover:bg-[#1e222d]'
             }`}
           >
             {/* Asset Avatar */}
@@ -76,7 +76,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
             </div>
 
             <div className="flex-1 flex flex-col truncate pr-1 min-w-0">
-              <span className="text-[#d1d4dc] font-bold truncate text-[11px] leading-tight">{stock.symbol}</span>
+              <span className="text-[#1e2329] dark:text-[#d1d4dc] font-bold truncate text-[11px] leading-tight">{stock.symbol}</span>
               <span className="text-[#787b86] text-[9px] truncate leading-tight">{stock.name}</span>
             </div>
 
@@ -99,20 +99,20 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
 
       {/* Order Entry */}
       {user ? (
-        <div className="border-t border-[#2a2e39] p-3 flex flex-col gap-2.5 shrink-0">
+        <div className="border-t border-[#e6e8ea] dark:border-[#2a2e39] p-3 flex flex-col gap-2.5 shrink-0 bg-[#f8f9fa] dark:bg-[#131722] transition-colors">
           {/* Balance row */}
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-1 text-[#787b86]">
               <Wallet className="w-3 h-3" />
               <span>Balance</span>
             </div>
-            <span className="font-mono text-green-400 font-semibold">{balance.toLocaleString('vi-VN')} ₫</span>
+            <span className="font-mono text-green-600 dark:text-green-400 font-semibold">{balance.toLocaleString('vi-VN')} ₫</span>
           </div>
 
           {/* Holding */}
           <div className="flex items-center justify-between text-xs">
             <span className="text-[#787b86]">Holding {selectedStock.symbol}</span>
-            <span className="font-mono text-[#d1d4dc]">{held.toLocaleString()} shares</span>
+            <span className="font-mono text-[#1e2329] dark:text-[#d1d4dc]">{held.toLocaleString()} shares</span>
           </div>
 
           {/* Order type */}
@@ -122,7 +122,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                 key={t}
                 onClick={() => setOrderType(t)}
                 className={`flex-1 py-1.5 rounded capitalize transition-colors ${
-                  orderType === t ? 'bg-blue-600 text-white' : 'bg-[#1e222d] text-[#787b86] hover:text-[#d1d4dc]'
+                  orderType === t ? 'bg-blue-600 text-white' : 'bg-[#e6e8ea] dark:bg-[#1e222d] text-[#1e2329] dark:text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'
                 }`}
               >
                 {t}
@@ -139,7 +139,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                   type="number"
                   value={price}
                   onChange={e => setPrice(e.target.value)}
-                  className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full"
+                  className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full"
                 />
               </div>
             )}
@@ -150,7 +150,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                 type="number"
                 value={qty}
                 onChange={e => setQty(e.target.value)}
-                className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full"
+                className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full"
               />
             </div>
           </div>
@@ -164,7 +164,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                 value={tp}
                 placeholder="Tùy chọn"
                 onChange={e => setTp(e.target.value)}
-                className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full placeholder:text-[#434651]"
+                className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full placeholder:text-[#a0a3af] dark:placeholder:text-[#434651]"
               />
             </div>
             <div className="flex flex-col gap-1 flex-1">
@@ -174,7 +174,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                 value={sl}
                 placeholder="Tùy chọn"
                 onChange={e => setSl(e.target.value)}
-                className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full placeholder:text-[#434651]"
+                className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full placeholder:text-[#a0a3af] dark:placeholder:text-[#434651]"
               />
             </div>
           </div>
@@ -182,20 +182,20 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
           {/* Total */}
           <div className="flex justify-between text-xs">
             <span className="text-[#787b86]">Total</span>
-            <span className="font-mono text-[#d1d4dc] font-semibold">{total.toLocaleString('vi-VN')} ₫</span>
+            <span className="font-mono text-[#1e2329] dark:text-[#d1d4dc] font-semibold">{total.toLocaleString('vi-VN')} ₫</span>
           </div>
 
           {/* Buy / Sell buttons */}
           <div className="flex gap-2">
             <button
               onClick={() => handleTrade('buy')}
-              className="flex-1 bg-[#089981] hover:bg-[#089981]/80 active:scale-95 text-white font-bold py-2.5 rounded text-sm transition-all"
+              className="flex-1 bg-[#089981] hover:bg-[#089981]/90 active:scale-95 text-white font-bold py-2.5 rounded text-sm transition-all shadow-sm"
             >
               MUA
             </button>
             <button
               onClick={() => handleTrade('sell')}
-              className="flex-1 bg-[#f23645] hover:bg-[#f23645]/80 active:scale-95 text-white font-bold py-2.5 rounded text-sm transition-all"
+              className="flex-1 bg-[#f23645] hover:bg-[#f23645]/90 active:scale-95 text-white font-bold py-2.5 rounded text-sm transition-all shadow-sm"
             >
               BÁN
             </button>
@@ -203,20 +203,20 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
 
           {/* Toast notification */}
           {toast && (
-            <div className={`text-xs px-3 py-2 rounded text-center font-medium transition-all ${
-              toast.ok ? 'bg-green-900/50 text-green-300 border border-green-700' : 'bg-red-900/50 text-red-300 border border-red-700'
+            <div className={`text-xs px-3 py-2 rounded text-center font-medium transition-all shadow-sm ${
+              toast.ok ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-700' : 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700'
             }`}>
               {toast.msg}
             </div>
           )}
         </div>
       ) : (
-        <div className="border-t border-[#2a2e39] p-6 flex flex-col items-center justify-center text-center gap-4 shrink-0 bg-[#131722]">
-          <Wallet className="w-8 h-8 text-[#434651]" />
+        <div className="border-t border-[#e6e8ea] dark:border-[#2a2e39] p-6 flex flex-col items-center justify-center text-center gap-4 shrink-0 bg-[#f8f9fa] dark:bg-[#131722] transition-colors">
+          <Wallet className="w-8 h-8 text-[#a0a3af] dark:text-[#434651]" />
           <p className="text-[#787b86] text-xs">Vui lòng đăng nhập để xem số dư và thực hiện giao dịch.</p>
           <button 
             onClick={() => login()}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2.5 rounded transition-colors"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2.5 rounded transition-colors shadow-sm"
           >
             Đăng nhập
           </button>

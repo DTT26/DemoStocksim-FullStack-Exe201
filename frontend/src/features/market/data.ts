@@ -80,7 +80,10 @@ export const generateOHLCV = (basePrice: number, count = 200, timeframe = 'D') =
   const volScale = Math.sqrt(tfMin / 390); // tương đối so với ngày
 
   const data = [];
-  let time = Date.now() - intervalMs * count;
+  // Làm tròn thời gian hiện tại về đầu khoảng interval để các mốc thời gian chẵn (VD: 09:00, 09:30)
+  const now = Date.now();
+  const alignedNow = now - (now % intervalMs);
+  let time = alignedNow - intervalMs * count;
   let close = basePrice;
 
   for (let i = 0; i < count; i++) {

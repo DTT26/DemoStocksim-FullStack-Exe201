@@ -1,10 +1,72 @@
 import { useState, useEffect, useRef } from 'react';
-import { init, dispose } from 'klinecharts';
+import { init, dispose, registerOverlay } from 'klinecharts';
 import type { Chart, KLineData, DataLoaderGetBarsParams, DataLoaderSubscribeBarParams } from 'klinecharts';
 import { generateOHLCV, type Stock } from '../data';
 import { fetchBinanceKlines, mapTimeframeToBinance, subscribeBinanceKline } from '../../../services/binanceApi';
 import type { TradeOrder } from '../TradingTerminal';
 import { INDICATOR_LIST } from './IndicatorModal';
+import { useTheme } from '../../../contexts/ThemeContext';
+
+// Đăng ký công cụ vẽ Hình chữ nhật (rect)
+registerOverlay({
+  name: 'rect',
+  totalStep: 3,
+  needDefaultPointFigure: true,
+  needDefaultXAxisFigure: true,
+  needDefaultYAxisFigure: true,
+  createPointFigures: ({ coordinates }) => {
+    if (coordinates.length > 1) {
+      return [
+        {
+          type: 'polygon',
+          attrs: {
+            coordinates: [
+              coordinates[0],
+              { x: coordinates[1].x, y: coordinates[0].y },
+              coordinates[1],
+              { x: coordinates[0].x, y: coordinates[1].y }
+            ]
+          },
+          styles: { style: 'stroke_fill', color: 'rgba(33, 150, 243, 0.2)', borderColor: '#2196f3' }
+        }
+      ];
+    }
+    return [];
+  }
+});
+
+// Đăng ký công cụ vẽ Mô hình XABCD
+registerOverlay({
+  name: 'xabcd',
+  totalStep: 6,
+  needDefaultPointFigure: true,
+  needDefaultXAxisFigure: true,
+  needDefaultYAxisFigure: true,
+  createPointFigures: ({ coordinates }) => {
+    const figures = [];
+    if (coordinates.length > 1) {
+      figures.push({ type: 'line', attrs: { coordinates } });
+    }
+    if (coordinates.length >= 3) {
+      figures.push({ type: 'polygon', attrs: { coordinates: [coordinates[0], coordinates[1], coordinates[2]] }, styles: { style: 'fill', color: 'rgba(33, 150, 243, 0.2)' } });
+    }
+    if (coordinates.length >= 5) {
+      figures.push({ type: 'polygon', attrs: { coordinates: [coordinates[2], coordinates[3], coordinates[4]] }, styles: { style: 'fill', color: 'rgba(33, 150, 243, 0.2)' } });
+    }
+    // Thêm Text nhãn X, A, B, C, D
+    const labels = ['X', 'A', 'B', 'C', 'D'];
+    coordinates.forEach((coord, i) => {
+      if (i < 5) {
+        figures.push({
+          type: 'text',
+          attrs: { x: coord.x, y: coord.y, text: labels[i] },
+          styles: { color: '#fff', backgroundColor: '#2196f3', paddingLeft: 4, paddingRight: 4, paddingTop: 2, paddingBottom: 2, borderRadius: 2 }
+        });
+      }
+    });
+    return figures;
+  }
+});
 
 interface ChartAreaProps {
   activeTool: string;
@@ -14,19 +76,45 @@ interface ChartAreaProps {
   replayIndex: number;
   tradeOrders: TradeOrder[];
   activeIndicators: string[];
+  onPriceUpdate?: (price: number) => void;
 }
 
 // Cache data per stock+timeframe to avoid re-generating every render
 const dataCache = new Map<string, KLineData[]>();
 
-export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplaying, replayIndex, tradeOrders, activeIndicators }: ChartAreaProps) => {
+export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplaying, replayIndex, tradeOrders, activeIndicators, onPriceUpdate }: ChartAreaProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<Chart | null>(null);
   const activeToolRef = useRef<string>('cursor');
   const activeTimeframeRef = useRef<string>(activeTimeframe);
   const [isLoading, setIsLoading] = useState(false);
+  const { theme } = useTheme();
   // Map: indicator name → sub-pane id (undefined = on main pane)
   const indicatorPaneRef = useRef<Map<string, string | undefined>>(new Map());
+
+  // Apply theme dynamically to klinecharts
+  useEffect(() => {
+    if (chartRef.current) {
+      chartRef.current.setStyles(theme === 'dark' ? 'dark' : 'light');
+      // Override grid and candle styles
+      chartRef.current.setStyles({
+        grid: {
+          horizontal: { color: theme === 'dark' ? '#2a2e39' : '#e6e8ea', size: 1, style: 'dashed' },
+          vertical: { color: theme === 'dark' ? '#2a2e39' : '#e6e8ea', size: 1, style: 'dashed' },
+        },
+        candle: {
+          bar: {
+            upColor: '#089981',
+            downColor: '#f23645',
+            upBorderColor: '#089981',
+            downBorderColor: '#f23645',
+            upWickColor: '#089981',
+            downWickColor: '#f23645',
+          }
+        }
+      });
+    }
+  }, [theme]);
 
   // Init chart ONCE
   useEffect(() => {
@@ -58,15 +146,25 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
     });
     if (!chart) return;
     
-    // Apply dark theme first
-    chart.setStyles('dark');
+    // Apply initial theme
+    chart.setStyles(theme === 'dark' ? 'dark' : 'light');
     
-    // Then override grid styles
+    // Then override grid and candle styles
     chart.setStyles({
       grid: {
-        horizontal: { color: '#2a2e39', size: 1, style: 'dashed' },
-        vertical: { color: '#2a2e39', size: 1, style: 'dashed' },
+        horizontal: { color: theme === 'dark' ? '#2a2e39' : '#e6e8ea', size: 1, style: 'dashed' },
+        vertical: { color: theme === 'dark' ? '#2a2e39' : '#e6e8ea', size: 1, style: 'dashed' },
       },
+      candle: {
+        bar: {
+          upColor: '#089981',
+          downColor: '#f23645',
+          upBorderColor: '#089981',
+          downBorderColor: '#f23645',
+          upWickColor: '#089981',
+          downWickColor: '#f23645',
+        }
+      }
     });
 
     chartRef.current = chart;
@@ -208,6 +306,7 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
               !!selectedStock.isFutures,
               (newCandle) => {
                 params.callback(newCandle);
+                if (onPriceUpdate) onPriceUpdate(newCandle.close);
               }
             );
           } else {
@@ -227,6 +326,7 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
               
               allData[allData.length - 1] = newCandle;
               params.callback(newCandle);
+              if (onPriceUpdate) onPriceUpdate(newCandle.close);
             }, 1000);
           }
         },
@@ -249,7 +349,7 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
       if (tickerInterval) clearInterval(tickerInterval);
       if (wsUnsubscribe) wsUnsubscribe();
     };
-  }, [selectedStock, activeTimeframe, isReplaying, replayIndex]);
+  }, [selectedStock.symbol, selectedStock.market, selectedStock.isFutures, activeTimeframe, isReplaying, replayIndex]);
 
   // Sync active indicators with chart
   useEffect(() => {
@@ -383,12 +483,12 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
   }, [tradeOrders]);
 
   return (
-    <div className="flex-1 min-w-0 relative bg-[#131722]">
+    <div className="flex-1 min-w-0 relative bg-white dark:bg-[#131722]">
       {/* Loading overlay */}
       {isLoading && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#131722]/50 backdrop-blur-sm">
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/50 dark:bg-[#131722]/50 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-2 text-[#787b86]">
-            <div className="w-8 h-8 border-4 border-[#2a2e39] border-t-blue-500 rounded-full animate-spin"></div>
+            <div className="w-8 h-8 border-4 border-[#e6e8ea] dark:border-[#2a2e39] border-t-blue-500 rounded-full animate-spin"></div>
             <span className="text-sm font-medium">Đang tải dữ liệu...</span>
           </div>
         </div>
