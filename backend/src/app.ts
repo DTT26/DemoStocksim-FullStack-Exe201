@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import tradingRoutes from './routes/tradingRoutes';
 
 const app = express();
 
@@ -11,7 +12,8 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', service: 'stocksim-api' });
 });
 
-// Placeholder for routes
+// Routes
+app.use('/api/trade', tradingRoutes);
 // app.use('/api/auth', authRoutes);
 // app.use('/api/users', userRoutes);
 // app.use('/api/stocks', stockRoutes);
