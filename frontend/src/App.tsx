@@ -8,6 +8,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 // Pages
 import { StudentDashboard } from './pages/student/StudentDashboard';
 import { StudentAssignments } from './pages/student/Assignments';
+import { StudentAssignmentDetail } from './pages/student/AssignmentDetail';
 import { StudentPerformance } from './pages/student/Performance';
 import { SimulationsList } from './pages/shared/Simulations';
 import { SimulationDetail } from './pages/shared/SimulationDetail';
@@ -50,6 +51,7 @@ function App() {
           <Route path="student">
             <Route index element={<StudentDashboard />} />
             <Route path="assignments" element={<StudentAssignments />} />
+            <Route path="assignments/:id" element={<StudentAssignmentDetail />} />
             <Route path="performance" element={<StudentPerformance />} />
           </Route>
         </Route>

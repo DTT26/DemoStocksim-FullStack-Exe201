@@ -7,6 +7,7 @@ export interface IAssignment extends Document {
   instructions?: string;
   deadline: Date;
   createdBy: mongoose.Types.ObjectId;
+  assignedTo: mongoose.Types.ObjectId[];
   status: 'OPEN' | 'CLOSED';
   createdAt: Date;
   updatedAt: Date;
@@ -20,6 +21,7 @@ const AssignmentSchema: Schema = new Schema(
     instructions: { type: String },
     deadline: { type: Date, required: true },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    assignedTo: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     status: { type: String, enum: ['OPEN', 'CLOSED'], default: 'OPEN' },
   },
   { timestamps: true }

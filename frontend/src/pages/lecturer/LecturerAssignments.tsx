@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Settings, Edit3, CheckCircle, Clock } from 'lucide-react';
+import { Settings, Edit3, CheckCircle, Clock, Users } from 'lucide-react';
 import { AssignmentModal } from './components/AssignmentModal';
+import { AssignStudentsModal } from './components/AssignStudentsModal';
 
 export const LecturerAssignments = () => {
   const [assignments, setAssignments] = useState<any[]>([]);
@@ -8,7 +9,9 @@ export const LecturerAssignments = () => {
   const [loading, setLoading] = useState(true);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [assignmentToEdit, setAssignmentToEdit] = useState<any>(null);
+  const [assignmentToAssign, setAssignmentToAssign] = useState<any>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -65,6 +68,11 @@ export const LecturerAssignments = () => {
   const handleOpenEditModal = (ass: any) => {
     setAssignmentToEdit(ass);
     setIsModalOpen(true);
+  };
+
+  const handleOpenAssignModal = (ass: any) => {
+    setAssignmentToAssign(ass);
+    setIsAssignModalOpen(true);
   };
 
   return (
@@ -139,6 +147,14 @@ export const LecturerAssignments = () => {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button 
+                          onClick={() => handleOpenAssignModal(ass)}
+                          className="p-2 text-[#787b86] hover:text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors"
+                          title="Assign to Students"
+                        >
+                          <Users className="w-5 h-5" />
+                        </button>
+                        
+                        <button 
                           onClick={() => handleOpenEditModal(ass)}
                           className="p-2 text-[#787b86] hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           title="Edit Assignment"
@@ -180,6 +196,16 @@ export const LecturerAssignments = () => {
         assignmentToEdit={assignmentToEdit}
         onSaved={() => {
           setIsModalOpen(false);
+          fetchData();
+        }}
+      />
+      
+      <AssignStudentsModal
+        isOpen={isAssignModalOpen}
+        onClose={() => setIsAssignModalOpen(false)}
+        assignment={assignmentToAssign}
+        onSaved={() => {
+          setIsAssignModalOpen(false);
           fetchData();
         }}
       />

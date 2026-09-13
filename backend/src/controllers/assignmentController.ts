@@ -106,6 +106,28 @@ export const deleteAssignment = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// PATCH /api/assignments/:id/assign (Lecturer/Admin only)
+export const assignToStudents = async (req: AuthRequest, res: Response) => {
+  try {
+    const assignment = await Assignment.findById(req.params.id);
+    if (!assignment) {
+      return res.status(404).json({ message: 'Assignment not found' });
+    }
+
+    const { studentIds } = req.body;
+    if (!Array.isArray(studentIds)) {
+      return res.status(400).json({ message: 'studentIds must be an array' });
+    }
+
+    assignment.assignedTo = studentIds;
+    const updatedAssignment = await assignment.save();
+    res.json(updatedAssignment);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
 // GET /api/assignments/my (Student only)
 export const getMyAssignments = async (req: AuthRequest, res: Response) => {
   try {
@@ -113,9 +135,19 @@ export const getMyAssignments = async (req: AuthRequest, res: Response) => {
     const participations = await SimulationParticipant.find({ userId: req.user._id });
     const simulationIds = participations.map(p => p.simulationId);
 
-    // Lấy tất cả bài tập thuộc các cuộc thi đó
-    const assignments = await Assignment.find({ 
-      simulationId: { $in: simulationIds } 
+    // Lấy tất cả bài tập thuộc các cuộc thi đó (nếu assignedTo trống)
+    // HOẶC bài tập có user trong assignedTo
+    const assignments = await Assignment.find({
+      $or: [
+        { assignedTo: req.user._id },
+        { 
+          simulationId: { $in: simulationIds }, 
+          $or: [
+            { assignedTo: { $exists: false } },
+            { assignedTo: { $size: 0 } }
+          ]
+        }
+      ]
     }).populate('simulationId', 'name');
 
     res.json(assignments);

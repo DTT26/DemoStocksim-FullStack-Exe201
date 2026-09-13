@@ -6,7 +6,8 @@ import {
   updateAssignmentStatus,
   editAssignment,
   deleteAssignment,
-  getMyAssignments
+  getMyAssignments,
+  assignToStudents
 } from '../controllers/assignmentController';
 import { protect, lecturer } from '../middleware/authMiddleware';
 
@@ -24,5 +25,6 @@ router.route('/:id')
   .delete(protect, lecturer, deleteAssignment as any);
 
 router.patch('/:id/status', protect, lecturer, updateAssignmentStatus as any);
+router.patch('/:id/assign', protect, lecturer, assignToStudents as any);
 
 export default router;

@@ -45,9 +45,9 @@ export const StudentAssignments = () => {
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <button className="text-blue-600 font-semibold hover:text-blue-700 hover:underline text-sm">
+                  <Link to="/student/assignments/1" className="text-blue-600 font-semibold hover:text-blue-700 hover:underline text-sm">
                     View
-                  </button>
+                  </Link>
                 </td>
               </tr>
               {/* Row 2 */}
@@ -73,9 +73,9 @@ export const StudentAssignments = () => {
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <button className="text-blue-600 font-semibold hover:text-blue-700 hover:underline text-sm">
+                  <Link to="/student/assignments/2" className="text-blue-600 font-semibold hover:text-blue-700 hover:underline text-sm">
                     View
-                  </button>
+                  </Link>
                 </td>
               </tr>
               {/* Row 3 */}
@@ -101,9 +101,9 @@ export const StudentAssignments = () => {
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <button className="text-[#787b86] font-semibold hover:text-[#d1d4dc] hover:underline text-sm">
+                  <Link to="/student/assignments/3" className="text-[#787b86] font-semibold hover:text-[#d1d4dc] hover:underline text-sm">
                     Review
-                  </button>
+                  </Link>
                 </td>
               </tr>
             </tbody>
