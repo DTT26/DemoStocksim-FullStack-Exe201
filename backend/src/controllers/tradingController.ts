@@ -1,0 +1,105 @@
+import { Request, Response } from 'express';
+import { TradingService } from '../services/tradingService';
+
+export const openLong = async (req: Request, res: Response) => {
+  try {
+    const { userId, symbol, margin, leverage, currentPrice, stopLoss, takeProfit } = req.body;
+    
+    if (!userId || !symbol || !margin || !leverage || !currentPrice) {
+      return res.status(400).json({ success: false, message: "Missing required fields" });
+    }
+
+    const result = await TradingService.openLong(userId, symbol, margin, leverage, currentPrice, stopLoss, takeProfit);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const openShort = async (req: Request, res: Response) => {
+  try {
+    const { userId, symbol, margin, leverage, currentPrice, stopLoss, takeProfit } = req.body;
+    
+    if (!userId || !symbol || !margin || !leverage || !currentPrice) {
+      return res.status(400).json({ success: false, message: "Missing required fields" });
+    }
+
+    const result = await TradingService.openShort(userId, symbol, margin, leverage, currentPrice, stopLoss, takeProfit);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const closePosition = async (req: Request, res: Response) => {
+  try {
+    const { userId, symbol, side, currentPrice } = req.body;
+    
+    if (!userId || !symbol || !side || !currentPrice) {
+      return res.status(400).json({ success: false, message: "Missing required fields" });
+    }
+
+    const result = await TradingService.closePosition(userId, symbol, side, currentPrice);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const updateTPSL = async (req: Request, res: Response) => {
+  try {
+    const { userId, symbol, side, takeProfit, stopLoss } = req.body;
+    
+    if (!userId || !symbol || !side) {
+      return res.status(400).json({ success: false, message: "Missing required fields" });
+    }
+
+    const result = await TradingService.updateTPSL(userId, symbol, side, takeProfit, stopLoss);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const addMargin = async (req: Request, res: Response) => {
+  try {
+    const { userId, symbol, side, amount } = req.body;
+    
+    if (!userId || !symbol || !side || !amount) {
+      return res.status(400).json({ success: false, message: "Missing required fields" });
+    }
+
+    const result = await TradingService.addMargin(userId, symbol, side, amount);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const getPortfolio = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "Missing userId" });
+    }
+
+    const portfolio = await TradingService.getPortfolio(userId);
+    res.status(200).json({ success: true, data: portfolio });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getTransactions = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "Missing userId" });
+    }
+
+    const transactions = await TradingService.getTransactions(userId);
+    res.status(200).json({ success: true, data: transactions });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
