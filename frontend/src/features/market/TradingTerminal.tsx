@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChartArea } from './components/ChartArea';
 import { RightSidebar } from './components/RightSidebar';
 import { LeftToolbar } from './components/LeftToolbar';
 import { ToolbarNavbar } from '../../components/ToolbarNavbar';
+import { ChartSettingsModal } from './components/ChartSettingsModal';
 import { STOCKS, type Stock } from './data';
+import { DEFAULT_CHART_SETTINGS, type ChartSettings } from './chartSettings';
 
 export interface TradeOrder {
   id: string;
@@ -23,6 +25,34 @@ export const TradingTerminal = () => {
   const [activeTimeframe, setActiveTimeframe] = useState<string>('D');
   const [balance, setBalance] = useState<number>(100_000_000);
   const [positions, setPositions] = useState<Record<string, number>>({});
+  
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [chartSettings, setChartSettings] = useState<ChartSettings>(() => {
+    try {
+      const saved = localStorage.getItem('chartSettings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          ...DEFAULT_CHART_SETTINGS,
+          ...parsed,
+          symbol: { ...DEFAULT_CHART_SETTINGS.symbol, ...(parsed.symbol || {}) },
+          status: { ...DEFAULT_CHART_SETTINGS.status, ...(parsed.status || {}) },
+          scales: { ...DEFAULT_CHART_SETTINGS.scales, ...(parsed.scales || {}) },
+          canvas: { ...DEFAULT_CHART_SETTINGS.canvas, ...(parsed.canvas || {}) },
+          alerts: { ...DEFAULT_CHART_SETTINGS.alerts, ...(parsed.alerts || {}) },
+          events: { ...DEFAULT_CHART_SETTINGS.events, ...(parsed.events || {}) },
+          candle: { ...DEFAULT_CHART_SETTINGS.candle, ...(parsed.candle || {}) },
+        };
+      }
+      return DEFAULT_CHART_SETTINGS;
+    } catch {
+      return DEFAULT_CHART_SETTINGS;
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('chartSettings', JSON.stringify(chartSettings));
+  }, [chartSettings]);
 
   // Bar Replay state
   const [isReplaying, setIsReplaying] = useState(false);
@@ -94,6 +124,7 @@ export const TradingTerminal = () => {
         onStartReplay={handleStartReplay}
         onReplayNext={handleReplayNext}
         onStopReplay={handleStopReplay}
+        onOpenSettings={() => setIsSettingsModalOpen(true)}
       />
       {/* Simulation Header */}
       <div className="h-8 bg-[#1e222d] border-b border-[#2a2e39] flex items-center px-4 justify-between text-xs text-[#d1d4dc] shrink-0">
@@ -127,6 +158,7 @@ export const TradingTerminal = () => {
           isReplaying={isReplaying}
           replayIndex={replayIndex}
           tradeOrders={tradeOrders.filter(o => o.symbol === selectedStock.symbol)}
+          chartSettings={chartSettings}
         />
         <RightSidebar
           selectedStock={selectedStock}
@@ -136,6 +168,14 @@ export const TradingTerminal = () => {
           onTrade={handleTrade}
         />
       </div>
+      
+      {isSettingsModalOpen && (
+        <ChartSettingsModal 
+          onClose={() => setIsSettingsModalOpen(false)} 
+          chartSettings={chartSettings}
+          onSettingsChange={setChartSettings}
+        />
+      )}
     </div>
   );
 };

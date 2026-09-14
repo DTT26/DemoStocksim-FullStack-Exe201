@@ -3,6 +3,7 @@ import { init, dispose } from 'klinecharts';
 import type { Chart, KLineData, DataLoaderGetBarsParams, DataLoaderSubscribeBarParams } from 'klinecharts';
 import { generateOHLCV, type Stock } from '../data';
 import type { TradeOrder } from '../TradingTerminal';
+import type { ChartSettings } from '../chartSettings';
 
 interface ChartAreaProps {
   activeTool: string;
@@ -11,6 +12,7 @@ interface ChartAreaProps {
   isReplaying: boolean;
   replayIndex: number;
   tradeOrders: TradeOrder[];
+  chartSettings: ChartSettings;
 }
 
 // Cache data per stock to avoid re-generating every render
@@ -23,7 +25,7 @@ const getStockData = (stock: Stock): KLineData[] => {
   return dataCache.get(stock.symbol)!;
 };
 
-export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplaying, replayIndex, tradeOrders }: ChartAreaProps) => {
+export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplaying, replayIndex, tradeOrders, chartSettings }: ChartAreaProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<Chart | null>(null);
   const activeToolRef = useRef<string>('cursor');
@@ -36,14 +38,6 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
     
     // Apply dark theme first
     chart.setStyles('dark');
-    
-    // Then override grid styles
-    chart.setStyles({
-      grid: {
-        horizontal: { color: '#2a2e39', size: 1, style: 'dashed' },
-        vertical: { color: '#2a2e39', size: 1, style: 'dashed' },
-      },
-    });
 
     chartRef.current = chart;
 
@@ -84,6 +78,94 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
       chart.createOverlay({ name: activeTool, lock: false });
     }
   }, [activeTool]);
+
+  // Apply chart settings when they change
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart || !chartSettings) return;
+
+    chart.setStyles({
+      grid: {
+        horizontal: {
+          show: chartSettings.canvas.hGridShow,
+          size: 1,
+          color: chartSettings.canvas.hGridColor,
+          style: chartSettings.canvas.hGridStyle === '—' ? 'solid' : 'dashed',
+        },
+        vertical: {
+          show: chartSettings.canvas.vGridShow,
+          size: 1,
+          color: chartSettings.canvas.vGridColor,
+          style: chartSettings.canvas.vGridStyle === '—' ? 'solid' : 'dashed',
+        }
+      },
+      candle: {
+        type: 'candle_solid',
+        bar: {
+          upColor: chartSettings.candle.bodyUp,
+          downColor: chartSettings.candle.bodyDown,
+          noChangeColor: chartSettings.candle.bodyDown,
+          upBorderColor: chartSettings.candle.borderUp,
+          downBorderColor: chartSettings.candle.borderDown,
+          noChangeBorderColor: chartSettings.candle.borderDown,
+          upWickColor: chartSettings.candle.wickUp,
+          downWickColor: chartSettings.candle.wickDown,
+          noChangeWickColor: chartSettings.candle.wickDown,
+        }
+      },
+      crosshair: {
+        show: true,
+        horizontal: {
+          show: true,
+          line: {
+            show: true,
+            style: chartSettings.canvas.crosshairStyle === '—' ? 'solid' : 'dashed',
+            color: chartSettings.canvas.crosshairColor,
+            size: 1,
+          },
+        },
+        vertical: {
+          show: true,
+          line: {
+            show: true,
+            style: chartSettings.canvas.crosshairStyle === '—' ? 'solid' : 'dashed',
+            color: chartSettings.canvas.crosshairColor,
+            size: 1,
+          }
+        }
+      },
+      xAxis: {
+        axisLine: { color: chartSettings.scales.lineColor },
+        tickText: { color: chartSettings.scales.textColor, size: chartSettings.scales.textSize, family: 'Inter' },
+      },
+      yAxis: {
+        axisLine: { color: chartSettings.scales.lineColor },
+        tickText: { color: chartSettings.scales.textColor, size: chartSettings.scales.textSize, family: 'Inter' },
+      }
+    });
+
+    try {
+      const anyChart = chart as any;
+      if (typeof anyChart.setTimezone === 'function') {
+        anyChart.setTimezone(chartSettings.symbol.timezone);
+      }
+      if (typeof anyChart.setOffsetRightDistance === 'function') {
+        anyChart.setOffsetRightDistance(chartSettings.canvas.marginRight);
+      }
+      if (typeof anyChart.setPriceVolumePrecision === 'function') {
+        let pricePrecision = 2;
+        switch (chartSettings.symbol.precision) {
+          case '1': pricePrecision = 0; break;
+          case '1/10': pricePrecision = 1; break;
+          case '1/100': pricePrecision = 2; break;
+          case '1/1000': pricePrecision = 3; break;
+        }
+        anyChart.setPriceVolumePrecision(pricePrecision, 0);
+      }
+    } catch (e) {
+      // Ignored if API is not available in this version
+    }
+  }, [chartSettings]);
 
   // Reload data when stock, timeframe, or replay state changes
   useEffect(() => {
@@ -227,19 +309,52 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
 
   const priceColor = selectedStock.type === 'up' ? 'text-[#089981]' : 'text-[#f23645]';
 
+  const bgStyle = chartSettings.canvas.bgType === 'Solid' 
+    ? { backgroundColor: chartSettings.canvas.bgSolid } 
+    : { background: `linear-gradient(to bottom, ${chartSettings.canvas.bgGradientTop}, ${chartSettings.canvas.bgGradientBottom})` };
+
   return (
-    <div className="flex-1 min-w-0 relative bg-[#131722]">
+    <div className="flex-1 min-w-0 relative" style={bgStyle}>
       {/* Symbol header */}
       <div className="absolute top-2 left-4 z-10 pointer-events-none flex items-baseline gap-2 flex-wrap">
-        <span className="text-white font-bold text-sm">{selectedStock.symbol}</span>
-        <span className="text-[#787b86] text-xs">{selectedStock.name}</span>
-        <span className={`text-sm font-bold font-mono ${priceColor}`}>
-          {selectedStock.price.toLocaleString('vi-VN')}
-        </span>
-        <span className={`text-xs ${priceColor}`}>
-          {selectedStock.percent > 0 ? '+' : ''}{selectedStock.percent.toFixed(2)}%
-        </span>
+        {['Ticker', 'Ticker and description', 'Name'].includes(chartSettings.status.title) && (
+          <span className="text-white font-bold text-sm">{selectedStock.symbol}</span>
+        )}
+        {['Description', 'Ticker and description'].includes(chartSettings.status.title) && (
+          <span className="text-[#787b86] text-xs">{selectedStock.name}</span>
+        )}
+        
+        {chartSettings.status.openMarketStatus && (
+          <span className="w-2 h-2 rounded-full bg-[#089981] ml-1 self-center" title="Market Open"></span>
+        )}
+
+        {chartSettings.status.chartValues && (
+          <span className={`text-sm font-bold font-mono ml-2 ${priceColor}`}>
+            {selectedStock.price.toLocaleString('vi-VN')}
+          </span>
+        )}
+        {chartSettings.status.barChangeValues && (
+          <span className={`text-xs ${priceColor}`}>
+            {selectedStock.percent > 0 ? '+' : ''}{selectedStock.percent.toFixed(2)}%
+          </span>
+        )}
+        {chartSettings.status.volume && (
+          <span className="text-[#787b86] text-xs ml-2">Vol: {(getStockData(selectedStock).slice(-1)[0]?.volume || 0).toFixed(0)}</span>
+        )}
       </div>
+
+      {/* Watermark overlay */}
+      {chartSettings.canvas.watermarkVal !== 'Hidden' && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[1] overflow-hidden opacity-[0.03]">
+          <span className="text-[120px] font-bold text-white select-none whitespace-nowrap">
+            {chartSettings.canvas.watermarkVal === 'Ticker' ? selectedStock.symbol 
+             : chartSettings.canvas.watermarkVal === 'Description' ? selectedStock.name
+             : chartSettings.canvas.watermarkVal === 'Interval' ? activeTimeframe
+             : chartSettings.canvas.watermarkVal === 'Replay mode' && isReplaying ? 'Replay Mode' 
+             : selectedStock.symbol}
+          </span>
+        </div>
+      )}
 
       {/* Bar Replay banner */}
       {isReplaying && (
@@ -259,7 +374,7 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
       {/* Chart canvas */}
       <div
         ref={chartContainerRef}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+        style={{ position: 'absolute', top: `${chartSettings.canvas.marginTop}%`, left: 0, right: 0, bottom: `${chartSettings.canvas.marginBottom}%` }}
       />
     </div>
   );

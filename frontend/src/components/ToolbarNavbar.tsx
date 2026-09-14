@@ -18,11 +18,13 @@ interface ToolbarNavbarProps {
   onStartReplay: (fromIndex: number) => void;
   onReplayNext: () => void;
   onStopReplay: () => void;
+  onOpenSettings: () => void;
 }
 
 export const ToolbarNavbar = ({
   selectedStock, activeTimeframe, onTimeframeChange, balance,
-  isReplaying, replayIndex, onStartReplay, onReplayNext, onStopReplay
+  isReplaying, replayIndex, onStartReplay, onReplayNext, onStopReplay,
+  onOpenSettings
 }: ToolbarNavbarProps) => {
   const [autoPlay, setAutoPlay] = useState(false);
   const [intervalId, setIntervalId] = useState<ReturnType<typeof setInterval> | null>(null);
@@ -150,8 +152,8 @@ export const ToolbarNavbar = ({
 
       {/* Right side controls */}
       <div className="flex items-center gap-2">
-        <button className="hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0">
-          <Settings className="w-5 h-5" />
+        <button onClick={onOpenSettings} className="hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0">
+          <Settings className="w-5 h-5 text-[#787b86] hover:text-[#d1d4dc]" />
         </button>
 
         {user ? (
