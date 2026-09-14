@@ -76,13 +76,14 @@ interface ChartAreaProps {
   replayIndex: number;
   tradeOrders: TradeOrder[];
   activeIndicators: string[];
+  activePosition?: { quantity: number; averagePrice: number; side: 'LONG'|'SHORT'; leverage: number; tp?: number; sl?: number };
   onPriceUpdate?: (price: number) => void;
 }
 
 // Cache data per stock+timeframe to avoid re-generating every render
 const dataCache = new Map<string, KLineData[]>();
 
-export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplaying, replayIndex, tradeOrders, activeIndicators, onPriceUpdate }: ChartAreaProps) => {
+export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplaying, replayIndex, tradeOrders, activeIndicators, activePosition, onPriceUpdate }: ChartAreaProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<Chart | null>(null);
   const activeToolRef = useRef<string>('cursor');
@@ -394,30 +395,29 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
     });
   }, [activeIndicators]);
 
-  // Draw price lines for ALL trade orders
+  // Draw price lines for active position
   useEffect(() => {
     const chart = chartRef.current;
-    if (!chart || tradeOrders.length === 0) return;
+    if (!chart) return;
 
-    const cacheKey = `${selectedStock.symbol}-${activeTimeframe}`;
-    const allData = dataCache.get(cacheKey) ?? [];
+    const allData = chart.getDataList();
     if (allData.length === 0) return;
     const lastDataIndex = allData.length - 1;
 
     // Clear previous order overlays to prevent duplicates if this runs multiple times
     chart.removeOverlay({ name: 'horizontalStraightLine' });
 
-    tradeOrders.forEach(order => {
-      const isBuy = order.type === 'buy';
+    if (activePosition && activePosition.quantity > 0) {
+      const isBuy = activePosition.side === 'LONG';
       const color = isBuy ? '#089981' : '#f23645';
 
       // 1. Draw main entry price line
       chart.createOverlay({
         name: 'horizontalStraightLine',
         lock: true,
-        points: [{ dataIndex: lastDataIndex, value: order.price }],
+        points: [{ timestamp: allData[lastDataIndex].timestamp, value: activePosition.averagePrice }],
         styles: {
-          line: { color, size: 2, style: 'dashed', dashedValue: [5, 5] },
+          line: { color: '#ffffff', size: 2, style: 'dashed', dashedValue: [5, 5] },
           text: {
             color: '#ffffff',
             backgroundColor: color,
@@ -431,15 +431,15 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
             weight: 'bold',
           },
         },
-        extendData: `${isBuy ? '▲ MUA' : '▼ BÁN'} ${order.qty} @ ${order.price.toLocaleString('vi-VN')}₫`,
+        extendData: `${isBuy ? '▲ LONG' : '▼ SHORT'} ${activePosition.quantity.toFixed(2)} @ ${activePosition.averagePrice.toLocaleString('vi-VN')}₫`,
       });
 
       // 2. Draw Take Profit line (TP)
-      if (order.tp) {
+      if (activePosition.tp) {
         chart.createOverlay({
           name: 'horizontalStraightLine',
           lock: true,
-          points: [{ dataIndex: lastDataIndex, value: order.tp }],
+          points: [{ timestamp: allData[lastDataIndex].timestamp, value: activePosition.tp }],
           styles: {
             line: { color: '#089981', size: 1, style: 'solid' },
             text: {
@@ -453,16 +453,16 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
               size: 10,
             },
           },
-          extendData: `TP @ ${order.tp.toLocaleString('vi-VN')}₫`,
+          extendData: `TP @ ${activePosition.tp.toLocaleString('vi-VN')}₫`,
         });
       }
 
       // 3. Draw Stop Loss line (SL)
-      if (order.sl) {
+      if (activePosition.sl) {
         chart.createOverlay({
           name: 'horizontalStraightLine',
           lock: true,
-          points: [{ dataIndex: lastDataIndex, value: order.sl }],
+          points: [{ timestamp: allData[lastDataIndex].timestamp, value: activePosition.sl }],
           styles: {
             line: { color: '#f23645', size: 1, style: 'solid' },
             text: {
@@ -476,11 +476,11 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
               size: 10,
             },
           },
-          extendData: `SL @ ${order.sl.toLocaleString('vi-VN')}₫`,
+          extendData: `SL @ ${activePosition.sl.toLocaleString('vi-VN')}₫`,
         });
       }
-    });
-  }, [tradeOrders]);
+    }
+  }, [activePosition, activeTimeframe, selectedStock.symbol, isLoading]);
 
   return (
     <div className="flex-1 min-w-0 relative bg-white dark:bg-[#131722]">

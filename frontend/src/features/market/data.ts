@@ -10,32 +10,36 @@ export interface Stock {
   market: MarketCategory;
   exchange: string;
   isFutures?: boolean;
+  leverageInfo: {
+    max: number;
+    marks: number[];
+  };
 }
 
 export const STOCKS: Stock[] = [
   // Cổ phiếu VN (HOSE/HNX)
-  { symbol: 'FPT', name: 'FPT Corp', price: 115.50, change: 2.48, percent: 2.21, type: 'up', market: 'Cổ phiếu', exchange: 'HOSE' },
-  { symbol: 'VCB', name: 'Vietcombank', price: 92.00, change: -0.47, percent: -0.51, type: 'down', market: 'Cổ phiếu', exchange: 'HOSE' },
-  { symbol: 'HPG', name: 'Hoa Phat Group', price: 30.50, change: 1.20, percent: 4.09, type: 'up', market: 'Cổ phiếu', exchange: 'HOSE' },
-  { symbol: 'SSI', name: 'SSI Securities', price: 38.20, change: 0.80, percent: 2.14, type: 'up', market: 'Cổ phiếu', exchange: 'HOSE' },
-  { symbol: 'VIC', name: 'Vingroup', price: 45.00, change: -0.98, percent: -2.13, type: 'down', market: 'Cổ phiếu', exchange: 'HOSE' },
+  { symbol: 'FPT', name: 'FPT Corp', price: 115.50, change: 2.48, percent: 2.21, type: 'up', market: 'Cổ phiếu', exchange: 'HOSE', leverageInfo: { max: 20, marks: [5, 10, 15, 20] } },
+  { symbol: 'VCB', name: 'Vietcombank', price: 92.00, change: -0.47, percent: -0.51, type: 'down', market: 'Cổ phiếu', exchange: 'HOSE', leverageInfo: { max: 20, marks: [5, 10, 15, 20] } },
+  { symbol: 'HPG', name: 'Hoa Phat Group', price: 30.50, change: 1.20, percent: 4.09, type: 'up', market: 'Cổ phiếu', exchange: 'HOSE', leverageInfo: { max: 20, marks: [5, 10, 15, 20] } },
+  { symbol: 'SSI', name: 'SSI Securities', price: 38.20, change: 0.80, percent: 2.14, type: 'up', market: 'Cổ phiếu', exchange: 'HOSE', leverageInfo: { max: 20, marks: [5, 10, 15, 20] } },
+  { symbol: 'VIC', name: 'Vingroup', price: 45.00, change: -0.98, percent: -2.13, type: 'down', market: 'Cổ phiếu', exchange: 'HOSE', leverageInfo: { max: 20, marks: [5, 10, 15, 20] } },
 
   // Crypto Spot (Binance)
-  { symbol: 'BTCUSDT', name: 'Bitcoin', price: 64200.50, change: 1200.50, percent: 1.90, type: 'up', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE' },
-  { symbol: 'ETHUSDT', name: 'Ethereum', price: 3450.20, change: -25.30, percent: -0.73, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE' },
-  { symbol: 'BNBUSDT', name: 'BNB', price: 590.10, change: 5.40, percent: 0.92, type: 'up', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE' },
-  { symbol: 'SOLUSDT', name: 'Solana', price: 145.30, change: -3.20, percent: -2.15, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE' },
-  { symbol: 'XRPUSDT', name: 'Ripple', price: 0.58, change: 0.01, percent: 1.75, type: 'up', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE' },
-  { symbol: 'ADAUSDT', name: 'Cardano', price: 0.45, change: -0.01, percent: -2.17, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE' },
+  { symbol: 'BTCUSDT', name: 'Bitcoin', price: 64200.50, change: 1200.50, percent: 1.90, type: 'up', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE', leverageInfo: { max: 125, marks: [25, 50, 75, 100, 125] } },
+  { symbol: 'ETHUSDT', name: 'Ethereum', price: 3450.20, change: -25.30, percent: -0.73, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE', leverageInfo: { max: 100, marks: [25, 50, 75, 100] } },
+  { symbol: 'BNBUSDT', name: 'BNB', price: 590.10, change: 5.40, percent: 0.92, type: 'up', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE', leverageInfo: { max: 75, marks: [25, 50, 75] } },
+  { symbol: 'SOLUSDT', name: 'Solana', price: 145.30, change: -3.20, percent: -2.15, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE', leverageInfo: { max: 75, marks: [25, 50, 75] } },
+  { symbol: 'XRPUSDT', name: 'Ripple', price: 0.58, change: 0.01, percent: 1.75, type: 'up', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE', leverageInfo: { max: 50, marks: [10, 25, 50] } },
+  { symbol: 'ADAUSDT', name: 'Cardano', price: 0.45, change: -0.01, percent: -2.17, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE', leverageInfo: { max: 50, marks: [10, 25, 50] } },
   
   // Crypto Futures (Binance)
-  { symbol: 'BTCUSDT.P', name: 'Bitcoin Perp', price: 64210.00, change: 1205.00, percent: 1.91, type: 'up', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE FUTURES', isFutures: true },
-  { symbol: 'ETHUSDT.P', name: 'Ethereum Perp', price: 3451.50, change: -24.00, percent: -0.69, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE FUTURES', isFutures: true },
-  { symbol: 'SOLUSDT.P', name: 'Solana Perp', price: 145.40, change: -3.10, percent: -2.09, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE FUTURES', isFutures: true },
+  { symbol: 'BTCUSDT.P', name: 'Bitcoin Perp', price: 64210.00, change: 1205.00, percent: 1.91, type: 'up', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE FUTURES', isFutures: true, leverageInfo: { max: 125, marks: [25, 50, 75, 100, 125] } },
+  { symbol: 'ETHUSDT.P', name: 'Ethereum Perp', price: 3451.50, change: -24.00, percent: -0.69, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE FUTURES', isFutures: true, leverageInfo: { max: 100, marks: [25, 50, 75, 100] } },
+  { symbol: 'SOLUSDT.P', name: 'Solana Perp', price: 145.40, change: -3.10, percent: -2.09, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE FUTURES', isFutures: true, leverageInfo: { max: 75, marks: [25, 50, 75] } },
   
   // Forex & Hàng hóa (Tượng trưng)
-  { symbol: 'XAUUSD', name: 'Gold / US Dollar', price: 2350.50, change: 15.20, percent: 0.65, type: 'up', market: 'Hàng hóa', exchange: 'OANDA' },
-  { symbol: 'EURUSD', name: 'Euro / US Dollar', price: 1.0850, change: -0.0020, percent: -0.18, type: 'down', market: 'Ngoại hối (Forex)', exchange: 'OANDA' },
+  { symbol: 'XAUUSD', name: 'Gold / US Dollar', price: 2350.50, change: 15.20, percent: 0.65, type: 'up', market: 'Hàng hóa', exchange: 'OANDA', leverageInfo: { max: 200, marks: [50, 100, 150, 200] } },
+  { symbol: 'EURUSD', name: 'Euro / US Dollar', price: 1.0850, change: -0.0020, percent: -0.18, type: 'down', market: 'Ngoại hối (Forex)', exchange: 'OANDA', leverageInfo: { max: 500, marks: [100, 200, 300, 400, 500] } },
 ];
 
 

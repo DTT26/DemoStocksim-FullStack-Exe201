@@ -107,8 +107,18 @@ export const SymbolSearchModal = ({ isOpen, onClose, onSelect }: SymbolSearchMod
                   </div>
 
                   {/* Market */}
-                  <div className="flex-1 text-[#787b86] text-xs truncate">
+                  <div className="w-32 text-[#787b86] text-xs truncate">
                     {stock.market}
+                  </div>
+
+                  {/* Price & CHG% */}
+                  <div className="flex-1 flex flex-col items-end justify-center pr-4">
+                    <span className="font-mono font-bold text-[#1e2329] dark:text-[#d1d4dc] text-sm">
+                      {stock.price.toLocaleString('vi-VN', { maximumFractionDigits: stock.price < 10 ? 4 : 2 })}
+                    </span>
+                    <span className={`font-mono text-xs font-semibold flex items-center gap-0.5 ${stock.type === 'up' ? 'text-[#089981]' : 'text-[#f23645]'}`}>
+                      {stock.type === 'up' ? '↗' : '↘'} {stock.percent > 0 ? '+' : ''}{stock.percent.toFixed(2)}%
+                    </span>
                   </div>
 
                   {/* Exchange badge */}

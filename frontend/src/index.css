@@ -46,5 +46,26 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #666;
+}
+
+/* Custom Leverage Slider */
+.custom-leverage-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #131722;
+  border: 2px solid white;
+  cursor: pointer;
+}
+
+.custom-leverage-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #131722;
+  border: 2px solid white;
+  cursor: pointer;
 }
