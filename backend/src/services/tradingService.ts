@@ -11,7 +11,7 @@ export class TradingService {
   // 1. MỞ VỊ THẾ LONG (Cược giá lên)
   static async openLong(userId: string, symbol: string, margin: number, leverage: number, currentPrice: number, stopLoss?: number, takeProfit?: number) {
     if (margin <= 0) throw new Error("Ký quỹ (Margin) phải lớn hơn 0");
-    if (leverage < 1 || leverage > 100) throw new Error("Đòn bẩy không hợp lệ");
+    if (leverage < 1 || leverage > 1000) throw new Error("Đòn bẩy không hợp lệ");
 
     const marginRequired = margin;
     const quantity = (margin * leverage) / currentPrice;
@@ -19,7 +19,7 @@ export class TradingService {
     const wallet = await Wallet.findOne({ userId });
     if (!wallet) throw new Error("Wallet not found");
     if (wallet.availableBalance < marginRequired) {
-      throw new Error(`Ký quỹ không đủ. Cần ${marginRequired.toLocaleString()} đ`);
+      throw new Error(`Ký quỹ không đủ. Cần ${marginRequired.toLocaleString('vi-VN')} đ`);
     }
 
     // Kiểm tra xem đã có lệnh SHORT ngược chiều chưa (One-way mode đơn giản)
@@ -58,7 +58,7 @@ export class TradingService {
   // 2. MỞ VỊ THẾ SHORT (Cược giá xuống)
   static async openShort(userId: string, symbol: string, margin: number, leverage: number, currentPrice: number, stopLoss?: number, takeProfit?: number) {
     if (margin <= 0) throw new Error("Ký quỹ (Margin) phải lớn hơn 0");
-    if (leverage < 1 || leverage > 100) throw new Error("Đòn bẩy không hợp lệ");
+    if (leverage < 1 || leverage > 1000) throw new Error("Đòn bẩy không hợp lệ");
 
     const marginRequired = margin;
     const quantity = (margin * leverage) / currentPrice;
@@ -66,7 +66,7 @@ export class TradingService {
     const wallet = await Wallet.findOne({ userId });
     if (!wallet) throw new Error("Wallet not found");
     if (wallet.availableBalance < marginRequired) {
-      throw new Error(`Ký quỹ không đủ. Cần ${marginRequired.toLocaleString()} đ`);
+      throw new Error(`Ký quỹ không đủ. Cần ${marginRequired.toLocaleString('vi-VN')} đ`);
     }
 
     const existingLong = await Holding.findOne({ userId, symbol, side: 'LONG' });
@@ -115,7 +115,12 @@ export class TradingService {
     }
 
     const marginReturned = (entryPrice * qty) / (holding.leverage || 1); // Tiền cọc ban đầu được tính lại từ đòn bẩy
-    const totalReturn = marginReturned + pnl;
+    let totalReturn = marginReturned + pnl;
+    
+    if (totalReturn < 0) {
+      totalReturn = 0; // Cháy tài khoản, mất trắng ký quỹ nhưng không bị âm vào số dư
+      pnl = -marginReturned; // Lợi nhuận âm tối đa bằng đúng số tiền ký quỹ
+    }
 
     // Cộng trả tiền về Ví
     const wallet = await Wallet.findOne({ userId });
@@ -129,10 +134,10 @@ export class TradingService {
 
     await Transaction.create({
       userId, type: TransactionType.DEPOSIT,
-      amount: pnl, description: `Đóng ${side} ${qty} ${symbol}. Lợi nhuận: ${pnl.toLocaleString()}đ`
+      amount: totalReturn, description: `Đóng ${side} ${qty.toLocaleString('vi-VN', {maximumFractionDigits: 2})} ${symbol}. Lợi nhuận: ${pnl.toLocaleString('vi-VN')}đ`
     });
 
-    return { success: true, message: `Đã đóng vị thế ${side}. Lợi nhuận: ${pnl.toLocaleString()}đ` };
+    return { success: true, message: `Đã đóng vị thế ${side}. Lợi nhuận: ${pnl.toLocaleString('vi-VN')}đ` };
   }
 
   // CẬP NHẬT TP / SL
@@ -154,7 +159,7 @@ export class TradingService {
     const wallet = await Wallet.findOne({ userId });
     if (!wallet) throw new Error("Wallet not found");
     if (wallet.availableBalance < amount) {
-      throw new Error(`Số dư không đủ. Cần ${amount.toLocaleString()} đ`);
+      throw new Error(`Số dư không đủ. Cần ${amount.toLocaleString('vi-VN')} đ`);
     }
 
     const holding = await Holding.findOne({ userId, symbol, side });
@@ -175,10 +180,75 @@ export class TradingService {
 
     await Transaction.create({
       userId, type: TransactionType.DEPOSIT,
-      amount: -amount, description: `Bơm ${amount.toLocaleString()}đ ký quỹ vào lệnh ${side} ${symbol}`
+      amount: -amount, description: `Bơm ${amount.toLocaleString('vi-VN')}đ ký quỹ vào lệnh ${side} ${symbol}`
     });
 
-    return { success: true, message: `Bơm ${amount.toLocaleString()}đ ký quỹ thành công!` };
+    return { success: true, message: `Bơm ${amount.toLocaleString('vi-VN')}đ ký quỹ thành công!` };
+  }
+
+  // ĐẶT LỆNH CHỜ (LIMIT / STOP ORDER)
+  static async placeLimitOrder(userId: string, symbol: string, side: 'LONG'|'SHORT', price: number, margin: number, leverage: number, stopLoss?: number, takeProfit?: number, orderType: 'LIMIT' | 'STOP' = 'LIMIT') {
+    if (margin <= 0) throw new Error("Ký quỹ (Margin) phải lớn hơn 0");
+    if (leverage < 1 || leverage > 1000) throw new Error("Đòn bẩy không hợp lệ");
+    if (price <= 0) throw new Error("Giá chờ không hợp lệ");
+
+    const wallet = await Wallet.findOne({ userId });
+    if (!wallet) throw new Error("Wallet not found");
+    if (wallet.availableBalance < margin) {
+      throw new Error(`Ký quỹ không đủ. Cần ${margin.toLocaleString('vi-VN')} đ`);
+    }
+
+    // Tạm trừ tiền ký quỹ để giữ chỗ lệnh chờ
+    wallet.balance -= margin;
+    wallet.availableBalance -= margin;
+    await wallet.save();
+
+    const quantity = (margin * leverage) / price;
+
+    const order = await Order.create({
+      userId,
+      symbol,
+      side,
+      type: orderType,
+      quantity,
+      price,
+      margin,
+      leverage,
+      stopLoss,
+      takeProfit,
+      status: OrderStatus.PENDING
+    });
+
+    await Transaction.create({
+      userId, type: TransactionType.BUY_STOCK, // Dùng tạm BUY_STOCK cho lệnh chờ
+      amount: margin, description: `Đặt lệnh chờ ${side} Limit ${symbol} tại ${price.toLocaleString('vi-VN')}đ | Margin: ${margin}`
+    });
+
+    return { success: true, message: `Đặt lệnh chờ ${side} Limit thành công tại ${price.toLocaleString('vi-VN')}đ!` };
+  }
+
+  // HỦY LỆNH CHỜ
+  static async cancelLimitOrder(userId: string, orderId: string) {
+    const order = await Order.findOne({ _id: orderId, userId, status: OrderStatus.PENDING });
+    if (!order) throw new Error("Không tìm thấy lệnh chờ hợp lệ");
+
+    order.status = OrderStatus.CANCELLED;
+    await order.save();
+
+    // Hoàn tiền ký quỹ
+    const wallet = await Wallet.findOne({ userId });
+    if (wallet) {
+       wallet.balance += order.margin;
+       wallet.availableBalance += order.margin;
+       await wallet.save();
+    }
+
+    await Transaction.create({
+      userId, type: TransactionType.DEPOSIT,
+      amount: order.margin, description: `Hủy lệnh chờ ${order.side} Limit ${order.symbol}. Hoàn ký quỹ ${order.margin.toLocaleString('vi-VN')}đ`
+    });
+
+    return { success: true, message: `Hủy lệnh chờ thành công!` };
   }
 
   /**
@@ -187,12 +257,14 @@ export class TradingService {
   static async getPortfolio(userId: string) {
     const wallet = await Wallet.findOne({ userId });
     const holdings = await Holding.find({ userId });
+    const pendingOrders = await Order.find({ userId, status: OrderStatus.PENDING });
     
     // Note: To calculate accurate Real-time PnL, the controller should fetch current prices from API
     // and map them into the holdings array before returning to frontend.
     return {
       wallet,
-      holdings
+      holdings,
+      pendingOrders
     };
   }
 

@@ -11,6 +11,7 @@ interface ChartAreaProps {
   isReplaying: boolean;
   replayIndex: number;
   tradeOrders: TradeOrder[];
+  pendingOrders?: any[];
   activePosition?: { quantity: number; averagePrice: number; side: 'LONG'|'SHORT'; leverage: number; tp?: number; sl?: number };
   onPriceChange?: (price: number) => void;
 }
@@ -25,7 +26,7 @@ const getStockData = (stock: Stock): KLineData[] => {
   return dataCache.get(stock.symbol)!;
 };
 
-export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplaying, replayIndex, tradeOrders, activePosition, onPriceChange }: ChartAreaProps) => {
+export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplaying, replayIndex, tradeOrders, pendingOrders, activePosition, onPriceChange }: ChartAreaProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<Chart | null>(null);
   const activeToolRef = useRef<string>('cursor');
@@ -171,7 +172,7 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
     // Draw active position line
     if (activePosition && activePosition.quantity > 0) {
       const isBuy = activePosition.side === 'LONG';
-      const color = isBuy ? '#089981' : '#f23645';
+      const color = '#ffffff'; // White for entry line
 
       chart.createOverlay({
         name: 'horizontalStraightLine',
@@ -180,7 +181,7 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
         styles: {
           line: { color, size: 2, style: 'dashed', dashedValue: [5, 5] },
           text: {
-            color: '#ffffff',
+            color: '#131722',
             backgroundColor: color,
             paddingLeft: 6,
             paddingRight: 6,
@@ -233,7 +234,33 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
         });
       }
     }
-  }, [activePosition, isReplaying, replayIndex, selectedStock]);
+
+    // Draw Pending Orders
+    if (pendingOrders && pendingOrders.length > 0) {
+      const stockPending = pendingOrders.filter(o => o.symbol === selectedStock.symbol);
+      stockPending.forEach(order => {
+        const isBuy = order.side === 'LONG';
+        const isLimit = order.type === 'LIMIT';
+        const color = isLimit ? '#2962ff' : '#e65100'; // Blue for limit, Orange for stop
+        
+        chart.createOverlay({
+          name: 'horizontalStraightLine',
+          lock: true,
+          points: [{ timestamp: currentTimestamp, value: order.price }],
+          styles: {
+            line: { color, size: 1, style: 'dashed', dashedValue: [2, 2] },
+            text: {
+              color: '#ffffff',
+              backgroundColor: color,
+              paddingLeft: 4, paddingRight: 4, paddingTop: 2, paddingBottom: 2,
+              borderRadius: 2, size: 10, family: 'Inter', weight: 'bold',
+            },
+          },
+          extendData: `${order.type} ${order.side} ${order.quantity?.toFixed(2) || ''} @ ${order.price.toLocaleString('vi-VN')}₫`,
+        });
+      });
+    }
+  }, [activePosition, pendingOrders, isReplaying, replayIndex, selectedStock]);
 
   const priceColor = selectedStock.type === 'up' ? 'text-[#089981]' : 'text-[#f23645]';
 
