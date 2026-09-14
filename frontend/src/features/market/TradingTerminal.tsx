@@ -24,12 +24,13 @@ export const TradingTerminal = () => {
   const [tradeOrders, setTradeOrders] = useState<TradeOrder[]>([]);
   const [activeTimeframe, setActiveTimeframe] = useState<string>('D');
   const [balance, setBalance] = useState<number>(100_000_000);
-  const [positions, setPositions] = useState<Record<string, { quantity: number, averagePrice: number, side: 'LONG'|'SHORT', leverage: number, tp?: number, sl?: number }>>({});
+  const [positions, setPositions] = useState<Record<string, { quantity: number, averagePrice: number, side: 'LONG' | 'SHORT', leverage: number, tp?: number, sl?: number }>>({});
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   const [tradeCount, setTradeCount] = useState(0);
-  const [toast, setToast] = useState<{msg: string, type: 'info'|'warning'} | null>(null);
+  const [toast, setToast] = useState<{ msg: string, type: 'info' | 'warning' } | null>(null);
+  const [editingSymbol, setEditingSymbol] = useState<string | null>(null);
 
-  const showToast = (msg: string, type: 'info'|'warning' = 'info') => {
+  const showToast = (msg: string, type: 'info' | 'warning' = 'info') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4000);
   };
@@ -59,17 +60,17 @@ export const TradingTerminal = () => {
       const res = await tradingApi.getPortfolio();
       if (res.success && res.data) {
         if (res.data.wallet) {
-           setBalance(res.data.wallet.availableBalance);
+          setBalance(res.data.wallet.availableBalance);
         }
         if (res.data.holdings) {
-           const newPositions: Record<string, { quantity: number, averagePrice: number, side: 'LONG'|'SHORT', leverage: number, tp?: number, sl?: number }> = {};
-           res.data.holdings.forEach((h: any) => {
-             newPositions[h.symbol] = { quantity: h.quantity, averagePrice: h.averagePrice, side: h.side, leverage: h.leverage, tp: h.tp, sl: h.sl };
-           });
-           setPositions(newPositions);
+          const newPositions: Record<string, { quantity: number, averagePrice: number, side: 'LONG' | 'SHORT', leverage: number, tp?: number, sl?: number }> = {};
+          res.data.holdings.forEach((h: any) => {
+            newPositions[h.symbol] = { quantity: h.quantity, averagePrice: h.averagePrice, side: h.side, leverage: h.leverage, tp: h.tp, sl: h.sl };
+          });
+          setPositions(newPositions);
         }
         if (res.data.pendingOrders) {
-           setPendingOrders(res.data.pendingOrders);
+          setPendingOrders(res.data.pendingOrders);
         }
       }
     } catch (e) {
@@ -84,58 +85,58 @@ export const TradingTerminal = () => {
   const handleTrade = async (type: 'buy' | 'sell' | 'close' | 'limit_buy' | 'limit_sell' | 'stop_buy' | 'stop_sell', price: number, margin: number, leverage: number, tp?: number, sl?: number) => {
     try {
       if (type === 'close') {
-         const pos = positions[selectedStock.symbol];
-         if (!pos) return { success: false, message: 'Không có vị thế để đóng' };
-         
-         const res = await tradingApi.closePosition(selectedStock.symbol, pos.side, price);
-         if (res.success) {
-            await fetchPortfolio();
-            setTradeCount(c => c + 1);
-            return { success: true, message: `✅ Đã chốt vị thế ${pos.side} thành công` };
-         }
+        const pos = positions[selectedStock.symbol];
+        if (!pos) return { success: false, message: 'Không có vị thế để đóng' };
+
+        const res = await tradingApi.closePosition(selectedStock.symbol, pos.side, price);
+        if (res.success) {
+          await fetchPortfolio();
+          setTradeCount(c => c + 1);
+          return { success: true, message: `✅ Đã chốt vị thế ${pos.side} thành công` };
+        }
       } else if (type === 'limit_buy' || type === 'limit_sell') {
-         const side = type === 'limit_buy' ? 'LONG' : 'SHORT';
-         const res = await tradingApi.placeLimitOrder(selectedStock.symbol, side, price, margin, leverage, sl, tp, 'LIMIT');
-         if (res.success) {
-            await fetchPortfolio();
-            setTradeCount(c => c + 1);
-            return { success: true, message: res.message };
-         }
+        const side = type === 'limit_buy' ? 'LONG' : 'SHORT';
+        const res = await tradingApi.placeLimitOrder(selectedStock.symbol, side, price, margin, leverage, sl, tp, 'LIMIT');
+        if (res.success) {
+          await fetchPortfolio();
+          setTradeCount(c => c + 1);
+          return { success: true, message: res.message };
+        }
       } else if (type === 'stop_buy' || type === 'stop_sell') {
-         const side = type === 'stop_buy' ? 'LONG' : 'SHORT';
-         const res = await tradingApi.placeLimitOrder(selectedStock.symbol, side, price, margin, leverage, sl, tp, 'STOP');
-         if (res.success) {
-            await fetchPortfolio();
-            setTradeCount(c => c + 1);
-            return { success: true, message: res.message };
-         }
+        const side = type === 'stop_buy' ? 'LONG' : 'SHORT';
+        const res = await tradingApi.placeLimitOrder(selectedStock.symbol, side, price, margin, leverage, sl, tp, 'STOP');
+        if (res.success) {
+          await fetchPortfolio();
+          setTradeCount(c => c + 1);
+          return { success: true, message: res.message };
+        }
       } else if (type === 'buy') {
         const res = await tradingApi.buyStock(selectedStock.symbol, margin, leverage, price, sl, tp);
         if (res.success) {
-           await fetchPortfolio();
-           const order: TradeOrder = {
-             id: `${Date.now()}-${Math.random()}`,
-             type, symbol: selectedStock.symbol, price, qty: (margin*leverage)/price, timestamp: Date.now(), tp, sl,
-           };
-           setTradeOrders(prev => [...prev, order]);
-           setTradeCount(c => c + 1);
-           return { success: true, message: `✅ Mở LONG ${selectedStock.symbol} thành công` };
+          await fetchPortfolio();
+          const order: TradeOrder = {
+            id: `${Date.now()}-${Math.random()}`,
+            type, symbol: selectedStock.symbol, price, qty: (margin * leverage) / price, timestamp: Date.now(), tp, sl,
+          };
+          setTradeOrders(prev => [...prev, order]);
+          setTradeCount(c => c + 1);
+          return { success: true, message: `✅ Mở LONG ${selectedStock.symbol} thành công` };
         }
       } else if (type === 'sell') {
         const res = await tradingApi.sellStock(selectedStock.symbol, margin, leverage, price);
         if (res.success) {
-           await fetchPortfolio();
-           const order: TradeOrder = {
-             id: `${Date.now()}-${Math.random()}`,
-             type, symbol: selectedStock.symbol, price, qty: (margin*leverage)/price, timestamp: Date.now(), tp, sl,
-           };
-           setTradeOrders(prev => [...prev, order]);
-           setTradeCount(c => c + 1);
-           return { success: true, message: `✅ Mở SHORT ${selectedStock.symbol} thành công` };
+          await fetchPortfolio();
+          const order: TradeOrder = {
+            id: `${Date.now()}-${Math.random()}`,
+            type, symbol: selectedStock.symbol, price, qty: (margin * leverage) / price, timestamp: Date.now(), tp, sl,
+          };
+          setTradeOrders(prev => [...prev, order]);
+          setTradeCount(c => c + 1);
+          return { success: true, message: `✅ Mở SHORT ${selectedStock.symbol} thành công` };
         }
       }
     } catch (error: any) {
-       return { success: false, message: error.message || 'Giao dịch thất bại' };
+      return { success: false, message: error.message || 'Giao dịch thất bại' };
     }
     return { success: false, message: 'Lỗi không xác định' };
   };
@@ -157,11 +158,11 @@ export const TradingTerminal = () => {
     try {
       const pos = positions[selectedStock.symbol];
       if (!pos) return { success: false, message: 'Không có vị thế' };
-      
+
       const res = await tradingApi.updateTPSL(selectedStock.symbol, pos.side, tp, sl);
       if (res.success) {
-         await fetchPortfolio();
-         return { success: true, message: `✅ Đã cập nhật TP/SL` };
+        await fetchPortfolio();
+        return { success: true, message: `✅ Đã cập nhật TP/SL` };
       }
       return { success: false, message: 'Lỗi cập nhật' };
     } catch (e: any) {
@@ -173,11 +174,11 @@ export const TradingTerminal = () => {
     try {
       const pos = positions[selectedStock.symbol];
       if (!pos) return { success: false, message: 'Không có vị thế' };
-      
+
       const res = await tradingApi.addMargin(selectedStock.symbol, pos.side, amount);
       if (res.success) {
-         await fetchPortfolio();
-         return { success: true, message: res.message || `✅ Đã bơm thêm ký quỹ` };
+        await fetchPortfolio();
+        return { success: true, message: res.message || `✅ Đã bơm thêm ký quỹ` };
       }
       return { success: false, message: res.message || 'Lỗi bơm ký quỹ' };
     } catch (e: any) {
@@ -196,7 +197,7 @@ export const TradingTerminal = () => {
     let shouldClose = false;
     let reason = '';
     let execPrice = currentPrice;
-    
+
     if (pos.side === 'LONG') {
       pnl = (currentPrice - pos.averagePrice) * pos.quantity;
       if (pos.sl && currentPrice <= pos.sl) { shouldClose = true; reason = 'Chạm Cắt Lỗ (SL)'; execPrice = pos.sl; }
@@ -220,12 +221,12 @@ export const TradingTerminal = () => {
       (window as any)[`isClosing_${key}`] = true;
 
       handleTrade('close', execPrice, 0, 0).then(res => {
-         (window as any)[`isClosing_${key}`] = false;
-         if (res.success) {
-           showToast(`⚠️ HỆ THỐNG TỰ ĐỘNG ĐÓNG VỊ THẾ!\nLý do: ${reason}\nGiá: ${execPrice.toLocaleString('vi-VN')}₫`, 'warning');
-         }
+        (window as any)[`isClosing_${key}`] = false;
+        if (res.success) {
+          showToast(`⚠️ HỆ THỐNG TỰ ĐỘNG ĐÓNG VỊ THẾ!\nLý do: ${reason}\nGiá: ${execPrice.toLocaleString('vi-VN')}₫`, 'warning');
+        }
       }).catch(() => {
-         (window as any)[`isClosing_${key}`] = false;
+        (window as any)[`isClosing_${key}`] = false;
       });
     }
   }, [selectedStock.price, positions, selectedStock.symbol]);
@@ -234,44 +235,44 @@ export const TradingTerminal = () => {
   useEffect(() => {
     const currentPrice = selectedStock.price;
     const symbolOrders = pendingOrders.filter(o => o.symbol === selectedStock.symbol);
-    
+
     symbolOrders.forEach(order => {
       const key = `executing_order_${order._id}`;
       if ((window as any)[key]) return;
-      
+
       let shouldExecute = false;
       if (order.type === 'LIMIT') {
         if (order.side === 'LONG' && currentPrice <= order.price) {
-           shouldExecute = true;
+          shouldExecute = true;
         } else if (order.side === 'SHORT' && currentPrice >= order.price) {
-           shouldExecute = true;
+          shouldExecute = true;
         }
       } else if (order.type === 'STOP') {
         if (order.side === 'LONG' && currentPrice >= order.price) {
-           shouldExecute = true;
+          shouldExecute = true;
         } else if (order.side === 'SHORT' && currentPrice <= order.price) {
-           shouldExecute = true;
+          shouldExecute = true;
         }
       }
 
       if (shouldExecute) {
-         (window as any)[key] = true;
-         // Khớp lệnh: 1. Hủy lệnh chờ, 2. Mở lệnh thật
-         tradingApi.cancelLimitOrder(order._id)
-           .then(() => {
-              if (order.side === 'LONG') {
-                return tradingApi.buyStock(order.symbol, order.margin, order.leverage, order.price, order.stopLoss, order.takeProfit);
-              } else {
-                return handleTrade(order.side === 'LONG' ? 'buy' : 'sell', order.price, order.margin, order.leverage, order.takeProfit, order.stopLoss);
-              }
-           })
-           .then(() => {
-              fetchPortfolio();
-              showToast(`✅ Lệnh chờ ${order.side} Limit tại ${order.price.toLocaleString()}đ đã khớp!`, 'info');
-           })
-           .finally(() => {
-              (window as any)[key] = false;
-           });
+        (window as any)[key] = true;
+        // Khớp lệnh: 1. Hủy lệnh chờ, 2. Mở lệnh thật
+        tradingApi.cancelLimitOrder(order._id)
+          .then(() => {
+            if (order.side === 'LONG') {
+              return tradingApi.buyStock(order.symbol, order.margin, order.leverage, order.price, order.stopLoss, order.takeProfit);
+            } else {
+              return handleTrade(order.side === 'LONG' ? 'buy' : 'sell', order.price, order.margin, order.leverage, order.takeProfit, order.stopLoss);
+            }
+          })
+          .then(() => {
+            fetchPortfolio();
+            showToast(`✅ Lệnh chờ ${order.side} Limit tại ${order.price.toLocaleString()}đ đã khớp!`, 'info');
+          })
+          .finally(() => {
+            (window as any)[key] = false;
+          });
       }
     });
   }, [selectedStock.price, pendingOrders, selectedStock.symbol]);
@@ -292,17 +293,7 @@ export const TradingTerminal = () => {
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
-      <ToolbarNavbar
-        selectedStock={selectedStock}
-        activeTimeframe={activeTimeframe}
-        onTimeframeChange={setActiveTimeframe}
-        balance={balance}
-        isReplaying={isReplaying}
-        replayIndex={replayIndex}
-        onStartReplay={handleStartReplay}
-        onReplayNext={handleReplayNext}
-        onStopReplay={handleStopReplay}
-      />
+      <ToolbarNavbar balance={balance} />
       {/* Simulation Header */}
       <div className="h-8 bg-[#1e222d] border-b border-[#2a2e39] flex items-center px-4 justify-between text-xs text-[#d1d4dc] shrink-0">
         <div className="flex items-center gap-3">
@@ -327,7 +318,7 @@ export const TradingTerminal = () => {
         </div>
       </div>
       <div className="flex flex-1 overflow-hidden">
-        <LeftToolbar activeTool={activeTool} onToolClick={handleToolClick} />
+        <LeftToolbar activeTool={activeTool} onToolSelect={handleToolClick} />
         <div className="flex flex-col flex-1 overflow-hidden">
           <ChartArea
             activeTool={activeTool}
@@ -338,7 +329,7 @@ export const TradingTerminal = () => {
             tradeOrders={tradeOrders.filter(o => o.symbol === selectedStock.symbol)}
             pendingOrders={pendingOrders}
             activePosition={positions[selectedStock.symbol]}
-            onPriceChange={handlePriceChange}
+            onPriceUpdate={handlePriceChange}
           />
           <BottomPanel
             positions={positions as any}
@@ -349,9 +340,9 @@ export const TradingTerminal = () => {
               try {
                 const res = await tradingApi.closePosition(symbol, side, price);
                 if (res.success) {
-                   await fetchPortfolio();
-                   setTradeCount(c => c + 1);
-                   return { success: true, message: `✅ Đã chốt vị thế ${side} ${symbol}` };
+                  await fetchPortfolio();
+                  setTradeCount(c => c + 1);
+                  return { success: true, message: `✅ Đã chốt vị thế ${side} ${symbol}` };
                 }
                 return { success: false, message: 'Lỗi khi đóng vị thế' };
               } catch (e: any) {
@@ -363,8 +354,8 @@ export const TradingTerminal = () => {
               try {
                 const res = await tradingApi.updateTPSL(symbol, side, tp, sl);
                 if (res.success) {
-                   await fetchPortfolio();
-                   return { success: true, message: '✅ Đã cập nhật TP/SL' };
+                  await fetchPortfolio();
+                  return { success: true, message: '✅ Đã cập nhật TP/SL' };
                 }
                 return { success: false, message: 'Lỗi cập nhật' };
               } catch (e: any) {
@@ -375,13 +366,18 @@ export const TradingTerminal = () => {
               try {
                 const res = await tradingApi.addMargin(symbol, side, amount);
                 if (res.success) {
-                   await fetchPortfolio();
-                   return { success: true, message: res.message || '✅ Đã bơm thêm ký quỹ' };
+                  await fetchPortfolio();
+                  return { success: true, message: res.message || '✅ Đã bơm thêm ký quỹ' };
                 }
                 return { success: false, message: res.message || 'Lỗi bơm ký quỹ' };
               } catch (e: any) {
                 return { success: false, message: e.message };
               }
+            }}
+            onEditPosition={(symbol) => {
+              const stock = STOCKS.find(s => s.symbol === symbol);
+              if (stock) handleStockSelect(stock);
+              setEditingSymbol(symbol);
             }}
             refreshTrigger={tradeCount}
           />
@@ -391,10 +387,19 @@ export const TradingTerminal = () => {
             selectedStock={selectedStock}
             positions={positions as any}
             balance={balance}
-            onStockSelect={handleStockSelect}
+            onStockSelect={(stock) => {
+              handleStockSelect(stock);
+              setEditingSymbol(null);
+            }}
             onTrade={handleTrade}
-            onUpdateTPSL={handleUpdateTPSL}
+            onUpdateTPSL={async (symbol, side, tp, sl) => {
+              const res = await handleUpdateTPSL(tp, sl);
+              if (res.success) setEditingSymbol(null);
+              return res;
+            }}
             onAddMargin={handleAddMargin}
+            isEditing={editingSymbol === selectedStock.symbol}
+            onCancelEdit={() => setEditingSymbol(null)}
           />
         </div>
       </div>
@@ -402,11 +407,10 @@ export const TradingTerminal = () => {
       {/* Global Toast */}
       {toast && (
         <div className="fixed top-4 right-1/2 translate-x-1/2 z-50 animate-bounce">
-          <div className={`px-4 py-3 rounded-lg shadow-xl border flex items-center gap-3 ${
-            toast.type === 'warning' 
-              ? 'bg-red-900/90 border-red-500 text-red-100' 
+          <div className={`px-4 py-3 rounded-lg shadow-xl border flex items-center gap-3 ${toast.type === 'warning'
+              ? 'bg-red-900/90 border-red-500 text-red-100'
               : 'bg-green-900/90 border-green-500 text-green-100'
-          }`}>
+            }`}>
             <span className="font-medium whitespace-pre-line text-sm">{toast.msg}</span>
           </div>
         </div>

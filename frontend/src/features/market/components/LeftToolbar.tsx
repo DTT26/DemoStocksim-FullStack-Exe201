@@ -1,48 +1,53 @@
-import { MousePointer2, TrendingUp, Minus, ArrowUpDown, BarChart2, Square, GitBranch, Type, Scissors, Percent } from 'lucide-react';
+import { Crosshair, TrendingUp, AlignLeft, Share2, Waypoints, SlidersHorizontal, Brush, Type, Smile, Ruler, ZoomIn, Magnet, PenTool, Lock, Eye, Trash2, ChevronRight } from 'lucide-react';
 
 const TOOLS = [
-  { id: 'cursor',          icon: MousePointer2, label: 'Cursor (Thoát chế độ vẽ)',    separator: false, color: 'default' },
-  { id: 'trendLine',       icon: TrendingUp,    label: 'Trend Line (Đường xu hướng)', separator: false, color: 'default' },
-  { id: 'horizontalLine',  icon: Minus,         label: 'Horizontal Line (Đường ngang)',separator: false, color: 'default' },
-  { id: 'verticalLine',    icon: ArrowUpDown,   label: 'Vertical Line (Đường dọc)',    separator: false, color: 'default' },
-  { id: 'rayLine',         icon: GitBranch,     label: 'Ray / Tia',                    separator: true,  color: 'default' },
-  { id: 'fibonacciLine',   icon: Percent,       label: 'Fibonacci Retracement',        separator: false, color: 'default' },
-  { id: 'rect',            icon: Square,        label: 'Rectangle (Hình chữ nhật)',    separator: false, color: 'default' },
-  { id: 'parallelChannel', icon: BarChart2,     label: 'Parallel Channel',             separator: true,  color: 'default' },
-  { id: 'text',            icon: Type,          label: 'Text Annotation',              separator: false, color: 'default' },
-  { id: 'clear',           icon: Scissors,      label: 'Xóa toàn bộ nét vẽ',          separator: false, color: 'red'     },
+  { id: 'cursor',                   icon: Crosshair,         label: 'Con trỏ',                      separator: true,  hasDropdown: true },
+  { id: 'segment',                  icon: TrendingUp,        label: 'Các công cụ Đường xu hướng',   separator: false, hasDropdown: true },
+  { id: 'fibonacciLine',            icon: AlignLeft,         label: 'Các công cụ Gann và Fibonacci',separator: false, hasDropdown: true },
+  { id: 'rect',                     icon: Share2,            label: 'Các Hình dạng Hình học',       separator: false, hasDropdown: true },
+  { id: 'xabcd',                    icon: Waypoints,         label: 'Các Mô hình (XABCD, Elliott...)',separator: false, hasDropdown: true },
+  { id: 'priceChannelLine',         icon: SlidersHorizontal, label: 'Công cụ Dự đoán và Đo lường',  separator: false, hasDropdown: true },
+  { id: 'rayLine',                  icon: Brush,             label: 'Cọ vẽ',                        separator: false, hasDropdown: true },
+  { id: 'simpleAnnotation',         icon: Type,              label: 'Công cụ Chú thích',            separator: false, hasDropdown: true },
+  { id: 'simpleTag',                icon: Smile,             label: 'Biểu tượng',                   separator: true,  hasDropdown: true },
+  { id: 'priceLine',                icon: Ruler,             label: 'Đo lường',                     separator: false, hasDropdown: false },
+  { id: 'zoomIn',                   icon: ZoomIn,            label: 'Phóng to',                     separator: true,  hasDropdown: false },
+  { id: 'magnet',                   icon: Magnet,            label: 'Chế độ Magnet',                separator: false, hasDropdown: true },
+  { id: 'stayInDrawing',            icon: PenTool,           label: 'Giữ ở Chế độ Vẽ',              separator: false, hasDropdown: false },
+  { id: 'lock',                     icon: Lock,              label: 'Khóa tất cả công cụ vẽ',       separator: false, hasDropdown: false },
+  { id: 'hide',                     icon: Eye,               label: 'Ẩn tất cả công cụ vẽ',         separator: true,  hasDropdown: true },
+  { id: 'clear',                    icon: Trash2,            label: 'Xóa công cụ vẽ',               separator: false, hasDropdown: true },
 ];
 
 interface LeftToolbarProps {
   activeTool: string;
-  onToolClick: (toolName: string) => void;
+  onToolSelect: (toolName: string) => void;
 }
 
-export const LeftToolbar = ({ activeTool, onToolClick }: LeftToolbarProps) => {
+export const LeftToolbar = ({ activeTool, onToolSelect }: LeftToolbarProps) => {
   return (
-    <div className="w-[50px] bg-[#131722] border-r border-[#2a2e39] flex flex-col items-center py-1 shrink-0">
+    <div className="w-[52px] bg-white dark:bg-[#1e222d] border-r border-[#e6e8ea] dark:border-[#2a2e39] flex flex-col items-center py-2 gap-1 shrink-0 overflow-y-auto hide-scrollbar z-10 transition-colors">
       {TOOLS.map((tool) => {
+        const Icon = tool.icon;
         const isActive = activeTool === tool.id && tool.id !== 'clear';
+        
         return (
           <div key={tool.id} className="w-full flex flex-col items-center">
             <button
+              onClick={() => onToolSelect(tool.id)}
               title={tool.label}
-              onClick={() => onToolClick(tool.id)}
-              className={`w-full flex justify-center p-2.5 transition-colors group relative ${
-                isActive
-                  ? 'text-blue-400 bg-blue-900/30'
-                  : tool.color === 'red'
-                  ? 'text-[#787b86] hover:text-red-400 hover:bg-red-900/20'
-                  : 'text-[#787b86] hover:text-blue-400 hover:bg-[#2a2e39]'
+              className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors group relative ${
+                isActive 
+                  ? 'bg-[#f0f3fa] dark:bg-[#2a2e39] text-[#131722] dark:text-[#d1d4dc]' 
+                  : 'text-[#787b86] hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] hover:text-[#131722] dark:hover:text-[#d1d4dc]'
               }`}
             >
-              {/* Active indicator */}
-              {isActive && (
-                <div className="absolute left-0 top-1 bottom-1 w-0.5 bg-blue-500 rounded-r" />
+              <Icon strokeWidth={1.5} className="w-[22px] h-[22px]" />
+              {tool.hasDropdown && (
+                <ChevronRight strokeWidth={2.5} className="w-[8px] h-[8px] absolute right-[2px] top-1/2 -translate-y-1/2 text-[#787b86]" />
               )}
-              <tool.icon className={`w-4 h-4 transition-transform ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
             </button>
-            {tool.separator && <div className="w-6 h-px bg-[#2a2e39] my-0.5" />}
+            {tool.separator && <div className="w-8 h-[1px] bg-[#e6e8ea] dark:bg-[#2a2e39] my-1 transition-colors" />}
           </div>
         );
       })}

@@ -9,11 +9,13 @@ interface RightSidebarProps {
   balance: number;
   onStockSelect: (stock: Stock) => void;
   onTrade: (type: 'buy' | 'sell' | 'close' | 'limit_buy' | 'limit_sell' | 'stop_buy' | 'stop_sell', price: number, margin: number, leverage: number, tp?: number, sl?: number) => Promise<{ success: boolean; message: string }>;
-  onUpdateTPSL: (tp?: number, sl?: number) => Promise<{ success: boolean; message: string }>;
-  onAddMargin?: (amount: number) => Promise<{ success: boolean; message: string }>;
+  onUpdateTPSL: (symbol: string, side: 'LONG' | 'SHORT', tp?: number, sl?: number) => Promise<{ success: boolean; message: string }>;
+  onAddMargin?: (symbol: string, side: 'LONG' | 'SHORT', amount: number) => Promise<{ success: boolean; message: string }>;
+  isEditing?: boolean;
+  onCancelEdit?: () => void;
 }
 
-export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect, onTrade, onUpdateTPSL, onAddMargin }: RightSidebarProps) => {
+export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect, onTrade, onUpdateTPSL, onAddMargin, isEditing, onCancelEdit }: RightSidebarProps) => {
   const { user, login } = useAuth();
   const [orderType, setOrderType] = useState<'market' | 'limit' | 'stop'>('market');
   const [limitPriceStr, setLimitPriceStr] = useState<string>('');
@@ -24,6 +26,13 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showTPSL, setShowTPSL] = useState(false);
+
+  // Force showTPSL when editing
+  useEffect(() => {
+    if (isEditing) {
+      setShowTPSL(true);
+    }
+  }, [isEditing]);
 
   // Bỏ sync price vì chỉ dùng Market Price
   useEffect(() => {
@@ -41,6 +50,18 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
   const showToast = (msg: string, ok: boolean) => {
     setToast({ msg, ok });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleUpdateTPSL = async () => {
+    if (!side) return;
+    const tpVal = tp ? parseFloat(tp) : undefined;
+    const slVal = sl ? parseFloat(sl) : undefined;
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    const res = await onUpdateTPSL(selectedStock.symbol, side, tpVal, slVal);
+    showToast(res.message, res.success);
+    setIsSubmitting(false);
+    if (res.success && onCancelEdit) onCancelEdit();
   };
 
   const handleTrade = async (type: 'buy' | 'sell' | 'close') => {
@@ -81,12 +102,12 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
     }
 
     if (tpVal !== undefined) {
-       if (type === 'buy' && tpVal <= p) return alert('Chốt lời (TP) của lệnh LONG phải CAO HƠN giá mở lệnh');
-       if (type === 'sell' && tpVal >= p) return alert('Chốt lời (TP) của lệnh SHORT phải THẤP HƠN giá mở lệnh');
+      if (type === 'buy' && tpVal <= p) return alert('Chốt lời (TP) của lệnh LONG phải CAO HƠN giá mở lệnh');
+      if (type === 'sell' && tpVal >= p) return alert('Chốt lời (TP) của lệnh SHORT phải THẤP HƠN giá mở lệnh');
     }
     if (slVal !== undefined) {
-       if (type === 'buy' && slVal >= p) return alert('Cắt lỗ (SL) của lệnh LONG phải THẤP HƠN giá mở lệnh');
-       if (type === 'sell' && slVal <= p) return alert('Cắt lỗ (SL) của lệnh SHORT phải CAO HƠN giá mở lệnh');
+      if (type === 'buy' && slVal >= p) return alert('Cắt lỗ (SL) của lệnh LONG phải THẤP HƠN giá mở lệnh');
+      if (type === 'sell' && slVal <= p) return alert('Cắt lỗ (SL) của lệnh SHORT phải CAO HƠN giá mở lệnh');
     }
 
     if (m <= 0) {
@@ -97,9 +118,9 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
     if (isSubmitting) return;
     setIsSubmitting(true);
 
-    const tradeType = orderType === 'market' ? type : 
-                      orderType === 'limit' ? (type === 'buy' ? 'limit_buy' : 'limit_sell') : 
-                                              (type === 'buy' ? 'stop_buy' : 'stop_sell');
+    const tradeType = orderType === 'market' ? type :
+      orderType === 'limit' ? (type === 'buy' ? 'limit_buy' : 'limit_sell') :
+        (type === 'buy' ? 'stop_buy' : 'stop_sell');
     const result = await onTrade(tradeType, p, requiredMargin, leverage, tpVal, slVal);
     showToast(result.message, result.success);
     setIsSubmitting(false);
@@ -147,8 +168,8 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
             key={stock.symbol}
             onClick={() => { onStockSelect(stock); }}
             className={`flex items-center px-3 py-2 text-xs cursor-pointer transition-colors border-b border-[#2a2e39]/40 ${selectedStock.symbol === stock.symbol
-                ? 'bg-blue-900/20 border-l-2 border-l-blue-500'
-                : 'hover:bg-[#1e222d]'
+              ? 'bg-blue-900/20 border-l-2 border-l-blue-500'
+              : 'hover:bg-[#1e222d]'
               }`}
           >
             <div className="flex-1 flex flex-col">
@@ -183,25 +204,31 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
           {/* Order type */}
           <div className="flex gap-1.5 text-xs font-semibold pb-1">
             <button
-              onClick={() => setOrderType('market')}
+              onClick={() => { if (!isEditing) setOrderType('market'); }}
               className={`flex-1 py-1.5 rounded uppercase transition-colors ${
-                orderType === 'market' ? 'bg-blue-600 text-white' : 'bg-[#1e222d] text-[#787b86] hover:text-[#d1d4dc]'
+                orderType === 'market' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#d1d4dc]')
               }`}
             >
               Thị trường
             </button>
             <button
-              onClick={() => setOrderType('limit')}
+              onClick={() => { if (!isEditing) setOrderType('limit'); }}
               className={`flex-1 py-1.5 rounded uppercase transition-colors ${
-                orderType === 'limit' ? 'bg-blue-600 text-white' : 'bg-[#1e222d] text-[#787b86] hover:text-[#d1d4dc]'
+                orderType === 'limit' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#d1d4dc]')
               }`}
             >
               Limit
             </button>
             <button
-              onClick={() => setOrderType('stop')}
+              onClick={() => { if (!isEditing) setOrderType('stop'); }}
               className={`flex-1 py-1.5 rounded uppercase transition-colors ${
-                orderType === 'stop' ? 'bg-blue-600 text-white' : 'bg-[#1e222d] text-[#787b86] hover:text-[#d1d4dc]'
+                orderType === 'stop' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#d1d4dc]')
               }`}
             >
               Stop
@@ -211,31 +238,44 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
           {/* Price & Qty inputs */}
           <div className="flex gap-2">
             <div className="flex flex-col gap-1 flex-1">
-              <label className="text-[10px] text-[#787b86] uppercase tracking-wider">Giá {orderType === 'market' ? '(Thị trường)' : '(VND)'}</label>
-              {orderType === 'market' ? (
+              <label className="text-[10px] text-[#787b86] uppercase tracking-wider">
+                {isEditing ? 'Giá vào lệnh' : `Giá ${orderType === 'market' ? '(Thị trường)' : '(VND)'}`}
+              </label>
+              {isEditing ? (
+                <div className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
+                  {avgPrice.toLocaleString('vi-VN')}
+                </div>
+              ) : orderType === 'market' ? (
                 <div className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
                   {selectedStock.price.toLocaleString('vi-VN')}
                 </div>
               ) : (
                 <input
                   type="number"
+                  disabled={isEditing}
                   value={limitPriceStr}
                   placeholder="VD: 112000"
                   onChange={e => setLimitPriceStr(e.target.value)}
-                  className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full"
+                  className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full disabled:opacity-50"
                 />
               )}
             </div>
 
             <div className="flex flex-col gap-1 flex-1">
               <label className="text-[10px] text-[#787b86] uppercase tracking-wider">Khối lượng (Lot)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={lotStr}
-                onChange={e => setLotStr(e.target.value)}
-                className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full"
-              />
+              {isEditing ? (
+                <div className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
+                  {(held / 100000).toLocaleString('vi-VN')}
+                </div>
+              ) : (
+                <input
+                  type="number"
+                  step="0.01"
+                  value={lotStr}
+                  onChange={e => setLotStr(e.target.value)}
+                  className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full"
+                />
+              )}
             </div>
           </div>
 
@@ -243,15 +283,16 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
           <div className="flex flex-col gap-1">
             <div className="flex justify-between items-center">
               <label className="text-[10px] text-[#787b86] uppercase tracking-wider">Đòn bẩy (Leverage)</label>
-              <span className="text-xs font-mono font-bold text-yellow-500">{leverage}x</span>
+              <span className="text-xs font-mono font-bold text-yellow-500">{isEditing ? posLeverage : leverage}x</span>
             </div>
             <input
               type="range"
               min="1"
               max="1000"
-              value={leverage}
+              value={isEditing ? posLeverage : leverage}
+              disabled={isEditing}
               onChange={e => setLev(parseInt(e.target.value))}
-              className="w-full accent-yellow-500"
+              className="w-full accent-yellow-500 disabled:opacity-50"
             />
           </div>
 
@@ -261,6 +302,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
               type="checkbox"
               id="toggle-tpsl"
               checked={showTPSL}
+              disabled={isEditing}
               onChange={(e) => {
                 setShowTPSL(e.target.checked);
                 if (!e.target.checked) {
@@ -337,23 +379,42 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
             <span className="font-mono text-[#787b86]">{actualQty.toLocaleString('vi-VN')}</span>
           </div>
 
-          {/* Buy / Sell buttons */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleTrade('buy')}
-              disabled={isSubmitting}
-              className="flex-1 bg-[#089981] hover:bg-[#089981]/80 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded text-sm transition-all"
-            >
-              LONG
-            </button>
-            <button
-              onClick={() => handleTrade('sell')}
-              disabled={isSubmitting}
-              className="flex-1 bg-[#f23645] hover:bg-[#f23645]/80 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded text-sm transition-all"
-            >
-              SHORT
-            </button>
-          </div>
+          {/* Buttons */}
+          {isEditing ? (
+            <div className="flex gap-2">
+              <button
+                onClick={onCancelEdit}
+                disabled={isSubmitting}
+                className="flex-1 bg-[#2a2e39] hover:bg-[#363a45] text-white font-bold py-2.5 rounded text-sm transition-all"
+              >
+                HỦY SỬA
+              </button>
+              <button
+                onClick={handleUpdateTPSL}
+                disabled={isSubmitting}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold py-2.5 rounded text-sm transition-all"
+              >
+                LƯU CẬP NHẬT
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleTrade('buy')}
+                disabled={isSubmitting}
+                className="flex-1 bg-[#089981] hover:bg-[#089981]/80 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded text-sm transition-all"
+              >
+                LONG
+              </button>
+              <button
+                onClick={() => handleTrade('sell')}
+                disabled={isSubmitting}
+                className="flex-1 bg-[#f23645] hover:bg-[#f23645]/80 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded text-sm transition-all"
+              >
+                SHORT
+              </button>
+            </div>
+          )}
 
           {/* Toast notification */}
           {toast && (

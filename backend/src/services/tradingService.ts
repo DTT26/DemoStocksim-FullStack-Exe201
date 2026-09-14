@@ -11,7 +11,7 @@ export class TradingService {
   // 1. MỞ VỊ THẾ LONG (Cược giá lên)
   static async openLong(userId: string, symbol: string, margin: number, leverage: number, currentPrice: number, stopLoss?: number, takeProfit?: number) {
     if (margin <= 0) throw new Error("Ký quỹ (Margin) phải lớn hơn 0");
-    if (leverage < 1 || leverage > 1000) throw new Error("Đòn bẩy không hợp lệ");
+    if (leverage < 1 || leverage > 125) throw new Error("Đòn bẩy không hợp lệ");
 
     const marginRequired = margin;
     const quantity = (margin * leverage) / currentPrice;
@@ -58,7 +58,7 @@ export class TradingService {
   // 2. MỞ VỊ THẾ SHORT (Cược giá xuống)
   static async openShort(userId: string, symbol: string, margin: number, leverage: number, currentPrice: number, stopLoss?: number, takeProfit?: number) {
     if (margin <= 0) throw new Error("Ký quỹ (Margin) phải lớn hơn 0");
-    if (leverage < 1 || leverage > 1000) throw new Error("Đòn bẩy không hợp lệ");
+    if (leverage < 1 || leverage > 125) throw new Error("Đòn bẩy không hợp lệ");
 
     const marginRequired = margin;
     const quantity = (margin * leverage) / currentPrice;

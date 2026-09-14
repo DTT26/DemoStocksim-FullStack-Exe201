@@ -24,28 +24,28 @@ function App() {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div className="h-screen w-screen flex items-center justify-center bg-[#0b0e14]">Loading...</div>;
+    return <div className="h-screen w-screen flex items-center justify-center bg-white dark:bg-[#0b0e14] text-[#1e2329] dark:text-white transition-colors">Loading...</div>;
   }
 
   return (
     <Routes>
       {/* Route for Trading Terminal (Isolated) */}
       <Route path="/trade/:simulationId" element={
-        <div className="h-screen w-screen bg-[#131722] overflow-hidden flex flex-col text-slate-200">
+        <div className="h-screen w-screen bg-white dark:bg-[#131722] overflow-hidden flex flex-col text-[#1e2329] dark:text-slate-200 transition-colors">
           <TradingTerminal />
         </div>
       } />
-      
+
       {/* App Shell Routes */}
       <Route path="/" element={<AppLayout />}>
         {/* Default route based on role */}
         <Route index element={
-          !user ? <Navigate to="/trade/sim-01" /> :
+          !user ? <Navigate to="/trade/fpt" /> :
           user.role === 'admin' ? <Navigate to="/admin" /> : 
           user.role === 'lecturer' ? <Navigate to="/lecturer" /> : 
           <Navigate to="/student" />
         } />
-        
+
         {/* Student Routes */}
         <Route element={<ProtectedRoute allowedRoles={['student']} />}>
           <Route path="student">
@@ -55,7 +55,7 @@ function App() {
             <Route path="performance" element={<StudentPerformance />} />
           </Route>
         </Route>
-        
+
         {/* Shared Routes (require login but any role) */}
         <Route element={<ProtectedRoute />}>
           <Route path="simulations">
@@ -64,7 +64,7 @@ function App() {
           </Route>
           <Route path="leaderboard" element={<Leaderboard />} />
         </Route>
-        
+
         {/* Lecturer Routes */}
         <Route element={<ProtectedRoute allowedRoles={['lecturer']} />}>
           <Route path="lecturer">
@@ -74,7 +74,7 @@ function App() {
             <Route path="students" element={<LecturerStudents />} />
           </Route>
         </Route>
-        
+
         {/* Admin Routes */}
         <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
           <Route path="admin">

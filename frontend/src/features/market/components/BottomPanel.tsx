@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 import { STOCKS } from '../data';
 import { tradingApi } from '../../../services/tradingApi';
 
@@ -19,6 +20,7 @@ interface BottomPanelProps {
   onCancelOrder: (orderId: string) => Promise<void>;
   onUpdateTPSL: (symbol: string, side: 'LONG' | 'SHORT', tp?: number, sl?: number) => Promise<{ success: boolean; message: string }>;
   onAddMargin: (symbol: string, side: 'LONG' | 'SHORT', amount: number) => Promise<{ success: boolean; message: string }>;
+  onEditPosition: (symbol: string) => void;
   refreshTrigger: number;
 }
 
@@ -31,10 +33,13 @@ export const BottomPanel = ({
   onCancelOrder,
   onUpdateTPSL,
   onAddMargin,
+  onEditPosition,
   refreshTrigger
 }: BottomPanelProps) => {
   const [activeTab, setActiveTab] = useState<'positions' | 'orders' | 'history'>('positions');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  
+  const [addingMargin, setAddingMargin] = useState<{symbol: string, side: 'LONG'|'SHORT', amount: string} | null>(null);
 
   useEffect(() => {
     if (activeTab === 'history') {
@@ -55,7 +60,7 @@ export const BottomPanel = ({
   const posList = Object.entries(positions).map(([symbol, pos]) => {
     const isSelected = symbol === selectedSymbol;
     const price = isSelected ? currentPrice : (STOCKS.find(s => s.symbol === symbol)?.price || 0);
-    
+
     let pnl = 0;
     if (pos.side === 'LONG') {
       pnl = (price - pos.averagePrice) * pos.quantity;
@@ -123,14 +128,8 @@ export const BottomPanel = ({
                     <td className="px-4 py-2 font-mono">{pos.price.toLocaleString('vi-VN')}</td>
                     <td className="px-4 py-2 font-mono">
                       {pos.margin.toLocaleString('vi-VN')}
-                      <button onClick={async () => {
-                        const ans = window.prompt(`Nhập số tiền VNĐ muốn bơm thêm vào ${pos.symbol}:`);
-                        if (!ans) return;
-                        const amount = parseInt(ans, 10);
-                        if (!isNaN(amount) && amount > 0) {
-                          const res = await onAddMargin(pos.symbol, pos.side, amount);
-                          alert(res.message);
-                        }
+                      <button onClick={() => {
+                        setAddingMargin({ symbol: pos.symbol, side: pos.side, amount: '' });
                       }} className="ml-2 text-blue-400 hover:text-blue-300">+</button>
                     </td>
                     <td className={`px-4 py-2 font-mono font-semibold ${pos.pnlColor}`}>
@@ -138,14 +137,7 @@ export const BottomPanel = ({
                     </td>
                     <td className="px-4 py-2 font-mono text-[#787b86]">
                       {pos.tp || '-'} / {pos.sl || '-'}
-                      <button onClick={async () => {
-                        const newTp = window.prompt(`Nhập giá Chốt lời (TP) cho ${pos.symbol}:`, pos.tp?.toString() || '');
-                        const newSl = window.prompt(`Nhập giá Cắt lỗ (SL) cho ${pos.symbol}:`, pos.sl?.toString() || '');
-                        if (newTp !== null && newSl !== null) {
-                           const res = await onUpdateTPSL(pos.symbol, pos.side, parseFloat(newTp) || undefined, parseFloat(newSl) || undefined);
-                           alert(res.message);
-                        }
-                      }} className="ml-2 text-blue-400 hover:text-blue-300">Sửa</button>
+                      <button onClick={() => onEditPosition(pos.symbol)} className="ml-2 text-blue-400 hover:text-blue-300">Sửa</button>
                     </td>
                     <td className="px-4 py-2 text-right">
                       <button onClick={async () => {
@@ -215,10 +207,9 @@ export const BottomPanel = ({
                     <tr key={tx._id} className="hover:bg-[#1e222d] transition-colors">
                       <td className="px-4 py-2 text-[#787b86]">{new Date(tx.createdAt).toLocaleString('vi-VN')}</td>
                       <td className="px-4 py-2">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          tx.type.includes('BUY') ? 'bg-[#f23645]/20 text-[#f23645]' : 
-                          tx.type.includes('SELL') ? 'bg-[#089981]/20 text-[#089981]' : 'bg-blue-500/20 text-blue-400'
-                        }`}>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${tx.type.includes('BUY') ? 'bg-[#f23645]/20 text-[#f23645]' :
+                            tx.type.includes('SELL') ? 'bg-[#089981]/20 text-[#089981]' : 'bg-blue-500/20 text-blue-400'
+                          }`}>
                           {tx.type.replace('_STOCK', '')}
                         </span>
                       </td>
@@ -234,6 +225,55 @@ export const BottomPanel = ({
           </table>
         )}
       </div>
+
+      {/* Add Margin Modal */}
+      {addingMargin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#1e222d] rounded-xl w-[320px] p-5 shadow-2xl border border-[#2a2e39]">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-white font-semibold">Thêm ký quỹ ({addingMargin.symbol})</h3>
+              <button onClick={() => setAddingMargin(null)} className="text-[#787b86] hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[#787b86] text-xs mb-1">Số tiền muốn bơm thêm (VNĐ)</label>
+                <input 
+                  type="number" 
+                  value={addingMargin.amount}
+                  onChange={e => setAddingMargin({...addingMargin, amount: e.target.value})}
+                  className="w-full bg-[#131722] border border-[#2a2e39] rounded px-3 py-2 text-white focus:outline-none focus:border-[#2962ff] font-mono text-sm"
+                  placeholder="Ví dụ: 1000000"
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button 
+                onClick={() => setAddingMargin(null)}
+                className="flex-1 py-2 rounded font-medium text-[#d1d4dc] bg-[#2a2e39] hover:bg-[#363a45] transition-colors"
+              >
+                Hủy
+              </button>
+              <button 
+                onClick={async () => {
+                  const amt = parseInt(addingMargin.amount, 10);
+                  if (!isNaN(amt) && amt > 0) {
+                    const res = await onAddMargin(addingMargin.symbol, addingMargin.side, amt);
+                    alert(res.message);
+                    if (res.success) setAddingMargin(null);
+                  }
+                }}
+                className="flex-1 py-2 rounded font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+              >
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
