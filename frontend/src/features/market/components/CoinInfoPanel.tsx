@@ -18,11 +18,11 @@ export const CoinInfoPanel = ({ stock }: CoinInfoPanelProps) => {
   }
 
   return (
-    <div className="flex-1 bg-white dark:bg-[#131722] overflow-y-auto p-6 text-sm text-[#1e2329] dark:text-[#d1d4dc] transition-colors">
-      <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-12">
+    <div className="flex-1 bg-white dark:bg-[#131722] overflow-y-auto px-4 py-5 md:px-6 text-sm text-[#1e2329] dark:text-[#d1d4dc] transition-colors">
+      <div className="w-full flex flex-col md:flex-row gap-8 lg:gap-12">
         {/* Left Column: Stats */}
         <div className="flex-1 space-y-6">
-          <div className="space-y-4">
+          <div className="space-y-2">
             <h1 className="text-[20px] font-semibold text-[#1e2329] dark:text-white">
               {data.name}
             </h1>
@@ -31,63 +31,63 @@ export const CoinInfoPanel = ({ stock }: CoinInfoPanelProps) => {
             </p>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex justify-between items-center py-2">
+          <div className="space-y-3">
+            <div className="flex justify-between items-center py-2 border-b border-[#f0f3f6] dark:border-[#2a2e39]/50">
               <span className="text-[#787b86]">Thứ Hạng Vốn Hóa</span>
               <span className="font-semibold text-[#1e2329] dark:text-white">{data.rank || '--'}</span>
             </div>
-            <div className="flex justify-between items-center py-2">
+            <div className="flex justify-between items-center py-2 border-b border-[#f0f3f6] dark:border-[#2a2e39]/50">
               <span className="text-[#787b86]">Vốn Hóa Lưu Thông</span>
               <span className="font-semibold text-[#1e2329] dark:text-white">{data.marketCap || '--'}</span>
             </div>
-            <div className="flex justify-between items-center py-2">
+            <div className="flex justify-between items-center py-2 border-b border-[#f0f3f6] dark:border-[#2a2e39]/50">
               <span className="text-[#787b86]">Vốn Hóa Thị Trường Pha Loãng Hoàn Toàn</span>
               <span className="font-semibold text-[#1e2329] dark:text-white">{data.fullyDilutedValuation || '--'}</span>
             </div>
-            <div className="flex justify-between items-center py-2">
+            <div className="flex justify-between items-center py-2 border-b border-[#f0f3f6] dark:border-[#2a2e39]/50">
               <span className="text-[#787b86]">Thống Trị Thị Trường</span>
               <span className="font-semibold text-[#1e2329] dark:text-white">{data.marketDominance || '--'}</span>
             </div>
-            <div className="flex justify-between items-center py-2">
+            <div className="flex justify-between items-center py-2 border-b border-[#f0f3f6] dark:border-[#2a2e39]/50">
               <span className="text-[#787b86]">Nguồn Cung Lưu Thông</span>
               <span className="font-semibold text-[#1e2329] dark:text-white">{data.circulatingSupply || '--'}</span>
             </div>
-            <div className="flex justify-between items-center py-2">
+            <div className="flex justify-between items-center py-2 border-b border-[#f0f3f6] dark:border-[#2a2e39]/50">
               <span className="text-[#787b86]">Nguồn Cung Tối Đa</span>
               <span className="font-semibold text-[#1e2329] dark:text-white">{data.maxSupply || '--'}</span>
             </div>
-            <div className="flex justify-between items-center py-2">
+            <div className="flex justify-between items-center py-2 border-b border-[#f0f3f6] dark:border-[#2a2e39]/50">
               <span className="text-[#787b86]">Tổng Nguồn Cung</span>
-              <span className="font-semibold text-white">{data.totalSupply || '--'}</span>
+              <span className="font-semibold text-[#1e2329] dark:text-white">{data.totalSupply || '--'}</span>
             </div>
-            <div className="flex justify-between items-center py-2">
+            <div className="flex justify-between items-center py-2 border-b border-[#f0f3f6] dark:border-[#2a2e39]/50">
               <span className="text-[#787b86]">Ngày Cấp</span>
-              <span className="font-semibold text-white">{data.issueDate || '--'}</span>
+              <span className="font-semibold text-[#1e2329] dark:text-white">{data.issueDate || '--'}</span>
             </div>
-            <div className="flex justify-between items-center py-2">
+            <div className="flex justify-between items-center py-2 border-b border-[#f0f3f6] dark:border-[#2a2e39]/50">
               <span className="text-[#787b86]">Đỉnh Cao Nhất</span>
-              <span className="font-semibold text-white">{data.allTimeHigh || '--'}</span>
+              <span className="font-semibold text-[#1e2329] dark:text-white">{data.allTimeHigh || '--'}</span>
             </div>
             <div className="flex justify-between items-center py-2">
               <span className="text-[#787b86]">Đáy Thấp Nhất</span>
-              <span className="font-semibold text-white">{data.allTimeLow || '--'}</span>
+              <span className="font-semibold text-[#1e2329] dark:text-white">{data.allTimeLow || '--'}</span>
             </div>
             
-            <div className="pt-2">
-              <span className="text-[#787b86] block mb-3">Liên kết liên quan</span>
+            <div className="pt-3">
+              <span className="text-[#787b86] block mb-2.5">Liên kết liên quan</span>
               <div className="flex flex-wrap gap-2">
                 {data.website && (
-                  <a href={data.website} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2a2e39] text-[#d1d4dc] rounded hover:bg-[#363a45] transition-colors text-xs font-medium">
+                  <a href={data.website} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-[#f0f3f6] dark:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc] rounded hover:bg-[#e2e8f0] dark:hover:bg-[#363a45] transition-colors text-xs font-medium">
                     Trang web chính thức <ArrowUpRight className="w-3.5 h-3.5 text-[#787b86]" />
                   </a>
                 )}
                 {data.whitepaper && (
-                  <a href={data.whitepaper} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2a2e39] text-[#d1d4dc] rounded hover:bg-[#363a45] transition-colors text-xs font-medium">
+                  <a href={data.whitepaper} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-[#f0f3f6] dark:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc] rounded hover:bg-[#e2e8f0] dark:hover:bg-[#363a45] transition-colors text-xs font-medium">
                     Sách Trắng <ArrowUpRight className="w-3.5 h-3.5 text-[#787b86]" />
                   </a>
                 )}
                 {data.explorer && (
-                  <a href={data.explorer} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2a2e39] text-[#d1d4dc] rounded hover:bg-[#363a45] transition-colors text-xs font-medium">
+                  <a href={data.explorer} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-[#f0f3f6] dark:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc] rounded hover:bg-[#e2e8f0] dark:hover:bg-[#363a45] transition-colors text-xs font-medium">
                     Explorer <ArrowUpRight className="w-3.5 h-3.5 text-[#787b86]" />
                   </a>
                 )}
@@ -104,7 +104,7 @@ export const CoinInfoPanel = ({ stock }: CoinInfoPanelProps) => {
               Thêm
             </button>
           </div>
-          <p className="text-[#b2b5be] leading-relaxed text-[13px] text-justify whitespace-pre-line">
+          <p className="text-[#474d57] dark:text-[#b2b5be] leading-relaxed text-[13px] text-justify whitespace-pre-line">
             {data.introduction}
           </p>
         </div>

@@ -13,12 +13,19 @@ export interface FetchKlinesParams {
 // In-memory cache to avoid rate limits and speed up tab switching
 const klineCache = new Map<string, KLineData[]>();
 
+export const cleanBinanceSymbol = (symbol: string): string => {
+  let s = symbol.replace('.P', '').replace('.SWAP', '');
+  if (s.endsWith('USD') && !s.endsWith('USDT')) {
+    s = s + 'T';
+  }
+  return s;
+};
+
 /**
  * Lấy dữ liệu OHLCV từ Binance (Spot hoặc Futures)
  */
 export const fetchBinanceKlines = async ({ symbol, interval, limit = 500, isFutures = false, endTime }: FetchKlinesParams): Promise<KLineData[]> => {
-  // Bỏ hậu tố .P nếu có (dành cho Futures của app)
-  const cleanSymbol = symbol.replace('.P', '');
+  const cleanSymbol = cleanBinanceSymbol(symbol);
   
   const cacheKey = `${cleanSymbol}-${interval}-${isFutures ? 'futures' : 'spot'}-${limit}-${endTime || 'latest'}`;
   
@@ -39,6 +46,9 @@ export const fetchBinanceKlines = async ({ symbol, interval, limit = 500, isFutu
     }
 
     const data: any[][] = await response.json();
+    if (!Array.isArray(data)) {
+      return [];
+    }
     
     // Binance format:
     // [0] Open time
@@ -56,11 +66,13 @@ export const fetchBinanceKlines = async ({ symbol, interval, limit = 500, isFutu
       volume: parseFloat(candle[5]),
     }));
 
-    klineCache.set(cacheKey, formattedData);
+    if (formattedData.length > 0) {
+      klineCache.set(cacheKey, formattedData);
+    }
     return formattedData;
 
   } catch (error) {
-    console.error('Failed to fetch Binance klines:', error);
+    console.warn(`Binance fetch failed for ${cleanSymbol}:`, error);
     return [];
   }
 };
@@ -92,38 +104,45 @@ export const subscribeBinanceKline = (
   isFutures: boolean,
   callback: (kline: KLineData) => void
 ): (() => void) => {
-  const cleanSymbol = symbol.replace('.P', '').toLowerCase();
+  const cleanSymbol = cleanBinanceSymbol(symbol).toLowerCase();
   const wsUrl = isFutures
     ? `wss://fstream.binance.com/ws/${cleanSymbol}@kline_${interval}`
     : `wss://stream.binance.com:9443/ws/${cleanSymbol}@kline_${interval}`;
 
-  const ws = new WebSocket(wsUrl);
+  let ws: WebSocket | null = null;
+  try {
+    ws = new WebSocket(wsUrl);
 
-  ws.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      if (data.e === 'kline' && data.k) {
-        const k = data.k;
-        const newCandle: KLineData = {
-          timestamp: k.t,
-          open: parseFloat(k.o),
-          high: parseFloat(k.h),
-          low: parseFloat(k.l),
-          close: parseFloat(k.c),
-          volume: parseFloat(k.v),
-        };
-        callback(newCandle);
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.e === 'kline' && data.k) {
+          const k = data.k;
+          const newCandle: KLineData = {
+            timestamp: k.t,
+            open: parseFloat(k.o),
+            high: parseFloat(k.h),
+            low: parseFloat(k.l),
+            close: parseFloat(k.c),
+            volume: parseFloat(k.v),
+          };
+          callback(newCandle);
+        }
+      } catch (err) {
+        console.error('WebSocket parse error:', err);
       }
-    } catch (err) {
-      console.error('WebSocket parse error:', err);
-    }
-  };
+    };
 
-  ws.onerror = (err) => {
-    console.error('Binance WebSocket Error:', err);
-  };
+    ws.onerror = (err) => {
+      console.warn('Binance WebSocket Error:', err);
+    };
+  } catch (e) {
+    console.warn('Could not establish WebSocket for', cleanSymbol, e);
+  }
 
   return () => {
-    ws.close();
+    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+      ws.close();
+    }
   };
 };

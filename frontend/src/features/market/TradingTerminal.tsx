@@ -44,7 +44,10 @@ export const TradingTerminal = () => {
 
   // Bar Replay state
   const [isReplaying, setIsReplaying] = useState(false);
+  const [isSelectingReplayStart, setIsSelectingReplayStart] = useState(false);
   const [replayIndex, setReplayIndex] = useState(0);
+  const [totalBars, setTotalBars] = useState(1000);
+  const [goToRealtimeTrigger, setGoToRealtimeTrigger] = useState(0);
 
   const handleToolClick = (toolName: string) => {
     setActiveTool(toolName === activeTool && toolName !== 'cursor' ? activeTool : toolName);
@@ -52,8 +55,9 @@ export const TradingTerminal = () => {
 
   const handleStockSelect = (stock: Stock) => {
     setSelectedStock(stock);
-    if (isReplaying) {
+    if (isReplaying || isSelectingReplayStart) {
       setIsReplaying(false);
+      setIsSelectingReplayStart(false);
       setReplayIndex(0);
     }
   };
@@ -219,9 +223,28 @@ export const TradingTerminal = () => {
     }
   }, [selectedStock.price, positions, selectedStock.symbol]);
 
-  const handleStartReplay = (fromIndex: number) => {
+  const handleStartReplaySelection = () => {
+    setIsSelectingReplayStart(true);
+    setIsReplaying(false);
+  };
+
+  const handleCancelReplaySelection = () => {
+    setIsSelectingReplayStart(false);
+  };
+
+  const handleConfirmReplayStart = (fromIndex: number) => {
     setReplayIndex(fromIndex);
+    setIsSelectingReplayStart(false);
     setIsReplaying(true);
+  };
+
+  const handleGoToRealtime = () => {
+    if (isReplaying || isSelectingReplayStart) {
+      setIsReplaying(false);
+      setIsSelectingReplayStart(false);
+      setReplayIndex(0);
+    }
+    setGoToRealtimeTrigger(t => t + 1);
   };
 
   const handleReplayNext = () => {
@@ -248,10 +271,14 @@ export const TradingTerminal = () => {
             activeTimeframe={activeTimeframe}
             onTimeframeChange={setActiveTimeframe}
             isReplaying={isReplaying}
+            isSelectingReplayStart={isSelectingReplayStart}
             replayIndex={replayIndex}
-            onStartReplay={handleStartReplay}
+            totalBars={totalBars}
+            onStartReplay={handleStartReplaySelection}
+            onCancelReplay={handleCancelReplaySelection}
             onReplayNext={handleReplayNext}
             onStopReplay={handleStopReplay}
+            onGoToRealtime={handleGoToRealtime}
             onOpenSearch={() => setIsSearchModalOpen(true)}
             onOpenIndicator={() => setIsIndicatorModalOpen(true)}
             activeIndicatorCount={activeIndicators.length}
@@ -265,7 +292,11 @@ export const TradingTerminal = () => {
                   selectedStock={selectedStock}
                   activeTimeframe={activeTimeframe}
                   isReplaying={isReplaying}
+                  isSelectingReplayStart={isSelectingReplayStart}
+                  onSelectReplayStart={handleConfirmReplayStart}
                   replayIndex={replayIndex}
+                  goToRealtimeTrigger={goToRealtimeTrigger}
+                  onDataLoaded={setTotalBars}
                   tradeOrders={tradeOrders.filter(o => o.symbol === selectedStock.symbol)}
                   activeIndicators={activeIndicators}
                   activePosition={positions[selectedStock.symbol] as any}

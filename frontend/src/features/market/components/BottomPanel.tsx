@@ -56,12 +56,12 @@ export const BottomPanel = ({ refreshTrigger, positions, currentStock, onClosePo
     { id: 'fund_flow', label: 'Lịch sử dòng vốn' },
   ];
 
-  const posList = Object.keys(positions).map(k => ({ symbol: k, ...positions[k] }));
+  const posList = Object.values(positions);
 
   return (
-    <div className="h-64 border-t border-[#2a2e39] bg-[#0b0e11] flex flex-col shrink-0 overflow-hidden text-xs text-[#787b86]">
+    <div className="h-64 border-t border-[#e6e8ea] dark:border-[#2a2e39] bg-white dark:bg-[#0b0e11] flex flex-col shrink-0 overflow-hidden text-xs text-[#787b86] transition-colors">
       {/* Header Tabs */}
-      <div className="flex items-center justify-between border-b border-[#2a2e39] px-2 h-10 shrink-0">
+      <div className="flex items-center justify-between border-b border-[#e6e8ea] dark:border-[#2a2e39] px-2 h-10 shrink-0">
         <div className="flex items-center gap-6 h-full">
           {tabs.map(tab => (
             <button
@@ -69,8 +69,8 @@ export const BottomPanel = ({ refreshTrigger, positions, currentStock, onClosePo
               onClick={() => setActiveTab(tab.id)}
               className={`h-full relative font-medium transition-colors ${
                 activeTab === tab.id 
-                  ? 'text-white' 
-                  : 'hover:text-[#d1d4dc]'
+                  ? 'text-[#1e2329] dark:text-white' 
+                  : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'
               }`}
             >
               {tab.label}
@@ -82,7 +82,7 @@ export const BottomPanel = ({ refreshTrigger, positions, currentStock, onClosePo
         </div>
         
         <div className="flex items-center gap-4">
-          <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#d1d4dc] transition-colors">
+          <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#1e2329] dark:hover:text-[#d1d4dc] transition-colors">
             {currentPairOnly ? (
               <CheckSquare className="w-3.5 h-3.5 text-[#fcd535]" />
             ) : (
@@ -96,10 +96,10 @@ export const BottomPanel = ({ refreshTrigger, positions, currentStock, onClosePo
             />
             <span className="text-[11px]">Cặp hiện tại</span>
           </label>
-          <button className="hover:text-white transition-colors">
+          <button className="hover:text-[#1e2329] dark:hover:text-white transition-colors">
             <Settings2 className="w-4 h-4" />
           </button>
-          <button className="bg-[#2a2e39] hover:bg-[#363a45] text-white px-3 py-1 rounded text-[11px] font-medium transition-colors">
+          <button className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-white px-3 py-1 rounded text-[11px] font-medium transition-colors">
             Đóng toàn bộ
           </button>
         </div>
@@ -109,8 +109,8 @@ export const BottomPanel = ({ refreshTrigger, positions, currentStock, onClosePo
       <div className="flex-1 overflow-y-auto custom-scrollbar relative">
         {activeTab === 'positions' && (
           posList.length > 0 ? (
-            <table className="w-full text-left text-xs text-[#d1d4dc]">
-              <thead className="sticky top-0 bg-[#0b0e11] text-[#787b86] font-normal text-[11px]">
+            <table className="w-full text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
+              <thead className="sticky top-0 bg-[#f8f9fa] dark:bg-[#0b0e11] text-[#787b86] font-normal text-[11px] border-b border-[#e6e8ea] dark:border-transparent">
                 <tr>
                   <th className="px-4 py-2">Symbol</th>
                   <th className="px-4 py-2">Size</th>
@@ -122,7 +122,7 @@ export const BottomPanel = ({ refreshTrigger, positions, currentStock, onClosePo
                   <th className="px-4 py-2 text-center">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#2a2e39]/50">
+              <tbody className="divide-y divide-[#e6e8ea] dark:divide-[#2a2e39]/50">
                 {posList.map(p => {
                   const currentPrice = p.symbol === currentStock.symbol ? currentStock.price : (STOCKS.find(s => s.symbol === p.symbol)?.price || p.averagePrice);
                   const margin = (p.averagePrice * p.quantity) / p.leverage;
@@ -130,7 +130,7 @@ export const BottomPanel = ({ refreshTrigger, positions, currentStock, onClosePo
                   const roe = margin > 0 ? (pnl / margin) * 100 : 0;
                   
                   return (
-                    <tr key={p.symbol} className="hover:bg-[#1e222d] transition-colors">
+                    <tr key={p.symbol} className="hover:bg-[#f5f5f5] dark:hover:bg-[#1e222d] transition-colors">
                       <td className="px-4 py-2 font-bold">{p.symbol}</td>
                       <td className="px-4 py-2">{p.quantity.toLocaleString('vi-VN')}</td>
                       <td className="px-4 py-2">{p.averagePrice.toLocaleString('vi-VN')}</td>
@@ -144,7 +144,7 @@ export const BottomPanel = ({ refreshTrigger, positions, currentStock, onClosePo
                       <td className="px-4 py-2 text-center">
                         <button 
                           onClick={() => onClosePosition && onClosePosition(p.symbol)}
-                          className="bg-[#2a2e39] hover:bg-[#363a45] text-[#d1d4dc] hover:text-white px-3 py-1 rounded text-[11px] font-medium transition-colors"
+                          className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-[#d1d4dc] dark:hover:text-white px-3 py-1 rounded text-[11px] font-medium transition-colors"
                         >
                           Đóng lệnh
                         </button>
@@ -160,8 +160,8 @@ export const BottomPanel = ({ refreshTrigger, positions, currentStock, onClosePo
         )}
 
         {activeTab === 'trade_history' && (
-          <table className="w-full text-left text-xs text-[#d1d4dc]">
-            <thead className="sticky top-0 bg-[#0b0e11] text-[#787b86] font-normal text-[11px]">
+          <table className="w-full text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
+            <thead className="sticky top-0 bg-[#f8f9fa] dark:bg-[#0b0e11] text-[#787b86] font-normal text-[11px] border-b border-[#e6e8ea] dark:border-transparent">
               <tr>
                 <th className="px-4 py-2">Thời gian</th>
                 <th className="px-4 py-2">Loại</th>
@@ -169,7 +169,7 @@ export const BottomPanel = ({ refreshTrigger, positions, currentStock, onClosePo
                 <th className="px-4 py-2 text-right">Biến động (VND)</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#2a2e39]/50">
+            <tbody className="divide-y divide-[#e6e8ea] dark:divide-[#2a2e39]/50">
               {transactions.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-4 py-8 text-center text-[#787b86]">Không có giao dịch nào</td>
@@ -180,7 +180,7 @@ export const BottomPanel = ({ refreshTrigger, positions, currentStock, onClosePo
                   const colorClass = isPositive ? 'text-[#089981]' : 'text-[#f23645]';
                   const sign = isPositive ? '+' : '-';
                   return (
-                    <tr key={tx._id} className="hover:bg-[#1e222d] transition-colors">
+                    <tr key={tx._id} className="hover:bg-[#f5f5f5] dark:hover:bg-[#1e222d] transition-colors">
                       <td className="px-4 py-2 text-[#787b86]">
                         {new Date(tx.createdAt).toLocaleString('vi-VN')}
                       </td>
@@ -220,8 +220,8 @@ const EmptyState = () => (
     <div className="relative w-24 h-24 mb-4">
       <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full opacity-80">
         {/* Box/Folder base */}
-        <path d="M20 50 L50 65 L80 50 L80 80 L50 95 L20 80 Z" fill="#1e222d" stroke="#2a2e39" strokeWidth="2" strokeLinejoin="round"/>
-        <path d="M20 50 L50 35 L80 50 L50 65 Z" fill="#2a2e39" stroke="#363a45" strokeWidth="2" strokeLinejoin="round"/>
+        <path d="M20 50 L50 65 L80 50 L80 80 L50 95 L20 80 Z" className="fill-[#f8f9fa] dark:fill-[#1e222d] stroke-[#e6e8ea] dark:stroke-[#2a2e39]" strokeWidth="2" strokeLinejoin="round"/>
+        <path d="M20 50 L50 35 L80 50 L50 65 Z" className="fill-[#f0f3fa] dark:fill-[#2a2e39] stroke-[#e6e8ea] dark:stroke-[#363a45]" strokeWidth="2" strokeLinejoin="round"/>
         {/* Paper */}
         <path d="M35 35 L65 35 L65 55 L35 55 Z" fill="#ffffff" transform="matrix(0.866 0.5 -0.866 0.5 50 10)" opacity="0.9"/>
         {/* Dotted lines on paper */}
@@ -233,17 +233,17 @@ const EmptyState = () => (
       </svg>
     </div>
     
-    <div className="text-[#d1d4dc] font-semibold text-sm mb-1">Không có vị thế mở</div>
+    <div className="text-[#1e2329] dark:text-[#d1d4dc] font-semibold text-sm mb-1">Không có vị thế mở</div>
     <div className="text-[#787b86] text-[11px] mb-6">Thực hiện giao dịch live, giao dịch demo hoặc giao dịch sao chép</div>
     
     <div className="flex gap-3 pointer-events-auto">
-      <button className="bg-[#2a2e39] hover:bg-[#363a45] text-[#d1d4dc] px-4 py-1.5 rounded-full text-[11px] font-medium transition-colors">
+      <button className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-[#d1d4dc] dark:hover:text-white px-4 py-1.5 rounded-full text-[11px] font-medium transition-colors">
         Giao dịch Demo
       </button>
-      <button className="bg-[#2a2e39] hover:bg-[#363a45] text-[#d1d4dc] px-4 py-1.5 rounded-full text-[11px] font-medium transition-colors">
+      <button className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-[#d1d4dc] dark:hover:text-white px-4 py-1.5 rounded-full text-[11px] font-medium transition-colors">
         Giao Dịch Sao Chép
       </button>
-      <button className="bg-[#2a2e39] hover:bg-[#363a45] text-[#d1d4dc] px-4 py-1.5 rounded-full text-[11px] font-medium transition-colors">
+      <button className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-[#d1d4dc] dark:hover:text-white px-4 py-1.5 rounded-full text-[11px] font-medium transition-colors">
         Bot
       </button>
     </div>

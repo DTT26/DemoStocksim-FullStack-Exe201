@@ -210,7 +210,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
           <div className="flex flex-col gap-1 mt-1">
             <div className="flex justify-between items-center px-1">
               <label className="text-[10px] text-[#787b86] uppercase tracking-wider">Đòn bẩy</label>
-              <span className="text-xs font-mono font-bold text-white">{leverage}X</span>
+              <span className="text-xs font-mono font-bold text-[#1e2329] dark:text-white">{leverage}X</span>
             </div>
             
             <div className="relative mt-2 mb-5 mx-1">
@@ -222,7 +222,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                  onChange={e => setLev(parseInt(e.target.value))}
                  className="w-full h-[3px] appearance-none cursor-pointer relative z-10 bg-transparent custom-leverage-slider m-0 p-0 block"
                  style={{
-                   background: `linear-gradient(to right, white ${((leverage - 1) / (leverageInfo.max - 1)) * 100}%, #2a2e39 ${((leverage - 1) / (leverageInfo.max - 1)) * 100}%)`
+                   background: `linear-gradient(to right, var(--lev-fill) ${((leverage - 1) / (leverageInfo.max - 1)) * 100}%, var(--lev-bg) ${((leverage - 1) / (leverageInfo.max - 1)) * 100}%)`
                  }}
                />
                
@@ -234,8 +234,8 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                    style={{ left: '0%' }}
                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLev(1); }}
                  >
-                    <div className="w-2.5 h-2.5 rounded-full bg-white transition-transform group-hover:scale-125 shrink-0 mt-[10px]" />
-                    <span className="text-[10px] font-semibold text-white whitespace-nowrap mt-1">1X</span>
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#1e2329] dark:bg-white transition-transform group-hover:scale-125 shrink-0 mt-[10px]" />
+                    <span className="text-[10px] font-semibold text-[#1e2329] dark:text-white whitespace-nowrap mt-1">1X</span>
                  </div>
                  
                  {leverageInfo.marks.map(m => {
@@ -248,8 +248,8 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                        style={{ left: `${percent}%` }}
                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLev(m); }}
                      >
-                       <div className={`w-2.5 h-2.5 rounded-full transition-transform group-hover:scale-125 shrink-0 mt-[10px] ${isActive ? 'bg-white' : 'bg-[#2a2e39]'}`} />
-                       <span className={`text-[10px] font-semibold whitespace-nowrap mt-1 transition-colors ${isActive ? 'text-[#d1d4dc] group-hover:text-white' : 'text-[#787b86] group-hover:text-white'}`}>
+                       <div className={`w-2.5 h-2.5 rounded-full transition-transform group-hover:scale-125 shrink-0 mt-[10px] ${isActive ? 'bg-[#1e2329] dark:bg-white' : 'bg-[#e6e8ea] dark:bg-[#2a2e39]'}`} />
+                       <span className={`text-[10px] font-semibold whitespace-nowrap mt-1 transition-colors ${isActive ? 'text-[#1e2329] dark:text-[#d1d4dc] group-hover:text-black dark:group-hover:text-white' : 'text-[#787b86] group-hover:text-[#1e2329] dark:group-hover:text-white'}`}>
                          {m}X
                        </span>
                      </div>
