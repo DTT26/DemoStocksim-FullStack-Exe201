@@ -205,31 +205,28 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
           <div className="flex gap-1.5 text-xs font-semibold pb-1">
             <button
               onClick={() => { if (!isEditing) setOrderType('market'); }}
-              className={`flex-1 py-1.5 rounded uppercase transition-colors ${
-                orderType === 'market' 
-                  ? 'bg-blue-600 text-white' 
+              className={`flex-1 py-1.5 rounded uppercase transition-colors ${orderType === 'market'
+                  ? 'bg-blue-600 text-white'
                   : 'bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#d1d4dc]')
-              }`}
+                }`}
             >
               Thị trường
             </button>
             <button
               onClick={() => { if (!isEditing) setOrderType('limit'); }}
-              className={`flex-1 py-1.5 rounded uppercase transition-colors ${
-                orderType === 'limit' 
-                  ? 'bg-blue-600 text-white' 
+              className={`flex-1 py-1.5 rounded uppercase transition-colors ${orderType === 'limit'
+                  ? 'bg-blue-600 text-white'
                   : 'bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#d1d4dc]')
-              }`}
+                }`}
             >
               Limit
             </button>
             <button
               onClick={() => { if (!isEditing) setOrderType('stop'); }}
-              className={`flex-1 py-1.5 rounded uppercase transition-colors ${
-                orderType === 'stop' 
-                  ? 'bg-blue-600 text-white' 
+              className={`flex-1 py-1.5 rounded uppercase transition-colors ${orderType === 'stop'
+                  ? 'bg-blue-600 text-white'
                   : 'bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#d1d4dc]')
-              }`}
+                }`}
             >
               Stop
             </button>
