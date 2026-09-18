@@ -6,7 +6,10 @@ import { AssetAvatar, ExchangeBadge } from './AssetAvatar';
 interface SymbolSearchModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (stock: Stock) => void;
+  onSelect?: (stock: Stock) => void;
+  watchlistMode?: boolean;
+  activeWatchlistSymbols?: string[];
+  onToggleWatchlist?: (symbol: string) => void;
 }
 
 const CATEGORIES: ('Tất cả' | MarketCategory)[] = [
@@ -18,7 +21,7 @@ const CATEGORIES: ('Tất cả' | MarketCategory)[] = [
   'Chỉ số'
 ];
 
-export const SymbolSearchModal = ({ isOpen, onClose, onSelect }: SymbolSearchModalProps) => {
+export const SymbolSearchModal = ({ isOpen, onClose, onSelect, watchlistMode, activeWatchlistSymbols = [], onToggleWatchlist }: SymbolSearchModalProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<'Tất cả' | MarketCategory>('Tất cả');
 
@@ -42,7 +45,9 @@ export const SymbolSearchModal = ({ isOpen, onClose, onSelect }: SymbolSearchMod
         
         {/* Header: Title and Close */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#e6e8ea] dark:border-[#2a2e39]">
-          <h2 className="text-lg font-bold text-[#1e2329] dark:text-white">Tìm kiếm mã giao dịch</h2>
+          <h2 className="text-lg font-bold text-[#1e2329] dark:text-white">
+            {watchlistMode ? 'Thêm mã giao dịch' : 'Tìm kiếm mã giao dịch'}
+          </h2>
           <button onClick={onClose} className="text-[#787b86] hover:text-[#1e2329] dark:hover:text-white transition-colors">
             <X className="w-5 h-5" />
           </button>
@@ -88,45 +93,75 @@ export const SymbolSearchModal = ({ isOpen, onClose, onSelect }: SymbolSearchMod
             </div>
           ) : (
             <div className="flex flex-col py-2">
-              {filteredStocks.map((stock) => (
-                <div
-                  key={stock.symbol}
-                  onClick={() => {
-                    onSelect(stock);
-                    onClose();
-                  }}
-                  className="flex items-center px-5 py-3 hover:bg-[#f5f5f5] dark:hover:bg-[#2a2e39]/50 cursor-pointer transition-colors group gap-3 border-b border-[#e6e8ea] dark:border-transparent last:border-b-0"
-                >
-                  {/* Avatar */}
-                  <AssetAvatar stock={stock} size="md" showExchangeBadge />
+              {filteredStocks.map((stock) => {
+                const isAdded = watchlistMode && activeWatchlistSymbols.includes(stock.symbol);
+                return (
+                  <div
+                    key={stock.symbol}
+                    onClick={() => {
+                      if (!watchlistMode) {
+                        onSelect?.(stock);
+                        onClose();
+                      }
+                    }}
+                    className={`flex items-center px-5 py-3 hover:bg-[#f5f5f5] dark:hover:bg-[#2a2e39]/50 transition-colors group gap-3 border-b border-[#e6e8ea] dark:border-transparent last:border-b-0 ${!watchlistMode ? 'cursor-pointer' : ''}`}
+                  >
+                    {/* Avatar - hide in watchlist mode for closer match to user screenshot */}
+                    {!watchlistMode && <AssetAvatar stock={stock} size="md" showExchangeBadge />}
 
-                  {/* Symbol + Name */}
-                  <div className="w-44 shrink-0 flex flex-col">
-                    <span className="font-bold text-[#1e2329] dark:text-[#d1d4dc] group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors text-sm">{stock.symbol}</span>
-                    <span className="text-[#787b86] text-xs truncate">{stock.name}</span>
-                  </div>
+                    {/* Symbol + Name */}
+                    <div className="w-44 shrink-0 flex flex-col">
+                      <span className="font-bold text-[#1e2329] dark:text-[#d1d4dc] group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors text-sm">{stock.symbol}</span>
+                      <span className="text-[#787b86] text-xs truncate">{stock.name}</span>
+                    </div>
 
-                  {/* Market */}
-                  <div className="w-32 text-[#787b86] text-xs truncate">
-                    {stock.market}
-                  </div>
+                    {/* Market */}
+                    <div className="w-32 text-[#787b86] text-xs truncate">
+                      {stock.market}
+                    </div>
 
-                  {/* Price & CHG% */}
-                  <div className="flex-1 flex flex-col items-end justify-center pr-4">
-                    <span className="font-mono font-bold text-[#1e2329] dark:text-[#d1d4dc] text-sm">
-                      {stock.price.toLocaleString('vi-VN', { maximumFractionDigits: stock.price < 10 ? 4 : 2 })}
-                    </span>
-                    <span className={`font-mono text-xs font-semibold flex items-center gap-0.5 ${stock.type === 'up' ? 'text-[#089981]' : 'text-[#f23645]'}`}>
-                      {stock.type === 'up' ? '↗' : '↘'} {stock.percent > 0 ? '+' : ''}{stock.percent.toFixed(2)}%
-                    </span>
-                  </div>
+                    {/* Price & CHG% (hidden in watchlist mode) */}
+                    {!watchlistMode && (
+                      <div className="flex-1 flex flex-col items-end justify-center pr-4">
+                        <span className="font-mono font-bold text-[#1e2329] dark:text-[#d1d4dc] text-sm">
+                          {stock.price.toLocaleString('vi-VN', { maximumFractionDigits: stock.price < 10 ? 4 : 2 })}
+                        </span>
+                        <span className={`font-mono text-xs font-semibold flex items-center gap-0.5 ${stock.type === 'up' ? 'text-[#089981]' : 'text-[#f23645]'}`}>
+                          {stock.type === 'up' ? '↗' : '↘'} {stock.percent > 0 ? '+' : ''}{stock.percent.toFixed(2)}%
+                        </span>
+                      </div>
+                    )}
 
-                  {/* Exchange badge */}
-                  <div className="shrink-0">
-                    <ExchangeBadge exchange={stock.exchange} size="sm" />
+                    <div className="flex-1"></div>
+
+                    {/* Exchange badge (always show) */}
+                    <div className="shrink-0 flex items-center gap-4">
+                      <ExchangeBadge exchange={stock.exchange} size="sm" />
+                      
+                      {/* Watchlist Add/Remove Action */}
+                      {watchlistMode && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleWatchlist?.(stock.symbol);
+                          }}
+                          className={`p-1 rounded transition-colors ${
+                            isAdded 
+                              ? 'text-[#f23645] hover:bg-[#f23645]/10' 
+                              : 'text-[#787b86] hover:text-[#1e2329] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10'
+                          }`}
+                        >
+                          {isAdded ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+                          )}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

@@ -1,9 +1,17 @@
 import { useState, useEffect } from 'react';
 import { ChartArea } from './components/ChartArea';
 import { RightSidebar } from './components/RightSidebar';
+import { RightToolbar } from './components/RightToolbar';
+import { WatchlistPanel, type Watchlist } from './components/WatchlistPanel';
+import { SimulationPanel } from './components/SimulationPanel';
+import { CalculatorPanel } from './components/CalculatorPanel';
 import { LeftToolbar } from './components/LeftToolbar';
 import { ToolbarNavbar } from '../../components/ToolbarNavbar';
+import { ChartSettingsModal } from './components/ChartSettingsModal';
+import { getWatchlists, createWatchlist as apiCreateWatchlist, updateWatchlist as apiUpdateWatchlist, deleteWatchlist as apiDeleteWatchlist } from '../../services/marketApi';
+import { useAuth } from '../../contexts/AuthContext';
 import { STOCKS, type Stock } from './data';
+import { DEFAULT_CHART_SETTINGS, type ChartSettings } from './chartSettings';
 import { SymbolSearchModal } from './components/SymbolSearchModal';
 import { IndicatorModal } from './components/IndicatorModal';
 import { TickerHeader } from './components/TickerHeader';
@@ -35,6 +43,138 @@ export const TradingTerminal = () => {
   const [isIndicatorModalOpen, setIsIndicatorModalOpen] = useState(false);
   const [activeIndicators, setActiveIndicators] = useState<string[]>([]);
   const [tradeCount, setTradeCount] = useState(0);
+  
+  const [activeRightPanel, setActiveRightPanel] = useState<'watchlist' | 'order' | 'simulation' | 'calculator' | null>('watchlist');
+  
+  const { user } = useAuth();
+  
+  const [watchlists, setWatchlists] = useState<Watchlist[]>(() => {
+    try {
+      const saved = localStorage.getItem('watchlists');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [{ id: '1', name: 'Danh sách của tôi', symbols: ['BTCUSDT', 'ETHUSDT', 'FPT', 'VNINDEX'] }];
+  });
+
+  // Fetch watchlists from API if user is logged in
+  useEffect(() => {
+    const fetchAPI = async () => {
+      const token = localStorage.getItem('token');
+      if (user && token) {
+        try {
+          const data = await getWatchlists(token);
+          if (data && data.length > 0) {
+            // map _id to id if needed
+            const mapped = data.map((w: any) => ({ ...w, id: w._id || w.id }));
+            setWatchlists(mapped);
+          }
+        } catch (error) {
+          console.error("Failed to fetch watchlists", error);
+        }
+      }
+    };
+    fetchAPI();
+  }, [user]);
+
+  useEffect(() => {
+    // Only save to local storage if NOT logged in, otherwise let API handle it.
+    // Actually, saving to localStorage as a fallback is fine.
+    if (!user) {
+      localStorage.setItem('watchlists', JSON.stringify(watchlists));
+    }
+  }, [watchlists, user]);
+
+  const [activeWatchlistId, setActiveWatchlistId] = useState<string>(watchlists[0]?.id || '1');
+
+  const handleUpdateWatchlist = async (id: string, symbols: string[]) => {
+    setWatchlists(prev => prev.map(w => w.id === id ? { ...w, symbols } : w));
+    
+    const token = localStorage.getItem('token');
+    if (user && token) {
+      try {
+        await apiUpdateWatchlist(token, id, { symbols });
+      } catch (error) {
+        console.error("Failed to update watchlist on server", error);
+      }
+    }
+  };
+  
+  const handleCreateWatchlist = async (name: string) => {
+    const tempId = Date.now().toString();
+    const newWatchlist = { id: tempId, name, symbols: [] };
+    setWatchlists(prev => [...prev, newWatchlist]);
+    setActiveWatchlistId(tempId);
+    
+    const token = localStorage.getItem('token');
+    if (user && token) {
+      try {
+        const created = await apiCreateWatchlist(token, { name, symbols: [] });
+        // Replace tempId with actual DB id
+        const realId = (created as any)._id || created.id;
+        setWatchlists(prev => prev.map(w => w.id === tempId ? { ...w, id: realId } : w));
+        setActiveWatchlistId(realId);
+      } catch (error) {
+        console.error("Failed to create watchlist on server", error);
+      }
+    }
+  };
+  
+  const handleDeleteWatchlist = async (id: string) => {
+    setWatchlists(prev => prev.filter(w => w.id !== id));
+    if (activeWatchlistId === id) {
+      setActiveWatchlistId(watchlists.find(w => w.id !== id)?.id || watchlists[0]?.id || '');
+    }
+    
+    const token = localStorage.getItem('token');
+    if (user && token) {
+      try {
+        await apiDeleteWatchlist(token, id);
+      } catch (error) {
+        console.error("Failed to delete watchlist on server", error);
+      }
+    }
+  };
+  
+  const handleRenameWatchlist = async (id: string, newName: string) => {
+    setWatchlists(prev => prev.map(w => w.id === id ? { ...w, name: newName } : w));
+    
+    const token = localStorage.getItem('token');
+    if (user && token) {
+      try {
+        await apiUpdateWatchlist(token, id, { name: newName });
+      } catch (error) {
+        console.error("Failed to rename watchlist on server", error);
+      }
+    }
+  };
+
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [chartSettings, setChartSettings] = useState<ChartSettings>(() => {
+    try {
+      const saved = localStorage.getItem('chartSettings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          ...DEFAULT_CHART_SETTINGS,
+          ...parsed,
+          symbol: { ...DEFAULT_CHART_SETTINGS.symbol, ...(parsed.symbol || {}) },
+          status: { ...DEFAULT_CHART_SETTINGS.status, ...(parsed.status || {}) },
+          scales: { ...DEFAULT_CHART_SETTINGS.scales, ...(parsed.scales || {}) },
+          canvas: { ...DEFAULT_CHART_SETTINGS.canvas, ...(parsed.canvas || {}) },
+          alerts: { ...DEFAULT_CHART_SETTINGS.alerts, ...(parsed.alerts || {}) },
+          events: { ...DEFAULT_CHART_SETTINGS.events, ...(parsed.events || {}) },
+          candle: { ...DEFAULT_CHART_SETTINGS.candle, ...(parsed.candle || {}) },
+        };
+      }
+      return DEFAULT_CHART_SETTINGS;
+    } catch {
+      return DEFAULT_CHART_SETTINGS;
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('chartSettings', JSON.stringify(chartSettings));
+  }, [chartSettings]);
 
   const handleToggleIndicator = (name: string) => {
     setActiveIndicators(prev =>
@@ -251,6 +391,13 @@ export const TradingTerminal = () => {
     setReplayIndex(i => i + 1);
   };
 
+  const handleStartSimulation = (config: SimulationConfig) => {
+    console.log("Start simulation with config:", config);
+    // Ideally we enter replay mode and reset states with the config
+    setIsSelectingReplayStart(true);
+    setIsReplaying(false);
+  };
+
   const handleStopReplay = () => {
     setIsReplaying(false);
     setReplayIndex(0);
@@ -258,7 +405,7 @@ export const TradingTerminal = () => {
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden bg-white dark:bg-[#131722] text-[#1e2329] dark:text-[#d1d4dc]">
-      <ToolbarNavbar balance={balance} />
+      <ToolbarNavbar balance={balance} onOpenSettings={() => setIsSettingsModalOpen(true)} />
 
       <div className="flex flex-1 overflow-hidden">
         <LeftToolbar activeTool={activeTool} onToolSelect={handleToolClick} />
@@ -300,6 +447,7 @@ export const TradingTerminal = () => {
                   tradeOrders={tradeOrders.filter(o => o.symbol === selectedStock.symbol)}
                   activeIndicators={activeIndicators}
                   activePosition={positions[selectedStock.symbol] as any}
+                  chartSettings={chartSettings}
                   onPriceUpdate={(price) => {
                     setSelectedStock(prev => {
                       if (prev.price === price) return prev;
@@ -328,15 +476,50 @@ export const TradingTerminal = () => {
           )}
         </div>
 
-        <div className="overflow-y-auto custom-scrollbar flex shrink-0">
-          <RightSidebar
-            selectedStock={selectedStock}
-            positions={positions}
-            balance={balance}
-            onStockSelect={handleStockSelect}
-            onTrade={handleTrade}
-            onUpdateTPSL={handleUpdateTPSL}
-            onAddMargin={handleAddMargin}
+        <div className="flex shrink-0">
+          {activeRightPanel === 'watchlist' && (
+            <WatchlistPanel
+              watchlists={watchlists}
+              activeWatchlistId={activeWatchlistId}
+              onWatchlistChange={setActiveWatchlistId}
+              onUpdateWatchlist={handleUpdateWatchlist}
+              onCreateWatchlist={handleCreateWatchlist}
+              onDeleteWatchlist={handleDeleteWatchlist}
+              onRenameWatchlist={handleRenameWatchlist}
+              onSelectStock={handleStockSelect}
+              currentSymbol={selectedStock.symbol}
+            />
+          )}
+          
+          {activeRightPanel === 'order' && (
+            <RightSidebar
+              selectedStock={selectedStock}
+              positions={positions}
+              balance={balance}
+              onStockSelect={handleStockSelect}
+              onTrade={handleTrade}
+              onUpdateTPSL={handleUpdateTPSL}
+              onAddMargin={handleAddMargin}
+            />
+          )}
+
+          {activeRightPanel === 'simulation' && (
+            <SimulationPanel
+              currentSymbol={selectedStock.symbol}
+              onStartSimulation={handleStartSimulation}
+            />
+          )}
+
+          {activeRightPanel === 'calculator' && (
+            <CalculatorPanel
+              initialBalance={balance}
+              currentStock={selectedStock}
+            />
+          )}
+
+          <RightToolbar 
+            activePanel={activeRightPanel} 
+            onChangePanel={setActiveRightPanel} 
           />
         </div>
       </div>
@@ -352,6 +535,14 @@ export const TradingTerminal = () => {
         activeIndicators={activeIndicators}
         onToggle={handleToggleIndicator}
       />
+      
+      {isSettingsModalOpen && (
+        <ChartSettingsModal 
+          onClose={() => setIsSettingsModalOpen(false)} 
+          chartSettings={chartSettings}
+          onSettingsChange={setChartSettings}
+        />
+      )}
     </div>
   );
 };

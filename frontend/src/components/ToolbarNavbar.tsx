@@ -7,9 +7,10 @@ import { LanguageModal } from './LanguageModal';
 
 interface ToolbarNavbarProps {
   balance: number;
+  onOpenSettings?: () => void;
 }
 
-export const ToolbarNavbar = ({ balance }: ToolbarNavbarProps) => {
+export const ToolbarNavbar = ({ balance, onOpenSettings }: ToolbarNavbarProps) => {
   const { user, login, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const isDarkMode = theme === 'dark';
@@ -73,7 +74,7 @@ export const ToolbarNavbar = ({ balance }: ToolbarNavbarProps) => {
             <span className="text-xs font-semibold">{language}</span>
           </button>
           <button 
-            onClick={() => alert('Cài đặt')}
+            onClick={onOpenSettings}
             className="hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#d1d4dc]"
             title="Cài đặt"
           >
