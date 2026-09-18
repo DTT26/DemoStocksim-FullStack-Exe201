@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { init, dispose, registerOverlay } from 'klinecharts';
 import type { Chart, KLineData, DataLoaderGetBarsParams, DataLoaderSubscribeBarParams } from 'klinecharts';
-import { generateOHLCV, type Stock } from '../data';
+import { generateOHLCV, getPricePrecision, type Stock } from '../data';
 import { fetchBinanceKlines, mapTimeframeToBinance, subscribeBinanceKline } from '../../../services/binanceApi';
 import type { TradeOrder } from '../TradingTerminal';
 import type { ChartSettings } from '../chartSettings';
@@ -80,20 +80,41 @@ interface ChartAreaProps {
   activeIndicators: string[];
   activePosition?: { quantity: number; averagePrice: number; side: 'LONG'|'SHORT'; leverage: number; tp?: number; sl?: number };
   onPriceUpdate?: (price: number) => void;
+  isSelectingReplayStart?: boolean;
+  onSelectReplayStart?: (index: number) => void;
+  goToRealtimeTrigger?: number;
+  onDataLoaded?: (count: number) => void;
 }
 
 // Cache data per stock+timeframe to avoid re-generating every render
 const dataCache = new Map<string, KLineData[]>();
 
-export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplaying, replayIndex, tradeOrders, chartSettings, activeIndicators, activePosition, onPriceUpdate }: ChartAreaProps) => {
+export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplaying, replayIndex, tradeOrders, chartSettings, activeIndicators, activePosition, onPriceUpdate, isSelectingReplayStart, onSelectReplayStart, goToRealtimeTrigger, onDataLoaded }: ChartAreaProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<Chart | null>(null);
   const activeToolRef = useRef<string>('cursor');
   const activeTimeframeRef = useRef<string>(activeTimeframe);
+  const isSelectingReplayStartRef = useRef(isSelectingReplayStart);
+  const onSelectReplayStartRef = useRef(onSelectReplayStart);
+  const crosshairIndexRef = useRef<number | null>(null);
+  const subscriberCallbackRef = useRef<((data: KLineData) => void) | null>(null);
+  
   const [isLoading, setIsLoading] = useState(false);
   const { theme } = useTheme();
   // Map: indicator name → sub-pane id (undefined = on main pane)
   const indicatorPaneRef = useRef<Map<string, string | undefined>>(new Map());
+
+  useEffect(() => {
+    isSelectingReplayStartRef.current = isSelectingReplayStart;
+    onSelectReplayStartRef.current = onSelectReplayStart;
+  }, [isSelectingReplayStart, onSelectReplayStart]);
+
+  useEffect(() => {
+    if (goToRealtimeTrigger && goToRealtimeTrigger > 0 && chartRef.current) {
+      chartRef.current.setOffsetRightDistance(50);
+      chartRef.current.scrollToRealTime(0);
+    }
+  }, [goToRealtimeTrigger]);
 
   // Apply theme dynamically to klinecharts
   useEffect(() => {
@@ -106,6 +127,29 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
           vertical: { color: theme === 'dark' ? '#2a2e39' : '#e6e8ea', size: 1, style: 'dashed' },
         },
         candle: {
+          tooltip: {
+            showRule: 'always',
+            showType: 'standard',
+            legend: {
+              template: (data: any) => {
+                const d = data.current;
+                if (!d) return [];
+                const time = new Date(d.timestamp).toLocaleString('vi-VN', {
+                  hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
+                });
+                const precision = getPricePrecision(d.close || selectedStock.price || 1);
+                return [
+                  { 
+                    title: '', 
+                    value: { 
+                      text: `Time: ${time}   Open: ${Number(d.open).toFixed(precision)}   High: ${Number(d.high).toFixed(precision)}   Low: ${Number(d.low).toFixed(precision)}   Close: ${Number(d.close).toFixed(precision)}   Volume: ${(d.volume/1000).toFixed(2)}K`, 
+                      color: theme === 'dark' ? '#c4c6cb' : '#131722' 
+                    } 
+                  }
+                ];
+              }
+            }
+          },
           bar: {
             upColor: '#089981',
             downColor: '#f23645',
@@ -132,7 +176,8 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
           const mo = (d.getMonth() + 1).toString().padStart(2, '0');
           const yyyy = d.getFullYear();
           
-          const isIntraday = ['1m', '5m', '15m', '30m'].includes(activeTimeframeRef.current);
+          const tf = activeTimeframeRef.current || 'D';
+          const isIntraday = tf.endsWith('m') || tf.endsWith('h');
           
           if (params.type === 'crosshair' || params.type === 'tooltip') {
              return isIntraday ? `${dd}/${mo}/${yyyy} ${hh}:${mm}` : `${dd}/${mo}/${yyyy}`;
@@ -140,7 +185,7 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
           
           // xAxis tick
           if (isIntraday) {
-             return `${hh}:${mm}`;
+             return `${dd}/${mo} ${hh}:${mm}`;
           } else {
              return `${dd}/${mo}/${yyyy}`;
           }
@@ -165,11 +210,36 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
       }
     });
 
+    chart.subscribeAction('onCandleTooltipFeatureClick' as any, () => {
+      // logic for tooltip feature click
+    });
+
+    chart.subscribeAction('onCrosshairChange', (data: any) => {
+      crosshairIndexRef.current = data?.dataIndex ?? null;
+    });
+
+    // Native bar click for Bar Replay start point selection
+    chart.subscribeAction('onCandleBarClick', (data: any) => {
+      if (isSelectingReplayStartRef.current && typeof data?.dataIndex === 'number') {
+        onSelectReplayStartRef.current?.(data.dataIndex);
+      }
+    });
+
+    const handleChartClick = () => {
+      if (isSelectingReplayStartRef.current && crosshairIndexRef.current !== null) {
+        onSelectReplayStartRef.current?.(crosshairIndexRef.current);
+      }
+    };
+    
+    const container = chartContainerRef.current;
+    container?.addEventListener('click', handleChartClick);
+
     const handleResize = () => chart?.resize();
     window.addEventListener('resize', handleResize);
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      container?.removeEventListener('click', handleChartClick);
       if (chartContainerRef.current) {
         dispose(chartContainerRef.current);
       }
@@ -280,6 +350,18 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
     }
   }, [chartSettings]);
 
+  // Handle step updates during replay smoothly
+  useEffect(() => {
+    if (isReplaying && replayIndex > 0) {
+      const fullData = dataCache.get(`${selectedStock.symbol}-${activeTimeframe}`);
+      if (fullData && replayIndex < fullData.length && subscriberCallbackRef.current) {
+        const nextBar = fullData[replayIndex];
+        subscriberCallbackRef.current(nextBar);
+        if (onPriceUpdate) onPriceUpdate(nextBar.close);
+      }
+    }
+  }, [replayIndex, isReplaying]);
+
   // Reload data when stock, timeframe, or replay state changes
   useEffect(() => {
     activeTimeframeRef.current = activeTimeframe;
@@ -315,59 +397,121 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
       if (selectedStock.market === 'Tiền điện tử (Crypto)') {
         // Lấy dữ liệu thật từ Binance
         const binanceInterval = mapTimeframeToBinance(activeTimeframe);
-        allData = await fetchBinanceKlines({
-          symbol: selectedStock.symbol,
-          interval: binanceInterval,
-          limit: 300,
-          isFutures: selectedStock.isFutures
-        });
-      } else {
-        // Dùng mock data (generateOHLCV) cho chứng khoán VN, Forex...
+        try {
+          allData = await fetchBinanceKlines({
+            symbol: selectedStock.symbol,
+            interval: binanceInterval,
+            limit: 1000,
+            isFutures: selectedStock.isFutures
+          });
+        } catch (error) {
+          allData = [];
+        }
+      }
+
+      // NẾU allData rỗng (hoặc thị trường không phải Crypto, hoặc Binance lỗi/không hỗ trợ mã này)
+      if (!allData || allData.length === 0) {
         if (!dataCache.has(cacheKey)) {
-          dataCache.set(cacheKey, generateOHLCV(selectedStock.price, 300, activeTimeframe));
+          dataCache.set(cacheKey, generateOHLCV(selectedStock.price, 5000, activeTimeframe));
         }
         allData = dataCache.get(cacheKey)!;
+      } else {
+        dataCache.set(cacheKey, allData);
       }
+      onDataLoaded?.(allData.length);
 
       if (!isMounted) return;
 
       // In replay mode: slice data up to replayIndex
       const visibleData = isReplaying
-        ? allData.slice(0, Math.max(30, replayIndex))
+        ? allData.slice(0, Math.max(5, replayIndex))
         : allData;
 
-      chart.setSymbol({ name: selectedStock.symbol });
+      const precision = getPricePrecision(selectedStock.price);
+      chart.setSymbol({ 
+        ticker: `${selectedStock.exchange} • ${selectedStock.symbol}`,
+        name: selectedStock.name,
+        shortName: selectedStock.symbol,
+        pricePrecision: precision,
+        volumePrecision: 2,
+      });
       
       chart.setDataLoader({
         getBars: async (params: DataLoaderGetBarsParams) => {
           // Khi người dùng cuộn sang trái (kéo về quá khứ)
-          if (params.type === 'backward' && selectedStock.market === 'Tiền điện tử (Crypto)') {
+          // CHÚ Ý: Trong KlineCharts v10, 'forward' là cuộn về quá khứ (prepend data)
+          if (params.type === 'forward') {
             if (!params.timestamp) return params.callback([], true);
             
             // Lấy nến cũ hơn dựa vào timestamp của nến đầu tiên hiện tại
             const oldestTime = params.timestamp;
-            const binanceInterval = mapTimeframeToBinance(activeTimeframe);
             
-            const olderData = await fetchBinanceKlines({
-              symbol: selectedStock.symbol,
-              interval: binanceInterval,
-              limit: 500,
-              isFutures: selectedStock.isFutures,
-              endTime: oldestTime - 1, // Tránh lấy trùng nến đầu tiên
-            });
-            
-            // Nối dữ liệu cũ vào mảng allData để live ticker có thể dùng nếu cần
-            allData = [...olderData, ...allData];
-            
-            // Báo cho klinecharts đã lấy xong, false = vẫn còn data, true = hết data
-            params.callback(olderData, olderData.length === 0);
+            if (selectedStock.market === 'Tiền điện tử (Crypto)') {
+              const binanceInterval = mapTimeframeToBinance(activeTimeframe);
+              
+              try {
+                let olderData = await fetchBinanceKlines({
+                  symbol: selectedStock.symbol,
+                  interval: binanceInterval,
+                  limit: 1000,
+                  isFutures: selectedStock.isFutures,
+                  endTime: oldestTime - 1, // Tránh lấy trùng nến đầu tiên
+                });
+                
+                olderData = olderData.filter(d => d.timestamp < oldestTime);
+                if (olderData.length > 0) {
+                  // Nối dữ liệu cũ vào mảng allData
+                  allData = [...olderData, ...allData];
+                  dataCache.set(cacheKey, allData);
+                  onDataLoaded?.(allData.length);
+                  params.callback(olderData, true); // Luôn cho phép cuộn tiếp
+                  return;
+                }
+              } catch (err) {
+                // Fake data fallback nếu lỗi hoặc hết data Binance
+              }
+
+              const oldestCandle = allData[0];
+              const basePrice = oldestCandle ? oldestCandle.open : selectedStock.price;
+              const olderData = generateOHLCV(basePrice, 500, activeTimeframe, oldestTime - 1).filter(d => d.timestamp < oldestTime);
+              if (olderData.length > 0) {
+                allData = [...olderData, ...allData];
+                dataCache.set(cacheKey, allData);
+                onDataLoaded?.(allData.length);
+                params.callback(olderData, true);
+              } else {
+                params.callback([], true);
+              }
+              return;
+            } else {
+              // Fake data cho thị trường khác
+              const oldestCandle = allData[0];
+              const basePrice = oldestCandle ? oldestCandle.open : selectedStock.price;
+              const olderData = generateOHLCV(basePrice, 1000, activeTimeframe, oldestTime - 1).filter(d => d.timestamp < oldestTime);
+              
+              if (olderData.length > 0) {
+                allData = [...olderData, ...allData];
+                dataCache.set(cacheKey, allData);
+                onDataLoaded?.(allData.length);
+                params.callback(olderData, true);
+              } else {
+                params.callback([], true);
+              }
+              return;
+            }
+          }
+
+          // Khi người dùng cuộn sang phải (về tương lai)
+          if (params.type === 'backward') {
+            params.callback([], false);
             return;
           }
 
-          // Gọi lần đầu
-          params.callback(visibleData, false);
+          // Gọi lần đầu (type === 'init')
+          params.callback(visibleData, true);
         },
         subscribeBar: (params: DataLoaderSubscribeBarParams) => {
+          subscriberCallbackRef.current = params.callback;
           if (isReplaying) return;
 
           if (selectedStock.market === 'Tiền điện tử (Crypto)') {
@@ -387,13 +531,15 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
             tickerInterval = setInterval(() => {
               if (allData.length === 0) return;
               const lastCandle = allData[allData.length - 1];
-              const newPrice = lastCandle.close + (Math.random() - 0.5) * lastCandle.close * 0.005;
+              const tickPrecision = getPricePrecision(lastCandle.close);
+              const swing = (Math.random() - 0.5) * lastCandle.close * 0.005;
+              const newPrice = lastCandle.close + swing;
               
               const newCandle = {
                 ...lastCandle,
-                close: parseFloat(newPrice.toFixed(2)),
-                high: Math.max(lastCandle.high, parseFloat(newPrice.toFixed(2))),
-                low: Math.min(lastCandle.low, parseFloat(newPrice.toFixed(2))),
+                close: parseFloat(newPrice.toFixed(tickPrecision)),
+                high: parseFloat(Math.max(lastCandle.high, newPrice).toFixed(tickPrecision)),
+                low: parseFloat(Math.min(lastCandle.low, newPrice).toFixed(tickPrecision)),
                 volume: (lastCandle.volume || 0) + Math.random() * 500,
               };
               
@@ -404,6 +550,7 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
           }
         },
         unsubscribeBar: () => {
+          subscriberCallbackRef.current = null;
           if (tickerInterval) clearInterval(tickerInterval);
           if (wsUnsubscribe) wsUnsubscribe();
         }
@@ -422,7 +569,7 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
       if (tickerInterval) clearInterval(tickerInterval);
       if (wsUnsubscribe) wsUnsubscribe();
     };
-  }, [selectedStock.symbol, selectedStock.market, selectedStock.isFutures, activeTimeframe, isReplaying, replayIndex]);
+  }, [selectedStock.symbol, selectedStock.market, selectedStock.isFutures, activeTimeframe, isReplaying]);
 
   // Sync active indicators with chart
   useEffect(() => {
@@ -621,7 +768,6 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
           Bar Replay — Cây nến thứ {replayIndex} / {dataCache.get(`${selectedStock.symbol}-${activeTimeframe}`)?.length || 300}
         </div>
       )}
-
       {/* Active tool hint */}
       {activeTool !== 'cursor' && activeTool !== 'clear' && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 text-xs text-blue-200 bg-blue-900/60 border border-blue-700/60 px-4 py-1.5 rounded-full backdrop-blur-sm pointer-events-none">
@@ -631,9 +777,16 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
 
       {/* Chart canvas */}
       <div
+        id="market-chart" 
         ref={chartContainerRef}
+        className={isSelectingReplayStart ? 'cursor-crosshair' : ''}
         style={{ position: 'absolute', top: `${chartSettings.canvas.marginTop}%`, left: 0, right: 0, bottom: `${chartSettings.canvas.marginBottom}%` }}
       />
+      
+      {/* Selection Mode Overlay / Indicator */}
+      {isSelectingReplayStart && (
+        <div className="absolute inset-0 border-4 border-blue-500/30 pointer-events-none rounded transition-all animate-pulse z-10" />
+      )}
     </div>
   );
 };

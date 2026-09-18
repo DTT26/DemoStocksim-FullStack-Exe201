@@ -32,32 +32,60 @@
 
 /* Custom Scrollbar for a premium feel */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-background);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.45);
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #666;
+  background: rgba(100, 116, 139, 0.7);
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
 }
 
 /* Custom Leverage Slider */
+:root {
+  --lev-fill: #1e2329;
+  --lev-bg: #e6e8ea;
+  --lev-thumb-bg: #f8f9fa;
+  --lev-thumb-border: #1e2329;
+}
+
+.dark {
+  --lev-fill: #ffffff;
+  --lev-bg: #2a2e39;
+  --lev-thumb-bg: #131722;
+  --lev-thumb-border: #ffffff;
+}
+
 .custom-leverage-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #131722;
-  border: 2px solid white;
+  background: var(--lev-thumb-bg);
+  border: 2px solid var(--lev-thumb-border);
   cursor: pointer;
 }
 
@@ -65,7 +93,7 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #131722;
-  border: 2px solid white;
+  background: var(--lev-thumb-bg);
+  border: 2px solid var(--lev-thumb-border);
   cursor: pointer;
 }
