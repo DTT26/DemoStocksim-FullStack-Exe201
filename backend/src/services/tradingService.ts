@@ -46,7 +46,7 @@ export class TradingService {
 
     await Transaction.create({
       userId, type: TransactionType.BUY_STOCK,
-      amount: marginRequired, description: `Mở LONG ${symbol} | Margin: ${margin} | x${leverage} | Qty: ${quantity.toFixed(2)}`
+      amount: marginRequired, description: `Mở LONG ${symbol} ở giá ${currentPrice.toLocaleString('en-US', {maximumFractionDigits:2})} | Margin: ${margin} | x${leverage} | Qty: ${quantity.toFixed(2)}`
     });
 
     return { success: true, message: `Mở LONG ${symbol} thành công (x${leverage})` };
@@ -92,7 +92,7 @@ export class TradingService {
 
     await Transaction.create({
       userId, type: TransactionType.SELL_STOCK,
-      amount: marginRequired, description: `Mở SHORT ${symbol} | Margin: ${margin} | x${leverage} | Qty: ${quantity.toFixed(2)}`
+      amount: marginRequired, description: `Mở SHORT ${symbol} ở giá ${currentPrice.toLocaleString('en-US', {maximumFractionDigits:2})} | Margin: ${margin} | x${leverage} | Qty: ${quantity.toFixed(2)}`
     });
 
     return { success: true, message: `Mở SHORT ${symbol} thành công (x${leverage})` };
@@ -134,7 +134,7 @@ export class TradingService {
 
     await Transaction.create({
       userId, type: TransactionType.DEPOSIT,
-      amount: totalReturn, description: `Đóng ${side} ${qty.toLocaleString('vi-VN', {maximumFractionDigits: 2})} ${symbol}. Lợi nhuận: ${pnl.toLocaleString('vi-VN')}đ`
+      amount: totalReturn, description: `Đóng ${side} ${qty.toLocaleString('vi-VN', {maximumFractionDigits: 2})} ${symbol} ở giá ${currentPrice.toLocaleString('en-US', {maximumFractionDigits:2})}. Lợi nhuận: ${pnl.toLocaleString('vi-VN')}đ`
     });
 
     return { success: true, message: `Đã đóng vị thế ${side}. Lợi nhuận: ${pnl.toLocaleString('vi-VN')}đ` };

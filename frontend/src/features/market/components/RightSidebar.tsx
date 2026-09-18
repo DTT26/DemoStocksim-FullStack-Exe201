@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Wallet } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, ChevronRight, ChevronLeft } from 'lucide-react';
 import { STOCKS, type Stock, generateOHLCV } from '../data';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -18,6 +18,7 @@ interface RightSidebarProps {
 export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect, onTrade, onUpdateTPSL, onAddMargin, isEditing, onCancelEdit }: RightSidebarProps) => {
   const { user, login } = useAuth();
   const [orderType, setOrderType] = useState<'market' | 'limit' | 'stop'>('market');
+  const [isExpanded, setIsExpanded] = useState(true);
   const [limitPriceStr, setLimitPriceStr] = useState<string>('');
   const [lotStr, setLotStr] = useState<string>('0.1');
   const [leverage, setLev] = useState<number>(10);
@@ -138,6 +139,8 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
   const posTp = positions[selectedStock.symbol]?.tp;
   const posSl = positions[selectedStock.symbol]?.sl;
 
+  const leverageInfo = selectedStock.leverageInfo || { max: 20, marks: [5, 10, 15, 20] }; // Fallback
+
   let pnl = 0;
   let pnlPercent = 0;
   if (held > 0 && avgPrice > 0) {
@@ -152,12 +155,34 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
   const pnlColor = pnl >= 0 ? 'text-[#089981]' : 'text-[#f23645]';
   const pnlSign = pnl >= 0 ? '+' : '';
 
+  if (!isExpanded) {
+    return (
+      <div className="w-10 flex flex-col bg-[#131722] flex-1 min-h-0 overflow-hidden items-center">
+        <button 
+          onClick={() => setIsExpanded(true)}
+          className="w-full py-4 flex items-center justify-center text-[#787b86] hover:text-[#d1d4dc] hover:bg-[#1e222d] transition-colors"
+          title="Mở bảng đặt lệnh"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <div className="flex-1 border-r border-[#2a2e39] w-0"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-[280px] border-l border-[#2a2e39] flex flex-col bg-[#131722] flex-1 min-h-0 overflow-hidden">
+    <div className="w-[280px] flex flex-col bg-[#131722] flex-1 min-h-0 overflow-hidden">
 
       {/* Watchlist */}
       <div className="flex-1 overflow-y-auto">
-        <div className="flex px-3 py-2 border-b border-[#2a2e39] text-[10px] uppercase tracking-wider text-[#787b86] font-semibold">
+        <div className="flex items-center px-2 py-2 border-b border-[#2a2e39] text-[10px] uppercase tracking-wider text-[#787b86] font-semibold">
+          <button 
+            onClick={() => setIsExpanded(false)}
+            className="mr-2 p-1 rounded hover:bg-[#1e222d] hover:text-[#d1d4dc] transition-colors"
+            title="Thu gọn"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
           <div className="flex-1">Symbol</div>
           <div className="w-20 text-right">Price</div>
           <div className="w-14 text-right">Chg%</div>
@@ -276,21 +301,58 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
             </div>
           </div>
 
-          {/* Leverage Slider */}
-          <div className="flex flex-col gap-1">
-            <div className="flex justify-between items-center">
-              <label className="text-[10px] text-[#787b86] uppercase tracking-wider">Đòn bẩy (Leverage)</label>
-              <span className="text-xs font-mono font-bold text-yellow-500">{isEditing ? posLeverage : leverage}x</span>
+          {/* Custom Leverage Slider Inline */}
+          <div className={`flex flex-col gap-1 mt-1 ${isEditing ? 'opacity-50' : ''}`}>
+            <div className="flex justify-between items-center px-1">
+              <label className="text-[10px] text-[#787b86] uppercase tracking-wider">Đòn bẩy</label>
+              <span className="text-xs font-mono font-bold text-[#1e2329] dark:text-white">{isEditing ? posLeverage : leverage}X</span>
             </div>
-            <input
-              type="range"
-              min="1"
-              max="1000"
-              value={isEditing ? posLeverage : leverage}
-              disabled={isEditing}
-              onChange={e => setLev(parseInt(e.target.value))}
-              className="w-full accent-yellow-500 disabled:opacity-50"
-            />
+            
+            <div className="relative mt-2 mb-5 mx-1">
+               <input
+                 type="range"
+                 min="1"
+                 max={leverageInfo.max}
+                 value={isEditing ? posLeverage : leverage}
+                 disabled={isEditing}
+                 onChange={e => setLev(parseInt(e.target.value))}
+                 className="w-full h-[3px] appearance-none cursor-pointer relative z-10 bg-transparent custom-leverage-slider m-0 p-0 block disabled:cursor-not-allowed"
+                 style={{
+                   background: `linear-gradient(to right, var(--lev-fill) ${(((isEditing ? posLeverage : leverage) - 1) / (leverageInfo.max - 1)) * 100}%, var(--lev-bg) ${(((isEditing ? posLeverage : leverage) - 1) / (leverageInfo.max - 1)) * 100}%)`
+                 }}
+               />
+               
+               {/* Markers layer */}
+               <div className="absolute top-[1.5px] left-[7px] right-[7px] pointer-events-none z-20">
+                 {/* Base 1x */}
+                 <div 
+                   className="absolute top-0 -translate-y-[14px] -translate-x-1/2 flex flex-col items-center justify-start cursor-pointer pointer-events-auto group w-[30px] h-[40px]" 
+                   style={{ left: '0%' }}
+                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLev(1); }}
+                 >
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#1e2329] dark:bg-white transition-transform group-hover:scale-125 shrink-0 mt-[10px]" />
+                    <span className="text-[10px] font-semibold text-[#1e2329] dark:text-white whitespace-nowrap mt-1">1X</span>
+                 </div>
+                 
+                 {leverageInfo.marks.map(m => {
+                   const percent = ((m - 1) / (leverageInfo.max - 1)) * 100;
+                   const isActive = leverage >= m;
+                   return (
+                     <div 
+                       key={m} 
+                       className="absolute top-0 -translate-y-[14px] -translate-x-1/2 flex flex-col items-center justify-start cursor-pointer pointer-events-auto group w-[40px] h-[40px]" 
+                       style={{ left: `${percent}%` }}
+                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLev(m); }}
+                     >
+                       <div className={`w-2.5 h-2.5 rounded-full transition-transform group-hover:scale-125 shrink-0 mt-[10px] ${isActive ? 'bg-[#1e2329] dark:bg-white' : 'bg-[#e6e8ea] dark:bg-[#2a2e39]'}`} />
+                       <span className={`text-[10px] font-semibold whitespace-nowrap mt-1 transition-colors ${isActive ? 'text-[#1e2329] dark:text-[#d1d4dc] group-hover:text-black dark:group-hover:text-white' : 'text-[#787b86] group-hover:text-[#1e2329] dark:group-hover:text-white'}`}>
+                         {m}X
+                       </span>
+                     </div>
+                   );
+                 })}
+               </div>
+            </div>
           </div>
 
           {/* TP / SL Toggle */}

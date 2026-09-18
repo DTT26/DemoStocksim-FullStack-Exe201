@@ -4,6 +4,11 @@ import { RightSidebar } from './components/RightSidebar';
 import { LeftToolbar } from './components/LeftToolbar';
 import { ToolbarNavbar } from '../../components/ToolbarNavbar';
 import { BottomPanel } from './components/BottomPanel';
+import { TickerHeader } from './components/TickerHeader';
+import { CoinInfoPanel } from './components/CoinInfoPanel';
+import { ContractInfoPanel } from './components/ContractInfoPanel';
+import { SymbolSearchModal } from './components/SymbolSearchModal';
+import { IndicatorModal } from './components/IndicatorModal';
 import { STOCKS, type Stock } from './data';
 import { tradingApi } from '../../services/tradingApi';
 
@@ -37,7 +42,16 @@ export const TradingTerminal = () => {
 
   // Bar Replay state
   const [isReplaying, setIsReplaying] = useState(false);
+  const [isSelectingReplayStart, setIsSelectingReplayStart] = useState(false);
   const [replayIndex, setReplayIndex] = useState(0);
+  const [totalBars, setTotalBars] = useState(1000);
+  const [goToRealtimeTrigger, setGoToRealtimeTrigger] = useState(0);
+
+  // Added missing states
+  const [activeTab, setActiveTab] = useState<'chart' | 'coin_info' | 'info'>('chart');
+  const [activeIndicators, setActiveIndicators] = useState<string[]>([]);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isIndicatorModalOpen, setIsIndicatorModalOpen] = useState(false);
 
   const handleToolClick = (toolName: string) => {
     setActiveTool(toolName === activeTool && toolName !== 'cursor' ? activeTool : toolName);
@@ -45,8 +59,9 @@ export const TradingTerminal = () => {
 
   const handleStockSelect = (stock: Stock) => {
     setSelectedStock(stock);
-    if (isReplaying) {
+    if (isReplaying || isSelectingReplayStart) {
       setIsReplaying(false);
+      setIsSelectingReplayStart(false);
       setReplayIndex(0);
     }
   };
@@ -170,12 +185,9 @@ export const TradingTerminal = () => {
     }
   };
 
-  const handleAddMargin = async (amount: number) => {
+  const handleAddMargin = async (symbol: string, side: 'LONG' | 'SHORT', amount: number) => {
     try {
-      const pos = positions[selectedStock.symbol];
-      if (!pos) return { success: false, message: 'Không có vị thế' };
-
-      const res = await tradingApi.addMargin(selectedStock.symbol, pos.side, amount);
+      const res = await tradingApi.addMargin(symbol, side, amount);
       if (res.success) {
         await fetchPortfolio();
         return { success: true, message: res.message || `✅ Đã bơm thêm ký quỹ` };
@@ -277,9 +289,29 @@ export const TradingTerminal = () => {
     });
   }, [selectedStock.price, pendingOrders, selectedStock.symbol]);
 
-  const handleStartReplay = (fromIndex: number) => {
+  const handleStartReplaySelection = () => {
+    setIsSelectingReplayStart(true);
+    setIsReplaying(false);
+  };
+
+  const handleCancelReplaySelection = () => {
+    setIsSelectingReplayStart(false);
+  };
+
+  const handleConfirmReplayStart = (fromIndex: number) => {
     setReplayIndex(fromIndex);
+    setIsSelectingReplayStart(false);
     setIsReplaying(true);
+  };
+
+
+  const handleGoToRealtime = () => {
+    if (isReplaying || isSelectingReplayStart) {
+      setIsReplaying(false);
+      setIsSelectingReplayStart(false);
+      setReplayIndex(0);
+    }
+    setGoToRealtimeTrigger(t => t + 1);
   };
 
   const handleReplayNext = () => {
@@ -320,67 +352,114 @@ export const TradingTerminal = () => {
       <div className="flex flex-1 overflow-hidden">
         <LeftToolbar activeTool={activeTool} onToolSelect={handleToolClick} />
         <div className="flex flex-col flex-1 overflow-hidden">
-          <ChartArea
-            activeTool={activeTool}
-            selectedStock={selectedStock}
+          <TickerHeader
+            stock={selectedStock}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
             activeTimeframe={activeTimeframe}
+            onTimeframeChange={setActiveTimeframe}
             isReplaying={isReplaying}
+            isSelectingReplayStart={isSelectingReplayStart}
             replayIndex={replayIndex}
-            tradeOrders={tradeOrders.filter(o => o.symbol === selectedStock.symbol)}
-            pendingOrders={pendingOrders}
-            activePosition={positions[selectedStock.symbol]}
-            onPriceUpdate={handlePriceChange}
+            totalBars={totalBars}
+            onStartReplay={handleStartReplaySelection}
+            onCancelReplay={handleCancelReplaySelection}
+            onReplayNext={handleReplayNext}
+            onStopReplay={handleStopReplay}
+            onGoToRealtime={handleGoToRealtime}
+            onOpenSearch={() => setIsSearchModalOpen(true)}
+            onOpenIndicator={() => setIsIndicatorModalOpen(true)}
+            activeIndicatorCount={activeIndicators.length}
           />
-          <BottomPanel
-            positions={positions as any}
-            pendingOrders={pendingOrders}
-            selectedSymbol={selectedStock.symbol}
-            currentPrice={selectedStock.price}
-            onClosePosition={async (symbol, side, price) => {
-              try {
-                const res = await tradingApi.closePosition(symbol, side, price);
-                if (res.success) {
-                  await fetchPortfolio();
-                  setTradeCount(c => c + 1);
-                  return { success: true, message: `✅ Đã chốt vị thế ${side} ${symbol}` };
-                }
-                return { success: false, message: 'Lỗi khi đóng vị thế' };
-              } catch (e: any) {
-                return { success: false, message: e.message };
-              }
-            }}
-            onCancelOrder={handleCancelOrder}
-            onUpdateTPSL={async (symbol, side, tp, sl) => {
-              try {
-                const res = await tradingApi.updateTPSL(symbol, side, tp, sl);
-                if (res.success) {
-                  await fetchPortfolio();
-                  return { success: true, message: '✅ Đã cập nhật TP/SL' };
-                }
-                return { success: false, message: 'Lỗi cập nhật' };
-              } catch (e: any) {
-                return { success: false, message: e.message };
-              }
-            }}
-            onAddMargin={async (symbol, side, amount) => {
-              try {
-                const res = await tradingApi.addMargin(symbol, side, amount);
-                if (res.success) {
-                  await fetchPortfolio();
-                  return { success: true, message: res.message || '✅ Đã bơm thêm ký quỹ' };
-                }
-                return { success: false, message: res.message || 'Lỗi bơm ký quỹ' };
-              } catch (e: any) {
-                return { success: false, message: e.message };
-              }
-            }}
-            onEditPosition={(symbol) => {
-              const stock = STOCKS.find(s => s.symbol === symbol);
-              if (stock) handleStockSelect(stock);
-              setEditingSymbol(symbol);
-            }}
-            refreshTrigger={tradeCount}
-          />
+          
+          {activeTab === 'chart' && (
+            <div className="flex flex-col flex-1 overflow-hidden">
+              <div className="flex flex-col flex-1 min-h-[300px] overflow-hidden border-b border-[#2a2e39]">
+                <ChartArea
+                  activeTool={activeTool}
+                  selectedStock={selectedStock}
+                  activeTimeframe={activeTimeframe}
+                  isReplaying={isReplaying}
+                  isSelectingReplayStart={isSelectingReplayStart}
+                  onSelectReplayStart={handleConfirmReplayStart}
+                  replayIndex={replayIndex}
+                  goToRealtimeTrigger={goToRealtimeTrigger}
+                  onDataLoaded={setTotalBars}
+                  tradeOrders={tradeOrders.filter(o => o.symbol === selectedStock.symbol)}
+                  pendingOrders={pendingOrders}
+                  activeIndicators={activeIndicators}
+                  activePosition={positions[selectedStock.symbol] as any}
+                  onPriceUpdate={(price) => {
+                    setSelectedStock(prev => {
+                      if (prev.price === price) return prev;
+                      const basePrice = STOCKS.find(s => s.symbol === prev.symbol)?.price || prev.price;
+                      const change = price - basePrice;
+                      const percent = (change / basePrice) * 100;
+                      return { ...prev, price, change, percent, type: change >= 0 ? 'up' : 'down' };
+                    });
+                    handlePriceChange(price);
+                  }}
+                />
+              </div>
+              <BottomPanel
+                positions={positions as any}
+                pendingOrders={pendingOrders}
+                selectedSymbol={selectedStock.symbol}
+                currentPrice={selectedStock.price}
+                onClosePosition={async (symbol, side, price) => {
+                  try {
+                    const res = await tradingApi.closePosition(symbol, side, price);
+                    if (res.success) {
+                      await fetchPortfolio();
+                      setTradeCount(c => c + 1);
+                      return { success: true, message: `✅ Đã chốt vị thế ${side} ${symbol}` };
+                    }
+                    return { success: false, message: 'Lỗi khi đóng vị thế' };
+                  } catch (e: any) {
+                    return { success: false, message: e.message };
+                  }
+                }}
+                onCancelOrder={handleCancelOrder}
+                onUpdateTPSL={async (symbol, side, tp, sl) => {
+                  try {
+                    const res = await tradingApi.updateTPSL(symbol, side, tp, sl);
+                    if (res.success) {
+                      await fetchPortfolio();
+                      return { success: true, message: '✅ Đã cập nhật TP/SL' };
+                    }
+                    return { success: false, message: 'Lỗi cập nhật' };
+                  } catch (e: any) {
+                    return { success: false, message: e.message };
+                  }
+                }}
+                onAddMargin={async (symbol, side, amount) => {
+                  try {
+                    const res = await tradingApi.addMargin(symbol, side, amount);
+                    if (res.success) {
+                      await fetchPortfolio();
+                      return { success: true, message: res.message || '✅ Đã bơm thêm ký quỹ' };
+                    }
+                    return { success: false, message: res.message || 'Lỗi bơm ký quỹ' };
+                  } catch (e: any) {
+                    return { success: false, message: e.message };
+                  }
+                }}
+                onEditPosition={(symbol) => {
+                  const stock = STOCKS.find(s => s.symbol === symbol);
+                  if (stock) handleStockSelect(stock);
+                  setEditingSymbol(symbol);
+                }}
+                refreshTrigger={tradeCount}
+              />
+            </div>
+          )}
+          
+          {activeTab === 'coin_info' && (
+            <CoinInfoPanel stock={selectedStock} />
+          )}
+          {activeTab === 'info' && (
+            <ContractInfoPanel stock={selectedStock} />
+          )}
         </div>
         <div className="flex flex-col bg-[#131722] shrink-0 border-l border-[#2a2e39] overflow-hidden">
           <RightSidebar
@@ -404,7 +483,6 @@ export const TradingTerminal = () => {
         </div>
       </div>
 
-      {/* Global Toast */}
       {toast && (
         <div className="fixed top-4 right-1/2 translate-x-1/2 z-50 animate-bounce">
           <div className={`px-4 py-3 rounded-lg shadow-xl border flex items-center gap-3 ${toast.type === 'warning'
@@ -416,6 +494,24 @@ export const TradingTerminal = () => {
         </div>
       )}
 
+      <SymbolSearchModal
+        isOpen={isSearchModalOpen}
+        onClose={() => setIsSearchModalOpen(false)}
+        onSelect={(stock) => {
+          handleStockSelect(stock);
+          setIsSearchModalOpen(false);
+        }}
+      />
+      <IndicatorModal
+        isOpen={isIndicatorModalOpen}
+        onClose={() => setIsIndicatorModalOpen(false)}
+        activeIndicators={activeIndicators}
+        onToggle={(ind) => {
+          setActiveIndicators(prev => 
+            prev.includes(ind) ? prev.filter(i => i !== ind) : [...prev, ind]
+          );
+        }}
+      />
     </div>
   );
 };

@@ -29,13 +29,13 @@ export const AssetAvatar = ({ stock, size = 'md', showExchangeBadge = true }: As
         style={{
           width: dim.inner,
           height: dim.inner,
-          background: assetStyle.bg,
+          background: (assetStyle.logoUrl && !imgError) ? '#ffffff' : assetStyle.bg,
           color: assetStyle.color,
         }}
       >
-        {assetStyle.isCrypto && assetStyle.coinLogoUrl && !imgError ? (
+        {(assetStyle.coinLogoUrl || assetStyle.logoUrl) && !imgError ? (
           <img
-            src={assetStyle.coinLogoUrl}
+            src={assetStyle.coinLogoUrl || assetStyle.logoUrl}
             alt={stock.symbol}
             style={{ width: dim.inner - 6, height: dim.inner - 6, objectFit: 'contain' }}
             onError={() => setImgError(true)}

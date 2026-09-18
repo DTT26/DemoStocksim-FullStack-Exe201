@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Search, BarChart2, Play, Pause, ChevronRight, Square, CandlestickChart, Settings } from 'lucide-react';
-import { TIMEFRAMES, type Stock } from '../data';
+import { Search, BarChart2, Play, Pause, Square, ChevronRight, CandlestickChart, Settings, RefreshCcw } from 'lucide-react';
+import { TIMEFRAMES, getPricePrecision, type Stock } from '../data';
 import { AssetAvatar } from './AssetAvatar';
 
 interface TickerHeaderProps {
@@ -8,23 +8,24 @@ interface TickerHeaderProps {
   activeTab: 'chart' | 'coin_info' | 'info';
   onTabChange: (tab: 'chart' | 'coin_info' | 'info') => void;
   activeTimeframe: string;
-  onTimeframeChange: (tf: string) => void;
+  onTimeframeChange: (t: string) => void;
   isReplaying: boolean;
+  isSelectingReplayStart: boolean;
   replayIndex: number;
-  onStartReplay: (fromIndex: number) => void;
+  totalBars?: number;
+  onStartReplay: () => void;
+  onCancelReplay: () => void;
   onReplayNext: () => void;
   onStopReplay: () => void;
+  onGoToRealtime: () => void;
   onOpenSearch: () => void;
   onOpenIndicator: () => void;
   activeIndicatorCount: number;
 }
 
-const TOTAL_BARS = 300;
-const DEFAULT_REPLAY_START = 50;
-
 export const TickerHeader = ({ 
-  stock, activeTab, onTabChange, activeTimeframe, onTimeframeChange, isReplaying, replayIndex,
-  onStartReplay, onReplayNext, onStopReplay, onOpenSearch, onOpenIndicator, activeIndicatorCount
+  stock, activeTab, onTabChange, activeTimeframe, onTimeframeChange, isReplaying, isSelectingReplayStart, replayIndex, totalBars = 1000,
+  onStartReplay, onCancelReplay, onReplayNext, onStopReplay, onGoToRealtime, onOpenSearch, onOpenIndicator, activeIndicatorCount 
 }: TickerHeaderProps) => {
   const [autoPlay, setAutoPlay] = useState(false);
   const [intervalId, setIntervalId] = useState<ReturnType<typeof setInterval> | null>(null);
@@ -46,8 +47,11 @@ export const TickerHeader = ({
     onStopReplay();
   };
 
-  const reachedEnd = replayIndex >= TOTAL_BARS;
+  const reachedEnd = totalBars > 0 && replayIndex >= totalBars;
 
+  const precision = getPricePrecision(stock.price);
+  const markPrice = (stock.price * 1.0002).toFixed(precision);
+  const indexPrice = (stock.price * 1.0001).toFixed(precision);
   const high24h = stock.price * 1.022;
   const low24h = stock.price * 0.978;
   const vol24h = stock.price > 1000 ? 158.49 : 15849.2;
@@ -76,10 +80,10 @@ export const TickerHeader = ({
           </div>
           <div className="flex flex-col items-end pl-4">
             <span className={`text-lg font-bold font-mono leading-tight ${isUp ? 'text-[#089981]' : 'text-[#f23645]'}`}>
-              {stock.price.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {stock.price.toLocaleString('vi-VN', { minimumFractionDigits: Math.min(2, precision), maximumFractionDigits: precision })}
             </span>
             <span className={`font-mono text-[11px] ${isUp ? 'text-[#089981]' : 'text-[#f23645]'}`}>
-              {stock.change > 0 ? '+' : ''}{stock.change.toFixed(2)} ({stock.percent > 0 ? '+' : ''}{stock.percent.toFixed(2)}%)
+              {stock.change > 0 ? '+' : ''}{stock.change.toFixed(precision)} ({stock.percent > 0 ? '+' : ''}{stock.percent.toFixed(2)}%)
             </span>
           </div>
         </div>
@@ -89,11 +93,11 @@ export const TickerHeader = ({
             <>
               <div className="flex flex-col gap-0.5">
                 <span className="text-[#787b86] text-xs">Giá đánh dấu</span>
-                <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-sm">{(stock.price + 0.07).toFixed(2)}</span>
+                <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-sm">{markPrice}</span>
               </div>
               <div className="flex flex-col gap-0.5">
                 <span className="text-[#787b86] text-xs">Giá chỉ số</span>
-                <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-sm">{(stock.price + 1.64).toFixed(2)}</span>
+                <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-sm">{indexPrice}</span>
               </div>
               {stock.isFutures && (
                 <div className="flex flex-col gap-0.5">
@@ -105,11 +109,11 @@ export const TickerHeader = ({
           )}
           <div className="flex flex-col gap-0.5">
             <span className="text-[#787b86] text-xs">Cao nhất 24 giờ</span>
-            <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-sm">{high24h.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-sm">{high24h.toLocaleString('vi-VN', { minimumFractionDigits: Math.min(2, precision), maximumFractionDigits: precision })}</span>
           </div>
           <div className="flex flex-col gap-0.5">
             <span className="text-[#787b86] text-xs">Thấp nhất 24 giờ</span>
-            <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-sm">{low24h.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-sm">{low24h.toLocaleString('vi-VN', { minimumFractionDigits: Math.min(2, precision), maximumFractionDigits: precision })}</span>
           </div>
           <div className="flex flex-col gap-0.5">
             <span className="text-[#787b86] text-xs">KL 24h ({stock.symbol.replace('USDT', '').replace('.P', '')})</span>
@@ -184,9 +188,21 @@ export const TickerHeader = ({
 
           <div className="w-px h-4 bg-[#e6e8ea] dark:bg-[#2a2e39] mx-1" />
 
-          {!isReplaying ? (
+          {isSelectingReplayStart ? (
+            <div className="flex items-center gap-2 bg-blue-100 dark:bg-blue-900/40 border border-blue-300 dark:border-blue-700/60 rounded px-2 py-0.5 shrink-0">
+              <span className="text-blue-700 dark:text-blue-300 text-xs font-semibold">
+                Nhấp vào nến trên biểu đồ để chọn điểm bắt đầu
+              </span>
+              <button 
+                onClick={onCancelReplay}
+                className="ml-2 text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 px-2 py-0.5 rounded text-gray-800 dark:text-gray-200 transition-colors"
+              >
+                Hủy
+              </button>
+            </div>
+          ) : !isReplaying ? (
             <button
-              onClick={() => onStartReplay(DEFAULT_REPLAY_START)}
+              onClick={onStartReplay}
               className="flex items-center gap-1 hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39] px-2 py-1 rounded transition-colors"
             >
               <Play className="w-4 h-4" />
@@ -194,22 +210,36 @@ export const TickerHeader = ({
             </button>
           ) : (
             <div className="flex items-center gap-1 bg-orange-100 dark:bg-orange-900/40 border border-orange-300 dark:border-orange-700/60 rounded px-2 py-0.5 shrink-0">
-              <span className="text-orange-700 dark:text-orange-300 text-xs font-semibold mr-1">
-                {reachedEnd ? '✅ Kết thúc' : `Bar ${replayIndex}`}
+              <span className="text-orange-700 dark:text-orange-300 text-xs font-semibold mr-1 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse inline-block" />
+                {reachedEnd ? '✅ Đã đến hiện tại' : 'Replay'}
               </span>
               {!reachedEnd && !autoPlay && (
-                <button onClick={onReplayNext} className="p-1 text-orange-600 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-700/40 rounded"><ChevronRight className="w-3.5 h-3.5" /></button>
+                <button onClick={onReplayNext} title="Nến tiếp theo (Bước tiếp)" className="p-1 text-orange-600 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-700/40 rounded transition-colors">
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
               )}
               {!reachedEnd && (
-                <button onClick={autoPlay ? stopAutoPlay : startAutoPlay} className="p-1 text-orange-600 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-700/40 rounded">
+                <button onClick={autoPlay ? stopAutoPlay : startAutoPlay} title={autoPlay ? "Tạm dừng" : "Phát tự động"} className="p-1 text-orange-600 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-700/40 rounded transition-colors">
                   {autoPlay ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
                 </button>
               )}
-              <button onClick={handleStopReplay} className="p-1 text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40 rounded"><Square className="w-3.5 h-3.5" /></button>
+              <button onClick={handleStopReplay} title="Thoát chế độ Replay" className="p-1 text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40 rounded transition-colors">
+                <Square className="w-3.5 h-3.5" />
+              </button>
             </div>
           )}
 
           <div className="w-px h-4 bg-[#e6e8ea] dark:bg-[#2a2e39] mx-1 hidden sm:block" />
+          
+          <button 
+            onClick={onGoToRealtime}
+            title="Đến biểu đồ thời gian thực"
+            className="hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39] p-1 rounded transition-colors hidden sm:block"
+          >
+            <RefreshCcw className="w-4 h-4" />
+          </button>
+          
           <button className="hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39] p-1 rounded transition-colors hidden sm:block"><Settings className="w-4 h-4" /></button>
         </div>
       </div>
