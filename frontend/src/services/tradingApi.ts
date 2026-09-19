@@ -78,5 +78,31 @@ export const tradingApi = {
   getTransactions: async () => {
     const res = await fetch(`${API_BASE_URL}/transactions/${DUMMY_USER_ID}`);
     return await res.json();
+  },
+
+  placeLimitOrder: async (symbol: string, side: 'LONG'|'SHORT', limitPrice: number, margin: number, leverage: number, stopLoss?: number, takeProfit?: number, orderType: 'LIMIT' | 'STOP' = 'LIMIT') => {
+    const res = await fetch(`${API_BASE_URL}/limit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: DUMMY_USER_ID, symbol, side, limitPrice, margin, leverage, stopLoss, takeProfit, orderType })
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.message || 'Lỗi hệ thống');
+    }
+    return await res.json();
+  },
+
+  cancelLimitOrder: async (orderId: string) => {
+    const res = await fetch(`${API_BASE_URL}/limit/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: DUMMY_USER_ID, orderId })
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.message || 'Lỗi hệ thống');
+    }
+    return await res.json();
   }
 };

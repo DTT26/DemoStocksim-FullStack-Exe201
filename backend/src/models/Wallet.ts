@@ -10,8 +10,8 @@ export interface IWallet extends Document {
 
 const WalletSchema: Schema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
-  balance: { type: Number, required: true, default: 100000 },
-  availableBalance: { type: Number, required: true, default: 100000 }
+  balance: { type: Number, required: true, default: 100000, min: [0, 'Balance cannot be negative'] },
+  availableBalance: { type: Number, required: true, default: 100000, min: [0, 'Available balance cannot be negative'] }
 }, { timestamps: true });
 
 export default mongoose.model<IWallet>('Wallet', WalletSchema);
