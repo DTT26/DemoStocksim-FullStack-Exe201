@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowUp, ArrowDown, Settings2 } from 'lucide-react';
+import { ArrowUp, ArrowDown } from 'lucide-react';
 
 interface OrderBookProps {
   symbol: string;
@@ -17,7 +17,6 @@ export const OrderBook = ({ symbol, currentPrice, isUp }: OrderBookProps) => {
   const [asks, setAsks] = useState<OrderRow[]>([]);
   const [bids, setBids] = useState<OrderRow[]>([]);
   const [buyRatio, setBuyRatio] = useState(92);
-  const [activeTab, setActiveTab] = useState<'orderbook' | 'trades'>('orderbook');
 
   const baseSymbol = symbol.replace('USDT', '').replace('.P', '');
   const quoteSymbol = symbol.includes('USDT') ? 'USDT' : 'VND';
@@ -33,8 +32,8 @@ export const OrderBook = ({ symbol, currentPrice, isUp }: OrderBookProps) => {
       const rows: OrderRow[] = [];
       const step = currentPrice * 0.0001; // 0.01% step
       
-      for (let i = 0; i < 14; i++) {
-        const p = isAsk ? startPrice + (step * (14 - i)) : startPrice - (step * (i + 1));
+      for (let i = 0; i < 10; i++) {
+        const p = isAsk ? startPrice + (step * (10 - i)) : startPrice - (step * (i + 1));
         const a = (Math.random() * (currentPrice > 1000 ? 0.5 : 500)) + (currentPrice > 1000 ? 0.01 : 10);
         rows.push({ price: p, amount: a, total: 0 });
       }
@@ -42,13 +41,13 @@ export const OrderBook = ({ symbol, currentPrice, isUp }: OrderBookProps) => {
       // Calculate totals
       if (isAsk) {
         // Asks accumulate from bottom to top
-        for (let i = 13; i >= 0; i--) {
+        for (let i = 9; i >= 0; i--) {
           currentTotal += rows[i].amount;
           rows[i].total = currentTotal;
         }
       } else {
         // Bids accumulate from top to bottom
-        for (let i = 0; i < 14; i++) {
+        for (let i = 0; i < 10; i++) {
           currentTotal += rows[i].amount;
           rows[i].total = currentTotal;
         }
@@ -73,12 +72,12 @@ export const OrderBook = ({ symbol, currentPrice, isUp }: OrderBookProps) => {
         }));
         
         if (isAsk) {
-          for (let i = 13; i >= 0; i--) {
+          for (let i = 9; i >= 0; i--) {
             currentTotal += newRows[i].amount;
             newRows[i].total = currentTotal;
           }
         } else {
-          for (let i = 0; i < 14; i++) {
+          for (let i = 0; i < 10; i++) {
             currentTotal += newRows[i].amount;
             newRows[i].total = currentTotal;
           }
@@ -95,42 +94,12 @@ export const OrderBook = ({ symbol, currentPrice, isUp }: OrderBookProps) => {
 
   const maxTotal = Math.max(
     asks.length > 0 ? asks[0].total : 0, 
-    bids.length > 0 ? bids[13].total : 0
+    bids.length > 0 ? bids[bids.length - 1].total : 0
   );
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden bg-white dark:bg-[#131722] transition-colors border-b border-[#e6e8ea] dark:border-[#2a2e39]">
-      {/* Header Tabs */}
-      <div className="flex items-center justify-between px-3 h-10 border-b border-[#e6e8ea] dark:border-[#2a2e39] shrink-0">
-        <div className="flex gap-4 h-full">
-          <button 
-            onClick={() => setActiveTab('orderbook')}
-            className={`text-sm font-semibold h-full border-b-2 transition-colors ${
-              activeTab === 'orderbook' 
-                ? 'text-[#1e2329] dark:text-[#d1d4dc] border-blue-500' 
-                : 'text-[#787b86] border-transparent hover:text-[#d1d4dc]'
-            }`}
-          >
-            Sổ lệnh
-          </button>
-          <button 
-            onClick={() => setActiveTab('trades')}
-            className={`text-sm font-semibold h-full border-b-2 transition-colors ${
-              activeTab === 'trades' 
-                ? 'text-[#1e2329] dark:text-[#d1d4dc] border-blue-500' 
-                : 'text-[#787b86] border-transparent hover:text-[#d1d4dc]'
-            }`}
-          >
-            Giao dịch
-          </button>
-        </div>
-        <button className="text-[#787b86] hover:text-[#d1d4dc]">
-          <Settings2 className="w-4 h-4" />
-        </button>
-      </div>
-
-      {activeTab === 'orderbook' ? (
-        <div className="flex flex-col flex-1 p-2 min-h-0">
+    <div className="flex flex-col flex-1 overflow-hidden bg-[#131722]">
+      <div className="flex flex-col flex-1 p-2 min-h-0">
           {/* Orderbook Header */}
           <div className="flex items-center justify-between text-[10px] text-[#787b86] mb-2 px-1">
             <span className="w-[30%]">Giá({quoteSymbol})</span>
@@ -203,11 +172,6 @@ export const OrderBook = ({ symbol, currentPrice, isUp }: OrderBookProps) => {
             </div>
           </div>
         </div>
-      ) : (
-        <div className="flex-1 flex items-center justify-center text-xs text-[#787b86]">
-          Chưa có dữ liệu giao dịch
-        </div>
-      )}
     </div>
   );
 };
