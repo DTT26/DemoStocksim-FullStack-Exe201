@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Check } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 

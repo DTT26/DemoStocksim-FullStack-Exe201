@@ -6,16 +6,11 @@ import dotenv from 'dotenv';
 import Wallet from './models/Wallet';
 
 dotenv.config();
-// import { Server } from 'socket.io';
 
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/stocksim';
 
 const server = http.createServer(app);
-
-// Socket.IO Setup Placeholder
-// const io = new Server(server, { cors: { origin: '*' } });
-// io.on('connection', (socket) => { ... });
 
 const MONGO_URI_LOCAL = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/stocksim';
 

@@ -103,3 +103,29 @@ export const getTransactions = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const placeLimitOrder = async (req: Request, res: Response) => {
+  try {
+    const { userId, symbol, side, limitPrice, margin, leverage, stopLoss, takeProfit, orderType } = req.body;
+    if (!userId || !symbol || !side || !limitPrice || !margin || !leverage) {
+      return res.status(400).json({ success: false, message: 'Missing parameters' });
+    }
+    const result = await TradingService.placeLimitOrder(userId, symbol, side, limitPrice, margin, leverage, stopLoss, takeProfit, orderType);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const cancelLimitOrder = async (req: Request, res: Response) => {
+  try {
+    const { userId, orderId } = req.body;
+    if (!userId || !orderId) {
+      return res.status(400).json({ success: false, message: "Missing required fields" });
+    }
+    const result = await TradingService.cancelLimitOrder(userId, orderId);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};

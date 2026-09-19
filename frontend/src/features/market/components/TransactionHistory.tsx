@@ -48,7 +48,9 @@ export const TransactionHistory = ({ refreshTrigger }: { refreshTrigger: number 
               </tr>
             ) : (
               transactions.map(tx => {
-                const isPositive = tx.type === 'SELL_STOCK' || tx.type === 'DEPOSIT';
+                // Trong Margin Trading: Mở lệnh (Buy/Sell) đều là trừ tiền ký quỹ -> Âm
+                // Đóng lệnh (Deposit) là trả lại tiền ký quỹ + lãi/lỗ -> Dương
+                const isPositive = tx.type === 'DEPOSIT';
                 const colorClass = isPositive ? 'text-[#089981]' : 'text-[#f23645]';
                 const sign = isPositive ? '+' : '-';
                 
@@ -59,16 +61,16 @@ export const TransactionHistory = ({ refreshTrigger }: { refreshTrigger: number 
                     </td>
                     <td className="px-4 py-2">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        tx.type.includes('BUY') ? 'bg-[#f23645]/20 text-[#f23645]' : 
-                        tx.type.includes('SELL') ? 'bg-[#089981]/20 text-[#089981]' : 
-                        'bg-blue-500/20 text-blue-400'
+                        tx.type === 'DEPOSIT' ? 'bg-blue-500/20 text-blue-400' :
+                        tx.type.includes('BUY') ? 'bg-[#089981]/20 text-[#089981]' :
+                        'bg-[#f23645]/20 text-[#f23645]'
                       }`}>
-                        {tx.type.replace('_STOCK', '')}
+                        {tx.type === 'DEPOSIT' ? 'CLOSE' : tx.type.replace('_STOCK', '')}
                       </span>
                     </td>
                     <td className="px-4 py-2">{tx.description}</td>
                     <td className={`px-4 py-2 text-right font-mono font-semibold ${colorClass}`}>
-                      {sign}{tx.amount.toLocaleString('vi-VN')}
+                      {sign}{Math.abs(tx.amount).toLocaleString('vi-VN')}
                     </td>
                   </tr>
                 );

@@ -24,6 +24,25 @@ const CATEGORIES: ('Tất cả' | MarketCategory)[] = [
 export const SymbolSearchModal = ({ isOpen, onClose, onSelect, watchlistMode, activeWatchlistSymbols = [], onToggleWatchlist }: SymbolSearchModalProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<'Tất cả' | MarketCategory>('Tất cả');
+  const [activeExchange, setActiveExchange] = useState<string>('Tất cả');
+  const [activeType, setActiveType] = useState<'Tất cả' | 'Spot' | 'Futures'>('Tất cả');
+
+  // Reset sub-filters when category changes
+  const handleCategoryChange = (cat: 'Tất cả' | MarketCategory) => {
+    setActiveCategory(cat);
+    setActiveExchange('Tất cả');
+    setActiveType('Tất cả');
+  };
+
+  const availableExchanges = useMemo(() => {
+    const exchanges = new Set<string>();
+    STOCKS.forEach(stock => {
+      if (activeCategory === 'Tất cả' || stock.market === activeCategory) {
+        exchanges.add(stock.exchange);
+      }
+    });
+    return ['Tất cả', ...Array.from(exchanges)];
+  }, [activeCategory]);
 
   const filteredStocks = useMemo(() => {
     return STOCKS.filter((stock) => {
@@ -32,10 +51,15 @@ export const SymbolSearchModal = ({ isOpen, onClose, onSelect, watchlistMode, ac
         stock.name.toLowerCase().includes(searchQuery.toLowerCase());
       
       const matchesCategory = activeCategory === 'Tất cả' || stock.market === activeCategory;
+      const matchesExchange = activeExchange === 'Tất cả' || stock.exchange === activeExchange;
       
-      return matchesSearch && matchesCategory;
+      let matchesType = true;
+      if (activeType === 'Spot') matchesType = !stock.isFutures;
+      if (activeType === 'Futures') matchesType = !!stock.isFutures;
+      
+      return matchesSearch && matchesCategory && matchesExchange && matchesType;
     });
-  }, [searchQuery, activeCategory]);
+  }, [searchQuery, activeCategory, activeExchange, activeType]);
 
   if (!isOpen) return null;
 
@@ -73,7 +97,7 @@ export const SymbolSearchModal = ({ isOpen, onClose, onSelect, watchlistMode, ac
           {CATEGORIES.map((cat) => (
             <button
               key={cat}
-              onClick={() => setActiveCategory(cat)}
+              onClick={() => handleCategoryChange(cat)}
               className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${
                 activeCategory === cat
                   ? 'bg-blue-50 dark:bg-[#089981]/20 text-blue-600 dark:text-[#089981] border-blue-500 dark:border-[#089981]/50'
@@ -83,6 +107,43 @@ export const SymbolSearchModal = ({ isOpen, onClose, onSelect, watchlistMode, ac
               {cat}
             </button>
           ))}
+        </div>
+
+        {/* Sub Filters (Exchange & Type) */}
+        <div className="px-5 py-3 border-b border-[#e6e8ea] dark:border-[#2a2e39] flex flex-wrap items-center gap-3 bg-[#f8f9fa] dark:bg-[#131722]/50">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-[#787b86]">Sàn GD:</span>
+            <select 
+              value={activeExchange}
+              onChange={(e) => setActiveExchange(e.target.value)}
+              className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc] text-xs rounded px-2 py-1 focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
+            >
+              {availableExchanges.map(ex => (
+                <option key={ex} value={ex}>{ex}</option>
+              ))}
+            </select>
+          </div>
+          
+          {(activeCategory === 'Tất cả' || activeCategory === 'Tiền điện tử (Crypto)') && (
+            <div className="flex items-center gap-2 border-l border-[#e6e8ea] dark:border-[#2a2e39] pl-3">
+              <span className="text-xs font-semibold text-[#787b86]">Loại:</span>
+              <div className="flex bg-[#e6e8ea] dark:bg-[#2a2e39] rounded p-0.5">
+                {['Tất cả', 'Spot', 'Futures'].map(type => (
+                  <button
+                    key={type}
+                    onClick={() => setActiveType(type as any)}
+                    className={`text-[11px] px-2 py-0.5 rounded transition-colors font-medium ${
+                      activeType === type 
+                        ? 'bg-white dark:bg-[#1e222d] text-blue-600 dark:text-blue-400 shadow-sm' 
+                        : 'text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Results List */}
@@ -115,9 +176,12 @@ export const SymbolSearchModal = ({ isOpen, onClose, onSelect, watchlistMode, ac
                       <span className="text-[#787b86] text-xs truncate">{stock.name}</span>
                     </div>
 
-                    {/* Market */}
-                    <div className="w-32 text-[#787b86] text-xs truncate">
-                      {stock.market}
+                    {/* Market & Leverage */}
+                    <div className="w-32 flex flex-col justify-center">
+                      <span className="text-[#787b86] text-xs truncate">{stock.market}</span>
+                      <span className="text-[10px] font-bold text-[#fcd535] bg-[#fcd535]/10 px-1.5 py-0.5 rounded w-max mt-0.5">
+                        Max {stock.leverageInfo.max}x
+                      </span>
                     </div>
 
                     {/* Price & CHG% (hidden in watchlist mode) */}

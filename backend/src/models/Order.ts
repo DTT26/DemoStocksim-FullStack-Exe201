@@ -1,13 +1,14 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export enum OrderSide {
-  BUY = 'BUY',
-  SELL = 'SELL'
+  LONG = 'LONG',
+  SHORT = 'SHORT'
 }
 
 export enum OrderType {
   MARKET = 'MARKET',
-  LIMIT = 'LIMIT'
+  LIMIT = 'LIMIT',
+  STOP = 'STOP'
 }
 
 export enum OrderStatus {
@@ -24,6 +25,8 @@ export interface IOrder extends Document {
   type: OrderType;
   quantity: number;
   price: number;
+  margin: number;
+  leverage: number;
   stopLoss?: number;
   takeProfit?: number;
   status: OrderStatus;
@@ -38,6 +41,8 @@ const OrderSchema: Schema = new Schema({
   type: { type: String, enum: Object.values(OrderType), required: true },
   quantity: { type: Number, required: true, min: [1, 'Quantity must be at least 1'] },
   price: { type: Number, required: true, min: [0, 'Price cannot be negative'] },
+  margin: { type: Number, required: true, default: 0 },
+  leverage: { type: Number, required: true, default: 1 },
   stopLoss: { type: Number },
   takeProfit: { type: Number },
   status: { type: String, enum: Object.values(OrderStatus), default: OrderStatus.PENDING }

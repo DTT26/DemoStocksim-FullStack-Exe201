@@ -77,8 +77,10 @@ interface ChartAreaProps {
   replayIndex: number;
   tradeOrders: TradeOrder[];
   chartSettings: ChartSettings;
+  pendingOrders?: any[];
   activeIndicators: string[];
-  activePosition?: { quantity: number; averagePrice: number; side: 'LONG'|'SHORT'; leverage: number; tp?: number; sl?: number };
+  activePosition?: { quantity: number; averagePrice: number; side: 'LONG' | 'SHORT'; leverage: number; tp?: number; sl?: number };
+  onPriceChange?: (price: number) => void;
   onPriceUpdate?: (price: number) => void;
   isSelectingReplayStart?: boolean;
   onSelectReplayStart?: (index: number) => void;
@@ -89,7 +91,14 @@ interface ChartAreaProps {
 // Cache data per stock+timeframe to avoid re-generating every render
 const dataCache = new Map<string, KLineData[]>();
 
-export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplaying, replayIndex, tradeOrders, chartSettings, activeIndicators, activePosition, onPriceUpdate, isSelectingReplayStart, onSelectReplayStart, goToRealtimeTrigger, onDataLoaded }: ChartAreaProps) => {
+const getStockData = (stock: Stock): KLineData[] => {
+  if (!dataCache.has(stock.symbol)) {
+    dataCache.set(stock.symbol, generateOHLCV(stock.price, 300));
+  }
+  return dataCache.get(stock.symbol)!;
+};
+
+export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplaying, replayIndex, tradeOrders, chartSettings, pendingOrders, activeIndicators, activePosition, onPriceUpdate, onPriceChange, isSelectingReplayStart, onSelectReplayStart, goToRealtimeTrigger, onDataLoaded }: ChartAreaProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<Chart | null>(null);
   const activeToolRef = useRef<string>('cursor');
@@ -175,27 +184,43 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
           const dd = d.getDate().toString().padStart(2, '0');
           const mo = (d.getMonth() + 1).toString().padStart(2, '0');
           const yyyy = d.getFullYear();
-          
           const tf = activeTimeframeRef.current || 'D';
           const isIntraday = tf.endsWith('m') || tf.endsWith('h');
-          
           if (params.type === 'crosshair' || params.type === 'tooltip') {
-             return isIntraday ? `${dd}/${mo}/${yyyy} ${hh}:${mm}` : `${dd}/${mo}/${yyyy}`;
+            return isIntraday ? `${dd}/${mo}/${yyyy} ${hh}:${mm}` : `${dd}/${mo}/${yyyy}`;
           }
-          
+
           // xAxis tick
           if (isIntraday) {
              return `${dd}/${mo} ${hh}:${mm}`;
           } else {
-             return `${dd}/${mo}/${yyyy}`;
+            return `${dd}/${mo}/${yyyy}`;
           }
         }
       }
     });
     if (!chart) return;
-    
+
     // Apply initial theme
     chart.setStyles(theme === 'dark' ? 'dark' : 'light');
+
+    // Then override grid and candle styles
+    chart.setStyles({
+      grid: {
+        horizontal: { color: theme === 'dark' ? '#2a2e39' : '#e6e8ea', size: 1, style: 'dashed' },
+        vertical: { color: theme === 'dark' ? '#2a2e39' : '#e6e8ea', size: 1, style: 'dashed' },
+      },
+      candle: {
+        bar: {
+          upColor: '#089981',
+          downColor: '#f23645',
+          upBorderColor: '#089981',
+          downBorderColor: '#f23645',
+          upWickColor: '#089981',
+          downWickColor: '#f23645',
+        }
+      }
+    });
 
     chartRef.current = chart;
 
@@ -371,7 +396,7 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
     let isMounted = true;
     let tickerInterval: ReturnType<typeof setInterval>;
     let wsUnsubscribe: (() => void) | null = null;
-    
+
     // Map activeTimeframe to klinecharts period
     let timespan = 'day';
     let multiplier = 1;
@@ -390,7 +415,7 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
     const loadData = async () => {
       setIsLoading(true);
       const cacheKey = `${selectedStock.symbol}-${activeTimeframe}`;
-      
+
       let allData: KLineData[] = [];
 
       // Phân loại data source
@@ -435,17 +460,15 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
         pricePrecision: precision,
         volumePrecision: 2,
       });
-      
       chart.setDataLoader({
         getBars: async (params: DataLoaderGetBarsParams) => {
           // Khi người dùng cuộn sang trái (kéo về quá khứ)
           // CHÚ Ý: Trong KlineCharts v10, 'forward' là cuộn về quá khứ (prepend data)
           if (params.type === 'forward') {
             if (!params.timestamp) return params.callback([], true);
-            
+
             // Lấy nến cũ hơn dựa vào timestamp của nến đầu tiên hiện tại
             const oldestTime = params.timestamp;
-            
             if (selectedStock.market === 'Tiền điện tử (Crypto)') {
               const binanceInterval = mapTimeframeToBinance(activeTimeframe);
               
@@ -534,7 +557,6 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
               const tickPrecision = getPricePrecision(lastCandle.close);
               const swing = (Math.random() - 0.5) * lastCandle.close * 0.005;
               const newPrice = lastCandle.close + swing;
-              
               const newCandle = {
                 ...lastCandle,
                 close: parseFloat(newPrice.toFixed(tickPrecision)),
@@ -542,7 +564,7 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
                 low: parseFloat(Math.min(lastCandle.low, newPrice).toFixed(tickPrecision)),
                 volume: (lastCandle.volume || 0) + Math.random() * 500,
               };
-              
+
               allData[allData.length - 1] = newCandle;
               params.callback(newCandle);
               if (onPriceUpdate) onPriceUpdate(newCandle.close);
@@ -587,7 +609,7 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
         try {
           // API v10: removeIndicator(filter?: { id?, paneId?, name? })
           chart.removeIndicator(paneId ? { paneId, name } : { name });
-        } catch (_) {}
+        } catch (_) { }
         paneMap.delete(name);
       }
     });
@@ -628,7 +650,7 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
 
     if (activePosition && activePosition.quantity > 0) {
       const isBuy = activePosition.side === 'LONG';
-      const color = isBuy ? '#089981' : '#f23645';
+      const color = '#ffffff'; // White for entry line
 
       // 1. Draw main entry price line
       chart.createOverlay({
@@ -638,7 +660,7 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
         styles: {
           line: { color: '#ffffff', size: 2, style: 'dashed', dashedValue: [5, 5] },
           text: {
-            color: '#ffffff',
+            color: '#131722',
             backgroundColor: color,
             paddingLeft: 6,
             paddingRight: 6,
@@ -699,14 +721,39 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
         });
       }
     }
-  }, [activePosition, activeTimeframe, selectedStock.symbol, isLoading]);
+
+    // Draw Pending Orders
+    if (pendingOrders && pendingOrders.length > 0) {
+      const stockPending = pendingOrders.filter(o => o.symbol === selectedStock.symbol);
+      stockPending.forEach(order => {
+        const isBuy = order.side === 'LONG';
+        const isLimit = order.type === 'LIMIT';
+        const color = isLimit ? '#2962ff' : '#e65100'; // Blue for limit, Orange for stop
+
+        chart.createOverlay({
+          name: 'horizontalStraightLine',
+          lock: true,
+          points: [{ timestamp: allData[lastDataIndex].timestamp, value: order.price }],
+          styles: {
+            line: { color, size: 1, style: 'dashed', dashedValue: [2, 2] },
+            text: {
+              color: '#ffffff',
+              backgroundColor: color,
+              paddingLeft: 4, paddingRight: 4, paddingTop: 2, paddingBottom: 2,
+              borderRadius: 2, size: 10, family: 'Inter', weight: 'bold',
+            },
+          },
+          extendData: `${order.type} ${order.side} ${order.quantity?.toFixed(2) || ''} @ ${order.price.toLocaleString('vi-VN')}₫`,
+        });
+      });
+    }
+  }, [activePosition, pendingOrders, isReplaying, replayIndex, selectedStock]);
+
+  const priceColor = selectedStock.percent > 0 ? 'text-[#089981]' : selectedStock.percent < 0 ? 'text-[#f23645]' : 'text-[#787b86]';
 
   const bgStyle = chartSettings.canvas.bgType === 'Solid' 
     ? { backgroundColor: chartSettings.canvas.bgSolid } 
     : { background: `linear-gradient(to bottom, ${chartSettings.canvas.bgGradientTop}, ${chartSettings.canvas.bgGradientBottom})` };
-
-  const priceColor = selectedStock.percent > 0 ? 'text-[#089981]' : selectedStock.percent < 0 ? 'text-[#f23645]' : 'text-[#787b86]';
-
 
   return (
     <div className="flex-1 min-w-0 relative" style={bgStyle}>
