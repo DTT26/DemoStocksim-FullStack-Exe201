@@ -67,7 +67,10 @@ export const BottomPanel = ({
   const tabs = [
     { id: 'positions', label: `Vị thế (${posList.length})` },
     { id: 'orders', label: `Lệnh mở (${pendingOrders.length})` },
-    { id: 'trade_history', label: 'Lịch sử giao dịch' }
+    { id: 'order_history', label: 'Lịch sử đặt lệnh' },
+    { id: 'trade_history', label: 'Lịch sử giao dịch' },
+    { id: 'position_history', label: 'Lịch sử vị thế' },
+    { id: 'cashflow_history', label: 'Lịch sử dòng vốn' }
   ];
 
   return (
@@ -82,7 +85,7 @@ export const BottomPanel = ({
                 if (activeTab === tab.id) {
                   setIsExpanded(!isExpanded);
                 } else {
-                  setActiveTab(tab.id as 'positions' | 'orders' | 'history' | 'trade_history');
+                  setActiveTab(tab.id as any);
                   setIsExpanded(true);
                 }
               }}
@@ -225,7 +228,7 @@ export const BottomPanel = ({
           </table>
         )}
 
-        {activeTab === 'trade_history' && (
+        {['order_history', 'trade_history', 'position_history', 'cashflow_history'].includes(activeTab) && (
           <table className="w-full text-left">
             <thead className="sticky top-0 bg-[#131722] text-[#787b86] font-medium border-b border-[#2a2e39]">
               <tr>
