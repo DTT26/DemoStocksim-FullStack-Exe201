@@ -3,7 +3,7 @@ import { ChartArea } from './components/ChartArea';
 import { RightSidebar } from './components/RightSidebar';
 import { RightToolbar } from './components/RightToolbar';
 import { WatchlistPanel, type Watchlist } from './components/WatchlistPanel';
-import { SimulationPanel } from './components/SimulationPanel';
+import { SimulationPanel, type SimulationConfig } from './components/SimulationPanel';
 import { CalculatorPanel } from './components/CalculatorPanel';
 import { LeftToolbar } from './components/LeftToolbar';
 import { ToolbarNavbar } from '../../components/ToolbarNavbar';
@@ -38,21 +38,21 @@ export const TradingTerminal = () => {
   const [tradeOrders, setTradeOrders] = useState<TradeOrder[]>([]);
   const [activeTimeframe, setActiveTimeframe] = useState<string>('D');
   const [balance, setBalance] = useState<number>(100_000_000);
-  const [positions, setPositions] = useState<Record<string, { quantity: number, averagePrice: number, side: 'LONG'|'SHORT', leverage: number, tp?: number, sl?: number }>>({});
+  const [positions, setPositions] = useState<Record<string, { quantity: number, averagePrice: number, side: 'LONG' | 'SHORT', leverage: number, tp?: number, sl?: number }>>({});
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isIndicatorModalOpen, setIsIndicatorModalOpen] = useState(false);
   const [activeIndicators, setActiveIndicators] = useState<string[]>([]);
   const [tradeCount, setTradeCount] = useState(0);
-  
+
   const [activeRightPanel, setActiveRightPanel] = useState<'watchlist' | 'order' | 'simulation' | 'calculator' | null>('watchlist');
-  
+
   const { user } = useAuth();
-  
+
   const [watchlists, setWatchlists] = useState<Watchlist[]>(() => {
     try {
       const saved = localStorage.getItem('watchlists');
       if (saved) return JSON.parse(saved);
-    } catch {}
+    } catch { }
     return [{ id: '1', name: 'Danh sách của tôi', symbols: ['BTCUSDT', 'ETHUSDT', 'FPT', 'VNINDEX'] }];
   });
 
@@ -88,7 +88,7 @@ export const TradingTerminal = () => {
 
   const handleUpdateWatchlist = async (id: string, symbols: string[]) => {
     setWatchlists(prev => prev.map(w => w.id === id ? { ...w, symbols } : w));
-    
+
     const token = localStorage.getItem('token');
     if (user && token) {
       try {
@@ -98,13 +98,13 @@ export const TradingTerminal = () => {
       }
     }
   };
-  
+
   const handleCreateWatchlist = async (name: string) => {
     const tempId = Date.now().toString();
     const newWatchlist = { id: tempId, name, symbols: [] };
     setWatchlists(prev => [...prev, newWatchlist]);
     setActiveWatchlistId(tempId);
-    
+
     const token = localStorage.getItem('token');
     if (user && token) {
       try {
@@ -118,13 +118,13 @@ export const TradingTerminal = () => {
       }
     }
   };
-  
+
   const handleDeleteWatchlist = async (id: string) => {
     setWatchlists(prev => prev.filter(w => w.id !== id));
     if (activeWatchlistId === id) {
       setActiveWatchlistId(watchlists.find(w => w.id !== id)?.id || watchlists[0]?.id || '');
     }
-    
+
     const token = localStorage.getItem('token');
     if (user && token) {
       try {
@@ -134,10 +134,10 @@ export const TradingTerminal = () => {
       }
     }
   };
-  
+
   const handleRenameWatchlist = async (id: string, newName: string) => {
     setWatchlists(prev => prev.map(w => w.id === id ? { ...w, name: newName } : w));
-    
+
     const token = localStorage.getItem('token');
     if (user && token) {
       try {
@@ -207,14 +207,14 @@ export const TradingTerminal = () => {
       const res = await tradingApi.getPortfolio();
       if (res.success && res.data) {
         if (res.data.wallet) {
-           setBalance(res.data.wallet.availableBalance);
+          setBalance(res.data.wallet.availableBalance);
         }
         if (res.data.holdings) {
-           const newPositions: Record<string, { quantity: number, averagePrice: number, side: 'LONG'|'SHORT', leverage: number, tp?: number, sl?: number }> = {};
-           res.data.holdings.forEach((h: any) => {
-             newPositions[h.symbol] = { quantity: h.quantity, averagePrice: h.averagePrice, side: h.side, leverage: h.leverage, tp: h.tp, sl: h.sl };
-           });
-           setPositions(newPositions);
+          const newPositions: Record<string, { quantity: number, averagePrice: number, side: 'LONG' | 'SHORT', leverage: number, tp?: number, sl?: number }> = {};
+          res.data.holdings.forEach((h: any) => {
+            newPositions[h.symbol] = { quantity: h.quantity, averagePrice: h.averagePrice, side: h.side, leverage: h.leverage, tp: h.tp, sl: h.sl };
+          });
+          setPositions(newPositions);
         }
       }
     } catch (e) {
@@ -229,42 +229,42 @@ export const TradingTerminal = () => {
   const handleTrade = async (type: 'buy' | 'sell' | 'close', price: number, margin: number, leverage: number, tp?: number, sl?: number) => {
     try {
       if (type === 'close') {
-         const pos = positions[selectedStock.symbol];
-         if (!pos) return { success: false, message: 'Không có vị thế để đóng' };
-         
-         const res = await tradingApi.closePosition(selectedStock.symbol, pos.side, price);
-         if (res.success) {
-            await fetchPortfolio();
-            setTradeCount(c => c + 1);
-            return { success: true, message: `✅ Đã chốt vị thế ${pos.side} thành công` };
-         }
+        const pos = positions[selectedStock.symbol];
+        if (!pos) return { success: false, message: 'Không có vị thế để đóng' };
+
+        const res = await tradingApi.closePosition(selectedStock.symbol, pos.side, price);
+        if (res.success) {
+          await fetchPortfolio();
+          setTradeCount(c => c + 1);
+          return { success: true, message: `✅ Đã chốt vị thế ${pos.side} thành công` };
+        }
       } else if (type === 'buy') {
         const res = await tradingApi.buyStock(selectedStock.symbol, margin, leverage, price, sl, tp);
         if (res.success) {
-           await fetchPortfolio();
-           const order: TradeOrder = {
-             id: `${Date.now()}-${Math.random()}`,
-             type, symbol: selectedStock.symbol, price, qty: (margin*leverage)/price, timestamp: Date.now(), tp, sl,
-           };
-           setTradeOrders(prev => [...prev, order]);
-           setTradeCount(c => c + 1);
-           return { success: true, message: `✅ Mở LONG ${selectedStock.symbol} thành công` };
+          await fetchPortfolio();
+          const order: TradeOrder = {
+            id: `${Date.now()}-${Math.random()}`,
+            type, symbol: selectedStock.symbol, price, qty: (margin * leverage) / price, timestamp: Date.now(), tp, sl,
+          };
+          setTradeOrders(prev => [...prev, order]);
+          setTradeCount(c => c + 1);
+          return { success: true, message: `✅ Mở LONG ${selectedStock.symbol} thành công` };
         }
       } else if (type === 'sell') {
         const res = await tradingApi.sellStock(selectedStock.symbol, margin, leverage, price);
         if (res.success) {
-           await fetchPortfolio();
-           const order: TradeOrder = {
-             id: `${Date.now()}-${Math.random()}`,
-             type, symbol: selectedStock.symbol, price, qty: (margin*leverage)/price, timestamp: Date.now(), tp, sl,
-           };
-           setTradeOrders(prev => [...prev, order]);
-           setTradeCount(c => c + 1);
-           return { success: true, message: `✅ Mở SHORT ${selectedStock.symbol} thành công` };
+          await fetchPortfolio();
+          const order: TradeOrder = {
+            id: `${Date.now()}-${Math.random()}`,
+            type, symbol: selectedStock.symbol, price, qty: (margin * leverage) / price, timestamp: Date.now(), tp, sl,
+          };
+          setTradeOrders(prev => [...prev, order]);
+          setTradeCount(c => c + 1);
+          return { success: true, message: `✅ Mở SHORT ${selectedStock.symbol} thành công` };
         }
       }
     } catch (error: any) {
-       return { success: false, message: error.message || 'Giao dịch thất bại' };
+      return { success: false, message: error.message || 'Giao dịch thất bại' };
     }
     return { success: false, message: 'Lỗi không xác định' };
   };
@@ -273,11 +273,11 @@ export const TradingTerminal = () => {
     try {
       const pos = positions[selectedStock.symbol];
       if (!pos) return { success: false, message: 'Không có vị thế' };
-      
+
       const res = await tradingApi.updateTPSL(selectedStock.symbol, pos.side, tp, sl);
       if (res.success) {
-         await fetchPortfolio();
-         return { success: true, message: `✅ Đã cập nhật TP/SL` };
+        await fetchPortfolio();
+        return { success: true, message: `✅ Đã cập nhật TP/SL` };
       }
       return { success: false, message: 'Lỗi cập nhật' };
     } catch (e: any) {
@@ -289,9 +289,9 @@ export const TradingTerminal = () => {
     try {
       const pos = positions[symbolToClose];
       if (!pos) return { success: false, message: 'Không có vị thế' };
-      
+
       const currentPrice = symbolToClose === selectedStock.symbol ? selectedStock.price : (STOCKS.find(s => s.symbol === symbolToClose)?.price || pos.averagePrice);
-      
+
       const res = await tradingApi.closePosition(symbolToClose, pos.side, currentPrice);
       if (res.success) {
         await fetchPortfolio();
@@ -308,11 +308,11 @@ export const TradingTerminal = () => {
     try {
       const pos = positions[selectedStock.symbol];
       if (!pos) return { success: false, message: 'Không có vị thế' };
-      
+
       const res = await tradingApi.addMargin(selectedStock.symbol, pos.side, amount);
       if (res.success) {
-         await fetchPortfolio();
-         return { success: true, message: res.message || `✅ Đã bơm thêm ký quỹ` };
+        await fetchPortfolio();
+        return { success: true, message: res.message || `✅ Đã bơm thêm ký quỹ` };
       }
       return { success: false, message: res.message || 'Lỗi bơm ký quỹ' };
     } catch (e: any) {
@@ -353,12 +353,12 @@ export const TradingTerminal = () => {
       (window as any)[`isClosing_${key}`] = true;
 
       handleTrade('close', currentPrice, 0, 0).then(res => {
-         (window as any)[`isClosing_${key}`] = false;
-         if (res.success) {
-           alert(`⚠️ HỆ THỐNG TỰ ĐỘNG ĐÓNG VỊ THẾ!\nLý do: ${reason}\nGiá thực thi: ${currentPrice.toLocaleString('vi-VN')}₫`);
-         }
+        (window as any)[`isClosing_${key}`] = false;
+        if (res.success) {
+          alert(`⚠️ HỆ THỐNG TỰ ĐỘNG ĐÓNG VỊ THẾ!\nLý do: ${reason}\nGiá thực thi: ${currentPrice.toLocaleString('vi-VN')}₫`);
+        }
       }).catch(() => {
-         (window as any)[`isClosing_${key}`] = false;
+        (window as any)[`isClosing_${key}`] = false;
       });
     }
   }, [selectedStock.price, positions, selectedStock.symbol]);
@@ -409,9 +409,9 @@ export const TradingTerminal = () => {
 
       <div className="flex flex-1 overflow-hidden">
         <LeftToolbar activeTool={activeTool} onToolSelect={handleToolClick} />
-        
+
         <div className="flex flex-col flex-1 overflow-y-auto custom-scrollbar min-w-0 border-r border-[#2a2e39]">
-          <TickerHeader 
+          <TickerHeader
             stock={selectedStock}
             activeTab={activeTab}
             onTabChange={setActiveTab}
@@ -430,7 +430,7 @@ export const TradingTerminal = () => {
             onOpenIndicator={() => setIsIndicatorModalOpen(true)}
             activeIndicatorCount={activeIndicators.length}
           />
-          
+
           {activeTab === 'chart' && (
             <div className="flex flex-col flex-1">
               <div className="flex flex-col h-[550px] shrink-0 overflow-hidden border-b border-[#2a2e39]">
@@ -459,15 +459,15 @@ export const TradingTerminal = () => {
                   }}
                 />
               </div>
-              <BottomPanel 
-                refreshTrigger={tradeCount} 
-                positions={positions as any} 
-                currentStock={selectedStock} 
-                onClosePosition={handleCloseSpecificPosition} 
+              <BottomPanel
+                refreshTrigger={tradeCount}
+                positions={positions as any}
+                currentStock={selectedStock}
+                onClosePosition={handleCloseSpecificPosition}
               />
             </div>
           )}
-          
+
           {activeTab === 'coin_info' && (
             <CoinInfoPanel stock={selectedStock} />
           )}
@@ -490,7 +490,7 @@ export const TradingTerminal = () => {
               currentSymbol={selectedStock.symbol}
             />
           )}
-          
+
           {activeRightPanel === 'order' && (
             <RightSidebar
               selectedStock={selectedStock}
@@ -517,17 +517,17 @@ export const TradingTerminal = () => {
             />
           )}
 
-          <RightToolbar 
-            activePanel={activeRightPanel} 
-            onChangePanel={setActiveRightPanel} 
+          <RightToolbar
+            activePanel={activeRightPanel}
+            onChangePanel={setActiveRightPanel}
           />
         </div>
       </div>
 
-      <SymbolSearchModal 
-        isOpen={isSearchModalOpen} 
-        onClose={() => setIsSearchModalOpen(false)} 
-        onSelect={handleStockSelect} 
+      <SymbolSearchModal
+        isOpen={isSearchModalOpen}
+        onClose={() => setIsSearchModalOpen(false)}
+        onSelect={handleStockSelect}
       />
       <IndicatorModal
         isOpen={isIndicatorModalOpen}
@@ -535,10 +535,10 @@ export const TradingTerminal = () => {
         activeIndicators={activeIndicators}
         onToggle={handleToggleIndicator}
       />
-      
+
       {isSettingsModalOpen && (
-        <ChartSettingsModal 
-          onClose={() => setIsSettingsModalOpen(false)} 
+        <ChartSettingsModal
+          onClose={() => setIsSettingsModalOpen(false)}
           chartSettings={chartSettings}
           onSettingsChange={setChartSettings}
         />
