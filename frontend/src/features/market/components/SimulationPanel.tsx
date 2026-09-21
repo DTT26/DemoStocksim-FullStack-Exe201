@@ -46,10 +46,9 @@ export const SimulationPanel = ({ currentSymbol, onStartSimulation }: Simulation
   // Fetch sessions on mount
   useEffect(() => {
     const fetchSessions = async () => {
-      const token = localStorage.getItem('token');
-      if (user && token) {
+      if (user) {
         try {
-          const data = await getSessions(token);
+          const data = await getSessions();
           setSessions(data);
         } catch (error) {
           console.error("Failed to fetch sessions", error);
@@ -68,14 +67,13 @@ export const SimulationPanel = ({ currentSymbol, onStartSimulation }: Simulation
 
   const handleStart = async () => {
     onStartSimulation(config);
-    const token = localStorage.getItem('token');
-    if (!user || !token) {
+    if (!user) {
       setIsCreating(false);
       return;
     }
 
     try {
-      const newSession = await createSession(token, {
+      const newSession = await createSession({
         symbol: currentSymbol,
         initialBalance: config.balance
       });

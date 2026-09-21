@@ -4,19 +4,17 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 // --- Watchlist API ---
 
-export const getWatchlists = async (token: string): Promise<Watchlist[]> => {
-  const res = await fetch(`${API_URL}/watchlists`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+export const getWatchlists = async (): Promise<Watchlist[]> => {
+  const res = await fetch(`${API_URL}/watchlists`, { credentials: 'include',
+    });
   if (!res.ok) throw new Error('Failed to fetch watchlists');
   return res.json();
 };
 
-export const createWatchlist = async (token: string, data: { name: string; symbols?: string[] }): Promise<Watchlist> => {
-  const res = await fetch(`${API_URL}/watchlists`, {
+export const createWatchlist = async (data: { name: string; symbols?: string[] }): Promise<Watchlist> => {
+  const res = await fetch(`${API_URL}/watchlists`, { credentials: 'include',
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(data)
@@ -25,11 +23,10 @@ export const createWatchlist = async (token: string, data: { name: string; symbo
   return res.json();
 };
 
-export const updateWatchlist = async (token: string, id: string, data: { name?: string; symbols?: string[] }): Promise<Watchlist> => {
-  const res = await fetch(`${API_URL}/watchlists/${id}`, {
+export const updateWatchlist = async (id: string, data: { name?: string; symbols?: string[] }): Promise<Watchlist> => {
+  const res = await fetch(`${API_URL}/watchlists/${id}`, { credentials: 'include',
     method: 'PUT',
     headers: {
-      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(data)
@@ -38,11 +35,10 @@ export const updateWatchlist = async (token: string, id: string, data: { name?: 
   return res.json();
 };
 
-export const deleteWatchlist = async (token: string, id: string): Promise<void> => {
-  const res = await fetch(`${API_URL}/watchlists/${id}`, {
+export const deleteWatchlist = async (id: string): Promise<void> => {
+  const res = await fetch(`${API_URL}/watchlists/${id}`, { credentials: 'include',
     method: 'DELETE',
-    headers: { Authorization: `Bearer ${token}` }
-  });
+    });
   if (!res.ok) throw new Error('Failed to delete watchlist');
 };
 
@@ -58,19 +54,17 @@ export interface PaperSession {
   completedAt?: string;
 }
 
-export const getSessions = async (token: string): Promise<PaperSession[]> => {
-  const res = await fetch(`${API_URL}/paper-trading`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+export const getSessions = async (): Promise<PaperSession[]> => {
+  const res = await fetch(`${API_URL}/paper-trading`, { credentials: 'include',
+    });
   if (!res.ok) throw new Error('Failed to fetch sessions');
   return res.json();
 };
 
-export const createSession = async (token: string, data: { symbol: string; initialBalance: number }): Promise<PaperSession> => {
-  const res = await fetch(`${API_URL}/paper-trading`, {
+export const createSession = async (data: { symbol: string; initialBalance: number }): Promise<PaperSession> => {
+  const res = await fetch(`${API_URL}/paper-trading`, { credentials: 'include',
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(data)
@@ -79,11 +73,10 @@ export const createSession = async (token: string, data: { symbol: string; initi
   return res.json();
 };
 
-export const updateSession = async (token: string, id: string, data: { currentBalance?: number; status?: 'running' | 'completed' }): Promise<PaperSession> => {
-  const res = await fetch(`${API_URL}/paper-trading/${id}`, {
+export const updateSession = async (id: string, data: { currentBalance?: number; status?: 'running' | 'completed' }): Promise<PaperSession> => {
+  const res = await fetch(`${API_URL}/paper-trading/${id}`, { credentials: 'include',
     method: 'PUT',
     headers: {
-      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(data)

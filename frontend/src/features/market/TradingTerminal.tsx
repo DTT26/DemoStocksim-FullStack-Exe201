@@ -61,10 +61,9 @@ export const TradingTerminal = () => {
   // Fetch watchlists from API if user is logged in
   useEffect(() => {
     const fetchAPI = async () => {
-      const token = localStorage.getItem('token');
-      if (user && token) {
+      if (user) {
         try {
-          const data = await getWatchlists(token);
+          const data = await getWatchlists();
           if (data && data.length > 0) {
             // map _id to id if needed
             const mapped = data.map((w: any) => ({ ...w, id: w._id || w.id }));
@@ -91,10 +90,9 @@ export const TradingTerminal = () => {
   const handleUpdateWatchlist = async (id: string, symbols: string[]) => {
     setWatchlists(prev => prev.map(w => w.id === id ? { ...w, symbols } : w));
 
-    const token = localStorage.getItem('token');
-    if (user && token) {
+    if (user) {
       try {
-        await apiUpdateWatchlist(token, id, { symbols });
+        await apiUpdateWatchlist(id, { symbols });
       } catch (error) {
         console.error("Failed to update watchlist on server", error);
       }
@@ -107,10 +105,9 @@ export const TradingTerminal = () => {
     setWatchlists(prev => [...prev, newWatchlist]);
     setActiveWatchlistId(tempId);
 
-    const token = localStorage.getItem('token');
-    if (user && token) {
+    if (user) {
       try {
-        const created = await apiCreateWatchlist(token, { name, symbols: [] });
+        const created = await apiCreateWatchlist({ name, symbols: [] });
         // Replace tempId with actual DB id
         const realId = (created as any)._id || created.id;
         setWatchlists(prev => prev.map(w => w.id === tempId ? { ...w, id: realId } : w));
@@ -127,10 +124,9 @@ export const TradingTerminal = () => {
       setActiveWatchlistId(watchlists.find(w => w.id !== id)?.id || watchlists[0]?.id || '');
     }
 
-    const token = localStorage.getItem('token');
-    if (user && token) {
+    if (user) {
       try {
-        await apiDeleteWatchlist(token, id);
+        await apiDeleteWatchlist(id);
       } catch (error) {
         console.error("Failed to delete watchlist on server", error);
       }
@@ -140,10 +136,9 @@ export const TradingTerminal = () => {
   const handleRenameWatchlist = async (id: string, newName: string) => {
     setWatchlists(prev => prev.map(w => w.id === id ? { ...w, name: newName } : w));
 
-    const token = localStorage.getItem('token');
-    if (user && token) {
+    if (user) {
       try {
-        await apiUpdateWatchlist(token, id, { name: newName });
+        await apiUpdateWatchlist(id, { name: newName });
       } catch (error) {
         console.error("Failed to rename watchlist on server", error);
       }
