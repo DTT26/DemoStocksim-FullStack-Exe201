@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { useGoogleLogin, googleLogout } from '@react-oauth/google';
+import { LoginModal } from '../components/LoginModal';
 
 export interface User {
   _id: string;
@@ -31,6 +32,8 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string>('');
 
   const fetchUser = async () => {
     try {
@@ -56,14 +59,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     fetchUser();
   }, []);
 
-  const login = useGoogleLogin({
+  const triggerGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
         const res = await fetch(`${apiUrl}/auth/google`, { credentials: 'include',
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ access_token: tokenResponse.access_token }),
+          body: JSON.stringify({ 
+            access_token: tokenResponse.access_token,
+            captchaToken: captchaToken
+          }),
         });
         const data = await res.json();
         
@@ -79,6 +85,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     },
     onError: () => console.log('Login Failed')
   });
+
+  const login = () => setIsLoginModalOpen(true);
 
   const logout = async () => {
     googleLogout();
@@ -100,6 +108,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   return (
     <AuthContext.Provider value={{ user, loading, login, logout, refreshUser: fetchUser }}>
       {children}
+      <LoginModal 
+        isOpen={isLoginModalOpen} 
+        onClose={() => setIsLoginModalOpen(false)} 
+        onLoginGoogle={(token) => {
+          setCaptchaToken(token);
+          triggerGoogleLogin();
+        }} 
+      />
     </AuthContext.Provider>
   );
 };

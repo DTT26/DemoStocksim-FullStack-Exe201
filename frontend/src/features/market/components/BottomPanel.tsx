@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, CheckSquare, Square, Settings2, ChevronDown, ChevronUp } from 'lucide-react';
 import { STOCKS } from '../data';
 import { tradingApi } from '../../../services/tradingApi';
+import { useAlert } from '../../../contexts/AlertContext';
 
 interface Transaction {
   _id: string;
@@ -36,6 +37,7 @@ export const BottomPanel = ({
   onEditPosition,
   refreshTrigger
 }: BottomPanelProps) => {
+  const { showAlert } = useAlert();
   const [activeTab, setActiveTab] = useState<'positions' | 'orders' | 'history' | 'trade_history'>('positions');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   
@@ -370,7 +372,7 @@ export const BottomPanel = ({
                   const amt = parseInt(addingMargin.amount, 10);
                   if (!isNaN(amt) && amt > 0) {
                     const res = await onAddMargin(addingMargin.symbol, addingMargin.side, amt);
-                    alert(res.message);
+                    showAlert(res.message, res.success ? 'success' : 'error');
                     if (res.success) setAddingMargin(null);
                   }
                 }}

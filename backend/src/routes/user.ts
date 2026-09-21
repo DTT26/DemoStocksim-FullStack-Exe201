@@ -17,9 +17,9 @@ router.route('/me')
   .get(protect, getMyProfile as any)
   .put(protect, updateMyProfile as any);
 
-// Các route quản lý User (Dành cho Admin và Lecturer để xem danh sách sinh viên)
+// Các route quản lý User (Dành cho Admin, Lecturer, và Student để xem Leaderboard)
 router.route('/')
-  .get(protect, lecturer, getUsers as any);
+  .get(protect, getUsers as any);
 
 router.route('/:id')
   .get(protect, admin, getUserById as any)

@@ -22,6 +22,7 @@ import { tradingApi } from '../../services/tradingApi';
 import { SimulatorTradingPanel } from './components/SimulatorTradingPanel';
 import { PositionsManager } from './components/PositionsManager';
 import { useSimulatorStore } from './engine/useSimulatorStore';
+import { useNotificationStore } from '../../stores/useNotificationStore';
 
 export interface TradeOrder {
   id: string;
@@ -53,6 +54,7 @@ export const TradingTerminal = () => {
   const [activeRightPanel, setActiveRightPanel] = useState<'watchlist' | 'order' | 'simulation' | 'calculator' | null>('watchlist');
 
   const { user } = useAuth();
+  const { addNotification } = useNotificationStore();
 
   const [watchlists, setWatchlists] = useState<Watchlist[]>(() => {
     try {
@@ -252,6 +254,7 @@ export const TradingTerminal = () => {
         if (res.success) {
           await fetchPortfolio();
           setTradeCount(c => c + 1);
+          addNotification({ title: 'Đóng vị thế', message: `Đã chốt vị thế ${pos.side} mã ${selectedStock.symbol} thành công.`, type: 'success' });
           return { success: true, message: `✅ Đã chốt vị thế ${pos.side} thành công` };
         }
       } else if (type === 'limit_buy' || type === 'limit_sell') {
@@ -260,6 +263,7 @@ export const TradingTerminal = () => {
         if (res.success) {
           await fetchPortfolio();
           setTradeCount(c => c + 1);
+          addNotification({ title: 'Đặt lệnh Limit', message: `Lệnh ${side} Limit mã ${selectedStock.symbol} tại giá ${price.toLocaleString('vi-VN')} đã được đặt.`, type: 'info' });
           return { success: true, message: res.message };
         }
       } else if (type === 'stop_buy' || type === 'stop_sell') {
@@ -268,6 +272,7 @@ export const TradingTerminal = () => {
         if (res.success) {
           await fetchPortfolio();
           setTradeCount(c => c + 1);
+          addNotification({ title: 'Đặt lệnh Stop', message: `Lệnh ${side} Stop mã ${selectedStock.symbol} tại giá ${price.toLocaleString('vi-VN')} đã được đặt.`, type: 'info' });
           return { success: true, message: res.message };
         }
       } else if (type === 'buy') {
@@ -280,6 +285,7 @@ export const TradingTerminal = () => {
           };
           setTradeOrders(prev => [...prev, order]);
           setTradeCount(c => c + 1);
+          addNotification({ title: 'Mở vị thế LONG', message: `Đã mở LONG ${selectedStock.symbol} tại giá ${price.toLocaleString('vi-VN')} đòn bẩy ${leverage}x.`, type: 'success' });
           return { success: true, message: `✅ Mở LONG ${selectedStock.symbol} thành công` };
         }
       } else if (type === 'sell') {
@@ -292,6 +298,7 @@ export const TradingTerminal = () => {
           };
           setTradeOrders(prev => [...prev, order]);
           setTradeCount(c => c + 1);
+          addNotification({ title: 'Mở vị thế SHORT', message: `Đã mở SHORT ${selectedStock.symbol} tại giá ${price.toLocaleString('vi-VN')} đòn bẩy ${leverage}x.`, type: 'success' });
           return { success: true, message: `✅ Mở SHORT ${selectedStock.symbol} thành công` };
         }
       }
@@ -308,6 +315,7 @@ export const TradingTerminal = () => {
         await fetchPortfolio();
         setTradeCount(c => c + 1);
         showToast('Đã hủy lệnh chờ thành công!', 'info');
+        addNotification({ title: 'Hủy lệnh', message: `Lệnh chờ đã bị hủy.`, type: 'warning' });
       }
     } catch (e: any) {
       showToast(e.message || 'Hủy lệnh thất bại', 'warning');
@@ -322,6 +330,7 @@ export const TradingTerminal = () => {
       const res = await tradingApi.updateTPSL(selectedStock.symbol, pos.side, tp, sl);
       if (res.success) {
         await fetchPortfolio();
+        addNotification({ title: 'Cập nhật TP/SL', message: `Đã cập nhật Chốt lời/Cắt lỗ cho vị thế ${pos.side} mã ${selectedStock.symbol}.`, type: 'info' });
         return { success: true, message: `✅ Đã cập nhật TP/SL` };
       }
       return { success: false, message: 'Lỗi cập nhật' };
@@ -341,6 +350,7 @@ export const TradingTerminal = () => {
       if (res.success) {
         await fetchPortfolio();
         setTradeCount(c => c + 1);
+        addNotification({ title: 'Đóng vị thế', message: `Đã chốt vị thế ${pos.side} mã ${symbolToClose}.`, type: 'success' });
         return { success: true, message: `✅ Đã chốt vị thế ${symbolToClose} thành công` };
       }
       return { success: false, message: res.message || 'Lỗi đóng lệnh' };
@@ -354,6 +364,7 @@ export const TradingTerminal = () => {
       const res = await tradingApi.addMargin(symbol, side, amount);
       if (res.success) {
         await fetchPortfolio();
+        addNotification({ title: 'Thêm ký quỹ', message: `Đã bơm thêm ${amount.toLocaleString('vi-VN')}₫ ký quỹ cho vị thế ${side} mã ${symbol}.`, type: 'info' });
         return { success: true, message: res.message || `✅ Đã bơm thêm ký quỹ` };
       }
       return { success: false, message: res.message || 'Lỗi bơm ký quỹ' };
@@ -400,6 +411,7 @@ export const TradingTerminal = () => {
         (window as any)[`isClosing_${key}`] = false;
         if (res.success) {
           showToast(`⚠️ HỆ THỐNG TỰ ĐỘNG ĐÓNG VỊ THẾ!\nLý do: ${reason}\nGiá: ${execPrice.toLocaleString('vi-VN')}₫`, 'warning');
+          addNotification({ title: 'Đóng lệnh tự động', message: `Vị thế ${pos.side} mã ${selectedStock.symbol} tự động đóng do: ${reason}.`, type: 'warning' });
         }
       }).catch(() => {
         (window as any)[`isClosing_${key}`] = false;
@@ -445,6 +457,7 @@ export const TradingTerminal = () => {
           .then(() => {
             fetchPortfolio();
             showToast(`✅ Lệnh chờ ${order.side} Limit tại ${order.price.toLocaleString()}đ đã khớp!`, 'info');
+            addNotification({ title: 'Khớp lệnh chờ', message: `Lệnh ${order.type} ${order.side} mã ${order.symbol} đã khớp tại giá ${order.price.toLocaleString('vi-VN')}₫.`, type: 'success' });
           })
           .finally(() => {
             (window as any)[key] = false;

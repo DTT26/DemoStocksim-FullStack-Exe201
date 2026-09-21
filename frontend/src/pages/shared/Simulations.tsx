@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Calendar, Users, DollarSign, BarChart2, PlusCircle, ArrowRight } from 'lucide-react';
+import { useAlert } from '../../contexts/AlertContext';
 
 export const SimulationsList = () => {
+  const { showAlert } = useAlert();
   const [simulations, setSimulations] = useState<any[]>([]);
   const [participations, setParticipations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,13 +51,14 @@ export const SimulationsList = () => {
       if (response.ok) {
         // Refresh data to show "Enter Simulation" button
         fetchData();
+        showAlert('Successfully joined the simulation', 'success');
       } else {
         const data = await response.json();
-        alert(data.message || 'Failed to join simulation');
+        showAlert(data.message || 'Failed to join simulation', 'error');
       }
     } catch (error) {
       console.error('Error joining simulation:', error);
-      alert('An error occurred while joining the simulation');
+      showAlert('An error occurred while joining the simulation', 'error');
     } finally {
       setJoiningId(null);
     }

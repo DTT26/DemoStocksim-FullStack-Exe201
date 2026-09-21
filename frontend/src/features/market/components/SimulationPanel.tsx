@@ -5,6 +5,7 @@ import { AuthOverlay } from './AuthOverlay';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getSessions, createSession, type PaperSession } from '../../../services/marketApi';
 import { useSimulatorStore } from '../engine/useSimulatorStore';
+import { CustomDatePicker } from '../../../components/CustomDatePicker';
 
 interface SimulationPanelProps {
   currentSymbol: string;
@@ -65,9 +66,47 @@ export const SimulationPanel = ({ currentSymbol, isReplaying, onStartSimulation 
   }, [user]);
 
   const store = useSimulatorStore();
+
+  // Filters for completed sessions
+  const [symbolFilter, setSymbolFilter] = useState<string>('');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
+  const [showSymbolDropdown, setShowSymbolDropdown] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   
   const activeSessions = sessions.filter(s => s.status === 'running');
-  const completedSessions = sessions.filter(s => s.status === 'completed');
+  const allCompletedSessions = sessions.filter(s => s.status === 'completed');
+
+  // Get unique symbols from completed sessions
+  const completedSymbols = useMemo(() => {
+    const symbols = new Set(allCompletedSessions.map(s => s.symbol));
+    return Array.from(symbols).sort();
+  }, [allCompletedSessions]);
+
+  // Apply filters
+  const completedSessions = useMemo(() => {
+    let filtered = allCompletedSessions;
+    if (symbolFilter) {
+      filtered = filtered.filter(s => s.symbol === symbolFilter);
+    }
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      filtered = filtered.filter(s => {
+        const d = new Date(s.completedAt || s.startedAt || '');
+        return d >= from;
+      });
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(s => {
+        const d = new Date(s.completedAt || s.startedAt || '');
+        return d <= to;
+      });
+    }
+    return filtered;
+  }, [allCompletedSessions, symbolFilter, dateFrom, dateTo]);
 
   const handleChange = (field: keyof SimulationConfig, value: number) => {
     setConfig(prev => ({ ...prev, [field]: value }));
@@ -490,15 +529,93 @@ export const SimulationPanel = ({ currentSymbol, isReplaying, onStartSimulation 
               </div>
               
               <div className="flex gap-2 mb-4 shrink-0">
-                <button className="flex-1 bg-transparent border border-[#e6e8ea] dark:border-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc] rounded px-3 py-1.5 text-sm flex items-center justify-between hover:border-[#787b86] transition-colors">
-                  <span className="truncate">Tất cả mã...</span>
-                  <ChevronDown className="w-4 h-4 text-[#787b86]" />
-                </button>
-                <button className="flex-1 bg-transparent border border-[#e6e8ea] dark:border-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc] rounded px-3 py-1.5 text-sm flex items-center justify-between hover:border-[#787b86] transition-colors">
-                  <span className="flex items-center gap-1.5 truncate">
-                    <Calendar className="w-4 h-4 text-[#787b86]" /> Khoảng ngày
-                  </span>
-                </button>
+                {/* Symbol Filter Dropdown */}
+                <div className="relative flex-1">
+                  <button 
+                    onClick={() => { setShowSymbolDropdown(!showSymbolDropdown); setShowDatePicker(false); }}
+                    className={`w-full bg-transparent border rounded px-3 py-1.5 text-sm flex items-center justify-between hover:border-[#787b86] transition-colors ${
+                      symbolFilter ? 'border-[#2962ff] text-[#2962ff]' : 'border-[#e6e8ea] dark:border-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]'
+                    }`}
+                  >
+                    <span className="truncate">{symbolFilter || 'Tất cả mã...'}</span>
+                    <ChevronDown className="w-4 h-4 text-[#787b86]" />
+                  </button>
+                  {showSymbolDropdown && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-[#1e222d] border border-[#2a2e39] rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+                      <button 
+                        onClick={() => { setSymbolFilter(''); setShowSymbolDropdown(false); }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-[#2a2e39] transition-colors ${
+                          !symbolFilter ? 'text-[#2962ff] font-bold' : 'text-[#d1d4dc]'
+                        }`}
+                      >
+                        Tất cả mã
+                      </button>
+                      {completedSymbols.map(sym => (
+                        <button 
+                          key={sym}
+                          onClick={() => { setSymbolFilter(sym); setShowSymbolDropdown(false); }}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-[#2a2e39] transition-colors ${
+                            symbolFilter === sym ? 'text-[#2962ff] font-bold' : 'text-[#d1d4dc]'
+                          }`}
+                        >
+                          {sym}
+                        </button>
+                      ))}
+                      {completedSymbols.length === 0 && (
+                        <div className="px-3 py-2 text-sm text-[#787b86]">Không có mã nào</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Date Range Filter */}
+                <div className="relative flex-1">
+                  <button 
+                    onClick={() => { setShowDatePicker(!showDatePicker); setShowSymbolDropdown(false); }}
+                    className={`w-full bg-transparent border rounded px-3 py-1.5 text-sm flex items-center justify-between hover:border-[#787b86] transition-colors ${
+                      (dateFrom || dateTo) ? 'border-[#2962ff] text-[#2962ff]' : 'border-[#e6e8ea] dark:border-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5 truncate">
+                      <Calendar className="w-4 h-4" />
+                      {(dateFrom || dateTo) 
+                        ? `${dateFrom ? new Date(dateFrom).toLocaleDateString('vi-VN', {day:'2-digit',month:'2-digit'}) : '...'} - ${dateTo ? new Date(dateTo).toLocaleDateString('vi-VN', {day:'2-digit',month:'2-digit'}) : '...'}`
+                        : 'Khoảng ngày'
+                      }
+                    </span>
+                  </button>
+                  {showDatePicker && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-[#1e222d] border border-[#2a2e39] rounded-lg shadow-xl z-50 p-3 space-y-2">
+                      <CustomDatePicker 
+                        label="Từ ngày"
+                        value={dateFrom} 
+                        onChange={(val) => setDateFrom(val)}
+                        align="right"
+                      />
+                      <div className="mt-2"></div>
+                      <CustomDatePicker 
+                        label="Đến ngày"
+                        value={dateTo} 
+                        onChange={(val) => setDateTo(val)}
+                        align="right"
+                      />
+                      <div className="flex gap-2 pt-1">
+                        <button 
+                          onClick={() => { setDateFrom(''); setDateTo(''); setShowDatePicker(false); }}
+                          className="flex-1 text-xs text-[#787b86] hover:text-[#d1d4dc] py-1.5 rounded border border-[#2a2e39] hover:border-[#787b86] transition-colors"
+                        >
+                          Xóa lọc
+                        </button>
+                        <button 
+                          onClick={() => setShowDatePicker(false)}
+                          className="flex-1 text-xs text-white bg-[#2962ff] hover:bg-[#2962ff]/90 py-1.5 rounded font-medium transition-colors"
+                        >
+                          Áp dụng
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="bg-[#089981]/10 dark:bg-[#089981]/10 border border-[#089981]/20 rounded-lg p-4 cursor-pointer hover:bg-[#089981]/20 transition-colors shrink-0 mb-8">

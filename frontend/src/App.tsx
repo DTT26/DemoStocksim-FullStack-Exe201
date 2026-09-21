@@ -17,8 +17,17 @@ import { LecturerDashboard } from './pages/lecturer/LecturerDashboard';
 import { LecturerSimulations } from './pages/lecturer/LecturerSimulations';
 import { LecturerAssignments } from './pages/lecturer/LecturerAssignments';
 import { LecturerStudents } from './pages/lecturer/LecturerStudents';
+import { LecturerStudentDetail } from './pages/lecturer/LecturerStudentDetail';
+import { LecturerPerformance } from './pages/lecturer/LecturerPerformance';
+import { LecturerProfile } from './pages/lecturer/LecturerProfile';
+import { LecturerSimulationResults } from './pages/lecturer/LecturerSimulationResults';
+import { LecturerLayout } from './layouts/LecturerLayout';
+import { AdminLayout } from './layouts/AdminLayout';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminUsers } from './pages/admin/Users';
+import { AdminSimulations } from './pages/admin/AdminSimulations';
+import { AdminSettings } from './pages/admin/AdminSettings';
+import { AdminProfile } from './pages/admin/AdminProfile';
 
 import { StudentLayout } from './layouts/StudentLayout';
 import { StudentJournal } from './pages/student/Journal';
@@ -30,7 +39,7 @@ function App() {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div className="h-screen w-screen flex items-center justify-center bg-white dark:bg-[#0b0e14] text-[#1e2329] dark:text-white transition-colors">Loading...</div>;
+    return <div className="h-screen w-screen flex items-center justify-center bg-[#080C14] text-white">Loading...</div>;
   }
 
   return (
@@ -57,16 +66,46 @@ function App() {
             <Route path="profile" element={<StudentProfile />} />
             <Route path="settings" element={<StudentSettings />} />
           </Route>
+          <Route path="/leaderboard" element={<Leaderboard />} />
         </Route>
       </Route>
 
-      {/* App Shell Routes (Admin & Lecturer) */}
+      {/* Lecturer Routes (Isolated Layout) */}
+      <Route element={<ProtectedRoute allowedRoles={['lecturer']} />}>
+        <Route element={<LecturerLayout />}>
+          <Route path="/lecturer">
+            <Route index element={<LecturerDashboard />} />
+            <Route path="simulations" element={<LecturerSimulations />} />
+            <Route path="simulations/:id/results" element={<LecturerSimulationResults />} />
+            <Route path="assignments" element={<LecturerAssignments />} />
+            <Route path="students" element={<LecturerStudents />} />
+            <Route path="students/:id" element={<LecturerStudentDetail />} />
+            <Route path="performance" element={<LecturerPerformance />} />
+            <Route path="profile" element={<LecturerProfile />} />
+          </Route>
+        </Route>
+      </Route>
+
+      {/* Admin Routes (Isolated Layout) */}
+      <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+        <Route element={<AdminLayout />}>
+          <Route path="/admin">
+            <Route index element={<AdminDashboard />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="simulations" element={<AdminSimulations />} />
+            <Route path="settings" element={<AdminSettings />} />
+            <Route path="profile" element={<AdminProfile />} />
+          </Route>
+        </Route>
+      </Route>
+
+      {/* App Shell Routes (shared/fallback) */}
       <Route path="/" element={<AppLayout />}>
         {/* Default route based on role */}
         <Route index element={
           !user ? <Navigate to="/trade/fpt" /> :
-          user.role === 'admin' ? <Navigate to="/admin" /> : 
-          user.role === 'lecturer' ? <Navigate to="/lecturer" /> : 
+          user.role === 'admin' ? <Navigate to="/admin" /> :
+          user.role === 'lecturer' ? <Navigate to="/lecturer" /> :
           <Navigate to="/student" />
         } />
 
@@ -76,25 +115,6 @@ function App() {
             <Route index element={<SimulationsList />} />
             <Route path=":id" element={<SimulationDetail />} />
           </Route>
-          <Route path="leaderboard" element={<Leaderboard />} />
-        </Route>
-
-        {/* Lecturer Routes */}
-        <Route element={<ProtectedRoute allowedRoles={['lecturer']} />}>
-          <Route path="lecturer">
-            <Route index element={<LecturerDashboard />} />
-            <Route path="simulations" element={<LecturerSimulations />} />
-            <Route path="assignments" element={<LecturerAssignments />} />
-            <Route path="students" element={<LecturerStudents />} />
-          </Route>
-        </Route>
-
-        {/* Admin Routes */}
-        <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-          <Route path="admin">
-            <Route index element={<AdminDashboard />} />
-            <Route path="users" element={<AdminUsers />} />
-          </Route>
         </Route>
       </Route>
     </Routes>
@@ -102,3 +122,4 @@ function App() {
 }
 
 export default App;
+

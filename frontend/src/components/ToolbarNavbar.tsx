@@ -3,7 +3,9 @@ import { Settings, User, Bell, Moon, Sun, Globe } from 'lucide-react';
 import { UserDropdown } from './UserDropdown';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAlert } from '../contexts/AlertContext';
 import { LanguageModal } from './LanguageModal';
+import { NotificationDropdown } from './NotificationDropdown';
 
 interface ToolbarNavbarProps {
   balance: number;
@@ -13,6 +15,7 @@ interface ToolbarNavbarProps {
 export const ToolbarNavbar = ({ balance, onOpenSettings }: ToolbarNavbarProps) => {
   const { user, login, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { showAlert } = useAlert();
   const isDarkMode = theme === 'dark';
   const [language, setLanguage] = useState('VI');
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
@@ -51,13 +54,7 @@ export const ToolbarNavbar = ({ balance, onOpenSettings }: ToolbarNavbarProps) =
 
         {/* Right side controls */}
         <div className="flex items-center gap-3">
-          <button 
-            onClick={() => alert('Chức năng Thông báo đang được phát triển!')}
-            className="hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#d1d4dc]"
-            title="Thông báo"
-          >
-            <Bell className="w-5 h-5" />
-          </button>
+          <NotificationDropdown />
           <button 
             onClick={toggleTheme}
             className="hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#d1d4dc]"

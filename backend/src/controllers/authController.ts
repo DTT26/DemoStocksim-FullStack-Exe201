@@ -4,10 +4,24 @@ import jwt from 'jsonwebtoken';
 
 export const googleLogin = async (req: Request, res: Response) => {
   try {
-    const { access_token } = req.body;
+    const { access_token, captchaToken } = req.body;
 
     if (!access_token) {
       return res.status(400).json({ message: 'Access token is required' });
+    }
+
+    if (!captchaToken) {
+      return res.status(400).json({ message: 'Captcha token is required' });
+    }
+
+    // Verify reCAPTCHA token
+    const secretKey = process.env.RECAPTCHA_SECRET_KEY || '6LcONsctAAAAAMsiuaoK59V9lOoI-tP6xcaF_nBK';
+    const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${captchaToken}`;
+    const captchaRes = await fetch(verifyUrl, { method: 'POST' });
+    const captchaData = await captchaRes.json();
+    
+    if (!captchaData.success) {
+      return res.status(403).json({ message: 'Captcha verification failed' });
     }
 
     // Lấy thông tin user từ Google API

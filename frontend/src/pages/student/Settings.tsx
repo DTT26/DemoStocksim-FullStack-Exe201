@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Bell, Shield, Smartphone, Monitor, Save } from 'lucide-react';
+import { useAlert } from '../../contexts/AlertContext';
 
 export const StudentSettings = () => {
+  const { showAlert } = useAlert();
   const [activeTab, setActiveTab] = useState('appearance');
   
   // Dummy state for settings
@@ -23,7 +25,7 @@ export const StudentSettings = () => {
 
   const handleSave = () => {
     // API Call to save settings would go here
-    alert("Settings saved successfully.");
+    showAlert("Settings saved successfully.", "success");
   };
 
   return (

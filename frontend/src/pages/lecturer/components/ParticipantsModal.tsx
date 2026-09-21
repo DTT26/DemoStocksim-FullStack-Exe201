@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, UserPlus, User } from 'lucide-react';
+import { X, UserPlus, User, Search, Users, ShieldAlert, Mail } from 'lucide-react';
 
 interface ParticipantsModalProps {
   isOpen: boolean;
@@ -11,12 +11,15 @@ export const ParticipantsModal = ({ isOpen, onClose, simulation }: ParticipantsM
   const [participants, setParticipants] = useState<any[]>([]);
   const [allStudents, setAllStudents] = useState<any[]>([]);
   const [selectedStudent, setSelectedStudent] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (isOpen && simulation) {
+      setSearchQuery('');
+      setSelectedStudent('');
       fetchData();
     }
   }, [isOpen, simulation]);
@@ -52,11 +55,10 @@ export const ParticipantsModal = ({ isOpen, onClose, simulation }: ParticipantsM
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
       
-      const response = await fetch(`${apiUrl}/simulations/${simulation._id}/add-student`, { credentials: 'include',
+      const response = await fetch(`${apiUrl}/simulations/${simulation._id}/add-student`, { 
+        credentials: 'include',
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentId: selectedStudent })
       });
 
@@ -64,6 +66,7 @@ export const ParticipantsModal = ({ isOpen, onClose, simulation }: ParticipantsM
         const newParticipant = await response.json();
         setParticipants([...participants, newParticipant]);
         setSelectedStudent('');
+        setSearchQuery('');
       } else {
         const data = await response.json();
         setError(data.message || 'Failed to add student');
@@ -77,87 +80,145 @@ export const ParticipantsModal = ({ isOpen, onClose, simulation }: ParticipantsM
 
   if (!isOpen || !simulation) return null;
 
-  // Lọc ra những sinh viên chưa tham gia
   const participantIds = participants.map(p => p.userId?._id || p.userId);
   const availableStudents = allStudents.filter(stu => !participantIds.includes(stu._id));
+  const filteredAvailable = availableStudents.filter(stu => 
+    (stu.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+    (stu.email?.toLowerCase() || '').includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#1e222d] rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="px-6 py-4 border-b border-[#2a2e39] flex justify-between items-center bg-[#131722]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-[#080C14]/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-[#111827] rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] border border-[#253047]">
+        {/* Header */}
+        <div className="px-6 py-5 border-b border-[#253047] flex justify-between items-center bg-[#172033]">
           <div>
-            <h2 className="text-xl font-bold text-white">Manage Participants</h2>
-            <p className="text-sm text-[#787b86]">{simulation.name}</p>
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <Users className="w-5 h-5 text-indigo-400" />
+              Manage Participants
+            </h2>
+            <p className="text-sm text-slate-400 mt-1">{simulation.name}</p>
           </div>
-          <button onClick={onClose} className="p-2 text-[#787b86] hover:text-[#787b86] hover:bg-[#2a2e39] rounded-full transition-colors">
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-white hover:bg-[#253047] rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
         
-        <div className="p-6 overflow-y-auto flex-1 flex flex-col">
+        <div className="p-6 overflow-y-auto flex-1 flex flex-col bg-[#111827]">
           {error && (
-            <div className="mb-4 p-3 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm">
-              {error}
+            <div className="mb-6 p-4 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-lg text-sm flex items-start gap-3">
+              <ShieldAlert className="w-5 h-5 shrink-0" />
+              <p>{error}</p>
             </div>
           )}
           
-          <div className="mb-8">
-            <label className="block text-sm font-semibold text-[#d1d4dc] mb-2">Add Student to Simulation</label>
-            <div className="flex gap-3">
-              <select
-                value={selectedStudent}
-                onChange={(e) => setSelectedStudent(e.target.value)}
-                className="flex-1 px-4 py-2 bg-[#131722] border border-[#2a2e39] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select a student...</option>
-                {availableStudents.map(stu => (
-                  <option key={stu._id} value={stu._id}>{stu.name || stu.email}</option>
-                ))}
-              </select>
+          {/* Add Student Section */}
+          <div className="mb-8 bg-[#172033] p-5 rounded-xl border border-[#253047]">
+            <label className="block text-sm font-semibold text-white mb-3">Add Student to Simulation</label>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  type="text"
+                  placeholder="Search available students..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2.5 bg-[#111827] border border-[#253047] rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-white placeholder:text-slate-500 text-sm"
+                />
+              </div>
+            </div>
+
+            {searchQuery && (
+              <div className="mt-2 border border-[#253047] rounded-lg overflow-hidden max-h-40 overflow-y-auto bg-[#111827]">
+                {filteredAvailable.length > 0 ? (
+                  <ul className="divide-y divide-[#253047]">
+                    {filteredAvailable.map(stu => (
+                      <li 
+                        key={stu._id} 
+                        onClick={() => { setSelectedStudent(stu._id); setSearchQuery(stu.name || stu.email); }}
+                        className="px-4 py-2 hover:bg-[#172033] cursor-pointer text-sm flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs font-bold">
+                            {stu.name ? stu.name.charAt(0).toUpperCase() : <User className="w-3 h-3" />}
+                          </div>
+                          <span className="text-white">{stu.name || stu.email}</span>
+                        </div>
+                        <span className="text-xs text-slate-500">{stu.email}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="px-4 py-3 text-sm text-slate-500 text-center">No students found matching "{searchQuery}"</div>
+                )}
+              </div>
+            )}
+
+            <div className="mt-4 flex justify-end">
               <button
                 onClick={handleAddStudent}
                 disabled={adding || !selectedStudent}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-2 font-medium"
+                className="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-medium text-sm shadow-lg shadow-indigo-600/20"
               >
                 {adding ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 ) : (
                   <UserPlus className="w-4 h-4" />
                 )}
-                Add
+                Add Selected Student
               </button>
             </div>
+            
             {availableStudents.length === 0 && !loading && (
-              <p className="text-xs text-amber-600 mt-2">All registered students are already in this simulation.</p>
+              <p className="text-sm text-emerald-400 mt-4 flex items-center gap-2 bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/20">
+                <ShieldAlert className="w-4 h-4" /> All registered students are already in this simulation.
+              </p>
             )}
           </div>
 
-          <div>
-            <h3 className="text-sm font-semibold text-[#d1d4dc] mb-3 flex justify-between">
-              <span>Current Participants ({participants.length})</span>
+          {/* Current Participants List */}
+          <div className="flex-1 flex flex-col min-h-0">
+            <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+              Current Participants 
+              <span className="bg-[#253047] text-slate-300 px-2 py-0.5 rounded-full text-xs">{participants.length}</span>
             </h3>
             
-            <div className="bg-[#131722] border border-[#2a2e39] rounded-xl overflow-hidden">
+            <div className="bg-[#172033] border border-[#253047] rounded-xl overflow-hidden flex-1 flex flex-col">
               {loading ? (
-                <div className="py-8 text-center text-[#787b86]">Loading participants...</div>
+                <div className="p-12 flex flex-col items-center justify-center text-slate-500">
+                  <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                  Loading participants...
+                </div>
               ) : participants.length === 0 ? (
-                <div className="py-8 text-center text-[#787b86]">No participants yet.</div>
+                <div className="p-12 flex flex-col items-center justify-center text-slate-500">
+                  <Users className="w-12 h-12 mb-4 opacity-20" />
+                  <p>No participants yet.</p>
+                </div>
               ) : (
-                <ul className="divide-y divide-[#2a2e39] max-h-64 overflow-y-auto">
+                <ul className="divide-y divide-[#253047] overflow-y-auto">
                   {participants.map(p => (
-                    <li key={p._id} className="p-3 flex items-center justify-between hover:bg-[#2a2e39] transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
-                          {p.userId?.name ? p.userId.name.charAt(0).toUpperCase() : <User className="w-4 h-4" />}
+                    <li key={p._id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-[#111827] transition-colors gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold shadow-md">
+                          {p.userId?.name ? p.userId.name.charAt(0).toUpperCase() : <User className="w-5 h-5" />}
                         </div>
                         <div>
-                          <p className="font-medium text-white text-sm">{p.userId?.name || 'Unknown'}</p>
-                          <p className="text-xs text-[#787b86]">{p.userId?.email}</p>
+                          <p className="font-bold text-white">{p.userId?.name || 'Unknown User'}</p>
+                          <p className="text-sm text-slate-400 flex items-center gap-1 mt-0.5">
+                            <Mail className="w-3 h-3" /> {p.userId?.email}
+                          </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-xs font-semibold text-[#787b86]">Joined</span>
-                        <p className="text-xs text-[#d1d4dc]">{new Date(p.joinedAt || p.createdAt).toLocaleDateString()}</p>
+                      <div className="sm:text-right flex items-center sm:block bg-[#111827] sm:bg-transparent p-2 sm:p-0 rounded-lg border border-[#253047] sm:border-none">
+                        <span className="text-xs font-medium text-slate-500 mr-2 sm:mr-0 sm:block sm:mb-1">Joined</span>
+                        <p className="text-sm font-medium text-slate-300">
+                          {new Date(p.joinedAt || p.createdAt).toLocaleDateString(undefined, {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </p>
                       </div>
                     </li>
                   ))}

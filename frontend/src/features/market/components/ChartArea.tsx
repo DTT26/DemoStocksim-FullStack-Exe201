@@ -220,28 +220,56 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
     const chart = init(chartContainerRef.current, {
       formatter: {
         formatDate: (params: any) => {
-          const tz = chartSettingsRef.current?.symbol?.timezone === 'Asia/Ho_Chi_Minh' ? 'Asia/Ho_Chi_Minh' : 'UTC';
+          const settings = chartSettingsRef.current;
+          const tz = settings?.symbol?.timezone === 'Asia/Ho_Chi_Minh' ? 'Asia/Ho_Chi_Minh' : 'UTC';
           const d = new Date(params.timestamp);
-          // Apply timezone offset simple hack for display
           if (tz === 'Asia/Ho_Chi_Minh') {
              d.setHours(d.getHours() + 7);
           }
-          const hh = d.getHours().toString().padStart(2, '0');
+          
+          let h = d.getHours();
           const mm = d.getMinutes().toString().padStart(2, '0');
+          let suffix = '';
+          if (settings?.scales?.timeFormat === '12-hours') {
+             suffix = h >= 12 ? ' PM' : ' AM';
+             h = h % 12 || 12;
+          }
+          const hhStr = h.toString().padStart(2, '0');
+          const timeStr = `${hhStr}:${mm}${suffix}`;
+
           const dd = d.getDate().toString().padStart(2, '0');
-          const mo = (d.getMonth() + 1).toString().padStart(2, '0');
+          const moNum = (d.getMonth() + 1).toString().padStart(2, '0');
           const yyyy = d.getFullYear();
-          const tf = activeTimeframeRef.current || 'D';
-          const isIntraday = tf.endsWith('m') || tf.endsWith('h');
-          if (params.type === 'crosshair' || params.type === 'tooltip') {
-            return isIntraday ? `${dd}/${mo}/${yyyy} ${hh}:${mm}` : `${dd}/${mo}/${yyyy}`;
+          const shortYear = yyyy.toString().slice(2);
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+          const moName = monthNames[d.getMonth()];
+          const dayName = dayNames[d.getDay()];
+
+          let dateStr = `${dd}/${moNum}/${yyyy}`; // default
+          const dFmt = settings?.scales?.dateFormat;
+          if (dFmt === "Mon 29 Sep '97") dateStr = `${dayName} ${dd} ${moName} '${shortYear}`;
+          else if (dFmt === "29 Sep '97") dateStr = `${dd} ${moName} '${shortYear}`;
+          else if (dFmt === "Sep '97") dateStr = `${moName} '${shortYear}`;
+          else if (dFmt === "09/29/1997") dateStr = `${moNum}/${dd}/${yyyy}`;
+          else if (dFmt === "29/09/1997") dateStr = `${dd}/${moNum}/${yyyy}`;
+          else if (dFmt === "1997-09-29") dateStr = `${yyyy}-${moNum}-${dd}`;
+          
+          if (settings?.scales?.dayOfWeek === false && dateStr.includes(dayName)) {
+            dateStr = dateStr.replace(`${dayName} `, '');
           }
 
-          // xAxis tick
+          const tf = activeTimeframeRef.current || 'D';
+          const isIntraday = tf.endsWith('m') || tf.endsWith('h');
+          
+          if (params.type === 'crosshair' || params.type === 'tooltip') {
+            return isIntraday ? `${dateStr} ${timeStr}` : dateStr;
+          }
+
           if (isIntraday) {
-             return `${dd}/${mo} ${hh}:${mm}`;
+             return `${dd}/${moNum} ${timeStr}`;
           } else {
-            return `${dd}/${mo}/${yyyy}`;
+            return dateStr;
           }
         }
       }
@@ -366,6 +394,38 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
           upWickColor: chartSettings.candle.wickUp,
           downWickColor: chartSettings.candle.wickDown,
           noChangeWickColor: chartSettings.candle.wickDown,
+        },
+        priceMark: {
+          show: true,
+          high: {
+            show: chartSettings.scales.hlVal.includes('Labels') || chartSettings.scales.hlVal.includes('Lines'),
+            color: chartSettings.scales.hlColor,
+            textOffset: 5,
+            textSize: chartSettings.scales.textSize
+          },
+          low: {
+            show: chartSettings.scales.hlVal.includes('Labels') || chartSettings.scales.hlVal.includes('Lines'),
+            color: chartSettings.scales.hlColor,
+            textOffset: 5,
+            textSize: chartSettings.scales.textSize
+          },
+          last: {
+            show: chartSettings.scales.symbolVal !== 'Hidden',
+            upColor: chartSettings.scales.symbolLabelColor1,
+            downColor: chartSettings.scales.symbolLabelColor2,
+            noChangeColor: chartSettings.scales.symbolLabelColor2,
+            text: {
+              show: chartSettings.scales.symbolVal.includes('Value'),
+              size: chartSettings.scales.textSize,
+              family: 'Inter',
+              weight: 'normal'
+            }
+          }
+        }
+      },
+      indicator: {
+        tooltip: {
+          showRule: 'always'
         }
       },
       crosshair: {

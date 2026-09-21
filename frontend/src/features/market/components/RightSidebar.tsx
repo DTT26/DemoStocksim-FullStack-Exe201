@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Wallet, ChevronRight, ChevronLeft, Settings2 } from 'lucide-react';
 import { STOCKS, type Stock, generateOHLCV } from '../data';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useAlert } from '../../../contexts/AlertContext';
 import { OrderBook } from './OrderBook';
 
 interface RightSidebarProps {
@@ -18,6 +19,7 @@ interface RightSidebarProps {
 
 export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect, onTrade, onUpdateTPSL, onAddMargin, isEditing, onCancelEdit }: RightSidebarProps) => {
   const { user, login } = useAuth();
+  const { showAlert } = useAlert();
   const [activeSidebarTab, setActiveSidebarTab] = useState<'orderbook' | 'trade'>('trade');
   const [orderType, setOrderType] = useState<'market' | 'limit' | 'stop'>('market');
   const [isExpanded, setIsExpanded] = useState(true);
@@ -87,30 +89,30 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
 
     // Validation
     if (orderType === 'limit') {
-      if (p <= 0) return alert('Giá Limit không hợp lệ');
+      if (p <= 0) { showAlert('Giá Limit không hợp lệ', 'error'); return; }
       if (type === 'buy' && p >= selectedStock.price) {
-        return alert(`Giá mua Limit (${p}) phải THẤP HƠN giá thị trường hiện tại (${selectedStock.price})`);
+        showAlert(`Giá mua Limit (${p}) phải THẤP HƠN giá thị trường hiện tại (${selectedStock.price})`, 'error'); return;
       }
       if (type === 'sell' && p <= selectedStock.price) {
-        return alert(`Giá bán Limit (${p}) phải CAO HƠN giá thị trường hiện tại (${selectedStock.price})`);
+        showAlert(`Giá bán Limit (${p}) phải CAO HƠN giá thị trường hiện tại (${selectedStock.price})`, 'error'); return;
       }
     } else if (orderType === 'stop') {
-      if (p <= 0) return alert('Giá Stop không hợp lệ');
+      if (p <= 0) { showAlert('Giá Stop không hợp lệ', 'error'); return; }
       if (type === 'buy' && p <= selectedStock.price) {
-        return alert(`Giá mua Stop (${p}) phải CAO HƠN giá thị trường hiện tại (${selectedStock.price})`);
+        showAlert(`Giá mua Stop (${p}) phải CAO HƠN giá thị trường hiện tại (${selectedStock.price})`, 'error'); return;
       }
       if (type === 'sell' && p >= selectedStock.price) {
-        return alert(`Giá bán Stop (${p}) phải THẤP HƠN giá thị trường hiện tại (${selectedStock.price})`);
+        showAlert(`Giá bán Stop (${p}) phải THẤP HƠN giá thị trường hiện tại (${selectedStock.price})`, 'error'); return;
       }
     }
 
     if (tpVal !== undefined) {
-      if (type === 'buy' && tpVal <= p) return alert('Chốt lời (TP) của lệnh LONG phải CAO HƠN giá mở lệnh');
-      if (type === 'sell' && tpVal >= p) return alert('Chốt lời (TP) của lệnh SHORT phải THẤP HƠN giá mở lệnh');
+      if (type === 'buy' && tpVal <= p) { showAlert('Chốt lời (TP) của lệnh LONG phải CAO HƠN giá mở lệnh', 'error'); return; }
+      if (type === 'sell' && tpVal >= p) { showAlert('Chốt lời (TP) của lệnh SHORT phải THẤP HƠN giá mở lệnh', 'error'); return; }
     }
     if (slVal !== undefined) {
-      if (type === 'buy' && slVal >= p) return alert('Cắt lỗ (SL) của lệnh LONG phải THẤP HƠN giá mở lệnh');
-      if (type === 'sell' && slVal <= p) return alert('Cắt lỗ (SL) của lệnh SHORT phải CAO HƠN giá mở lệnh');
+      if (type === 'buy' && slVal >= p) { showAlert('Cắt lỗ (SL) của lệnh LONG phải THẤP HƠN giá mở lệnh', 'error'); return; }
+      if (type === 'sell' && slVal <= p) { showAlert('Cắt lỗ (SL) của lệnh SHORT phải CAO HƠN giá mở lệnh', 'error'); return; }
     }
 
     if (m <= 0) {
