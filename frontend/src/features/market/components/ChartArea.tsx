@@ -81,7 +81,7 @@ interface ChartAreaProps {
   activeIndicators: string[];
   activePosition?: { quantity: number; averagePrice: number; side: 'LONG' | 'SHORT'; leverage: number; tp?: number; sl?: number };
   onPriceChange?: (price: number) => void;
-  onPriceUpdate?: (price: number) => void;
+  onPriceUpdate?: (price: number, timestamp?: number) => void;
   isSelectingReplayStart?: boolean;
   onSelectReplayStart?: (index: number) => void;
   goToRealtimeTrigger?: number;
@@ -125,6 +125,11 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
     }
   }, [goToRealtimeTrigger]);
 
+  const chartSettingsRef = useRef(chartSettings);
+  useEffect(() => {
+    chartSettingsRef.current = chartSettings;
+  }, [chartSettings]);
+
   // Apply theme dynamically to klinecharts
   useEffect(() => {
     if (chartRef.current) {
@@ -132,8 +137,38 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
       // Override grid and candle styles
       chartRef.current.setStyles({
         grid: {
-          horizontal: { color: theme === 'dark' ? '#2a2e39' : '#e6e8ea', size: 1, style: 'dashed' },
-          vertical: { color: theme === 'dark' ? '#2a2e39' : '#e6e8ea', size: 1, style: 'dashed' },
+          horizontal: { 
+            color: chartSettings.canvas.hGridShow ? chartSettings.canvas.hGridColor : 'transparent',
+            size: 1, 
+            style: chartSettings.canvas.hGridStyle === '—' ? 'solid' : 'dashed'
+          },
+          vertical: { 
+            color: chartSettings.canvas.vGridShow ? chartSettings.canvas.vGridColor : 'transparent',
+            size: 1, 
+            style: chartSettings.canvas.vGridStyle === '—' ? 'solid' : 'dashed'
+          },
+        },
+        crosshair: {
+          horizontal: {
+            line: { 
+              color: chartSettings.canvas.crosshairColor,
+              style: chartSettings.canvas.crosshairStyle === '—' ? 'solid' : 'dashed'
+            }
+          },
+          vertical: {
+            line: {
+              color: chartSettings.canvas.crosshairColor,
+              style: chartSettings.canvas.crosshairStyle === '—' ? 'solid' : 'dashed'
+            }
+          }
+        },
+        xAxis: {
+          tickText: { color: chartSettings.scales.textColor, size: chartSettings.scales.textSize },
+          axisLine: { color: chartSettings.scales.lineColor }
+        },
+        yAxis: {
+          tickText: { color: chartSettings.scales.textColor, size: chartSettings.scales.textSize },
+          axisLine: { color: chartSettings.scales.lineColor }
         },
         candle: {
           tooltip: {
@@ -146,7 +181,14 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
                 const time = new Date(d.timestamp).toLocaleString('vi-VN', {
                   hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
                 });
-                const precision = getPricePrecision(d.close || selectedStock.price || 1);
+                let precision = getPricePrecision(d.close || selectedStock.price || 1);
+                const customPrecision = chartSettingsRef.current?.symbol?.precision;
+                if (customPrecision && customPrecision !== 'Default') {
+                  if (customPrecision === '1') precision = 0;
+                  else if (customPrecision === '1/10') precision = 1;
+                  else if (customPrecision === '1/100') precision = 2;
+                  else if (customPrecision === '1/1000') precision = 3;
+                }
                 return [
                   { 
                     title: '', 
@@ -160,17 +202,17 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
             }
           },
           bar: {
-            upColor: '#089981',
-            downColor: '#f23645',
-            upBorderColor: '#089981',
-            downBorderColor: '#f23645',
-            upWickColor: '#089981',
-            downWickColor: '#f23645',
+            upColor: chartSettings.candle.bodyUp,
+            downColor: chartSettings.candle.bodyDown,
+            upBorderColor: chartSettings.candle.borderUp,
+            downBorderColor: chartSettings.candle.borderDown,
+            upWickColor: chartSettings.candle.wickUp,
+            downWickColor: chartSettings.candle.wickDown,
           }
         }
       });
     }
-  }, [theme]);
+  }, [theme, chartSettings]);
 
   // Init chart ONCE
   useEffect(() => {
@@ -178,7 +220,12 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
     const chart = init(chartContainerRef.current, {
       formatter: {
         formatDate: (params: any) => {
+          const tz = chartSettingsRef.current?.symbol?.timezone === 'Asia/Ho_Chi_Minh' ? 'Asia/Ho_Chi_Minh' : 'UTC';
           const d = new Date(params.timestamp);
+          // Apply timezone offset simple hack for display
+          if (tz === 'Asia/Ho_Chi_Minh') {
+             d.setHours(d.getHours() + 7);
+          }
           const hh = d.getHours().toString().padStart(2, '0');
           const mm = d.getMinutes().toString().padStart(2, '0');
           const dd = d.getDate().toString().padStart(2, '0');
@@ -212,12 +259,12 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
       },
       candle: {
         bar: {
-          upColor: '#089981',
-          downColor: '#f23645',
-          upBorderColor: '#089981',
-          downBorderColor: '#f23645',
-          upWickColor: '#089981',
-          downWickColor: '#f23645',
+          upColor: chartSettings.candle.bodyUp,
+          downColor: chartSettings.candle.bodyDown,
+          upBorderColor: chartSettings.candle.borderUp,
+          downBorderColor: chartSettings.candle.borderDown,
+          upWickColor: chartSettings.candle.wickUp,
+          downWickColor: chartSettings.candle.wickDown,
         }
       }
     });
@@ -597,6 +644,19 @@ export const ChartArea = ({ activeTool, selectedStock, activeTimeframe, isReplay
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
+
+    // Send price update on replay index change to tick the simulator
+    if (isReplaying) {
+       const cacheKey = `${selectedStock.symbol}-${activeTimeframe}`;
+       const allData = dataCache.get(cacheKey) || [];
+       if (allData.length > 0) {
+         const currentIdx = Math.max(0, Math.min(allData.length - 1, Math.max(5, replayIndex) - 1));
+         const currentCandle = allData[currentIdx];
+         if (currentCandle && onPriceUpdate) {
+           onPriceUpdate(currentCandle.close, currentCandle.timestamp);
+         }
+       }
+    }
 
     const paneMap = indicatorPaneRef.current;
     const currentlyOn = new Set(paneMap.keys());

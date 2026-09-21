@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import tradingRoutes from './routes/tradingRoutes';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/user';
@@ -10,8 +11,12 @@ import paperTradingRoutes from './routes/paperTrading';
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true
+}));
 app.use(express.json());
+app.use(cookieParser());
 
 // Health Check Endpoint
 app.get('/health', (req, res) => {

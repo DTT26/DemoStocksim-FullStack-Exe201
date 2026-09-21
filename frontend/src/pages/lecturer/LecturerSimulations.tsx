@@ -16,13 +16,9 @@ export const LecturerSimulations = () => {
   const fetchSimulations = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-      const response = await fetch(`${apiUrl}/simulations`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await fetch(`${apiUrl}/simulations`, { credentials: 'include',
+        });
       if (response.ok) {
         const data = await response.json();
         setSimulations(data);
@@ -42,14 +38,10 @@ export const LecturerSimulations = () => {
     if (!window.confirm(`Are you sure you want to ${action} this simulation?`)) return;
     
     try {
-      const token = localStorage.getItem('token');
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-      const response = await fetch(`${apiUrl}/simulations/${id}/${action}`, {
+      const response = await fetch(`${apiUrl}/simulations/${id}/${action}`, { credentials: 'include',
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+        });
       if (response.ok) {
         fetchSimulations();
       }

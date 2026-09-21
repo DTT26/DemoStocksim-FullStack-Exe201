@@ -1,12 +1,14 @@
 import { useState, useMemo, useEffect } from 'react';
 import { HelpCircle, Play, ChevronDown, Calendar, ArrowRight, Edit3, BarChart2 } from 'lucide-react';
-import { type Stock } from '../data';
+import { type Stock, STOCKS } from '../data';
 import { AuthOverlay } from './AuthOverlay';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getSessions, createSession, type PaperSession } from '../../../services/marketApi';
+import { useSimulatorStore } from '../engine/useSimulatorStore';
 
 interface SimulationPanelProps {
   currentSymbol: string;
+  isReplaying: boolean;
   onStartSimulation: (config: SimulationConfig) => void;
 }
 
@@ -34,30 +36,36 @@ const DEFAULT_CONFIG: SimulationConfig = {
   swapShort: -0.3,
 };
 
-export const SimulationPanel = ({ currentSymbol, onStartSimulation }: SimulationPanelProps) => {
+export const SimulationPanel = ({ currentSymbol, isReplaying, onStartSimulation }: SimulationPanelProps) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'running' | 'completed'>('running');
   const [isCreating, setIsCreating] = useState(false);
+  const [showReplayWarning, setShowReplayWarning] = useState(false);
   
   const [config, setConfig] = useState<SimulationConfig>(DEFAULT_CONFIG);
 
   const [sessions, setSessions] = useState<PaperSession[]>([]);
 
-  // Fetch sessions on mount
-  useEffect(() => {
-    const fetchSessions = async () => {
-      if (user) {
-        try {
-          const data = await getSessions();
-          setSessions(data);
-        } catch (error) {
-          console.error("Failed to fetch sessions", error);
-        }
+  const fetchSessions = async () => {
+    if (user) {
+      try {
+        const data = await getSessions();
+        setSessions(data);
+      } catch (error) {
+        console.error("Failed to fetch sessions", error);
       }
-    };
+    }
+  };
+
+  useEffect(() => {
     fetchSessions();
+    const handleSessionEnded = () => fetchSessions();
+    window.addEventListener('simulator-session-ended', handleSessionEnded);
+    return () => window.removeEventListener('simulator-session-ended', handleSessionEnded);
   }, [user]);
 
+  const store = useSimulatorStore();
+  
   const activeSessions = sessions.filter(s => s.status === 'running');
   const completedSessions = sessions.filter(s => s.status === 'completed');
 
@@ -75,10 +83,47 @@ export const SimulationPanel = ({ currentSymbol, onStartSimulation }: Simulation
     try {
       const newSession = await createSession({
         symbol: currentSymbol,
-        initialBalance: config.balance
+        timeframe: 'D', // Hardcoded for now
+        initialBalance: config.balance,
+        leverage: config.leverage,
+        minLot: config.minLot,
+        lotStep: config.lotStep,
+        maxMarginPercent: config.maxMarginPercent,
+        spread: config.spread,
+        commission: config.commission,
+        swapLong: config.swapLong,
+        swapShort: config.swapShort,
+        replayStartTime: new Date().toISOString() // Should be from Replay State
       });
+      
       setSessions(prev => [newSession, ...prev]);
       setIsCreating(false);
+
+      // Start locally
+      store.startSession({
+        _id: newSession._id,
+        name: newSession.name,
+        symbol: newSession.symbol,
+        timeframe: newSession.timeframe,
+        config: {
+          initialBalance: newSession.initialBalance,
+          leverage: newSession.leverage,
+          minLot: newSession.minLot,
+          lotStep: newSession.lotStep,
+          maxMarginPercent: newSession.maxMarginPercent,
+          spread: newSession.spread,
+          commission: newSession.commission,
+          swapLong: newSession.swapLong,
+          swapShort: newSession.swapShort,
+        },
+        balance: newSession.balance,
+        equity: newSession.equity,
+        usedMargin: newSession.usedMargin,
+        freeMargin: newSession.freeMargin,
+        replayStartTime: newSession.replayStartTime,
+        replayCurrentTime: newSession.replayCurrentTime,
+        status: newSession.status
+      });
     } catch (error) {
       console.error("Failed to create session", error);
     }
@@ -163,7 +208,13 @@ export const SimulationPanel = ({ currentSymbol, onStartSimulation }: Simulation
             
             <div className="mt-1 bg-[#151924] rounded-md p-3 text-xs text-[#787b86] flex items-start gap-2 border border-[#1e222d]">
               <span className="text-yellow-500">💡</span>
-              <p>Ký quỹ lot tối thiểu: <strong className="text-white">$137.60</strong> · Tối đa: <strong className="text-white">0.69 lots</strong></p>
+              <p>
+                Ký quỹ {config.minLot} lot: <strong className="text-white">${
+                  ((STOCKS.find((s: Stock) => s.symbol === currentSymbol)?.price || 1000) * config.minLot / config.leverage).toFixed(2)
+                }</strong> · Tối đa: <strong className="text-white">{
+                  (((config.balance * config.maxMarginPercent / 100) * config.leverage) / (STOCKS.find((s: Stock) => s.symbol === currentSymbol)?.price || 1000)).toFixed(2)
+                } lots</strong>
+              </p>
             </div>
           </div>
 
@@ -295,14 +346,75 @@ export const SimulationPanel = ({ currentSymbol, onStartSimulation }: Simulation
       {activeTab === 'running' && (
         <div className="flex flex-col px-4 flex-1 overflow-hidden">
           <button 
-            onClick={() => setIsCreating(true)}
+            onClick={() => {
+              if (!isReplaying) {
+                setShowReplayWarning(true);
+              } else {
+                setIsCreating(true);
+              }
+            }}
             className="w-full bg-[#089981] hover:bg-[#089981]/90 text-white font-bold py-2.5 rounded-md flex items-center justify-center gap-2 transition-colors shrink-0 uppercase text-sm mb-4"
           >
             <Play className="w-4 h-4 fill-white" />
             BẮT ĐẦU PHIÊN MỚI
           </button>
           
-          {activeSessions.length === 0 ? (
+          {store.isActive && store.session ? (
+            <div className="flex-1 flex flex-col gap-4 pb-4">
+              <div className="bg-[#1e222d] border border-[#089981] rounded-lg p-4 shadow-lg shadow-[#089981]/10">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="font-bold text-white text-lg">{store.session.symbol}</span>
+                  <span className="text-xs text-[#089981] bg-[#089981]/10 px-2 py-1 rounded font-bold animate-pulse">ĐANG CHẠY</span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="flex flex-col">
+                    <span className="text-xs text-[#787b86] mb-1">Tài sản (Equity)</span>
+                    <span className="font-mono font-bold text-lg text-white">
+                      ${store.session.equity.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-[#787b86] mb-1">Số dư (Balance)</span>
+                    <span className="font-mono font-bold text-lg text-[#d1d4dc]">
+                      ${store.session.balance.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2 bg-[#131722] p-3 rounded border border-[#2a2e39]">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#787b86]">Ký quỹ đã dùng</span>
+                    <span className="font-mono text-white">${store.session.usedMargin.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#787b86]">Ký quỹ khả dụng</span>
+                    <span className="font-mono text-white">${store.session.freeMargin.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm mt-2 pt-2 border-t border-[#2a2e39]">
+                    <span className="text-[#787b86]">Mức Ký quỹ</span>
+                    <span className={`font-mono font-bold ${
+                      store.session.usedMargin > 0 && (store.session.equity / store.session.usedMargin * 100) < 100 
+                        ? 'text-red-500' 
+                        : 'text-emerald-500'
+                    }`}>
+                      {store.session.usedMargin > 0 
+                        ? ((store.session.equity / store.session.usedMargin) * 100).toFixed(2) + '%'
+                        : '∞'
+                      }
+                    </span>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => store.endSession()}
+                  className="w-full mt-4 bg-transparent border border-red-500/50 hover:bg-red-500/10 text-red-500 font-bold py-2 rounded transition-colors text-sm"
+                >
+                  KẾT THÚC PHIÊN
+                </button>
+              </div>
+            </div>
+          ) : activeSessions.length === 0 ? (
             <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col items-center justify-center p-6 text-center text-[#787b86]">
               <div className="w-16 h-16 rounded-full bg-[#f0f1f3] dark:bg-[#1e222d] flex items-center justify-center mb-4">
                 <Play className="w-8 h-8 text-[#a0a3af] dark:text-[#434651] ml-1" />
@@ -312,15 +424,56 @@ export const SimulationPanel = ({ currentSymbol, onStartSimulation }: Simulation
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-3 pb-4">
-              {activeSessions.map((session) => (
-                <div key={session._id} className="bg-[#f8f9fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-lg p-3 cursor-pointer hover:border-[#089981] transition-colors">
+              {activeSessions.map((session: any) => (
+                <div 
+                  key={session._id} 
+                  className="bg-[#f8f9fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-lg p-3 cursor-pointer hover:border-[#089981] transition-colors"
+                  onClick={async () => {
+                    try {
+                      const { getSessionDetails } = await import('../../../services/marketApi');
+                      const data = await getSessionDetails(session._id);
+                      
+                      store.loadSession(
+                        {
+                          _id: data.session._id,
+                          name: data.session.name,
+                          symbol: data.session.symbol,
+                          timeframe: data.session.timeframe,
+                          config: {
+                            initialBalance: data.session.initialBalance,
+                            leverage: data.session.leverage,
+                            minLot: data.session.minLot,
+                            lotStep: data.session.lotStep,
+                            maxMarginPercent: data.session.maxMarginPercent,
+                            spread: data.session.spread,
+                            commission: data.session.commission,
+                            swapLong: data.session.swapLong,
+                            swapShort: data.session.swapShort
+                          },
+                          balance: data.session.balance,
+                          equity: data.session.equity,
+                          usedMargin: data.session.usedMargin,
+                          freeMargin: data.session.freeMargin,
+                          replayStartTime: data.session.replayStartTime,
+                          replayCurrentTime: data.session.replayCurrentTime,
+                          status: data.session.status
+                        },
+                        data.positions,
+                        data.orders,
+                        data.history
+                      );
+                    } catch (error) {
+                      console.error("Failed to load session", error);
+                    }
+                  }}
+                >
                   <div className="flex justify-between items-center mb-2">
                     <span className="font-bold text-[#1e2329] dark:text-white text-base">{session.symbol}</span>
                     <span className="text-xs text-[#089981] bg-[#089981]/10 px-2 py-0.5 rounded font-bold">Đang chạy</span>
                   </div>
                   <div className="flex justify-between items-center text-sm font-mono">
                     <span className="text-[#787b86]">Số dư:</span>
-                    <span className="font-bold text-[#1e2329] dark:text-[#d1d4dc]">${session.currentBalance.toLocaleString()}</span>
+                    <span className="font-bold text-[#1e2329] dark:text-[#d1d4dc]">${session.balance?.toLocaleString() || session.initialBalance?.toLocaleString()}</span>
                   </div>
                 </div>
               ))}
@@ -375,7 +528,7 @@ export const SimulationPanel = ({ currentSymbol, onStartSimulation }: Simulation
                       </div>
                       <div className="flex justify-between items-center text-sm font-mono">
                         <span className="text-[#787b86]">Số dư cuối:</span>
-                        <span className="font-bold text-[#1e2329] dark:text-[#d1d4dc]">${session.currentBalance.toLocaleString()}</span>
+                        <span className="font-bold text-[#1e2329] dark:text-[#d1d4dc]">${session.balance?.toLocaleString() || session.initialBalance?.toLocaleString()}</span>
                       </div>
                     </div>
                   ))}
@@ -384,6 +537,29 @@ export const SimulationPanel = ({ currentSymbol, onStartSimulation }: Simulation
             </div>
           )}
         </>
+      )}
+
+      {/* Replay Warning Modal */}
+      {showReplayWarning && (
+        <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-50 px-4 backdrop-blur-sm">
+          <div className="bg-[#1e222d] rounded-lg p-5 w-full border border-[#2a2e39] shadow-2xl flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center mb-3">
+              <span className="text-yellow-500 text-2xl">⚠️</span>
+            </div>
+            <h3 className="text-white font-bold mb-2">Hãy bật Chế độ Phát lại trước</h3>
+            <p className="text-sm text-[#787b86] mb-5">
+              Trading Simulator chỉ hoạt động trong chế độ Bar Replay để tránh việc nhìn thấy dữ liệu tương lai.
+              <br/><br/>
+              Vui lòng bật Replay trên thanh công cụ phía trên và chọn một điểm bắt đầu.
+            </p>
+            <button 
+              onClick={() => setShowReplayWarning(false)}
+              className="w-full bg-[#2962ff] hover:bg-[#2962ff]/90 text-white font-bold py-2 rounded transition-colors"
+            >
+              Đã hiểu
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

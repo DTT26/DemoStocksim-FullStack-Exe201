@@ -17,13 +17,9 @@ export const AdminDashboard = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const token = localStorage.getItem('token');
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-        const response = await fetch(`${apiUrl}/users`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await fetch(`${apiUrl}/users`, { credentials: 'include',
+          });
         
         if (response.ok) {
           const data = await response.json();

@@ -15,14 +15,13 @@ export const LecturerDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const token = localStorage.getItem('token');
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-        const headers = { 'Authorization': `Bearer ${token}` };
+        const headers = { };
 
         const [simRes, stuRes, assRes] = await Promise.all([
-          fetch(`${apiUrl}/simulations`, { headers }),
-          fetch(`${apiUrl}/users?role=student`, { headers }),
-          fetch(`${apiUrl}/assignments`, { headers })
+          fetch(`${apiUrl}/simulations`, { credentials: 'include', headers }),
+          fetch(`${apiUrl}/users?role=student`, { credentials: 'include', headers }),
+          fetch(`${apiUrl}/assignments`, { credentials: 'include', headers })
         ]);
 
         if (simRes.ok && stuRes.ok && assRes.ok) {

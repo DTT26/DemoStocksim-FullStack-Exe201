@@ -33,28 +33,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchUser = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
       const res = await fetch(`${apiUrl}/users/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include'
       });
       if (res.ok) {
         const userData = await res.json();
         setUser(userData);
       } else {
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
+        setUser(null);
       }
     } catch (error) {
       console.error('Failed to fetch user:', error);
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -68,18 +60,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     onSuccess: async (tokenResponse) => {
       try {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-        const res = await fetch(`${apiUrl}/auth/google`, {
+        const res = await fetch(`${apiUrl}/auth/google`, { credentials: 'include',
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ access_token: tokenResponse.access_token }),
         });
         const data = await res.json();
         
-        if (res.ok && data.token) {
-          localStorage.setItem('token', data.token);
-          if (data.refreshToken) {
-            localStorage.setItem('refreshToken', data.refreshToken);
-          }
+        if (res.ok) {
+          // Backend has already set the HttpOnly cookies for token and refreshToken
           await fetchUser();
         } else {
           console.error('Backend login failed:', data.message);
@@ -91,8 +80,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     onError: () => console.log('Login Failed')
   });
 
-  const logout = () => {
+  const logout = async () => {
     googleLogout();
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      await fetch(`${apiUrl}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+    } catch (err) {
+      console.error('Failed to logout on backend', err);
+    }
+    // Also remove from localStorage in case it's still there from previous version
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     setUser(null);

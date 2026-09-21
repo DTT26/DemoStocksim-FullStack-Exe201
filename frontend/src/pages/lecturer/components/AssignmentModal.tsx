@@ -52,7 +52,6 @@ export const AssignmentModal = ({ isOpen, onClose, onSaved, assignmentToEdit, si
     setError('');
 
     try {
-      const token = localStorage.getItem('token');
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
       
       const url = assignmentToEdit 
@@ -61,12 +60,11 @@ export const AssignmentModal = ({ isOpen, onClose, onSaved, assignmentToEdit, si
         
       const method = assignmentToEdit ? 'PUT' : 'POST';
 
-      const response = await fetch(url, {
+      const response = await fetch(url, { credentials: 'include',
         method,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+          },
         body: JSON.stringify(formData)
       });
 

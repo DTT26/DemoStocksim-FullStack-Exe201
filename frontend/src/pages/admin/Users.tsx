@@ -18,18 +18,14 @@ export const AdminUsers = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
       
       let queryParams = new URLSearchParams();
       if (searchTerm) queryParams.append('search', searchTerm);
       if (roleFilter) queryParams.append('role', roleFilter);
       
-      const response = await fetch(`${apiUrl}/users?${queryParams.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await fetch(`${apiUrl}/users?${queryParams.toString()}`, { credentials: 'include',
+        });
       
       if (response.ok) {
         const data = await response.json();
@@ -53,14 +49,12 @@ export const AdminUsers = () => {
   const handleStatusChange = async (userId: string, currentStatus: string) => {
     try {
       const newStatus = currentStatus === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
-      const token = localStorage.getItem('token');
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-      const response = await fetch(`${apiUrl}/users/${userId}/status`, {
+      const response = await fetch(`${apiUrl}/users/${userId}/status`, { credentials: 'include',
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+          },
         body: JSON.stringify({ status: newStatus })
       });
       
@@ -74,14 +68,12 @@ export const AdminUsers = () => {
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
-      const token = localStorage.getItem('token');
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-      const response = await fetch(`${apiUrl}/users/${userId}/role`, {
+      const response = await fetch(`${apiUrl}/users/${userId}/role`, { credentials: 'include',
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+          },
         body: JSON.stringify({ role: newRole })
       });
       

@@ -16,13 +16,12 @@ export const LecturerAssignments = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-      const headers = { 'Authorization': `Bearer ${token}` };
+      const headers = { };
 
       const [assRes, simRes] = await Promise.all([
-        fetch(`${apiUrl}/assignments`, { headers }),
-        fetch(`${apiUrl}/simulations`, { headers })
+        fetch(`${apiUrl}/assignments`, { credentials: 'include', headers }),
+        fetch(`${apiUrl}/simulations`, { credentials: 'include', headers })
       ]);
 
       if (assRes.ok && simRes.ok) {
@@ -42,14 +41,12 @@ export const LecturerAssignments = () => {
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
     try {
-      const token = localStorage.getItem('token');
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-      const response = await fetch(`${apiUrl}/assignments/${id}/status`, {
+      const response = await fetch(`${apiUrl}/assignments/${id}/status`, { credentials: 'include',
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+          },
         body: JSON.stringify({ status: newStatus })
       });
       if (response.ok) {

@@ -20,6 +20,12 @@ import { LecturerStudents } from './pages/lecturer/LecturerStudents';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminUsers } from './pages/admin/Users';
 
+import { StudentLayout } from './layouts/StudentLayout';
+import { StudentJournal } from './pages/student/Journal';
+import { StudentTradeDetail } from './pages/student/TradeDetail';
+import { StudentProfile } from './pages/student/Profile';
+import { StudentSettings } from './pages/student/Settings';
+
 function App() {
   const { user, loading } = useAuth();
 
@@ -36,7 +42,25 @@ function App() {
         </div>
       } />
 
-      {/* App Shell Routes */}
+      {/* Student Routes (Isolated Layout) */}
+      <Route element={<ProtectedRoute allowedRoles={['student']} />}>
+        <Route element={<StudentLayout />}>
+          <Route path="/student">
+            <Route index element={<StudentDashboard />} />
+            <Route path="simulations" element={<SimulationsList />} />
+            <Route path="simulations/:id" element={<SimulationDetail />} />
+            <Route path="assignments" element={<StudentAssignments />} />
+            <Route path="assignments/:id" element={<StudentAssignmentDetail />} />
+            <Route path="performance" element={<StudentPerformance />} />
+            <Route path="journal" element={<StudentJournal />} />
+            <Route path="journal/:tradeId" element={<StudentTradeDetail />} />
+            <Route path="profile" element={<StudentProfile />} />
+            <Route path="settings" element={<StudentSettings />} />
+          </Route>
+        </Route>
+      </Route>
+
+      {/* App Shell Routes (Admin & Lecturer) */}
       <Route path="/" element={<AppLayout />}>
         {/* Default route based on role */}
         <Route index element={
@@ -46,17 +70,7 @@ function App() {
           <Navigate to="/student" />
         } />
 
-        {/* Student Routes */}
-        <Route element={<ProtectedRoute allowedRoles={['student']} />}>
-          <Route path="student">
-            <Route index element={<StudentDashboard />} />
-            <Route path="assignments" element={<StudentAssignments />} />
-            <Route path="assignments/:id" element={<StudentAssignmentDetail />} />
-            <Route path="performance" element={<StudentPerformance />} />
-          </Route>
-        </Route>
-
-        {/* Shared Routes (require login but any role) */}
+        {/* Shared Routes (require login but any role, legacy paths) */}
         <Route element={<ProtectedRoute />}>
           <Route path="simulations">
             <Route index element={<SimulationsList />} />

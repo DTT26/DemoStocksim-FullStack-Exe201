@@ -37,11 +37,9 @@ export const AssignStudentsModal = ({ isOpen, onClose, assignment, onSaved }: As
   const fetchStudents = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-      const response = await fetch(`${apiUrl}/users?role=student`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await fetch(`${apiUrl}/users?role=student`, { credentials: 'include',
+        });
       if (response.ok) {
         setStudents(await response.json());
       }
@@ -57,14 +55,12 @@ export const AssignStudentsModal = ({ isOpen, onClose, assignment, onSaved }: As
     
     setSaving(true);
     try {
-      const token = localStorage.getItem('token');
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-      const response = await fetch(`${apiUrl}/assignments/${assignment._id}/assign`, {
+      const response = await fetch(`${apiUrl}/assignments/${assignment._id}/assign`, { credentials: 'include',
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+          },
         body: JSON.stringify({ studentIds: selectedIds })
       });
       

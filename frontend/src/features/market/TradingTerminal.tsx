@@ -19,6 +19,9 @@ import { TickerHeader } from './components/TickerHeader';
 import { CoinInfoPanel } from './components/CoinInfoPanel';
 import { ContractInfoPanel } from './components/ContractInfoPanel';
 import { tradingApi } from '../../services/tradingApi';
+import { SimulatorTradingPanel } from './components/SimulatorTradingPanel';
+import { PositionsManager } from './components/PositionsManager';
+import { useSimulatorStore } from './engine/useSimulatorStore';
 
 export interface TradeOrder {
   id: string;
@@ -38,6 +41,7 @@ export const TradingTerminal = () => {
   const [activeTimeframe, setActiveTimeframe] = useState<string>('D');
   const [balance, setBalance] = useState<number>(100_000_000);
   const [positions, setPositions] = useState<Record<string, { quantity: number, averagePrice: number, side: 'LONG' | 'SHORT', leverage: number, tp?: number, sl?: number }>>({});
+  const store = useSimulatorStore();
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isIndicatorModalOpen, setIsIndicatorModalOpen] = useState(false);
   const [activeIndicators, setActiveIndicators] = useState<string[]>([]);
@@ -553,11 +557,22 @@ export const TradingTerminal = () => {
                   goToRealtimeTrigger={goToRealtimeTrigger}
                   onDataLoaded={setTotalBars}
                   tradeOrders={tradeOrders.filter(o => o.symbol === selectedStock.symbol)}
-                  pendingOrders={pendingOrders}
+                  pendingOrders={store.isActive ? store.orders.map(o => ({ ...o, price: o.limitPrice, quantity: o.lot })) : pendingOrders}
                   activeIndicators={activeIndicators}
-                  activePosition={positions[selectedStock.symbol] as any}
+                  activePosition={
+                    store.isActive 
+                      ? (store.positions.find(p => p.symbol === selectedStock.symbol) ? {
+                          quantity: store.positions.find(p => p.symbol === selectedStock.symbol)!.lot,
+                          averagePrice: store.positions.find(p => p.symbol === selectedStock.symbol)!.entryPrice,
+                          side: store.positions.find(p => p.symbol === selectedStock.symbol)!.side,
+                          leverage: store.session!.config.leverage,
+                          tp: store.positions.find(p => p.symbol === selectedStock.symbol)!.tp,
+                          sl: store.positions.find(p => p.symbol === selectedStock.symbol)!.sl
+                        } : undefined)
+                      : (positions[selectedStock.symbol] as any)
+                  }
                   chartSettings={chartSettings}
-                  onPriceUpdate={(price) => {
+                  onPriceUpdate={(price, timestamp) => {
                     setSelectedStock(prev => {
                       if (prev.price === price) return prev;
                       const basePrice = STOCKS.find(s => s.symbol === prev.symbol)?.price || prev.price;
@@ -566,59 +581,58 @@ export const TradingTerminal = () => {
                       return { ...prev, price, change, percent, type: change >= 0 ? 'up' : 'down' };
                     });
                     handlePriceChange(price);
+                    
+                    if (store.isActive && store.session) {
+                      store.tick(price, timestamp ? new Date(timestamp).toISOString() : new Date().toISOString());
+                    }
                   }}
                 />
               </div>
-              <BottomPanel
-                positions={positions as any}
-                pendingOrders={pendingOrders}
-                selectedSymbol={selectedStock.symbol}
-                currentPrice={selectedStock.price}
-                onClosePosition={async (symbol, side, price) => {
-                  try {
-                    const res = await tradingApi.closePosition(symbol, side, price);
-                    if (res.success) {
-                      await fetchPortfolio();
-                      setTradeCount(c => c + 1);
-                      return { success: true, message: `✅ Đã chốt vị thế ${side} ${symbol}` };
+              
+              {store.isActive && store.session ? (
+                <PositionsManager currentPrice={selectedStock.price} />
+              ) : (
+                <BottomPanel
+                  positions={positions as any}
+                  pendingOrders={pendingOrders}
+                  selectedSymbol={selectedStock.symbol}
+                  currentPrice={selectedStock.price}
+                  onClosePosition={async (symbol, side, price) => {
+                    try {
+                      const res = await tradingApi.closePosition(symbol, side, price);
+                      if (res.success) {
+                        await fetchPortfolio();
+                        setTradeCount(c => c + 1);
+                        return { success: true, message: `✅ Đã chốt vị thế ${side} ${symbol}` };
+                      }
+                      return { success: false, message: 'Lỗi khi đóng vị thế' };
+                    } catch (e: any) {
+                      return { success: false, message: e.message };
                     }
-                    return { success: false, message: 'Lỗi khi đóng vị thế' };
-                  } catch (e: any) {
-                    return { success: false, message: e.message };
-                  }
-                }}
-                onCancelOrder={handleCancelOrder}
-                onUpdateTPSL={async (symbol, side, tp, sl) => {
-                  try {
-                    const res = await tradingApi.updateTPSL(symbol, side, tp, sl);
-                    if (res.success) {
-                      await fetchPortfolio();
-                      return { success: true, message: '✅ Đã cập nhật TP/SL' };
+                  }}
+                  onCancelOrder={handleCancelOrder}
+                  onUpdateTPSL={async (symbol, side, tp, sl) => {
+                    try {
+                      const res = await tradingApi.updateTPSL(symbol, side, tp, sl);
+                      if (res.success) {
+                        await fetchPortfolio();
+                        return { success: true, message: '✅ Đã cập nhật TP/SL' };
+                      }
+                      return { success: false, message: 'Lỗi cập nhật' };
+                    } catch (e: any) {
+                      return { success: false, message: e.message };
                     }
-                    return { success: false, message: 'Lỗi cập nhật' };
-                  } catch (e: any) {
-                    return { success: false, message: e.message };
-                  }
-                }}
-                onAddMargin={async (symbol, side, amount) => {
-                  try {
-                    const res = await tradingApi.addMargin(symbol, side, amount);
-                    if (res.success) {
-                      await fetchPortfolio();
-                      return { success: true, message: res.message || '✅ Đã bơm thêm ký quỹ' };
-                    }
-                    return { success: false, message: res.message || 'Lỗi bơm ký quỹ' };
-                  } catch (e: any) {
-                    return { success: false, message: e.message };
-                  }
-                }}
-                onEditPosition={(symbol) => {
-                  const stock = STOCKS.find(s => s.symbol === symbol);
-                  if (stock) handleStockSelect(stock);
-                  setEditingSymbol(symbol);
-                }}
-                refreshTrigger={tradeCount}
-              />
+                  }}
+                  onAddMargin={handleAddMargin}
+                  onEditPosition={(symbol) => {
+                    const stock = STOCKS.find(s => s.symbol === symbol);
+                    if (stock) handleStockSelect(stock);
+                    setEditingSymbol(symbol);
+                    setActiveRightPanel('order');
+                  }}
+                  refreshTrigger={tradeCount}
+                />
+              )}
             </div>
           )}
 
@@ -646,29 +660,36 @@ export const TradingTerminal = () => {
           )}
 
           {activeRightPanel === 'order' && (
-            <RightSidebar
-              selectedStock={selectedStock}
-              positions={positions}
-              balance={balance}
-              onStockSelect={(stock) => {
-                handleStockSelect(stock);
-                setEditingSymbol(null);
-              }}
-              onTrade={handleTrade}
-              onUpdateTPSL={async (symbol, side, tp, sl) => {
-                const res = await handleUpdateTPSL(tp, sl);
-                if (res.success) setEditingSymbol(null);
-                return res;
-              }}
-              onAddMargin={handleAddMargin}
-              isEditing={editingSymbol === selectedStock.symbol}
-              onCancelEdit={() => setEditingSymbol(null)}
-            />
+            store.isActive ? (
+              <SimulatorTradingPanel
+                selectedStock={selectedStock}
+              />
+            ) : (
+              <RightSidebar
+                selectedStock={selectedStock}
+                positions={positions}
+                balance={balance}
+                onStockSelect={(stock) => {
+                  handleStockSelect(stock);
+                  setEditingSymbol(null);
+                }}
+                onTrade={handleTrade}
+                onUpdateTPSL={async (symbol, side, tp, sl) => {
+                  const res = await handleUpdateTPSL(tp, sl);
+                  if (res.success) setEditingSymbol(null);
+                  return res;
+                }}
+                onAddMargin={handleAddMargin}
+                isEditing={editingSymbol === selectedStock.symbol}
+                onCancelEdit={() => setEditingSymbol(null)}
+              />
+            )
           )}
 
           {activeRightPanel === 'simulation' && (
             <SimulationPanel
               currentSymbol={selectedStock.symbol}
+              isReplaying={isReplaying}
               onStartSimulation={handleStartSimulation}
             />
           )}

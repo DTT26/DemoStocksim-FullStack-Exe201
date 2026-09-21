@@ -1,113 +1,132 @@
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Calendar, Clock, Target, Play } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, CheckCircle2, User, PlayCircle } from 'lucide-react';
+import { MOCK_ASSIGNMENTS } from '../../data/mockStudentData';
 
 export const StudentAssignmentDetail = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
+  const assignment = MOCK_ASSIGNMENTS.find(a => a.id === id);
+
+  if (!assignment) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+        <h2 className="text-xl font-bold text-white mb-2">Assignment not found</h2>
+        <p>This assignment might have been removed or doesn't exist.</p>
+        <Link to="/student/assignments" className="mt-6 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+          Back to Assignments
+        </Link>
+      </div>
+    );
+  }
+
+  const getStatusColor = (status: string) => {
+    switch(status) {
+      case 'In Progress': return 'bg-amber-500/10 text-amber-500 border border-amber-500/20';
+      case 'Completed': return 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20';
+      case 'Overdue': return 'bg-rose-500/10 text-rose-500 border border-rose-500/20';
+      default: return 'bg-slate-500/10 text-slate-400 border border-slate-500/20';
+    }
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-5xl mx-auto">
-      {/* Header */}
       <div className="flex items-center gap-4">
-        <Link 
-          to="/student/assignments" 
-          className="p-2 hover:bg-[#2a2e39] rounded-lg text-[#787b86] hover:text-white transition-colors"
-        >
+        <Link to="/student/assignments" className="p-2 text-slate-400 hover:text-white hover:bg-[#172033] rounded-lg transition-colors">
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-white">Technical Analysis: FPT</h1>
-          <div className="flex items-center gap-3 mt-1 text-sm text-[#787b86]">
-            <span className="bg-amber-50/10 text-amber-500 px-2 py-0.5 rounded text-xs font-medium border border-amber-500/20">
-              In Progress
+          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
+            {assignment.title}
+            <span className={`px-2.5 py-0.5 rounded text-xs font-bold uppercase ${getStatusColor(assignment.status)}`}>
+              {assignment.status}
             </span>
-            <span>•</span>
-            <span>Assigned by Dr. Smith</span>
-          </div>
+          </h1>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-[#1e222d] rounded-2xl border border-[#2a2e39] p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Instructions</h2>
-            <div className="prose prose-invert max-w-none text-[#787b86] text-sm">
-              <p>
-                In this assignment, you will apply basic technical analysis concepts to the FPT stock over a simulated 3-month period.
-              </p>
-              <ul className="list-disc pl-4 mt-2 space-y-1">
-                <li>Identify and trade at least 2 major support/resistance breakouts.</li>
-                <li>Use RSI to identify overbought/oversold conditions before entering a position.</li>
-                <li>Achieve a minimum profit of 5% on your initial capital.</li>
-              </ul>
-              <p className="mt-4">
-                Make sure to review the provided material on moving averages before starting.
-              </p>
+          <div className="bg-[#111827] rounded-2xl border border-[#253047] p-6 sm:p-8 shadow-lg">
+            <h2 className="text-xl font-bold text-white mb-4">Instructions</h2>
+            <div className="prose prose-invert max-w-none text-slate-300">
+              <p>{assignment.instructions}</p>
             </div>
           </div>
 
-          <div className="bg-[#1e222d] rounded-2xl border border-[#2a2e39] p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Rules & Constraints</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-[#131722] rounded-xl border border-[#2a2e39]">
-                <div className="text-[#787b86] text-xs font-semibold uppercase mb-1">Initial Capital</div>
-                <div className="text-white font-bold font-mono">100,000,000 VND</div>
-              </div>
-              <div className="p-4 bg-[#131722] rounded-xl border border-[#2a2e39]">
-                <div className="text-[#787b86] text-xs font-semibold uppercase mb-1">Allowed Pairs</div>
-                <div className="text-white font-bold font-mono">FPT/VND only</div>
-              </div>
-              <div className="p-4 bg-[#131722] rounded-xl border border-[#2a2e39]">
-                <div className="text-[#787b86] text-xs font-semibold uppercase mb-1">Max Leverage</div>
-                <div className="text-white font-bold font-mono">1x (Spot only)</div>
-              </div>
-              <div className="p-4 bg-[#131722] rounded-xl border border-[#2a2e39]">
-                <div className="text-[#787b86] text-xs font-semibold uppercase mb-1">Time Limit</div>
-                <div className="text-white font-bold font-mono">60 minutes</div>
-              </div>
+          <div className="bg-[#111827] rounded-2xl border border-[#253047] overflow-hidden shadow-lg">
+            <div className="p-6 border-b border-[#253047] flex justify-between items-center">
+              <h2 className="text-xl font-bold text-white">Requirements checklist</h2>
+              <span className="text-sm font-semibold text-indigo-400">
+                {assignment.requirementsCompleted} / {assignment.totalRequirements} completed
+              </span>
+            </div>
+            <div className="divide-y divide-[#253047]">
+              {assignment.requirements.map(req => (
+                <div key={req.id} className="p-4 sm:p-6 flex items-start gap-4 hover:bg-[#172033]/50 transition-colors">
+                  <div className={`mt-0.5 shrink-0 w-6 h-6 rounded-full flex items-center justify-center border-2 ${
+                    req.completed ? 'border-emerald-500 bg-emerald-500/20 text-emerald-500' : 'border-slate-500 border-dashed text-transparent'
+                  }`}>
+                    {req.completed && <CheckCircle2 className="w-4 h-4" />}
+                  </div>
+                  <div>
+                    <p className={`text-base font-medium ${req.completed ? 'text-slate-400 line-through' : 'text-white'}`}>
+                      {req.text}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-6">
-          <div className="bg-[#1e222d] rounded-2xl border border-[#2a2e39] p-6">
-            <h3 className="text-white font-semibold mb-4">Details</h3>
+          <div className="bg-[#111827] rounded-2xl border border-[#253047] p-6 shadow-lg">
+            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Assignment Info</h3>
             
             <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <Target className="w-5 h-5 text-blue-500 mt-0.5" />
-                <div>
-                  <div className="text-sm font-medium text-white">Simulation Module</div>
-                  <div className="text-xs text-[#787b86]">Trading Challenge #01</div>
-                </div>
+              <div>
+                <p className="text-xs text-slate-500 mb-1">Simulation</p>
+                <p className="text-sm font-medium text-white">{assignment.simulation}</p>
               </div>
-              
-              <div className="flex items-start gap-3">
-                <Calendar className="w-5 h-5 text-emerald-500 mt-0.5" />
-                <div>
-                  <div className="text-sm font-medium text-white">Due Date</div>
-                  <div className="text-xs text-[#787b86]">September 15, 2026, 23:59</div>
-                </div>
+              <div>
+                <p className="text-xs text-slate-500 mb-1">Lecturer</p>
+                <p className="text-sm font-medium text-white flex items-center gap-2">
+                  <User className="w-4 h-4 text-slate-400" />
+                  {assignment.lecturer}
+                </p>
               </div>
-
-              <div className="flex items-start gap-3">
-                <Clock className="w-5 h-5 text-amber-500 mt-0.5" />
-                <div>
-                  <div className="text-sm font-medium text-white">Estimated Effort</div>
-                  <div className="text-xs text-[#787b86]">~1.5 hours</div>
+              <div>
+                <p className="text-xs text-slate-500 mb-1">Deadline</p>
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-rose-400" />
+                  <p className="text-sm font-medium text-rose-400">
+                    {new Date(assignment.deadline).toLocaleString()}
+                  </p>
                 </div>
               </div>
             </div>
 
-            <hr className="border-[#2a2e39] my-6" />
+            <div className="mt-8 pt-6 border-t border-[#253047]">
+              <div className="flex justify-between text-xs mb-2">
+                <span className="text-slate-400">Overall Progress</span>
+                <span className="text-white font-bold">{assignment.progress}%</span>
+              </div>
+              <div className="w-full bg-[#253047] rounded-full h-2">
+                <div 
+                  className={`h-2 rounded-full ${assignment.progress === 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`} 
+                  style={{ width: `${assignment.progress}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
 
-            <Link 
-              to="/trade/sim-01"
-              className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-xl font-semibold transition-all shadow-lg shadow-blue-900/20"
-            >
-              <Play className="w-4 h-4 fill-current" />
-              Start Assignment
+          <div className="bg-gradient-to-br from-indigo-900/40 to-[#111827] rounded-2xl border border-indigo-500/20 p-6 shadow-lg text-center">
+            <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center mx-auto mb-4">
+              <PlayCircle className="w-6 h-6 text-indigo-400" />
+            </div>
+            <h3 className="text-lg font-bold text-white mb-2">Ready to complete?</h3>
+            <p className="text-sm text-slate-400 mb-6">Enter the simulation to execute the required trades and analysis.</p>
+            <Link to="/trade/sim-01" className="block w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors shadow-lg shadow-indigo-600/20">
+              Open Trading Terminal
             </Link>
           </div>
         </div>

@@ -46,12 +46,21 @@ export const deleteWatchlist = async (id: string): Promise<void> => {
 
 export interface PaperSession {
   _id: string;
+  name?: string;
   symbol: string;
+  timeframe?: string;
   initialBalance: number;
-  currentBalance: number;
+  balance?: number;
+  equity?: number;
+  currentBalance?: number; // legacy
+  usedMargin?: number;
+  freeMargin?: number;
+  replayStartTime?: string;
+  replayCurrentTime?: string;
   status: 'running' | 'completed';
   startedAt: string;
   completedAt?: string;
+  config?: any;
 }
 
 export const getSessions = async (): Promise<PaperSession[]> => {
@@ -61,7 +70,13 @@ export const getSessions = async (): Promise<PaperSession[]> => {
   return res.json();
 };
 
-export const createSession = async (data: { symbol: string; initialBalance: number }): Promise<PaperSession> => {
+export const getSessionDetails = async (id: string): Promise<any> => {
+  const res = await fetch(`${API_URL}/paper-trading/${id}`, { credentials: 'include' });
+  if (!res.ok) throw new Error('Failed to fetch session details');
+  return res.json();
+};
+
+export const createSession = async (data: any): Promise<any> => {
   const res = await fetch(`${API_URL}/paper-trading`, { credentials: 'include',
     method: 'POST',
     headers: {
@@ -73,7 +88,7 @@ export const createSession = async (data: { symbol: string; initialBalance: numb
   return res.json();
 };
 
-export const updateSession = async (id: string, data: { currentBalance?: number; status?: 'running' | 'completed' }): Promise<PaperSession> => {
+export const updateSession = async (id: string, data: any): Promise<any> => {
   const res = await fetch(`${API_URL}/paper-trading/${id}`, { credentials: 'include',
     method: 'PUT',
     headers: {

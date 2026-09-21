@@ -1,6 +1,7 @@
 import express from 'express';
 import { 
   getSessions, 
+  getSessionDetails,
   createSession, 
   updateSession, 
   deleteSession 
@@ -12,6 +13,7 @@ const router = express.Router();
 router.use(protect);
 
 router.get('/', getSessions);
+router.get('/:id', getSessionDetails);
 router.post('/', createSession);
 router.put('/:id', updateSession);
 router.delete('/:id', deleteSession);

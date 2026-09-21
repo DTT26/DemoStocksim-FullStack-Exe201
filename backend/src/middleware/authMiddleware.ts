@@ -9,9 +9,14 @@ export interface AuthRequest extends Request {
 export const protect = async (req: AuthRequest, res: Response, next: NextFunction) => {
   let token;
 
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+  if (req.cookies && req.cookies.token) {
+    token = req.cookies.token;
+  } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+
+  if (token) {
     try {
-      token = req.headers.authorization.split(' ')[1];
       const decoded: any = jwt.verify(token, process.env.JWT_ACCESS_SECRET || 'fallback_secret_key_change_this_in_production');
 
       req.user = await User.findById(decoded.userId).select('-passwordHash');
@@ -20,9 +25,7 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
       console.error(error);
       res.status(401).json({ message: 'Not authorized, token failed' });
     }
-  }
-
-  if (!token) {
+  } else {
     res.status(401).json({ message: 'Not authorized, no token' });
   }
 };

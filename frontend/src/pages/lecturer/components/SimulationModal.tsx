@@ -54,7 +54,6 @@ export const SimulationModal = ({ isOpen, onClose, onSaved, simulationToEdit }: 
     setError('');
 
     try {
-      const token = localStorage.getItem('token');
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
       
       const url = simulationToEdit 
@@ -63,12 +62,11 @@ export const SimulationModal = ({ isOpen, onClose, onSaved, simulationToEdit }: 
         
       const method = simulationToEdit ? 'PUT' : 'POST';
 
-      const response = await fetch(url, {
+      const response = await fetch(url, { credentials: 'include',
         method,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+          },
         body: JSON.stringify(formData)
       });
 

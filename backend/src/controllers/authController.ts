@@ -62,6 +62,21 @@ export const googleLogin = async (req: Request, res: Response) => {
       { expiresIn: '7d' } // Hạn dài cho Refresh Token
     );
 
+    // Đặt cookie cho token
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 15 * 60 * 1000 // 15 phút
+    });
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 ngày
+    });
+
     // Trả về token và thông tin cơ bản
     res.status(200).json({
       token,
@@ -84,7 +99,7 @@ export const googleLogin = async (req: Request, res: Response) => {
 // POST /api/auth/refresh
 export const refreshAccessToken = async (req: Request, res: Response) => {
   try {
-    const { refreshToken } = req.body;
+    const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
     if (!refreshToken) {
       return res.status(401).json({ message: 'Refresh token is required' });
     }
@@ -105,8 +120,21 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
       { expiresIn: '15m' }
     );
 
+    res.cookie('token', newAccessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 15 * 60 * 1000
+    });
+
     res.json({ accessToken: newAccessToken });
   } catch (error) {
     res.status(403).json({ message: 'Invalid refresh token' });
   }
+};
+
+export const logout = (req: Request, res: Response) => {
+  res.clearCookie('token');
+  res.clearCookie('refreshToken');
+  res.status(200).json({ message: 'Logged out successfully' });
 };

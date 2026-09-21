@@ -21,13 +21,9 @@ export const Leaderboard = () => {
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        const token = localStorage.getItem('token');
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-        const response = await fetch(`${apiUrl}/users?role=student`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await fetch(`${apiUrl}/users?role=student`, { credentials: 'include',
+          });
         
         if (response.ok) {
           const data = await response.json();

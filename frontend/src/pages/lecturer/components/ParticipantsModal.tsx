@@ -24,13 +24,12 @@ export const ParticipantsModal = ({ isOpen, onClose, simulation }: ParticipantsM
   const fetchData = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-      const headers = { 'Authorization': `Bearer ${token}` };
+      const headers = { };
 
       const [partRes, stuRes] = await Promise.all([
-        fetch(`${apiUrl}/simulations/${simulation._id}/participants`, { headers }),
-        fetch(`${apiUrl}/users?role=student`, { headers })
+        fetch(`${apiUrl}/simulations/${simulation._id}/participants`, { credentials: 'include', headers }),
+        fetch(`${apiUrl}/users?role=student`, { credentials: 'include', headers })
       ]);
 
       if (partRes.ok && stuRes.ok) {
@@ -51,15 +50,13 @@ export const ParticipantsModal = ({ isOpen, onClose, simulation }: ParticipantsM
     setError('');
 
     try {
-      const token = localStorage.getItem('token');
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
       
-      const response = await fetch(`${apiUrl}/simulations/${simulation._id}/add-student`, {
+      const response = await fetch(`${apiUrl}/simulations/${simulation._id}/add-student`, { credentials: 'include',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+          },
         body: JSON.stringify({ studentId: selectedStudent })
       });
 
