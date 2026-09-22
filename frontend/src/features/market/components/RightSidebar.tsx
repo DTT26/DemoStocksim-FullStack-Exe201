@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Wallet, ChevronRight, ChevronLeft } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, ChevronRight, ChevronLeft, Settings2 } from 'lucide-react';
 import { STOCKS, type Stock, generateOHLCV, getPricePrecision } from '../data';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useModal } from '../../../contexts/ModalContext';
+import { OrderBook } from './OrderBook';
 
 interface RightSidebarProps {
   selectedStock: Stock;
@@ -21,6 +22,7 @@ interface RightSidebarProps {
 export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect, onTrade, onUpdateTPSL, onAddMargin, isEditing, onCancelEdit, onPreviewTPSLChange, draggedTPSL }: RightSidebarProps) => {
   const { user, login } = useAuth();
   const { showAlert } = useModal();
+  const [activeSidebarTab, setActiveSidebarTab] = useState<'orderbook' | 'trade'>('trade');
   const [orderType, setOrderType] = useState<'market' | 'limit' | 'stop'>('market');
   const [isExpanded, setIsExpanded] = useState(true);
   const [limitPriceStr, setLimitPriceStr] = useState<string>('');
@@ -192,7 +194,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
   if (!isExpanded) {
     return (
       <div className="w-10 flex flex-col bg-[#131722] flex-1 min-h-0 overflow-hidden items-center">
-        <button 
+        <button
           onClick={() => setIsExpanded(true)}
           className="w-full py-4 flex items-center justify-center text-[#787b86] hover:text-[#d1d4dc] hover:bg-[#1e222d] transition-colors"
           title="Mở bảng đặt lệnh"
@@ -206,49 +208,74 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
 
   return (
     <div className="w-[280px] flex flex-col bg-[#131722] flex-1 min-h-0 overflow-hidden">
-
-      {/* Watchlist */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="flex items-center px-2 py-2 border-b border-[#2a2e39] text-[10px] uppercase tracking-wider text-[#787b86] font-semibold">
-          <button 
-            onClick={() => setIsExpanded(false)}
-            className="mr-2 p-1 rounded hover:bg-[#1e222d] hover:text-[#d1d4dc] transition-colors"
-            title="Thu gọn"
+      {/* Header Tabs Sổ lệnh / Giao dịch */}
+      <div className="flex items-center border-b border-[#2a2e39] shrink-0">
+        <button
+          onClick={() => setIsExpanded(false)}
+          className="p-3 text-[#787b86] hover:text-[#d1d4dc] hover:bg-[#1e222d] transition-colors border-r border-[#2a2e39]"
+          title="Thu gọn"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+        <div className="flex-1 flex items-center">
+          <button
+            onClick={() => setActiveSidebarTab('orderbook')}
+            className={`flex-1 py-3 text-xs font-semibold transition-colors ${activeSidebarTab === 'orderbook' ? 'text-white border-b-2 border-blue-500' : 'text-[#787b86] hover:text-[#d1d4dc]'}`}
           >
-            <ChevronRight className="w-4 h-4" />
+            Sổ lệnh
           </button>
-          <div className="flex-1">Symbol</div>
-          <div className="w-20 text-right">Price</div>
-          <div className="w-14 text-right">Chg%</div>
-        </div>
-
-        {STOCKS.map(stock => (
-          <div
-            key={stock.symbol}
-            onClick={() => { onStockSelect(stock); }}
-            className={`flex items-center px-3 py-2 text-xs cursor-pointer transition-colors border-b border-[#2a2e39]/40 ${selectedStock.symbol === stock.symbol
-              ? 'bg-blue-900/20 border-l-2 border-l-blue-500'
-              : 'hover:bg-[#1e222d]'
-              }`}
+          <button
+            onClick={() => setActiveSidebarTab('trade')}
+            className={`flex-1 py-3 text-xs font-semibold transition-colors ${activeSidebarTab === 'trade' ? 'text-white border-b-2 border-blue-500' : 'text-[#787b86] hover:text-[#d1d4dc]'}`}
           >
-            <div className="flex-1 flex flex-col">
-              <span className="text-[#d1d4dc] font-semibold">{stock.symbol}</span>
-              <span className="text-[#787b86] text-[10px]">{stock.name}</span>
-            </div>
-            <div className={`w-20 text-right font-mono font-semibold ${stock.type === 'up' ? 'text-[#089981]' : 'text-[#f23645]'}`}>
-              {stock.price >= 100 ? stock.price.toLocaleString('vi-VN') : stock.price.toFixed(getPricePrecision(stock.price))}
-            </div>
-            <div className={`w-14 text-right flex items-center justify-end gap-0.5 ${stock.type === 'up' ? 'text-[#089981]' : 'text-[#f23645]'}`}>
-              {stock.type === 'up' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              <span>{Math.abs(stock.percent).toFixed(2)}%</span>
-            </div>
-          </div>
-        ))}
+            Giao dịch
+          </button>
+        </div>
+        <button className="p-3 text-[#787b86] hover:text-[#d1d4dc] hover:bg-[#1e222d] transition-colors">
+          <Settings2 className="w-4 h-4" />
+        </button>
       </div>
+
+      {activeSidebarTab === 'orderbook' ? (
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <OrderBook symbol={selectedStock.symbol} currentPrice={selectedStock.price} isUp={selectedStock.type === 'up'} />
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="flex items-center px-2 py-2 border-b border-[#2a2e39] text-[10px] uppercase tracking-wider text-[#787b86] font-semibold">
+            <div className="flex-1 ml-1">Symbol</div>
+            <div className="w-20 text-right">Price</div>
+            <div className="w-14 text-right">Chg%</div>
+          </div>
+
+          {STOCKS.map(stock => (
+            <div
+              key={stock.symbol}
+              onClick={() => { onStockSelect(stock); }}
+              className={`flex items-center px-3 py-2 text-xs cursor-pointer transition-colors border-b border-[#2a2e39]/40 ${selectedStock.symbol === stock.symbol
+                ? 'bg-blue-900/20 border-l-2 border-l-blue-500'
+                : 'hover:bg-[#1e222d]'
+                }`}
+            >
+              <div className="flex-1 flex flex-col">
+                <span className="text-[#d1d4dc] font-semibold">{stock.symbol}</span>
+                <span className="text-[#787b86] text-[10px]">{stock.name}</span>
+              </div>
+              <div className={`w-20 text-right font-mono font-semibold ${stock.type === 'up' ? 'text-[#089981]' : 'text-[#f23645]'}`}>
+                {stock.price >= 100 ? stock.price.toLocaleString('vi-VN') : stock.price.toFixed(getPricePrecision(stock.price))}
+              </div>
+              <div className={`w-14 text-right flex items-center justify-end gap-0.5 ${stock.type === 'up' ? 'text-[#089981]' : 'text-[#f23645]'}`}>
+                {stock.type === 'up' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                <span>{Math.abs(stock.percent).toFixed(2)}%</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Order Entry */}
       {user ? (
-        <div className="border-t border-[#2a2e39] p-3 flex flex-col gap-2.5 shrink-0">
+        <div className="border-t border-[#2a2e39] p-3 flex flex-col gap-2.5 shrink-0 bg-[#131722]">
           {/* Balance row */}
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-1 text-[#787b86]">
@@ -299,11 +326,11 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
               </label>
               {isEditing ? (
                 <div className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
-                  {avgPrice.toLocaleString('vi-VN')}
+                  {avgPrice >= 100 ? avgPrice.toLocaleString('vi-VN') : avgPrice.toFixed(getPricePrecision(avgPrice))}
                 </div>
               ) : orderType === 'market' ? (
                 <div className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
-                  {selectedStock.price.toLocaleString('vi-VN')}
+                  {selectedStock.price >= 100 ? selectedStock.price.toLocaleString('vi-VN') : selectedStock.price.toFixed(getPricePrecision(selectedStock.price))}
                 </div>
               ) : (
                 <input
@@ -341,51 +368,51 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
               <label className="text-[10px] text-[#787b86] uppercase tracking-wider">Đòn bẩy</label>
               <span className="text-xs font-mono font-bold text-[#1e2329] dark:text-white">{isEditing ? posLeverage : leverage}X</span>
             </div>
-            
+
             <div className="relative mt-2 mb-5 mx-1">
-               <input
-                 type="range"
-                 min="1"
-                 max={leverageInfo.max}
-                 value={isEditing ? posLeverage : leverage}
-                 disabled={isEditing}
-                 onChange={e => setLev(parseInt(e.target.value))}
-                 className="w-full h-[3px] appearance-none cursor-pointer relative z-10 bg-transparent custom-leverage-slider m-0 p-0 block disabled:cursor-not-allowed"
-                 style={{
-                   background: `linear-gradient(to right, var(--lev-fill) ${(((isEditing ? posLeverage : leverage) - 1) / (leverageInfo.max - 1)) * 100}%, var(--lev-bg) ${(((isEditing ? posLeverage : leverage) - 1) / (leverageInfo.max - 1)) * 100}%)`
-                 }}
-               />
-               
-               {/* Markers layer */}
-               <div className="absolute top-[1.5px] left-[7px] right-[7px] pointer-events-none z-20">
-                 {/* Base 1x */}
-                 <div 
-                   className="absolute top-0 -translate-y-[14px] -translate-x-1/2 flex flex-col items-center justify-start cursor-pointer pointer-events-auto group w-[30px] h-[40px]" 
-                   style={{ left: '0%' }}
-                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLev(1); }}
-                 >
-                    <div className="w-2.5 h-2.5 rounded-full bg-[#1e2329] dark:bg-white transition-transform group-hover:scale-125 shrink-0 mt-[10px]" />
-                    <span className="text-[10px] font-semibold text-[#1e2329] dark:text-white whitespace-nowrap mt-1">1X</span>
-                 </div>
-                 
-                 {leverageInfo.marks.map(m => {
-                   const percent = ((m - 1) / (leverageInfo.max - 1)) * 100;
-                   const isActive = leverage >= m;
-                   return (
-                     <div 
-                       key={m} 
-                       className="absolute top-0 -translate-y-[14px] -translate-x-1/2 flex flex-col items-center justify-start cursor-pointer pointer-events-auto group w-[40px] h-[40px]" 
-                       style={{ left: `${percent}%` }}
-                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLev(m); }}
-                     >
-                       <div className={`w-2.5 h-2.5 rounded-full transition-transform group-hover:scale-125 shrink-0 mt-[10px] ${isActive ? 'bg-[#1e2329] dark:bg-white' : 'bg-[#e6e8ea] dark:bg-[#2a2e39]'}`} />
-                       <span className={`text-[10px] font-semibold whitespace-nowrap mt-1 transition-colors ${isActive ? 'text-[#1e2329] dark:text-[#d1d4dc] group-hover:text-black dark:group-hover:text-white' : 'text-[#787b86] group-hover:text-[#1e2329] dark:group-hover:text-white'}`}>
-                         {m}X
-                       </span>
-                     </div>
-                   );
-                 })}
-               </div>
+              <input
+                type="range"
+                min="1"
+                max={leverageInfo.max}
+                value={isEditing ? posLeverage : leverage}
+                disabled={isEditing}
+                onChange={e => setLev(parseInt(e.target.value))}
+                className="w-full h-[3px] appearance-none cursor-pointer relative z-10 bg-transparent custom-leverage-slider m-0 p-0 block disabled:cursor-not-allowed"
+                style={{
+                  background: `linear-gradient(to right, var(--lev-fill) ${(((isEditing ? posLeverage : leverage) - 1) / (leverageInfo.max - 1)) * 100}%, var(--lev-bg) ${(((isEditing ? posLeverage : leverage) - 1) / (leverageInfo.max - 1)) * 100}%)`
+                }}
+              />
+
+              {/* Markers layer */}
+              <div className="absolute top-[1.5px] left-[7px] right-[7px] pointer-events-none z-20">
+                {/* Base 1x */}
+                <div
+                  className="absolute top-0 -translate-y-[14px] -translate-x-1/2 flex flex-col items-center justify-start cursor-pointer pointer-events-auto group w-[30px] h-[40px]"
+                  style={{ left: '0%' }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLev(1); }}
+                >
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#1e2329] dark:bg-white transition-transform group-hover:scale-125 shrink-0 mt-[10px]" />
+                  <span className="text-[10px] font-semibold text-[#1e2329] dark:text-white whitespace-nowrap mt-1">1X</span>
+                </div>
+
+                {leverageInfo.marks.map(m => {
+                  const percent = ((m - 1) / (leverageInfo.max - 1)) * 100;
+                  const isActive = leverage >= m;
+                  return (
+                    <div
+                      key={m}
+                      className="absolute top-0 -translate-y-[14px] -translate-x-1/2 flex flex-col items-center justify-start cursor-pointer pointer-events-auto group w-[40px] h-[40px]"
+                      style={{ left: `${percent}%` }}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLev(m); }}
+                    >
+                      <div className={`w-2.5 h-2.5 rounded-full transition-transform group-hover:scale-125 shrink-0 mt-[10px] ${isActive ? 'bg-[#1e2329] dark:bg-white' : 'bg-[#e6e8ea] dark:bg-[#2a2e39]'}`} />
+                      <span className={`text-[10px] font-semibold whitespace-nowrap mt-1 transition-colors ${isActive ? 'text-[#1e2329] dark:text-[#d1d4dc] group-hover:text-black dark:group-hover:text-white' : 'text-[#787b86] group-hover:text-[#1e2329] dark:group-hover:text-white'}`}>
+                        {m}X
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
