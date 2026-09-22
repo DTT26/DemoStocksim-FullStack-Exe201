@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Wallet, ChevronRight, ChevronLeft } from 'lucide-react';
-import { STOCKS, type Stock, generateOHLCV } from '../data';
+import { STOCKS, type Stock, generateOHLCV, getPricePrecision } from '../data';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useModal } from '../../../contexts/ModalContext';
 
 interface RightSidebarProps {
   selectedStock: Stock;
@@ -13,10 +14,13 @@ interface RightSidebarProps {
   onAddMargin?: (symbol: string, side: 'LONG' | 'SHORT', amount: number) => Promise<{ success: boolean; message: string }>;
   isEditing?: boolean;
   onCancelEdit?: () => void;
+  onPreviewTPSLChange?: (tpsl: { tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean } | null) => void;
+  draggedTPSL?: { tp?: number; sl?: number } | null;
 }
 
-export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect, onTrade, onUpdateTPSL, onAddMargin, isEditing, onCancelEdit }: RightSidebarProps) => {
+export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect, onTrade, onUpdateTPSL, onAddMargin, isEditing, onCancelEdit, onPreviewTPSLChange, draggedTPSL }: RightSidebarProps) => {
   const { user, login } = useAuth();
+  const { showAlert } = useModal();
   const [orderType, setOrderType] = useState<'market' | 'limit' | 'stop'>('market');
   const [isExpanded, setIsExpanded] = useState(true);
   const [limitPriceStr, setLimitPriceStr] = useState<string>('');
@@ -45,8 +49,21 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
     } else {
       setTp('');
       setSl('');
+      setShowTPSL(false);
     }
   }, [selectedStock.symbol, positions]);
+
+  // Listen for real-time drag updates from chart
+  useEffect(() => {
+    if (draggedTPSL) {
+      if (draggedTPSL.tp !== undefined) {
+        setTp(draggedTPSL.tp.toString());
+      }
+      if (draggedTPSL.sl !== undefined) {
+        setSl(draggedTPSL.sl.toString());
+      }
+    }
+  }, [draggedTPSL]);
 
   const showToast = (msg: string, ok: boolean) => {
     setToast({ msg, ok });
@@ -85,34 +102,34 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
 
     // Validation
     if (orderType === 'limit') {
-      if (p <= 0) return alert('Giá Limit không hợp lệ');
+      if (p <= 0) return showAlert({ title: 'Giá không hợp lệ', message: 'Giá Limit không hợp lệ', type: 'warning' });
       if (type === 'buy' && p >= selectedStock.price) {
-        return alert(`Giá mua Limit (${p}) phải THẤP HƠN giá thị trường hiện tại (${selectedStock.price})`);
+        return showAlert({ title: 'Giá Limit không hợp lệ', message: `Giá mua Limit (${p}) phải THẤP HƠN giá thị trường hiện tại (${selectedStock.price})`, type: 'warning' });
       }
       if (type === 'sell' && p <= selectedStock.price) {
-        return alert(`Giá bán Limit (${p}) phải CAO HƠN giá thị trường hiện tại (${selectedStock.price})`);
+        return showAlert({ title: 'Giá Limit không hợp lệ', message: `Giá bán Limit (${p}) phải CAO HƠN giá thị trường hiện tại (${selectedStock.price})`, type: 'warning' });
       }
     } else if (orderType === 'stop') {
-      if (p <= 0) return alert('Giá Stop không hợp lệ');
+      if (p <= 0) return showAlert({ title: 'Giá không hợp lệ', message: 'Giá Stop không hợp lệ', type: 'warning' });
       if (type === 'buy' && p <= selectedStock.price) {
-        return alert(`Giá mua Stop (${p}) phải CAO HƠN giá thị trường hiện tại (${selectedStock.price})`);
+        return showAlert({ title: 'Giá Stop không hợp lệ', message: `Giá mua Stop (${p}) phải CAO HƠN giá thị trường hiện tại (${selectedStock.price})`, type: 'warning' });
       }
       if (type === 'sell' && p >= selectedStock.price) {
-        return alert(`Giá bán Stop (${p}) phải THẤP HƠN giá thị trường hiện tại (${selectedStock.price})`);
+        return showAlert({ title: 'Giá Stop không hợp lệ', message: `Giá bán Stop (${p}) phải THẤP HƠN giá thị trường hiện tại (${selectedStock.price})`, type: 'warning' });
       }
     }
 
     if (tpVal !== undefined) {
-      if (type === 'buy' && tpVal <= p) return alert('Chốt lời (TP) của lệnh LONG phải CAO HƠN giá mở lệnh');
-      if (type === 'sell' && tpVal >= p) return alert('Chốt lời (TP) của lệnh SHORT phải THẤP HƠN giá mở lệnh');
+      if (type === 'buy' && tpVal <= p) return showAlert({ title: 'Thiết lập TP/SL', message: 'Chốt lời (TP) của lệnh LONG phải CAO HƠN giá mở lệnh', type: 'warning' });
+      if (type === 'sell' && tpVal >= p) return showAlert({ title: 'Thiết lập TP/SL', message: 'Chốt lời (TP) của lệnh SHORT phải THẤP HƠN giá mở lệnh', type: 'warning' });
     }
     if (slVal !== undefined) {
-      if (type === 'buy' && slVal >= p) return alert('Cắt lỗ (SL) của lệnh LONG phải THẤP HƠN giá mở lệnh');
-      if (type === 'sell' && slVal <= p) return alert('Cắt lỗ (SL) của lệnh SHORT phải CAO HƠN giá mở lệnh');
+      if (type === 'buy' && slVal >= p) return showAlert({ title: 'Thiết lập TP/SL', message: 'Cắt lỗ (SL) của lệnh LONG phải THẤP HƠN giá mở lệnh', type: 'warning' });
+      if (type === 'sell' && slVal <= p) return showAlert({ title: 'Thiết lập TP/SL', message: 'Cắt lỗ (SL) của lệnh SHORT phải CAO HƠN giá mở lệnh', type: 'warning' });
     }
 
     if (m <= 0) {
-      showToast('Khối lượng Lot phải lớn hơn 0!', false);
+      showAlert({ title: 'Khối lượng không hợp lệ', message: 'Khối lượng Lot phải lớn hơn 0!', type: 'warning' });
       return;
     }
 
@@ -154,6 +171,23 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
   }
   const pnlColor = pnl >= 0 ? 'text-[#089981]' : 'text-[#f23645]';
   const pnlSign = pnl >= 0 ? '+' : '';
+
+  // Synchronize preview TP/SL with parent chart
+  useEffect(() => {
+    if (showTPSL) {
+      const currentSide = held > 0 && side ? side : 'LONG';
+      const tpNum = tp ? parseFloat(tp) : undefined;
+      const slNum = sl ? parseFloat(sl) : undefined;
+      onPreviewTPSLChange?.({
+        enabled: true,
+        tp: (tpNum !== undefined && !isNaN(tpNum)) ? tpNum : undefined,
+        sl: (slNum !== undefined && !isNaN(slNum)) ? slNum : undefined,
+        side: currentSide
+      });
+    } else {
+      onPreviewTPSLChange?.(null);
+    }
+  }, [showTPSL, tp, sl, side, held, onPreviewTPSLChange]);
 
   if (!isExpanded) {
     return (
@@ -202,7 +236,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
               <span className="text-[#787b86] text-[10px]">{stock.name}</span>
             </div>
             <div className={`w-20 text-right font-mono font-semibold ${stock.type === 'up' ? 'text-[#089981]' : 'text-[#f23645]'}`}>
-              {stock.price.toLocaleString('vi-VN')}
+              {stock.price >= 100 ? stock.price.toLocaleString('vi-VN') : stock.price.toFixed(getPricePrecision(stock.price))}
             </div>
             <div className={`w-14 text-right flex items-center justify-end gap-0.5 ${stock.type === 'up' ? 'text-[#089981]' : 'text-[#f23645]'}`}>
               {stock.type === 'up' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
@@ -221,7 +255,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
               <Wallet className="w-3 h-3" />
               <span>Balance</span>
             </div>
-            <span className="font-mono text-green-400 font-semibold">{balance.toLocaleString('vi-VN')} ₫</span>
+            <span className="font-mono text-green-400 font-semibold">${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
 
           {/* Holding & PnL section removed */}
@@ -363,8 +397,28 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
               checked={showTPSL}
               disabled={isEditing}
               onChange={(e) => {
-                setShowTPSL(e.target.checked);
-                if (!e.target.checked) {
+                const isChecked = e.target.checked;
+                setShowTPSL(isChecked);
+                if (isChecked) {
+                  const refPrice = orderType === 'limit' && parseFloat(limitPriceStr) > 0 
+                    ? parseFloat(limitPriceStr) 
+                    : (held > 0 && avgPrice > 0 ? avgPrice : selectedStock.price);
+                  const precision = getPricePrecision(refPrice);
+                  const currentSide = held > 0 && side ? side : 'LONG';
+
+                  let newTp = tp;
+                  let newSl = sl;
+                  if (!newTp) {
+                    const tpFactor = currentSide === 'LONG' ? 1.05 : 0.95;
+                    newTp = (refPrice * tpFactor).toFixed(precision);
+                    setTp(newTp);
+                  }
+                  if (!newSl) {
+                    const slFactor = currentSide === 'LONG' ? 0.97 : 1.03;
+                    newSl = (refPrice * slFactor).toFixed(precision);
+                    setSl(newSl);
+                  }
+                } else {
                   setTp('');
                   setSl('');
                 }
@@ -377,61 +431,63 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
           </div>
 
           {/* TP / SL inputs */}
-          {showTPSL && (
-            <div className="flex gap-2 border-t border-[#2a2e39]/50 pt-2 mt-1">
-              <div className="flex flex-col gap-1 flex-1">
-                <div className="flex justify-between items-center">
-                  <label className="text-[10px] text-[#089981] uppercase tracking-wider font-semibold">Chốt lời (TP)</label>
-                </div>
-                <input
-                  type="number"
-                  value={tp}
-                  placeholder="Tùy chọn"
-                  onChange={e => setTp(e.target.value)}
-                  className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-[#089981] transition-colors w-full placeholder:text-[#434651]"
-                />
-                {held > 0 && (
+          {showTPSL && (() => {
+            const baseRefPrice = held > 0 && avgPrice > 0 ? avgPrice : (orderType === 'limit' && parseFloat(limitPriceStr) > 0 ? parseFloat(limitPriceStr) : selectedStock.price);
+            const sliderPrecision = getPricePrecision(baseRefPrice);
+            const sliderStep = baseRefPrice > 1000 ? '1' : baseRefPrice > 10 ? '0.1' : Math.pow(10, -sliderPrecision).toString();
+
+            return (
+              <div className="flex gap-2 border-t border-[#2a2e39]/50 pt-2 mt-1">
+                <div className="flex flex-col gap-1 flex-1">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] text-[#089981] uppercase tracking-wider font-semibold">Chốt lời (TP)</label>
+                  </div>
+                  <input
+                    type="number"
+                    value={tp}
+                    placeholder="Tùy chọn"
+                    onChange={e => setTp(e.target.value)}
+                    className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-[#089981] transition-colors w-full placeholder:text-[#434651]"
+                  />
                   <input
                     type="range"
-                    min={(avgPrice * 0.5).toFixed(1)}
-                    max={(avgPrice * 1.5).toFixed(1)}
-                    step="0.1"
-                    value={tp || selectedStock.price}
+                    min={(baseRefPrice * 0.5).toFixed(sliderPrecision)}
+                    max={(baseRefPrice * 1.5).toFixed(sliderPrecision)}
+                    step={sliderStep}
+                    value={tp || baseRefPrice}
                     onChange={e => setTp(e.target.value)}
                     className="w-full accent-[#089981] mt-1 h-1 bg-[#2a2e39] rounded-lg appearance-none cursor-pointer"
                   />
-                )}
-              </div>
-              <div className="flex flex-col gap-1 flex-1">
-                <div className="flex justify-between items-center">
-                  <label className="text-[10px] text-[#f23645] uppercase tracking-wider font-semibold">Cắt lỗ (SL)</label>
                 </div>
-                <input
-                  type="number"
-                  value={sl}
-                  placeholder="Tùy chọn"
-                  onChange={e => setSl(e.target.value)}
-                  className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-[#f23645] transition-colors w-full placeholder:text-[#434651]"
-                />
-                {held > 0 && (
+                <div className="flex flex-col gap-1 flex-1">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] text-[#f23645] uppercase tracking-wider font-semibold">Cắt lỗ (SL)</label>
+                  </div>
+                  <input
+                    type="number"
+                    value={sl}
+                    placeholder="Tùy chọn"
+                    onChange={e => setSl(e.target.value)}
+                    className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-[#f23645] transition-colors w-full placeholder:text-[#434651]"
+                  />
                   <input
                     type="range"
-                    min={(avgPrice * 0.5).toFixed(1)}
-                    max={(avgPrice * 1.5).toFixed(1)}
-                    step="0.1"
-                    value={sl || selectedStock.price}
+                    min={(baseRefPrice * 0.5).toFixed(sliderPrecision)}
+                    max={(baseRefPrice * 1.5).toFixed(sliderPrecision)}
+                    step={sliderStep}
+                    value={sl || baseRefPrice}
                     onChange={e => setSl(e.target.value)}
                     className="w-full accent-[#f23645] mt-1 h-1 bg-[#2a2e39] rounded-lg appearance-none cursor-pointer"
                   />
-                )}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Total info */}
           <div className="flex items-center justify-between text-xs pt-2">
             <span className="text-[#787b86]">Ký quỹ yêu cầu</span>
-            <span className="font-mono text-[#d1d4dc] font-bold">{requiredMargin.toLocaleString('vi-VN', { maximumFractionDigits: 0 })} ₫</span>
+            <span className="font-mono text-[#d1d4dc] font-bold">${requiredMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <div className="flex items-center justify-between text-[10px] pb-2">
             <span className="text-[#787b86]">Khối lượng thực tế</span>

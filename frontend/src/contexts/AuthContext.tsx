@@ -49,9 +49,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (res.ok) {
         const userData = await res.json();
         setUser(userData);
+        if (userData._id) {
+          localStorage.setItem('userId', userData._id);
+        }
       } else {
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
+        localStorage.removeItem('userId');
       }
     } catch (error) {
       console.error('Failed to fetch user:', error);
@@ -95,6 +99,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     googleLogout();
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('userId');
     setUser(null);
   };
 

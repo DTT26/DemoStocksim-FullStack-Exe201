@@ -1,14 +1,62 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { mockStocks } from '../mockData';
+import { fetchVnStockQuotes, type VnStockQuote } from '../../../services/vnStockApi';
 
 export const StockTable = () => {
+  const [stocks, setStocks] = useState(mockStocks);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    const loadRealQuotes = async () => {
+      try {
+        const symbols = mockStocks.map(s => s.symbol);
+        const quotes: Record<string, VnStockQuote> = await fetchVnStockQuotes(symbols);
+        
+        if (quotes && Object.keys(quotes).length > 0) {
+          setStocks(prev => prev.map(stock => {
+            const q = quotes[stock.symbol];
+            if (q) {
+              return {
+                ...stock,
+                price: q.price,
+                change: q.change,
+                percent: q.percent,
+                type: q.change >= 0 ? 'up' : 'down',
+                volume: q.volume >= 1_000_000 
+                  ? `${(q.volume / 1_000_000).toFixed(1)}M` 
+                  : `${(q.volume / 1_000).toFixed(0)}K`
+              };
+            }
+            return stock;
+          }));
+        }
+      } catch (err) {
+        console.warn('Failed to load real quotes for StockTable:', err);
+      }
+    };
+
+    loadRealQuotes();
+  }, []);
+
+  const filteredStocks = stocks.filter(s => 
+    s.symbol.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    s.company.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="glass-panel overflow-hidden">
       <div className="p-5 border-b border-border flex justify-between items-center">
-        <h2 className="text-lg font-semibold text-white">Market Watch</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-white">Market Watch</h2>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            Dữ liệu thật HOSE/HNX
+          </span>
+        </div>
         <div className="flex gap-2">
           <input 
             type="text" 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search symbol..." 
             className="bg-slate-800/50 border border-border rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-primary transition-colors"
           />
@@ -28,7 +76,7 @@ export const StockTable = () => {
             </tr>
           </thead>
           <tbody>
-            {mockStocks.map((stock) => (
+            {filteredStocks.map((stock) => (
               <tr key={stock.symbol} className="stock-row">
                 <td className="p-4">
                   <span className={`font-bold ${stock.type === 'up' ? 'text-up' : 'text-down'}`}>
