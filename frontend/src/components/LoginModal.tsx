@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { X } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -11,11 +12,12 @@ interface LoginModalProps {
 export const LoginModal = ({ isOpen, onClose, onLoginGoogle }: LoginModalProps) => {
   const [isVerified, setIsVerified] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string>('');
+  const { theme } = useTheme();
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[200] flex items-start justify-end pt-20 pr-6 bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div 
         className="bg-white dark:bg-[#1e222d] w-[400px] rounded-xl shadow-2xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
@@ -37,6 +39,7 @@ export const LoginModal = ({ isOpen, onClose, onLoginGoogle }: LoginModalProps) 
           <div className="flex justify-center w-full min-h-[78px]">
             <ReCAPTCHA
               sitekey="6LcONsctAAAAANj0qc4XgLeCqo4WsQZzctup9WVM"
+              theme={theme}
               onChange={(token) => {
                 if (token) {
                   setIsVerified(true);
