@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Play, Square, Users, Edit3, Settings, UserPlus, Search, Filter, MoreVertical, Trash2, Copy, BarChart3, Clock, Target, PlusCircle, Activity } from 'lucide-react';
 import { SimulationModal } from './components/SimulationModal';
 import { ParticipantsModal } from './components/ParticipantsModal';
+import { ConfirmModal } from '../../components/ConfirmModal';
 
 export const LecturerSimulations = () => {
   const [simulations, setSimulations] = useState<any[]>([]);
@@ -14,6 +15,9 @@ export const LecturerSimulations = () => {
   const [isParticipantsModalOpen, setIsParticipantsModalOpen] = useState(false);
   const [simulationToEdit, setSimulationToEdit] = useState<any>(null);
   const [simulationForParticipants, setSimulationForParticipants] = useState<any>(null);
+  const [confirmState, setConfirmState] = useState<{isOpen: boolean, action: 'start'|'end'|'delete'|null, simId: string|null, simName?: string}>({
+    isOpen: false, action: null, simId: null
+  });
   
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
@@ -37,9 +41,16 @@ export const LecturerSimulations = () => {
     fetchSimulations();
   }, []);
 
+  const confirmUpdateStatus = (id: string, action: 'start' | 'end') => {
+    setConfirmState({ isOpen: true, action, simId: id });
+  };
+
+  const confirmDeleteSimulation = (sim: any) => {
+    setOpenDropdownId(null);
+    setConfirmState({ isOpen: true, action: 'delete', simId: sim._id, simName: sim.name });
+  };
+
   const handleUpdateStatus = async (id: string, action: 'start' | 'end') => {
-    if (!window.confirm(`Are you sure you want to ${action} this simulation?`)) return;
-    
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
       const response = await fetch(`${apiUrl}/simulations/${id}/${action}`, { 
@@ -51,6 +62,24 @@ export const LecturerSimulations = () => {
       }
     } catch (error) {
       console.error(`Error ${action}ing simulation:`, error);
+    }
+  };
+
+  const handleDeleteSimulation = async (id: string) => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const response = await fetch(`${apiUrl}/simulations/${id}`, { 
+        credentials: 'include',
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        fetchSimulations();
+      } else {
+        const data = await response.json();
+        console.error('Failed to delete simulation:', data);
+      }
+    } catch (error) {
+      console.error('Error deleting simulation:', error);
     }
   };
 
@@ -213,7 +242,10 @@ export const LecturerSimulations = () => {
                           <Copy className="w-4 h-4" /> Duplicate
                         </button>
                         <div className="h-px bg-[#253047] my-1" />
-                        <button className="w-full text-left px-4 py-2 text-sm text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 flex items-center gap-2">
+                        <button 
+                          onClick={() => confirmDeleteSimulation(sim)} 
+                          className="w-full text-left px-4 py-2 text-sm text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 flex items-center gap-2"
+                        >
                           <Trash2 className="w-4 h-4" /> Delete
                         </button>
                       </div>
@@ -261,12 +293,12 @@ export const LecturerSimulations = () => {
               {/* Action Bar */}
               <div className="p-4 border-t border-[#253047] bg-[#172033]/50 flex gap-2">
                 {(sim.status === 'DRAFT' || sim.status === 'PUBLISHED') && (
-                  <button onClick={() => handleUpdateStatus(sim._id, 'start')} className="flex-1 flex items-center justify-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 py-2 rounded-lg font-medium text-sm transition-colors">
+                  <button onClick={() => confirmUpdateStatus(sim._id, 'start')} className="flex-1 flex items-center justify-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 py-2 rounded-lg font-medium text-sm transition-colors">
                     <Play className="w-4 h-4 fill-current" /> Start
                   </button>
                 )}
                 {sim.status === 'ACTIVE' && (
-                  <button onClick={() => handleUpdateStatus(sim._id, 'end')} className="flex-1 flex items-center justify-center gap-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 py-2 rounded-lg font-medium text-sm transition-colors">
+                  <button onClick={() => confirmUpdateStatus(sim._id, 'end')} className="flex-1 flex items-center justify-center gap-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 py-2 rounded-lg font-medium text-sm transition-colors">
                     <Square className="w-4 h-4 fill-current" /> End
                   </button>
                 )}
@@ -294,6 +326,42 @@ export const LecturerSimulations = () => {
         isOpen={isParticipantsModalOpen}
         onClose={() => setIsParticipantsModalOpen(false)}
         simulation={simulationForParticipants}
+      />
+
+      <ConfirmModal
+        isOpen={confirmState.isOpen}
+        onClose={() => setConfirmState({ ...confirmState, isOpen: false })}
+        onConfirm={() => {
+          if (confirmState.simId && confirmState.action) {
+            if (confirmState.action === 'delete') {
+              handleDeleteSimulation(confirmState.simId);
+            } else {
+              handleUpdateStatus(confirmState.simId, confirmState.action);
+            }
+          }
+        }}
+        title={
+          confirmState.action === 'delete'
+            ? 'Delete Simulation'
+            : `${confirmState.action === 'start' ? 'Start' : 'End'} Simulation`
+        }
+        message={
+          confirmState.action === 'delete'
+            ? `Are you sure you want to delete "${confirmState.simName || 'this simulation'}"? This action cannot be undone.`
+            : `Are you sure you want to ${confirmState.action} this simulation?`
+        }
+        confirmText={
+          confirmState.action === 'delete'
+            ? 'Yes, delete it'
+            : `Yes, ${confirmState.action} it`
+        }
+        type={
+          confirmState.action === 'delete'
+            ? 'danger'
+            : confirmState.action === 'start'
+            ? 'info'
+            : 'warning'
+        }
       />
     </div>
   );

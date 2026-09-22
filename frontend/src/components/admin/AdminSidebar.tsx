@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Target, Settings, User, LogOut, TrendingUp, Menu, ChevronLeft } from 'lucide-react';
+import { LayoutDashboard, Users, Target, Settings, User, LogOut, TrendingUp, Menu, ChevronLeft, LineChart } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface AdminSidebarProps {
@@ -28,7 +28,10 @@ export const AdminSidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpe
     { name: 'Settings', path: '/admin/settings', icon: <Settings className="w-5 h-5" /> },
   ];
 
+  const lastSelectedStock = localStorage.getItem('lastSelectedStock') || 'fpt';
+
   const bottomItems = [
+    { name: 'Back to Chart', path: `/trade/${lastSelectedStock}`, icon: <LineChart className="w-5 h-5" /> },
     { name: 'Profile', path: '/admin/profile', icon: <User className="w-5 h-5" /> },
   ];
 
@@ -60,7 +63,7 @@ export const AdminSidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpe
               <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
                 <TrendingUp className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-white tracking-tight">StockSim<span className="text-blue-400"> Edu</span></span>
+              <span className="text-xl font-bold text-white tracking-tight">Stock<span className="text-blue-400">Sim</span></span>
             </Link>
           )}
           {collapsed && (
@@ -151,7 +154,7 @@ export const AdminSidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpe
           {/* Footer tagline */}
           {!collapsed && (
             <div className="mt-3 px-3 pb-2 text-center">
-              <p className="text-[10px] text-slate-600 font-medium uppercase tracking-wider">StockSim Edu</p>
+              <p className="text-[10px] text-slate-600 font-medium uppercase tracking-wider">StockSim</p>
               <p className="text-[10px] text-slate-500 italic">Teach Today · Trade Tomorrow</p>
             </div>
           )}

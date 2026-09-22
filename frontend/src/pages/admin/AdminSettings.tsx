@@ -10,7 +10,7 @@ export const AdminSettings = () => {
 
   // All settings are local state — no backend endpoint exists
   const [general, setGeneral] = useState({
-    platformName: 'StockSim Edu',
+    platformName: 'StockSim',
     defaultMarket: 'Vietnam (HOSE, HNX)',
     description: 'A comprehensive stock trading simulation platform for educational purposes.',
   });

@@ -36,6 +36,9 @@ interface SimulatorState {
   
   // Risk Mgmt
   updateTPSL: (positionId: string, sl?: number, tp?: number) => void;
+  
+  // App state mgmt
+  reset: () => void;
 }
 
 export const useSimulatorStore = create<SimulatorState>((set, get) => ({
@@ -49,6 +52,20 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
   currentBid: 0,
   currentAsk: 0,
   currentTime: '',
+
+  reset: () => {
+    set({
+      isActive: false,
+      session: null,
+      positions: [],
+      orders: [],
+      history: [],
+      currentPrice: 0,
+      currentBid: 0,
+      currentAsk: 0,
+      currentTime: '',
+    });
+  },
 
   startSession: (session) => {
     set({

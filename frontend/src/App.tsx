@@ -35,6 +35,8 @@ import { StudentTradeDetail } from './pages/student/TradeDetail';
 import { StudentProfile } from './pages/student/Profile';
 import { StudentSettings } from './pages/student/Settings';
 
+import { LandingPage } from './pages/shared/LandingPage';
+
 function App() {
   const { user, loading } = useAuth();
 
@@ -46,7 +48,7 @@ function App() {
     <Routes>
       {/* Route for Trading Terminal (Isolated) */}
       <Route path="/trade/:simulationId" element={
-        <div className="h-screen w-screen bg-white dark:bg-[#131722] overflow-hidden flex flex-col text-[#1e2329] dark:text-slate-200 transition-colors">
+        <div className="h-screen w-screen bg-[#131722] overflow-hidden flex flex-col text-[#d1d4dc] transition-colors">
           <TradingTerminal />
         </div>
       } />

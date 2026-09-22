@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Target, BookOpen, Activity, User, Settings, LogOut, TrendingUp, Menu } from 'lucide-react';
+import { LayoutDashboard, Target, BookOpen, Activity, User, Settings, LogOut, TrendingUp, Menu, LineChart } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface StudentSidebarProps {
@@ -29,7 +29,10 @@ export const StudentSidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileO
     { name: 'Performance', path: '/student/performance', icon: <TrendingUp className="w-5 h-5" /> },
   ];
 
+  const lastSelectedStock = localStorage.getItem('lastSelectedStock') || 'fpt';
+
   const bottomItems = [
+    { name: 'Back to Chart', path: `/trade/${lastSelectedStock}`, icon: <LineChart className="w-5 h-5" /> },
     { name: 'Profile', path: '/student/profile', icon: <User className="w-5 h-5" /> },
     { name: 'Settings', path: '/student/settings', icon: <Settings className="w-5 h-5" /> },
   ];
@@ -56,7 +59,7 @@ export const StudentSidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileO
               <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
                 <TrendingUp className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-white tracking-tight">Tradex<span className="text-indigo-500">.ai</span></span>
+              <span className="text-xl font-bold text-white tracking-tight">Stock<span className="text-indigo-500">Sim</span></span>
             </Link>
           )}
           {collapsed && (

@@ -2,6 +2,8 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/authMiddleware';
 import Simulation from '../models/Simulation';
 import SimulationParticipant from '../models/SimulationParticipant';
+import Assignment from '../models/Assignment';
+import User from '../models/User';
 
 // POST /api/simulations (Lecturer/Admin only)
 export const createSimulation = async (req: AuthRequest, res: Response) => {
@@ -90,10 +92,20 @@ export const joinSimulation = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'Cannot join this simulation at current status' });
     }
 
-    // Check if already joined
+    // Check if already requested or joined
     const existing = await SimulationParticipant.findOne({ simulationId, userId });
     if (existing) {
-      return res.status(400).json({ message: 'You have already joined this simulation' });
+      if (existing.status === 'PENDING') {
+        return res.status(400).json({ message: 'Yêu cầu tham gia của bạn đang chờ phê duyệt' });
+      }
+      if (existing.status === 'ACTIVE') {
+        return res.status(400).json({ message: 'Bạn đã ở trong simulation này' });
+      }
+      if (existing.status === 'REJECTED') {
+        existing.status = 'PENDING';
+        await existing.save();
+        return res.status(200).json({ message: 'Đã nộp lại yêu cầu tham gia thành công!', participant: existing });
+      }
     }
 
     const participant = new SimulationParticipant({
@@ -104,18 +116,49 @@ export const joinSimulation = async (req: AuthRequest, res: Response) => {
       portfolioValue: 0,
       totalProfit: 0,
       returnRate: 0,
-      status: 'ACTIVE'
+      status: 'PENDING'
     });
 
     await participant.save();
-    res.status(201).json(participant);
+    res.status(201).json({ message: 'Yêu cầu tham gia đã gửi. Vui lòng chờ Giảng viên phê duyệt!', participant });
   } catch (error: any) {
-    // MongoError E11000 dup key
     if (error.code === 11000) {
-      return res.status(400).json({ message: 'You have already joined this simulation' });
+      return res.status(400).json({ message: 'Bạn đã gửi yêu cầu tham gia simulation này' });
     }
     console.error(error);
     res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+// PATCH /api/simulations/:id/participants/:participantId/approve (Lecturer/Admin only)
+export const approveParticipant = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, participantId } = req.params;
+    const participant = await SimulationParticipant.findOne({ _id: participantId, simulationId: id });
+    if (!participant) {
+      return res.status(404).json({ message: 'Không tìm thấy yêu cầu tham gia' });
+    }
+    participant.status = 'ACTIVE';
+    await participant.save();
+    res.json({ message: 'Đã chấp nhận sinh viên vào simulation', participant });
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error', error });
+  }
+};
+
+// PATCH /api/simulations/:id/participants/:participantId/reject (Lecturer/Admin only)
+export const rejectParticipant = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, participantId } = req.params;
+    const participant = await SimulationParticipant.findOne({ _id: participantId, simulationId: id });
+    if (!participant) {
+      return res.status(404).json({ message: 'Không tìm thấy yêu cầu tham gia' });
+    }
+    participant.status = 'REJECTED';
+    await participant.save();
+    res.json({ message: 'Đã từ chối yêu cầu tham gia', participant });
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error', error });
   }
 };
 
@@ -166,6 +209,31 @@ export const addStudentToSimulation = async (req: AuthRequest, res: Response) =>
     res.status(500).json({ message: 'Server Error' });
   }
 };
+
+// DELETE /api/simulations/:id/participants/:studentId (Lecturer/Admin only)
+export const removeStudentFromSimulation = async (req: AuthRequest, res: Response) => {
+  try {
+    const simulationId = req.params.id;
+    const studentId = req.params.studentId;
+
+    const simulation = await Simulation.findById(simulationId);
+    if (!simulation) {
+      return res.status(404).json({ message: 'Simulation not found' });
+    }
+
+    const participant = await SimulationParticipant.findOne({ simulationId, userId: studentId });
+    if (!participant) {
+      return res.status(404).json({ message: 'Student is not in this simulation' });
+    }
+
+    await participant.deleteOne();
+    res.json({ message: 'Student removed successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
 // PUT /api/simulations/:id (Lecturer/Admin only)
 export const editSimulation = async (req: AuthRequest, res: Response) => {
   try {
@@ -216,6 +284,28 @@ export const endSimulation = async (req: AuthRequest, res: Response) => {
     const updatedSimulation = await simulation.save();
     res.json(updatedSimulation);
   } catch (error) {
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+// DELETE /api/simulations/:id (Lecturer/Admin only)
+export const deleteSimulation = async (req: AuthRequest, res: Response) => {
+  try {
+    const simulation = await Simulation.findById(req.params.id);
+    if (!simulation) {
+      return res.status(404).json({ message: 'Simulation not found' });
+    }
+
+    if (req.user.role !== 'admin' && simulation.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to delete this simulation' });
+    }
+
+    await SimulationParticipant.deleteMany({ simulationId: req.params.id });
+    await simulation.deleteOne();
+
+    res.json({ message: 'Simulation deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting simulation:', error);
     res.status(500).json({ message: 'Server Error' });
   }
 };
@@ -299,6 +389,98 @@ export const getLeaderboard = async (req: AuthRequest, res: Response) => {
 
     res.json(leaderboard);
   } catch (error) {
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+// GET /api/simulations/dashboard/stats
+export const getLecturerDashboardStats = async (req: AuthRequest, res: Response) => {
+  try {
+    const lecturerId = req.user._id;
+
+    // 1. Get simulations created by this lecturer (or all if none created yet)
+    let simulations = await Simulation.find({ createdBy: lecturerId });
+    if (simulations.length === 0) {
+      simulations = await Simulation.find();
+    }
+    const simulationIds = simulations.map(sim => sim._id);
+
+    // 2. Count total unique students
+    const uniqueStudentIds = await SimulationParticipant.distinct('userId', {
+      simulationId: { $in: simulationIds }
+    });
+    const totalEnrolledStudents = uniqueStudentIds.length || (await User.countDocuments({ role: 'student' }));
+
+    // 3. Count active assignments
+    const activeAssignments = await Assignment.countDocuments({ status: 'OPEN' });
+
+    // 4. Calculate average simulation return/score
+    const overallStats = await SimulationParticipant.aggregate([
+      { $match: { simulationId: { $in: simulationIds } } },
+      { $group: { _id: null, avgReturn: { $avg: '$returnRate' } } }
+    ]);
+    const avgScore = overallStats.length > 0 ? parseFloat(overallStats[0].avgReturn.toFixed(1)) : 0;
+
+    // 5. Chart Data (Average return rate per simulation)
+    const chartData = await SimulationParticipant.aggregate([
+      { $match: { simulationId: { $in: simulationIds } } },
+      { $group: { _id: '$simulationId', avgReturn: { $avg: '$returnRate' } } }
+    ]);
+
+    const formattedChartData = simulations.map(sim => {
+      const match = chartData.find(d => d._id.toString() === sim._id.toString());
+      return {
+        id: sim._id,
+        name: sim.name,
+        avgReturn: match ? parseFloat(match.avgReturn.toFixed(1)) : 0
+      };
+    });
+
+    // 6. Needs attention students (Negative return rate or PENDING approval)
+    const needsAttention = await SimulationParticipant.find({
+      simulationId: { $in: simulationIds },
+      $or: [{ returnRate: { $lt: 0 } }, { status: 'PENDING' }]
+    })
+      .limit(6)
+      .populate('userId', 'name email')
+      .populate('simulationId', 'name');
+
+    const formattedAttention = needsAttention.map(item => ({
+      id: item._id,
+      name: (item.userId as any)?.name || (item.userId as any)?.email || 'Sinh viên',
+      issue: item.status === 'PENDING' 
+        ? `Đang chờ duyệt vào ${(item.simulationId as any)?.name || 'Simulation'}`
+        : `Lợi nhuận ${item.returnRate.toFixed(1)}% tại ${(item.simulationId as any)?.name || 'Simulation'}`,
+      severity: item.status === 'PENDING' ? 'high' : item.returnRate < -5 ? 'high' : 'medium'
+    }));
+
+    // 7. Recent activity
+    const recentParticipants = await SimulationParticipant.find({
+      simulationId: { $in: simulationIds }
+    })
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .populate('userId', 'name email')
+      .populate('simulationId', 'name');
+
+    const recentActivity = recentParticipants.map(item => ({
+      id: item._id,
+      studentName: (item.userId as any)?.name || (item.userId as any)?.email || 'Sinh viên',
+      action: item.status === 'PENDING' ? 'đã đăng ký chờ duyệt vào' : 'đã tham gia mô phỏng',
+      simulationName: (item.simulationId as any)?.name || 'Simulation',
+      date: (item as any).createdAt || new Date()
+    }));
+
+    res.json({
+      totalEnrolledStudents,
+      avgScore,
+      activeAssignments,
+      chartData: formattedChartData,
+      needsAttention: formattedAttention,
+      recentActivity
+    });
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ message: 'Server Error' });
   }
 };

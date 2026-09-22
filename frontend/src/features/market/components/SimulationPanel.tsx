@@ -55,6 +55,11 @@ export const SimulationPanel = ({ currentSymbol, isReplaying, onStartSimulation 
       } catch (error) {
         console.error("Failed to fetch sessions", error);
       }
+    } else {
+      setSessions([]);
+      if (store.isActive) {
+        // Optionally end session, but it will be hidden anyway
+      }
     }
   };
 

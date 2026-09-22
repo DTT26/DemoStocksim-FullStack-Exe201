@@ -94,7 +94,7 @@ export const StudentProfile = () => {
                 </h3>
                 <p className="text-slate-300 mt-1">{user?.email}</p>
                 <p className="text-sm text-slate-500 mt-2">
-                  You sign in to Tradex.ai using your Google account. 
+                  You sign in to StockSim using your Google account. 
                   Authentication credentials and password are managed securely by Google.
                 </p>
               </div>

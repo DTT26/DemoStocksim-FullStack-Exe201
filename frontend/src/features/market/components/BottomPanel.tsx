@@ -123,7 +123,16 @@ export const BottomPanel = ({
           <button className="hover:text-[#1e2329] dark:hover:text-white transition-colors">
             <Settings2 className="w-4 h-4" />
           </button>
-          <button className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-white px-3 py-1 rounded text-[11px] font-medium transition-colors">
+          <button 
+            onClick={async () => {
+              if (displayPositions.length === 0) return;
+              for (const p of displayPositions) {
+                const markPrice = p.symbol === selectedSymbol ? currentPrice : (STOCKS.find(s => s.symbol === p.symbol)?.price || p.averagePrice);
+                await onClosePosition(p.symbol, p.side, markPrice);
+              }
+            }}
+            className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-white px-3 py-1 rounded text-[11px] font-medium transition-colors"
+          >
             Đóng toàn bộ
           </button>
           <button 

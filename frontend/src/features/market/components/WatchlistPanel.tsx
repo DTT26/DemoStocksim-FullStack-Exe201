@@ -4,6 +4,7 @@ import { STOCKS, type Stock } from '../data';
 import { SymbolSearchModal } from './SymbolSearchModal';
 import { AuthOverlay } from './AuthOverlay';
 import { useAuth } from '../../../contexts/AuthContext';
+import { ConfirmModal } from '../../../components/ConfirmModal';
 
 export interface Watchlist {
   id: string;
@@ -38,6 +39,10 @@ export const WatchlistPanel = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [confirmState, setConfirmState] = useState<{ isOpen: boolean; listId: string | null }>({
+    isOpen: false,
+    listId: null,
+  });
   
   const dropdownRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -87,9 +92,7 @@ export const WatchlistPanel = ({
 
   const handleDelete = () => {
     if (!activeWatchlist) return;
-    if (window.confirm(`Bạn có chắc chắn muốn xóa danh sách "${activeWatchlist.name}"?`)) {
-      onDeleteWatchlist(activeWatchlist.id);
-    }
+    setConfirmState({ isOpen: true, listId: activeWatchlist.id });
     setIsMenuOpen(false);
   };
 
@@ -270,6 +273,21 @@ export const WatchlistPanel = ({
           />
         </>
       )}
+
+      <ConfirmModal
+        isOpen={confirmState.isOpen}
+        onClose={() => setConfirmState({ isOpen: false, listId: null })}
+        onConfirm={() => {
+          if (confirmState.listId) {
+            onDeleteWatchlist(confirmState.listId);
+          }
+        }}
+        title="Xóa danh sách"
+        message="Bạn có chắc chắn muốn xóa danh sách theo dõi này? Thao tác này không thể hoàn tác."
+        confirmText="Xóa"
+        cancelText="Hủy"
+        type="danger"
+      />
     </div>
   );
 };

@@ -130,7 +130,7 @@ export const AdminDashboard = () => {
       <div>
         <h1 className="text-3xl font-bold text-white tracking-tight">Admin Dashboard</h1>
         <p className="text-slate-400 mt-2 text-lg">
-          Welcome back, <span className="text-blue-400 font-medium">{currentUser?.name || 'Admin'}</span>. Here's what's happening with StockSim Edu.
+          Welcome back, <span className="text-blue-400 font-medium">{currentUser?.name || 'Admin'}</span>. Here's what's happening with StockSim.
         </p>
       </div>
 

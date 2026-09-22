@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ChartArea } from './components/ChartArea';
 import { RightSidebar } from './components/RightSidebar';
 import { RightToolbar } from './components/RightToolbar';
@@ -36,8 +37,23 @@ export interface TradeOrder {
 }
 
 export const TradingTerminal = () => {
+  const { simulationId } = useParams<{ simulationId?: string }>();
+  const navigate = useNavigate();
+
   const [activeTool, setActiveTool] = useState<string>('cursor');
-  const [selectedStock, setSelectedStock] = useState<Stock>(STOCKS[0]);
+  const [selectedStock, setSelectedStock] = useState<Stock>(() => {
+    if (simulationId) {
+      const match = STOCKS.find(s => s.symbol.toLowerCase() === simulationId.toLowerCase());
+      if (match) return match;
+    }
+    const saved = localStorage.getItem('lastSelectedStock');
+    if (saved) {
+      const match = STOCKS.find(s => s.symbol.toLowerCase() === saved.toLowerCase());
+      if (match) return match;
+    }
+    return STOCKS[0];
+  });
+
   const [tradeOrders, setTradeOrders] = useState<TradeOrder[]>([]);
   const [activeTimeframe, setActiveTimeframe] = useState<string>('D');
   const [balance, setBalance] = useState<number>(100_000_000);
@@ -204,8 +220,25 @@ export const TradingTerminal = () => {
     setActiveTool(toolName === activeTool && toolName !== 'cursor' ? activeTool : toolName);
   };
 
+  useEffect(() => {
+    if (simulationId) {
+      const match = STOCKS.find(s => s.symbol.toLowerCase() === simulationId.toLowerCase());
+      if (match && match.symbol !== selectedStock.symbol) {
+        setSelectedStock(match);
+      }
+    }
+  }, [simulationId]);
+
+  useEffect(() => {
+    if (selectedStock?.symbol) {
+      localStorage.setItem('lastSelectedStock', selectedStock.symbol.toLowerCase());
+    }
+  }, [selectedStock]);
+
   const handleStockSelect = (stock: Stock) => {
     setSelectedStock(stock);
+    localStorage.setItem('lastSelectedStock', stock.symbol.toLowerCase());
+    navigate(`/trade/${stock.symbol.toLowerCase()}`, { replace: true });
     if (isReplaying || isSelectingReplayStart) {
       setIsReplaying(false);
       setIsSelectingReplayStart(false);
@@ -241,8 +274,16 @@ export const TradingTerminal = () => {
   };
 
   useEffect(() => {
-    fetchPortfolio();
-  }, []);
+    if (user) {
+      fetchPortfolio();
+    } else {
+      setPositions({});
+      setPendingOrders([]);
+      setTradeOrders([]);
+      setBalance(100_000_000);
+      store.reset();
+    }
+  }, [user]);
 
   const handleTrade = async (type: 'buy' | 'sell' | 'close' | 'limit_buy' | 'limit_sell' | 'stop_buy' | 'stop_sell', price: number, margin: number, leverage: number, tp?: number, sl?: number) => {
     try {
@@ -616,6 +657,11 @@ export const TradingTerminal = () => {
                       if (res.success) {
                         await fetchPortfolio();
                         setTradeCount(c => c + 1);
+                        addNotification({
+                          title: 'Đóng vị thế',
+                          message: `Đã chốt vị thế ${side} mã ${symbol} thành công ở giá ${price.toLocaleString('vi-VN')}đ.`,
+                          type: 'success'
+                        });
                         return { success: true, message: `✅ Đã chốt vị thế ${side} ${symbol}` };
                       }
                       return { success: false, message: 'Lỗi khi đóng vị thế' };

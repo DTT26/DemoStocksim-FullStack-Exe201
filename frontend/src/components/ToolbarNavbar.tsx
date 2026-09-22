@@ -23,9 +23,9 @@ export const ToolbarNavbar = ({ balance, onOpenSettings }: ToolbarNavbarProps) =
   return (
     <>
       <nav className="h-12 bg-white dark:bg-[#131722] border-b border-[#e6e8ea] dark:border-[#2a2e39] flex items-center px-4 justify-between text-[#1e2329] dark:text-[#d1d4dc] text-sm shrink-0 relative z-50">
-        {/* Logo AITRADEX */}
+        {/* Logo StockSim */}
         <div className="flex items-center">
-          <img src="/images/logo.jpg" alt="AITRADEX" className="h-7 object-contain rounded" />
+          <img src="/images/logo.jpg" alt="StockSim" className="h-7 object-contain rounded" />
         </div>
 
         {/* Simulation Info (Centered) */}

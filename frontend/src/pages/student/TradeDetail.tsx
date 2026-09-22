@@ -1,10 +1,101 @@
 import { useParams, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { MOCK_TRADES } from '../../data/mockStudentData';
+import { tradingApi } from '../../services/tradingApi';
+import { useSimulatorStore } from '../../features/market/engine/useSimulatorStore';
 
 export const StudentTradeDetail = () => {
   const { tradeId } = useParams<{ tradeId: string }>();
-  const trade = MOCK_TRADES.find(t => t.id === tradeId);
+  const [trade, setTrade] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const findTrade = async () => {
+      // 1. Check mock trades
+      const mock = MOCK_TRADES.find(t => t.id === tradeId);
+      if (mock) {
+        setTrade(mock);
+        setLoading(false);
+        return;
+      }
+
+      // 2. Check simulator history
+      const simHist = useSimulatorStore.getState().history.find(h => h.id === tradeId);
+      if (simHist) {
+        setTrade({
+          id: simHist.id,
+          symbol: simHist.symbol,
+          side: simHist.side === 'LONG' ? 'BUY' : 'SELL',
+          quantity: simHist.lot,
+          entryPrice: simHist.entryPrice,
+          exitPrice: simHist.exitPrice,
+          pnl: simHist.netPnL,
+          returnRate: simHist.entryPrice > 0 ? parseFloat((((simHist.exitPrice - simHist.entryPrice) / simHist.entryPrice) * 100).toFixed(2)) : 0,
+          status: 'CLOSED',
+          entryTime: simHist.openTime,
+          exitTime: simHist.closeTime,
+          commission: 0,
+          simulation: 'Market Replay',
+          notes: `Trade closed by ${simHist.closeReason}`
+        });
+        setLoading(false);
+        return;
+      }
+
+      // 3. Check backend transactions
+      try {
+        const res = await tradingApi.getTransactions();
+        if (res.success && Array.isArray(res.data)) {
+          const tx = res.data.find((t: any) => t._id === tradeId);
+          if (tx) {
+            const desc = tx.description || '';
+            const isClose = tx.type === 'DEPOSIT';
+            const isBuy = tx.type === 'BUY_STOCK' || desc.includes('LONG') || desc.includes('BUY');
+            const symbolMatch = desc.match(/(?:LONG|SHORT|BUY|SELL|Mở|Đóng)\s+([A-Z0-9]+)/i);
+            const symbol = symbolMatch ? symbolMatch[1].toUpperCase() : 'STOCK';
+            const priceMatch = desc.match(/ở giá\s+([\d.,]+)/);
+            const price = priceMatch ? parseFloat(priceMatch[1].replace(/,/g, '')) : 0;
+            const pnlMatch = desc.match(/Lợi nhuận:\s*(-?[\d.,]+)/);
+            let pnl = 0;
+            if (pnlMatch) pnl = parseFloat(pnlMatch[1].replace(/,/g, ''));
+
+            setTrade({
+              id: tx._id,
+              symbol,
+              side: isBuy ? 'BUY' : 'SELL',
+              quantity: 1,
+              entryPrice: price,
+              exitPrice: isClose ? price : undefined,
+              pnl,
+              returnRate: pnl !== 0 && tx.amount ? parseFloat(((pnl / Math.abs(tx.amount)) * 100).toFixed(2)) : 0,
+              status: isClose ? 'CLOSED' : 'EXECUTED',
+              entryTime: tx.createdAt,
+              exitTime: isClose ? tx.createdAt : undefined,
+              commission: 0,
+              simulation: 'Vietnam Stock Challenge #01',
+              notes: desc
+            });
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    findTrade();
+  }, [tradeId]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        Loading trade details...
+      </div>
+    );
+  }
 
   if (!trade) {
     return (

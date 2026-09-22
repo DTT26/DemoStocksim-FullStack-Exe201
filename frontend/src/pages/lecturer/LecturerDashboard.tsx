@@ -2,6 +2,8 @@ import { Users, BookOpen, Activity, Target, TrendingUp, Clock, PlusCircle, Chevr
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { SimulationModal } from './components/SimulationModal';
 
 export const LecturerDashboard = () => {
   const { user } = useAuth();
@@ -9,10 +11,13 @@ export const LecturerDashboard = () => {
     simulations: 0,
     students: 0,
     assignments: 0,
-    avgReturn: 0 // Mocked until API supports aggregated portfolio calculation
+    avgReturn: 0
   });
   const [simulations, setSimulations] = useState<any[]>([]);
+  const [activeAssignments, setActiveAssignments] = useState<any[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<{ chartData: any[], recentActivity: any[] }>({ chartData: [], recentActivity: [] });
   const [loading, setLoading] = useState(true);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -20,22 +25,36 @@ export const LecturerDashboard = () => {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
         const headers = { };
 
-        const [simRes, stuRes, assRes] = await Promise.all([
+        const [simRes, stuRes, assRes, statsRes] = await Promise.all([
           fetch(`${apiUrl}/simulations`, { credentials: 'include', headers }),
           fetch(`${apiUrl}/users?role=student`, { credentials: 'include', headers }),
-          fetch(`${apiUrl}/assignments`, { credentials: 'include', headers })
+          fetch(`${apiUrl}/assignments`, { credentials: 'include', headers }),
+          fetch(`${apiUrl}/simulations/dashboard/stats`, { credentials: 'include', headers })
         ]);
 
-        if (simRes.ok && stuRes.ok && assRes.ok) {
+        if (simRes.ok && stuRes.ok && assRes.ok && statsRes.ok) {
           const sims = await simRes.json();
           const students = await stuRes.json();
           const assignments = await assRes.json();
+          const dStats = await statsRes.json();
+
+          const activeAss = assignments.filter((a: any) => a.status !== 'COMPLETED' && a.status !== 'DRAFT');
+          setActiveAssignments(activeAss);
+          setDashboardStats({
+            chartData: dStats.chartData || [],
+            recentActivity: dStats.recentActivity || []
+          });
+
+          const chartData = dStats.chartData || [];
+          const totalAvg = chartData.length > 0 
+            ? chartData.reduce((acc: number, curr: any) => acc + curr.avgReturn, 0) / chartData.length 
+            : 0;
 
           setStats({
             simulations: sims.filter((s: any) => s.status === 'ACTIVE').length,
             students: students.length,
-            assignments: assignments.filter((a: any) => a.status !== 'COMPLETED' && a.status !== 'DRAFT').length,
-            avgReturn: 0 // Waiting for backend API to calculate real average return
+            assignments: activeAss.length,
+            avgReturn: parseFloat(totalAvg.toFixed(2))
           });
           
           setSimulations(sims.filter((s: any) => s.status === 'ACTIVE').slice(0, 4));
@@ -58,7 +77,10 @@ export const LecturerDashboard = () => {
           <h1 className="text-3xl font-bold text-white tracking-tight">Good afternoon, {user?.name || 'Lecturer'}</h1>
           <p className="text-slate-400 mt-2 text-lg">Manage your simulations, assignments and student performance.</p>
         </div>
-        <button className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors shadow-lg shadow-indigo-600/20 flex items-center gap-2">
+        <button 
+          onClick={() => setIsCreateModalOpen(true)}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors shadow-lg shadow-indigo-600/20 flex items-center gap-2"
+        >
           <PlusCircle className="w-5 h-5" />
           Create Simulation
         </button>
@@ -137,13 +159,33 @@ export const LecturerDashboard = () => {
               </div>
             </div>
             
-            <div className="h-[250px] w-full flex flex-col items-center justify-center border-2 border-dashed border-[#253047] rounded-xl bg-[#172033]/50">
-              <AlertCircle className="w-10 h-10 text-slate-500 mb-3" />
-              <p className="text-slate-400 font-medium">No Historical Data Available</p>
-              <p className="text-slate-500 text-sm mt-1 text-center max-w-sm">
-                Historical performance tracking API is not yet implemented. Chart will appear here once data is available.
-              </p>
-            </div>
+            {(!dashboardStats.chartData || dashboardStats.chartData.length === 0) ? (
+              <div className="h-[250px] w-full flex flex-col items-center justify-center border-2 border-dashed border-[#253047] rounded-xl bg-[#172033]/50">
+                <AlertCircle className="w-10 h-10 text-slate-500 mb-3" />
+                <p className="text-slate-400 font-medium">No Data Available</p>
+                <p className="text-slate-500 text-sm mt-1 text-center max-w-sm">
+                  There is currently no return rate data for your simulations.
+                </p>
+              </div>
+            ) : (
+              <div className="h-[250px] w-full mt-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dashboardStats.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}%`} />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#172033', borderColor: '#253047', borderRadius: '8px' }}
+                      itemStyle={{ color: '#fff' }}
+                    />
+                    <Bar dataKey="avgReturn" radius={[4, 4, 0, 0]}>
+                      {(dashboardStats.chartData || []).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.avgReturn >= 0 ? '#10b981' : '#f43f5e'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
 
           {/* Active Simulations */}
@@ -216,11 +258,29 @@ export const LecturerDashboard = () => {
               </h2>
             </div>
             
-            <div className="text-center py-12 text-slate-500 bg-[#172033] rounded-xl border border-[#253047]">
-              No active assignments currently.
-              <br />
-              <Link to="/lecturer/assignments" className="text-indigo-400 hover:text-indigo-300 text-sm font-medium mt-2 inline-block">Create Assignment</Link>
-            </div>
+            {activeAssignments.length === 0 ? (
+              <div className="text-center py-12 text-slate-500 bg-[#172033] rounded-xl border border-[#253047]">
+                No active assignments currently.
+                <br />
+                <Link to="/lecturer/assignments" className="text-indigo-400 hover:text-indigo-300 text-sm font-medium mt-2 inline-block">Create Assignment</Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {activeAssignments.slice(0, 4).map((assignment) => (
+                  <Link to={`/lecturer/assignments`} key={assignment._id} className="block p-4 rounded-xl border border-[#253047] bg-[#172033] hover:border-amber-500/50 transition-colors group">
+                    <h3 className="font-bold text-white group-hover:text-amber-400 transition-colors">{assignment.title}</h3>
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-xs text-slate-400 flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> Due {new Date(assignment.deadline).toLocaleDateString()}
+                      </span>
+                      <span className="text-xs bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded border border-amber-500/20">
+                        {assignment.status}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Student Activity */}
@@ -232,12 +292,44 @@ export const LecturerDashboard = () => {
               </h2>
             </div>
             
-            <div className="text-center py-12 text-slate-500 bg-[#172033] rounded-xl border border-[#253047]">
-              <p className="text-sm">Activity feed API not yet implemented.</p>
-            </div>
+            {(!dashboardStats.recentActivity || dashboardStats.recentActivity.length === 0) ? (
+              <div className="text-center py-12 text-slate-500 bg-[#172033] rounded-xl border border-[#253047]">
+                <p className="text-sm">No recent activity found.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {(dashboardStats.recentActivity || []).map((activity) => (
+                  <div key={activity.id} className="flex gap-4 p-3 rounded-lg hover:bg-[#172033] transition-colors">
+                    <div className="w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 font-bold text-sm">
+                      {activity.studentName.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="text-sm text-white">
+                        <span className="font-semibold">{activity.studentName}</span> {activity.action}
+                      </p>
+                      <p className="text-xs text-indigo-400 mt-0.5">{activity.simulationName}</p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {new Date(activity.date).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      <SimulationModal 
+        isOpen={isCreateModalOpen} 
+        onClose={() => setIsCreateModalOpen(false)} 
+        simulationToEdit={null}
+        onSaved={() => {
+          setIsCreateModalOpen(false);
+          // Refetch stats or simulations here since we created a new one
+          window.location.reload(); 
+        }}
+      />
     </div>
   );
 };

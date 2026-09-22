@@ -176,15 +176,43 @@ export const SimulationsList = () => {
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Status</p>
-                        <p className="text-sm font-bold text-indigo-400">Joined</p>
+                        <p className={`text-sm font-bold ${
+                          participation.status === 'ACTIVE' ? 'text-emerald-400' :
+                          participation.status === 'PENDING' ? 'text-amber-400' :
+                          participation.status === 'REJECTED' ? 'text-rose-400' : 'text-slate-400'
+                        }`}>
+                          {participation.status === 'ACTIVE' ? 'Đã duyệt (Active)' :
+                           participation.status === 'PENDING' ? 'Chờ phê duyệt' :
+                           participation.status === 'REJECTED' ? 'Bị từ chối' : participation.status}
+                        </p>
                       </div>
                     </div>
                     
                     <div className="flex gap-3 mt-auto">
-                      <Link to={`/trade/${sim._id}`} className="flex-1 text-center bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20">
-                        Enter Simulation
-                        <ArrowRight className="w-4 h-4" />
-                      </Link>
+                      {participation.status === 'ACTIVE' ? (
+                        <Link to={`/trade/${sim._id}`} className="flex-1 text-center bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20">
+                          Enter Simulation
+                          <ArrowRight className="w-4 h-4" />
+                        </Link>
+                      ) : participation.status === 'PENDING' ? (
+                        <button disabled className="flex-1 text-center bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium py-2.5 px-4 rounded-lg cursor-not-allowed flex items-center justify-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                          Chờ Giảng viên duyệt...
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => handleJoinSimulation(sim._id)}
+                          disabled={joiningId === sim._id}
+                          className="flex-1 text-center bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                        >
+                          {joiningId === sim._id ? (
+                            <div className="w-5 h-5 border-2 border-rose-400 border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <PlusCircle className="w-5 h-5" />
+                          )}
+                          Xin nộp lại yêu cầu
+                        </button>
+                      )}
                       <Link to={`/leaderboard?sim=${sim._id}`} className="bg-[#172033] hover:bg-[#253047] text-white border border-[#253047] font-medium py-2.5 px-4 rounded-lg transition-colors">
                         Leaderboard
                       </Link>

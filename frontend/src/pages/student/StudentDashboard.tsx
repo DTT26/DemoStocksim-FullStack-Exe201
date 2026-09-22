@@ -72,48 +72,6 @@ export const StudentDashboard = () => {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Main Column */}
         <div className="xl:col-span-2 space-y-6">
-          {/* Active Simulation Highlight */}
-          <div className="bg-[#111827] rounded-2xl border border-[#253047] shadow-lg overflow-hidden relative">
-            <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-500"></div>
-            <div className="p-6 md:p-8">
-              <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-6">
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="bg-emerald-500/10 text-emerald-500 text-xs px-2.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center gap-1.5 border border-emerald-500/20">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                      Live Simulation
-                    </span>
-                  </div>
-                  <h2 className="text-2xl font-bold text-white">Vietnam Stock Challenge #01</h2>
-                  <p className="text-slate-400 mt-1 max-w-lg">
-                    Practice trading with 100M VND starting capital on the HOSE market. Complete assignments and compete for the highest return.
-                  </p>
-                </div>
-                <Link to="/trade/sim-01" className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors shadow-lg shadow-indigo-600/20 whitespace-nowrap text-center">
-                  Trade Now
-                </Link>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-[#172033] rounded-xl border border-[#253047]">
-                <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">Your Rank</p>
-                  <p className="text-xl font-bold text-indigo-400">#7 <span className="text-sm font-normal text-slate-500">/ 42</span></p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">Current Return</p>
-                  <p className="text-xl font-bold text-emerald-500">+8.52%</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">Sim Time</p>
-                  <p className="text-sm font-semibold text-white mt-1">14:30<br/><span className="text-slate-400">12/09/2026</span></p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">Ends In</p>
-                  <p className="text-sm font-semibold text-white mt-1">14 Days</p>
-                </div>
-              </div>
-            </div>
-          </div>
 
           {/* Performance Chart */}
           <div className="bg-[#111827] rounded-2xl border border-[#253047] shadow-lg p-6">

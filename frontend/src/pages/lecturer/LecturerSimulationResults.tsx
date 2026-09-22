@@ -1,86 +1,111 @@
-import { Trophy, TrendingUp, TrendingDown, Target, Users, Search, ArrowLeft, Download, BarChart3, Activity } from 'lucide-react';
+import { Trophy, TrendingUp, TrendingDown, Target, Users, Search, ArrowLeft, Download, BarChart3, Activity, Check, X, Clock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 
-interface LeaderboardUser {
+interface ParticipantItem {
   _id: string;
-  name?: string;
-  email: string;
-  // Mock data fields for UI
-  portfolio: number;
-  profit: number;
+  status: 'PENDING' | 'ACTIVE' | 'REJECTED' | 'DISQUALIFIED' | 'LEFT';
+  userId: {
+    _id: string;
+    name?: string;
+    email: string;
+    picture?: string;
+  };
+  initialBalance: number;
+  currentBalance: number;
+  portfolioValue: number;
+  totalProfit: number;
   returnRate: number;
-  trades: number;
+  createdAt: string;
 }
 
 export const LecturerSimulationResults = () => {
   const { id } = useParams<{ id: string }>();
-  const [users, setUsers] = useState<LeaderboardUser[]>([]);
+  const [participants, setParticipants] = useState<ParticipantItem[]>([]);
   const [simulation, setSimulation] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'leaderboard' | 'pending'>('leaderboard');
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+
+  const fetchData = async () => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      
+      const [simRes, partRes] = await Promise.all([
+        fetch(`${apiUrl}/simulations/${id}`, { credentials: 'include' }),
+        fetch(`${apiUrl}/simulations/${id}/participants`, { credentials: 'include' })
+      ]);
+      
+      if (simRes.ok) {
+        setSimulation(await simRes.json());
+      }
+      if (partRes.ok) {
+        setParticipants(await partRes.json());
+      }
+    } catch (error) {
+      console.error('Error fetching results:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-        
-        // Fetch simulation details and participants
-        const [simRes, usersRes] = await Promise.all([
-          fetch(`${apiUrl}/simulations/${id}`, { credentials: 'include' }),
-          fetch(`${apiUrl}/users?role=student`, { credentials: 'include' }) // In reality, fetch actual participants
-        ]);
-        
-        if (simRes.ok && usersRes.ok) {
-          const simData = await simRes.json();
-          const usersData = await usersRes.json();
-          
-          setSimulation(simData);
-          
-          // Map real users to mock leaderboard data (sorted by mock performance)
-          const leaderboardData = usersData.map((u: any, index: number) => {
-            const basePortfolio = simData.initialBalance || 100000000; 
-            // Generate some pseudo-random but consistent performance based on index
-            const performanceMulti = 1 + ((usersData.length / 2) - index) * 0.05; 
-            const portfolio = basePortfolio * performanceMulti;
-            const profit = portfolio - basePortfolio;
-            const returnRate = (profit / basePortfolio) * 100;
-            
-            return {
-              _id: u._id,
-              name: u.name,
-              email: u.email,
-              portfolio,
-              profit,
-              returnRate,
-              trades: 10 + (usersData.length - index) * 2
-            };
-          }).sort((a: LeaderboardUser, b: LeaderboardUser) => b.portfolio - a.portfolio);
-          
-          setUsers(leaderboardData);
-        }
-      } catch (error) {
-        console.error('Error fetching results:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (id) {
       fetchData();
     }
   }, [id]);
 
-  const filteredUsers = users.filter(u => 
-    (u.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-    u.email.toLowerCase().includes(searchQuery.toLowerCase())
+  const handleApprove = async (participantId: string) => {
+    setActionLoadingId(participantId);
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const res = await fetch(`${apiUrl}/simulations/${id}/participants/${participantId}/approve`, {
+        method: 'PATCH',
+        credentials: 'include'
+      });
+      if (res.ok) {
+        await fetchData();
+      }
+    } catch (error) {
+      console.error('Approve failed:', error);
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleReject = async (participantId: string) => {
+    setActionLoadingId(participantId);
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const res = await fetch(`${apiUrl}/simulations/${id}/participants/${participantId}/reject`, {
+        method: 'PATCH',
+        credentials: 'include'
+      });
+      if (res.ok) {
+        await fetchData();
+      }
+    } catch (error) {
+      console.error('Reject failed:', error);
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const activeParticipants = participants.filter(p => p.status === 'ACTIVE')
+    .sort((a, b) => b.returnRate - a.returnRate);
+  
+  const pendingParticipants = participants.filter(p => p.status === 'PENDING');
+
+  const filteredActive = activeParticipants.filter(p => 
+    (p.userId?.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+    (p.userId?.email?.toLowerCase() || '').includes(searchQuery.toLowerCase())
   );
 
-  // Calculate stats
-  const totalParticipants = users.length;
-  const avgReturn = users.length > 0 ? users.reduce((acc, curr) => acc + curr.returnRate, 0) / users.length : 0;
-  const positiveReturns = users.filter(u => u.returnRate > 0).length;
-  const winRate = users.length > 0 ? (positiveReturns / users.length) * 100 : 0;
+  const totalParticipants = activeParticipants.length;
+  const avgReturn = totalParticipants > 0 ? activeParticipants.reduce((acc, curr) => acc + curr.returnRate, 0) / totalParticipants : 0;
+  const positiveReturns = activeParticipants.filter(u => u.returnRate > 0).length;
+  const winRate = totalParticipants > 0 ? (positiveReturns / totalParticipants) * 100 : 0;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
@@ -149,124 +174,217 @@ export const LecturerSimulationResults = () => {
           </div>
           <p className="text-sm font-medium text-slate-400 mb-1 relative z-10">Top Performer</p>
           <h3 className="text-xl font-bold text-amber-400 relative z-10 truncate pr-8">
-            {loading ? '-' : (users[0]?.name || 'N/A')}
+            {loading ? '-' : (activeParticipants[0]?.userId?.name || activeParticipants[0]?.userId?.email || 'N/A')}
           </h3>
           <div className="mt-2 text-xs text-amber-500/70 relative z-10 font-medium">
-            {loading || !users[0] ? '-' : `+${users[0].returnRate.toFixed(2)}% Return`}
+            {loading || !activeParticipants[0] ? '-' : `+${activeParticipants[0].returnRate.toFixed(2)}% Return`}
           </div>
         </div>
       </div>
 
-      {/* Leaderboard Table */}
+      {/* Tabs & Table Container */}
       <div className="bg-[#111827] rounded-2xl border border-[#253047] shadow-lg overflow-hidden flex flex-col">
-        <div className="p-4 border-b border-[#253047] flex justify-between items-center bg-[#172033]">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-indigo-400" />
-            Class Leaderboard
-          </h2>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-            <input
-              type="text"
-              placeholder="Search student..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 bg-[#111827] border border-[#253047] rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-full sm:w-64 transition-colors"
-            />
+        {/* Header Tabs */}
+        <div className="p-4 border-b border-[#253047] flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#172033]">
+          <div className="flex items-center gap-2 border-b sm:border-b-0 border-[#253047]">
+            <button
+              onClick={() => setActiveTab('leaderboard')}
+              className={`px-4 py-2 font-bold text-sm rounded-lg transition-colors flex items-center gap-2 ${
+                activeTab === 'leaderboard' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Trophy className="w-4 h-4" />
+              Class Leaderboard ({activeParticipants.length})
+            </button>
+
+            <button
+              onClick={() => setActiveTab('pending')}
+              className={`px-4 py-2 font-bold text-sm rounded-lg transition-colors flex items-center gap-2 relative ${
+                activeTab === 'pending' ? 'bg-amber-600 text-white' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Clock className="w-4 h-4" />
+              Yêu cầu chờ duyệt
+              {pendingParticipants.length > 0 && (
+                <span className="bg-rose-500 text-white text-[11px] px-2 py-0.5 rounded-full font-bold animate-pulse">
+                  {pendingParticipants.length}
+                </span>
+              )}
+            </button>
           </div>
+
+          {activeTab === 'leaderboard' && (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <input
+                type="text"
+                placeholder="Search student..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-4 py-2 bg-[#111827] border border-[#253047] rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-full sm:w-64 transition-colors"
+              />
+            </div>
+          )}
         </div>
         
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-[#172033]/50 border-b border-[#253047] text-slate-400 uppercase tracking-wider text-xs">
-              <tr>
-                <th className="px-6 py-4 font-semibold w-20 text-center">Rank</th>
-                <th className="px-6 py-4 font-semibold">Student</th>
-                <th className="px-6 py-4 font-semibold text-right">Portfolio Value</th>
-                <th className="px-6 py-4 font-semibold text-right">Profit</th>
-                <th className="px-6 py-4 font-semibold text-right">Return %</th>
-                <th className="px-6 py-4 font-semibold text-center">Trades</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#253047]">
-              {loading ? (
+          {activeTab === 'leaderboard' ? (
+            <table className="w-full text-left text-sm">
+              <thead className="bg-[#172033]/50 border-b border-[#253047] text-slate-400 uppercase tracking-wider text-xs">
                 <tr>
-                  <td colSpan={6} className="px-6 py-16 text-center text-slate-500">
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                      <p>Loading results...</p>
-                    </div>
-                  </td>
+                  <th className="px-6 py-4 font-semibold w-20 text-center">Rank</th>
+                  <th className="px-6 py-4 font-semibold">Student</th>
+                  <th className="px-6 py-4 font-semibold text-right">Portfolio Value</th>
+                  <th className="px-6 py-4 font-semibold text-right">Profit</th>
+                  <th className="px-6 py-4 font-semibold text-right">Return %</th>
                 </tr>
-              ) : filteredUsers.length === 0 ? (
+              </thead>
+              <tbody className="divide-y divide-[#253047]">
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-16 text-center text-slate-500">
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                        <p>Loading results...</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filteredActive.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-16 text-center text-slate-500">
+                      <div className="flex flex-col items-center gap-2">
+                        <Users className="w-10 h-10 opacity-20 mb-2" />
+                        <p>No active participants found.</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredActive.map((item, index) => {
+                    const actualRank = activeParticipants.findIndex(p => p._id === item._id) + 1;
+                    const student = item.userId;
+                    const portfolio = item.currentBalance + item.portfolioValue;
+                    const profit = item.totalProfit;
+
+                    return (
+                      <tr key={item._id} className="hover:bg-[#172033] transition-colors group">
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex justify-center items-center">
+                            {actualRank === 1 ? <div className="w-8 h-8 bg-amber-500/10 border border-amber-500/30 text-amber-500 rounded-full flex items-center justify-center font-bold">1</div> :
+                             actualRank === 2 ? <div className="w-8 h-8 bg-slate-300/10 border border-slate-300/30 text-slate-300 rounded-full flex items-center justify-center font-bold">2</div> :
+                             actualRank === 3 ? <div className="w-8 h-8 bg-orange-700/10 border border-orange-700/30 text-orange-600 rounded-full flex items-center justify-center font-bold">3</div> :
+                             <div className="w-8 h-8 text-slate-500 flex items-center justify-center font-medium">{actualRank}</div>}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center font-bold text-sm">
+                              {student?.name ? student.name.charAt(0).toUpperCase() : (student?.email?.charAt(0).toUpperCase() || 'S')}
+                            </div>
+                            <div>
+                              <span className="font-bold text-white group-hover:text-indigo-400 transition-colors">
+                                {student?.name || 'Student'}
+                              </span>
+                              <p className="text-xs text-slate-500 mt-0.5">{student?.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right font-mono font-medium text-white">
+                          {(portfolio / 1000000).toFixed(1)}M ₫
+                        </td>
+                        <td className="px-6 py-4 text-right font-mono">
+                          <span className={`inline-flex items-center gap-1 font-bold ${profit > 0 ? 'text-emerald-400' : profit < 0 ? 'text-rose-400' : 'text-slate-400'}`}>
+                            {profit > 0 ? <TrendingUp className="w-3 h-3" /> : profit < 0 ? <TrendingDown className="w-3 h-3" /> : null}
+                            {profit > 0 ? '+' : ''}{(profit / 1000000).toFixed(1)}M
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right font-mono">
+                          <span className={`inline-flex items-center justify-center px-2 py-1 rounded font-bold text-xs ${
+                            item.returnRate > 0 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 
+                            item.returnRate < 0 ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 
+                            'bg-[#253047] text-slate-400 border border-[#3b4b72]'
+                          }`}>
+                            {item.returnRate > 0 ? '+' : ''}{item.returnRate.toFixed(2)}%
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          ) : (
+            <table className="w-full text-left text-sm">
+              <thead className="bg-[#172033]/50 border-b border-[#253047] text-slate-400 uppercase tracking-wider text-xs">
                 <tr>
-                  <td colSpan={6} className="px-6 py-16 text-center text-slate-500">
-                    <div className="flex flex-col items-center gap-2">
-                      <Users className="w-10 h-10 opacity-20 mb-2" />
-                      <p>No participants found.</p>
-                      {searchQuery && <p className="text-sm">Try adjusting your search query.</p>}
-                    </div>
-                  </td>
+                  <th className="px-6 py-4 font-semibold">Sinh viên</th>
+                  <th className="px-6 py-4 font-semibold text-center">Thời gian gửi</th>
+                  <th className="px-6 py-4 font-semibold text-center">Vốn ban đầu</th>
+                  <th className="px-6 py-4 font-semibold text-center">Thao tác</th>
                 </tr>
-              ) : (
-                filteredUsers.map((user, index) => {
-                  // If searching, we want to show their actual rank, not filtered index.
-                  // But since the list is sorted by portfolio, and filteredUsers preserves order, 
-                  // to get actual rank we need to find them in the `users` array.
-                  const actualRank = users.findIndex(u => u._id === user._id) + 1;
-                  
-                  return (
-                    <tr key={user._id} className="hover:bg-[#172033] transition-colors group">
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex justify-center items-center">
-                          {actualRank === 1 ? <div className="w-8 h-8 bg-amber-500/10 border border-amber-500/30 text-amber-500 rounded-full flex items-center justify-center font-bold">1</div> :
-                           actualRank === 2 ? <div className="w-8 h-8 bg-slate-300/10 border border-slate-300/30 text-slate-300 rounded-full flex items-center justify-center font-bold">2</div> :
-                           actualRank === 3 ? <div className="w-8 h-8 bg-orange-700/10 border border-orange-700/30 text-orange-600 rounded-full flex items-center justify-center font-bold">3</div> :
-                           <div className="w-8 h-8 text-slate-500 flex items-center justify-center font-medium">{actualRank}</div>}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center font-bold text-sm">
-                            {user.name ? user.name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+              </thead>
+              <tbody className="divide-y divide-[#253047]">
+                {pendingParticipants.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-16 text-center text-slate-500">
+                      <div className="flex flex-col items-center gap-2">
+                        <Check className="w-10 h-10 text-emerald-500 opacity-40 mb-2" />
+                        <p>Không có yêu cầu tham gia nào đang chờ duyệt.</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  pendingParticipants.map((item) => {
+                    const student = item.userId;
+                    const isProcessing = actionLoadingId === item._id;
+
+                    return (
+                      <tr key={item._id} className="hover:bg-[#172033] transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center font-bold text-sm">
+                              {student?.name ? student.name.charAt(0).toUpperCase() : (student?.email?.charAt(0).toUpperCase() || 'S')}
+                            </div>
+                            <div>
+                              <span className="font-bold text-white">
+                                {student?.name || 'Student'}
+                              </span>
+                              <p className="text-xs text-slate-500 mt-0.5">{student?.email}</p>
+                            </div>
                           </div>
-                          <div>
-                            <span className="font-bold text-white group-hover:text-indigo-400 transition-colors">
-                              {user.name || 'Unknown User'}
-                            </span>
-                            <p className="text-xs text-slate-500 mt-0.5">{user.email}</p>
+                        </td>
+                        <td className="px-6 py-4 text-center text-slate-400 text-xs font-mono">
+                          {new Date(item.createdAt).toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 text-center font-mono text-white font-medium">
+                          {(item.initialBalance / 1000000).toFixed(0)}M ₫
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleApprove(item._id)}
+                              disabled={isProcessing}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-1.5 px-3 rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow-md shadow-emerald-600/20 disabled:opacity-50"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              Duyệt (Accept)
+                            </button>
+                            <button
+                              onClick={() => handleReject(item._id)}
+                              disabled={isProcessing}
+                              className="bg-rose-600 hover:bg-rose-700 text-white font-medium py-1.5 px-3 rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow-md shadow-rose-600/20 disabled:opacity-50"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                              Từ chối (Reject)
+                            </button>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-right font-mono font-medium text-white">
-                        {(user.portfolio / 1000000).toFixed(1)}M
-                      </td>
-                      <td className="px-6 py-4 text-right font-mono">
-                        <span className={`inline-flex items-center gap-1 font-bold ${user.profit > 0 ? 'text-emerald-400' : user.profit < 0 ? 'text-rose-400' : 'text-slate-400'}`}>
-                          {user.profit > 0 ? <TrendingUp className="w-3 h-3" /> : user.profit < 0 ? <TrendingDown className="w-3 h-3" /> : null}
-                          {user.profit > 0 ? '+' : ''}{(user.profit / 1000000).toFixed(1)}M
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right font-mono">
-                        <span className={`inline-flex items-center justify-center px-2 py-1 rounded font-bold text-xs ${
-                          user.returnRate > 0 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 
-                          user.returnRate < 0 ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 
-                          'bg-[#253047] text-slate-400 border border-[#3b4b72]'
-                        }`}>
-                          {user.returnRate > 0 ? '+' : ''}{user.returnRate.toFixed(2)}%
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="text-slate-400 font-medium inline-flex items-center gap-1.5 bg-[#172033] px-2.5 py-1 rounded-md border border-[#253047]">
-                          <Activity className="w-3 h-3" /> {user.trades}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

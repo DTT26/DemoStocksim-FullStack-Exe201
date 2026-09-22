@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Bell, Check, Trash2, Clock, CheckCircle2, AlertCircle, Info } from 'lucide-react';
 import { useNotificationStore } from '../stores/useNotificationStore';
+import { useAuth } from '../contexts/AuthContext';
 
 export const NotificationDropdown = () => {
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
@@ -20,6 +22,8 @@ export const NotificationDropdown = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  if (!user) return null;
 
   const getIcon = (type: string) => {
     switch(type) {
@@ -50,7 +54,9 @@ export const NotificationDropdown = () => {
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full border border-[#131722]"></span>
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full border-2 border-white dark:border-[#131722] flex items-center justify-center leading-none shadow-sm">
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
         )}
       </button>
 
