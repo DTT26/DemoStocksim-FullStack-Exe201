@@ -96,14 +96,14 @@ export const ToolbarNavbar = ({
           <NotificationDropdown />
           <button 
             onClick={toggleTheme}
-            className="hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#d1d4dc]"
+            className="hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]"
             title="Đổi giao diện (Sáng/Tối)"
           >
             {isDarkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
           </button>
           <button 
             onClick={() => setIsLanguageModalOpen(true)}
-            className="hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 flex items-center gap-1 text-[#787b86] hover:text-[#d1d4dc]"
+            className="hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 flex items-center gap-1 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]"
             title="Ngôn ngữ"
           >
             <Globe className="w-5 h-5" />
@@ -111,13 +111,13 @@ export const ToolbarNavbar = ({
           </button>
           <button 
             onClick={onOpenSettings}
-            className="hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#d1d4dc]"
+            className="hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]"
             title="Cài đặt"
           >
             <Settings className="w-5 h-5" />
           </button>
 
-          <div className="w-px h-4 bg-[#2a2e39] mx-1" />
+          <div className="w-px h-4 bg-[#e6e8ea] dark:bg-[#2a2e39] mx-1" />
 
           {user ? (
             <UserDropdown 
