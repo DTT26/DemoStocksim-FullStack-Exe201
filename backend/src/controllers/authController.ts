@@ -42,6 +42,13 @@ export const googleLogin = async (req: Request, res: Response) => {
     // Tìm user trong Database
     let user = await User.findOne({ email });
 
+    // Kiểm tra nếu tài khoản bị khóa hoặc tạm ngưng (Suspended/Disabled)
+    if (user && (user.status === 'DISABLED' || user.status === 'SUSPENDED')) {
+      return res.status(403).json({
+        message: 'Tài khoản của bạn đã bị khóa hoặc tạm ngưng (Suspended). Vui lòng liên hệ Quản trị viên để được hỗ trợ.'
+      });
+    }
+
     // Nếu chưa có, tạo user mới
     if (!user) {
       user = new User({
@@ -133,8 +140,8 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
     const decoded: any = jwt.verify(refreshToken, refreshSecret);
     const user = await User.findById(decoded.userId);
     
-    if (!user || user.status === 'DISABLED') {
-      return res.status(401).json({ message: 'User not found or disabled' });
+    if (!user || user.status === 'DISABLED' || user.status === 'SUSPENDED') {
+      return res.status(403).json({ message: 'Tài khoản của bạn đã bị khóa hoặc tạm ngưng (Suspended)' });
     }
 
     const newAccessToken = jwt.sign(

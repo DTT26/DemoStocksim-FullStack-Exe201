@@ -99,6 +99,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           await fetchUser();
         } else {
           console.error('Backend login failed:', data.message);
+          alert(data.message || 'Đăng nhập không thành công');
         }
       } catch (err) {
         console.error('Failed to authenticate', err);

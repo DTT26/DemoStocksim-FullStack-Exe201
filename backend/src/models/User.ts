@@ -7,7 +7,7 @@ export interface IUser extends Document {
   picture?: string;
   googleId?: string;
   role: 'student' | 'lecturer' | 'admin';
-  status: 'ACTIVE' | 'DISABLED';
+  status: 'ACTIVE' | 'DISABLED' | 'SUSPENDED';
   phone?: string;
   bio?: string;
   university?: string;
@@ -27,7 +27,7 @@ const UserSchema: Schema = new Schema(
     picture: { type: String },
     googleId: { type: String, unique: true, sparse: true },
     role: { type: String, enum: ['student', 'lecturer', 'admin'], default: 'student' },
-    status: { type: String, enum: ['ACTIVE', 'DISABLED'], default: 'ACTIVE' },
+    status: { type: String, enum: ['ACTIVE', 'DISABLED', 'SUSPENDED'], default: 'ACTIVE' },
     phone: { type: String, default: '' },
     bio: { type: String, default: '' },
     university: { type: String, default: '' },

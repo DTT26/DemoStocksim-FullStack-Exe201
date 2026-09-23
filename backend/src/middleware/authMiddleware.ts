@@ -25,6 +25,11 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
       const decoded: any = jwt.verify(token, jwtSecret);
       const user = await User.findById(decoded.userId).select('-passwordHash');
       if (user) {
+        if (user.status === 'DISABLED' || user.status === 'SUSPENDED') {
+          return res.status(403).json({ 
+            message: 'Tài khoản của bạn đã bị khóa hoặc tạm ngưng (Suspended). Phiên làm việc đã kết thúc.' 
+          });
+        }
         req.user = user;
         return next();
       }

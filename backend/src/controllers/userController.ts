@@ -11,6 +11,9 @@ export const getMyProfile = async (req: AuthRequest, res: Response) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
+    if (user.status === 'DISABLED' || user.status === 'SUSPENDED') {
+      return res.status(403).json({ message: 'Tài khoản của bạn đã bị khóa hoặc tạm ngưng (Suspended)' });
+    }
 
     // Lấy thông tin Ví của User
     let wallet = await Wallet.findOne({ userId: req.user._id });
