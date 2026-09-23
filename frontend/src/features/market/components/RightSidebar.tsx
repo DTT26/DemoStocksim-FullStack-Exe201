@@ -173,12 +173,12 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
   }
 
   return (
-    <div className="w-[280px] flex flex-col bg-[#131722] flex-1 min-h-0 overflow-hidden">
+    <div className="w-[280px] flex flex-col bg-white dark:bg-[#131722] border-l border-[#e6e8ea] dark:border-[#2a2e39] flex-1 min-h-0 overflow-hidden text-[#1e2329] dark:text-[#d1d4dc]">
       {/* Header Tabs Sổ lệnh / Giao dịch */}
-      <div className="flex items-center border-b border-[#2a2e39] shrink-0">
+      <div className="flex items-center border-b border-[#e6e8ea] dark:border-[#2a2e39] shrink-0">
         <button
           onClick={() => setIsExpanded(false)}
-          className="p-3 text-[#787b86] hover:text-[#d1d4dc] hover:bg-[#1e222d] transition-colors border-r border-[#2a2e39]"
+          className="p-3 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] hover:bg-[#f0f3fa] dark:hover:bg-[#1e222d] transition-colors border-r border-[#e6e8ea] dark:border-[#2a2e39]"
           title="Thu gọn"
         >
           <ChevronRight className="w-4 h-4" />
@@ -186,18 +186,18 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
         <div className="flex-1 flex items-center">
           <button
             onClick={() => setActiveSidebarTab('orderbook')}
-            className={`flex-1 py-3 text-xs font-semibold transition-colors ${activeSidebarTab === 'orderbook' ? 'text-white border-b-2 border-blue-500' : 'text-[#787b86] hover:text-[#d1d4dc]'}`}
+            className={`flex-1 py-3 text-xs font-semibold transition-colors ${activeSidebarTab === 'orderbook' ? 'text-blue-600 dark:text-white border-b-2 border-blue-500' : 'text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
           >
             Sổ lệnh
           </button>
           <button
             onClick={() => setActiveSidebarTab('trade')}
-            className={`flex-1 py-3 text-xs font-semibold transition-colors ${activeSidebarTab === 'trade' ? 'text-white border-b-2 border-blue-500' : 'text-[#787b86] hover:text-[#d1d4dc]'}`}
+            className={`flex-1 py-3 text-xs font-semibold transition-colors ${activeSidebarTab === 'trade' ? 'text-blue-600 dark:text-white border-b-2 border-blue-500' : 'text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
           >
             Giao dịch
           </button>
         </div>
-        <button className="p-3 text-[#787b86] hover:text-[#d1d4dc] hover:bg-[#1e222d] transition-colors">
+        <button className="p-3 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] hover:bg-[#f0f3fa] dark:hover:bg-[#1e222d] transition-colors">
           <Settings2 className="w-4 h-4" />
         </button>
       </div>
@@ -208,7 +208,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto min-h-0">
-          <div className="flex items-center px-2 py-2 border-b border-[#2a2e39] text-[10px] uppercase tracking-wider text-[#787b86] font-semibold">
+          <div className="flex items-center px-2 py-2 border-b border-[#e6e8ea] dark:border-[#2a2e39] text-[10px] uppercase tracking-wider text-[#787b86] font-semibold">
             <div className="flex-1 ml-1">Symbol</div>
             <div className="w-20 text-right">Price</div>
             <div className="w-14 text-right">Chg%</div>
@@ -218,13 +218,13 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
             <div
               key={stock.symbol}
               onClick={() => { onStockSelect(stock); }}
-              className={`flex items-center px-3 py-2 text-xs cursor-pointer transition-colors border-b border-[#2a2e39]/40 ${selectedStock.symbol === stock.symbol
-                ? 'bg-blue-900/20 border-l-2 border-l-blue-500'
-                : 'hover:bg-[#1e222d]'
+              className={`flex items-center px-3 py-2 text-xs cursor-pointer transition-colors border-b border-[#e6e8ea] dark:border-[#2a2e39]/40 ${selectedStock.symbol === stock.symbol
+                ? 'bg-blue-50 dark:bg-blue-900/20 border-l-2 border-l-blue-500'
+                : 'hover:bg-[#f0f3fa] dark:hover:bg-[#1e222d]'
                 }`}
             >
               <div className="flex-1 flex flex-col">
-                <span className="text-[#d1d4dc] font-semibold">{stock.symbol}</span>
+                <span className="text-[#1e2329] dark:text-[#d1d4dc] font-semibold">{stock.symbol}</span>
                 <span className="text-[#787b86] text-[10px]">{stock.name}</span>
               </div>
               <div className={`w-20 text-right font-mono font-semibold ${stock.type === 'up' ? 'text-[#089981]' : 'text-[#f23645]'}`}>
@@ -241,17 +241,15 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
 
       {/* Order Entry */}
       {user ? (
-        <div className="border-t border-[#2a2e39] p-3 flex flex-col gap-2.5 shrink-0 bg-[#131722]">
+        <div className="border-t border-[#e6e8ea] dark:border-[#2a2e39] p-3 flex flex-col gap-2.5 shrink-0 bg-[#f8f9fa] dark:bg-[#131722]">
           {/* Balance row */}
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1 text-[#787b86]">
                   <Wallet className="w-3 h-3" />
                   <span>Balance</span>
                 </div>
-                <span className="font-mono text-green-400 font-semibold">{balance.toLocaleString('vi-VN')} ₫</span>
+                <span className="font-mono text-green-600 dark:text-green-400 font-semibold">{balance.toLocaleString('vi-VN')} ₫</span>
               </div>
-
-              {/* Holding & PnL section removed */}
 
               {/* Order type */}
               <div className="flex gap-1.5 text-xs font-semibold pb-1">
@@ -259,7 +257,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                   onClick={() => { if (!isEditing) setOrderType('market'); }}
                   className={`flex-1 py-1.5 rounded uppercase transition-colors ${orderType === 'market'
                     ? 'bg-blue-600 text-white'
-                    : 'bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#d1d4dc]')
+                    : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]')
                     }`}
                 >
                   Thị trường
@@ -268,7 +266,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                   onClick={() => { if (!isEditing) setOrderType('limit'); }}
                   className={`flex-1 py-1.5 rounded uppercase transition-colors ${orderType === 'limit'
                     ? 'bg-blue-600 text-white'
-                    : 'bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#d1d4dc]')
+                    : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]')
                     }`}
                 >
                   Limit
@@ -277,7 +275,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                   onClick={() => { if (!isEditing) setOrderType('stop'); }}
                   className={`flex-1 py-1.5 rounded uppercase transition-colors ${orderType === 'stop'
                     ? 'bg-blue-600 text-white'
-                    : 'bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#d1d4dc]')
+                    : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]')
                     }`}
                 >
                   Stop
@@ -291,11 +289,11 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                     {isEditing ? 'Giá vào lệnh' : `Giá ${orderType === 'market' ? '(Thị trường)' : '(VND)'}`}
                   </label>
                   {isEditing ? (
-                    <div className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
+                    <div className="bg-[#f0f3fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
                       {avgPrice.toLocaleString('vi-VN')}
                     </div>
                   ) : orderType === 'market' ? (
-                    <div className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
+                    <div className="bg-[#f0f3fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
                       {selectedStock.price.toLocaleString('vi-VN')}
                     </div>
                   ) : (
@@ -305,7 +303,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                       value={limitPriceStr}
                       placeholder="VD: 112000"
                       onChange={e => setLimitPriceStr(e.target.value)}
-                      className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full disabled:opacity-50"
+                      className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full disabled:opacity-50"
                     />
                   )}
                 </div>
@@ -313,7 +311,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                 <div className="flex flex-col gap-1 flex-1">
                   <label className="text-[10px] text-[#787b86] uppercase tracking-wider">Khối lượng (Lot)</label>
                   {isEditing ? (
-                    <div className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
+                    <div className="bg-[#f0f3fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
                       {(held / 100000).toLocaleString('vi-VN')}
                     </div>
                   ) : (
@@ -322,7 +320,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                       step="0.01"
                       value={lotStr}
                       onChange={e => setLotStr(e.target.value)}
-                      className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full"
+                      className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full"
                     />
                   )}
                 </div>
@@ -511,8 +509,8 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
               )}
             </div>
           ) : (
-            <div className="border-t border-[#2a2e39] p-6 flex flex-col items-center justify-center text-center gap-4 shrink-0 bg-[#131722]">
-              <Wallet className="w-8 h-8 text-[#434651]" />
+            <div className="border-t border-[#e6e8ea] dark:border-[#2a2e39] p-6 flex flex-col items-center justify-center text-center gap-4 shrink-0 bg-[#f8f9fa] dark:bg-[#131722]">
+              <Wallet className="w-8 h-8 text-[#787b86] dark:text-[#434651]" />
               <p className="text-[#787b86] text-xs">Vui lòng đăng nhập để xem số dư và thực hiện giao dịch.</p>
               <button
                 onClick={() => login()}

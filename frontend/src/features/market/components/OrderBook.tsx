@@ -98,7 +98,7 @@ export const OrderBook = ({ symbol, currentPrice, isUp }: OrderBookProps) => {
   );
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden bg-[#131722]">
+    <div className="flex flex-col flex-1 overflow-hidden bg-white dark:bg-[#131722]">
       <div className="flex flex-col flex-1 p-2 min-h-0">
           {/* Orderbook Header */}
           <div className="flex items-center justify-between text-[10px] text-[#787b86] mb-2 px-1">
