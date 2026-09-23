@@ -228,8 +228,8 @@ export const TradingTerminal = () => {
 
   // Added missing states
   const [activeTab, setActiveTab] = useState<'chart' | 'coin_info' | 'info'>('chart');
-  const [previewTPSL, setPreviewTPSL] = useState<{ tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean } | null>(null);
-  const [draggedTPSL, setDraggedTPSL] = useState<{ tp?: number; sl?: number } | null>(null);
+  const [previewTPSL, setPreviewTPSL] = useState<{ tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean; orderPrice?: number; orderType?: 'LIMIT' | 'STOP' } | null>(null);
+  const [draggedTPSL, setDraggedTPSL] = useState<{ tp?: number; sl?: number; orderPrice?: number } | null>(null);
 
   const handleToolClick = (toolName: string) => {
     if (toolName === activeTool && toolName !== 'cursor') {
@@ -559,7 +559,7 @@ export const TradingTerminal = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undoRedoState.canUndo, undoRedoState.canRedo]);
 
-  const handleTPSLDragChange = (type: 'tp' | 'sl', price: number) => {
+  const handleTPSLDragChange = (type: 'tp' | 'sl' | 'orderPrice', price: number) => {
     setPreviewTPSL(prev => prev ? { ...prev, [type]: price } : { enabled: true, [type]: price });
     setDraggedTPSL(prev => ({ ...prev, [type]: price }));
   };
@@ -1038,16 +1038,17 @@ export const TradingTerminal = () => {
                   activeIndicators={activeIndicators}
                   activePosition={
                     store.isActive 
-                      ? (store.positions.find(p => p.symbol === selectedStock.symbol) ? {
-                          quantity: store.positions.find(p => p.symbol === selectedStock.symbol)!.lot,
-                          averagePrice: store.positions.find(p => p.symbol === selectedStock.symbol)!.entryPrice,
-                          side: store.positions.find(p => p.symbol === selectedStock.symbol)!.side,
+                      ? (store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase()) ? {
+                          quantity: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.lot,
+                          averagePrice: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.entryPrice,
+                          side: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.side,
                           leverage: store.session!.config.leverage,
-                          tp: store.positions.find(p => p.symbol === selectedStock.symbol)!.tp,
-                          sl: store.positions.find(p => p.symbol === selectedStock.symbol)!.sl
+                          tp: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.tp,
+                          sl: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.sl
                         } : undefined)
                       : (positions[selectedStock.symbol] as any)
                   }
+                  simulatorPositions={store.isActive ? store.positions : undefined}
                   previewTPSL={previewTPSL}
                   onTPSLChange={handleTPSLDragChange}
                   undoTrigger={undoTrigger}

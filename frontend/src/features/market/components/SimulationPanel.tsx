@@ -23,8 +23,8 @@ interface SimulationPanelProps {
   onStartSimulation: (config: SimulationConfig) => void;
   onStartReplay?: () => void;
   onSelectStock?: (stock: Stock) => void;
-  onPreviewTPSLChange?: (tpsl: { tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean } | null) => void;
-  draggedTPSL?: { tp?: number; sl?: number } | null;
+  onPreviewTPSLChange?: (tpsl: { tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean; orderPrice?: number; orderType?: 'LIMIT' | 'STOP' } | null) => void;
+  draggedTPSL?: { tp?: number; sl?: number; orderPrice?: number } | null;
 }
 
 export interface SimulationConfig {

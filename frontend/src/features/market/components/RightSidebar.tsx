@@ -15,8 +15,8 @@ interface RightSidebarProps {
   onAddMargin?: (symbol: string, side: 'LONG' | 'SHORT', amount: number) => Promise<{ success: boolean; message: string }>;
   isEditing?: boolean;
   onCancelEdit?: () => void;
-  onPreviewTPSLChange?: (tpsl: { tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean } | null) => void;
-  draggedTPSL?: { tp?: number; sl?: number } | null;
+  onPreviewTPSLChange?: (tpsl: { tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean; orderPrice?: number; orderType?: 'LIMIT' | 'STOP' } | null) => void;
+  draggedTPSL?: { tp?: number; sl?: number; orderPrice?: number } | null;
 }
 
 export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect, onTrade, onUpdateTPSL, onAddMargin, isEditing, onCancelEdit, onPreviewTPSLChange, draggedTPSL }: RightSidebarProps) => {
@@ -64,8 +64,11 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
       if (draggedTPSL.sl !== undefined) {
         setSl(draggedTPSL.sl.toString());
       }
+      if (draggedTPSL.orderPrice !== undefined && (orderType === 'limit' || orderType === 'stop')) {
+        setLimitPriceStr(draggedTPSL.orderPrice.toString());
+      }
     }
-  }, [draggedTPSL]);
+  }, [draggedTPSL, orderType]);
 
   const showToast = (msg: string, ok: boolean) => {
     setToast({ msg, ok });
@@ -174,12 +177,24 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
   const pnlColor = pnl >= 0 ? 'text-[#089981]' : 'text-[#f23645]';
   const pnlSign = pnl >= 0 ? '+' : '';
 
-  // Synchronize preview TP/SL with parent chart
+  // Synchronize preview TP/SL and limit/stop line with parent chart
   useEffect(() => {
-    if (showTPSL) {
-      const currentSide = held > 0 && side ? side : 'LONG';
-      const tpNum = tp ? parseFloat(tp) : undefined;
-      const slNum = sl ? parseFloat(sl) : undefined;
+    const isLimitOrStop = orderType === 'limit' || orderType === 'stop';
+    const limitPriceNum = parseFloat(limitPriceStr) || selectedStock.price;
+    const currentSide = held > 0 && side ? side : 'LONG';
+    const tpNum = tp ? parseFloat(tp) : undefined;
+    const slNum = sl ? parseFloat(sl) : undefined;
+
+    if (isLimitOrStop) {
+      onPreviewTPSLChange?.({
+        enabled: true,
+        orderPrice: limitPriceNum,
+        orderType: orderType === 'limit' ? 'LIMIT' : 'STOP',
+        tp: showTPSL && tpNum !== undefined && !isNaN(tpNum) ? tpNum : undefined,
+        sl: showTPSL && slNum !== undefined && !isNaN(slNum) ? slNum : undefined,
+        side: currentSide
+      });
+    } else if (showTPSL) {
       onPreviewTPSLChange?.({
         enabled: true,
         tp: (tpNum !== undefined && !isNaN(tpNum)) ? tpNum : undefined,
@@ -189,7 +204,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
     } else {
       onPreviewTPSLChange?.(null);
     }
-  }, [showTPSL, tp, sl, side, held, onPreviewTPSLChange]);
+  }, [showTPSL, tp, sl, side, held, orderType, limitPriceStr, selectedStock.price, onPreviewTPSLChange]);
 
   if (!isExpanded) {
     return (

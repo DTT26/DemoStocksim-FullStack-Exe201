@@ -6,8 +6,8 @@ import { ArrowUp, ArrowDown, Wallet, ChevronLeft } from 'lucide-react';
 interface SimulatorTradingPanelProps {
   selectedStock: Stock;
   onBack?: () => void;
-  onPreviewTPSLChange?: (tpsl: { tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean } | null) => void;
-  draggedTPSL?: { tp?: number; sl?: number } | null;
+  onPreviewTPSLChange?: (tpsl: { tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean; orderPrice?: number; orderType?: 'LIMIT' | 'STOP' } | null) => void;
+  draggedTPSL?: { tp?: number; sl?: number; orderPrice?: number } | null;
 }
 
 export const SimulatorTradingPanel = ({ 
@@ -66,14 +66,27 @@ export const SimulatorTradingPanel = ({
       if (draggedTPSL.sl !== undefined) {
         setSl(draggedTPSL.sl.toString());
       }
+      if (draggedTPSL.orderPrice !== undefined && orderType !== 'MARKET') {
+        setPriceStr(draggedTPSL.orderPrice.toString());
+      }
     }
-  }, [draggedTPSL]);
+  }, [draggedTPSL, orderType]);
 
-  // Synchronize preview TP/SL with parent chart
+  // Synchronize preview TP/SL and order price line with parent chart
   useEffect(() => {
-    if (showTPSL && (tp || sl)) {
-      const activePos = store.positions.find(p => p.symbol === selectedStock.symbol);
-      const currentSide = activePos ? activePos.side : 'LONG';
+    const activePos = store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase());
+    const currentSide = activePos ? activePos.side : 'LONG';
+
+    if (orderType !== 'MARKET') {
+      onPreviewTPSLChange?.({
+        tp: showTPSL && tp ? parseFloat(tp) : undefined,
+        sl: showTPSL && sl ? parseFloat(sl) : undefined,
+        side: currentSide,
+        enabled: true,
+        orderPrice: priceNum,
+        orderType: orderType,
+      });
+    } else if (showTPSL && (tp || sl)) {
       onPreviewTPSLChange?.({
         tp: tp ? parseFloat(tp) : undefined,
         sl: sl ? parseFloat(sl) : undefined,
@@ -83,7 +96,7 @@ export const SimulatorTradingPanel = ({
     } else {
       onPreviewTPSLChange?.(null);
     }
-  }, [showTPSL, tp, sl, selectedStock.symbol, onPreviewTPSLChange]);
+  }, [showTPSL, tp, sl, orderType, priceStr, priceNum, selectedStock.symbol, onPreviewTPSLChange]);
 
   // Clear preview when unmounting
   useEffect(() => {

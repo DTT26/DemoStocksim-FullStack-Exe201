@@ -17,7 +17,7 @@ export const PositionsManager = ({ currentPrice }: PositionsManagerProps) => {
 
   const tabs = [
     { id: 'positions', label: `Vị thế (${positions.length})` },
-    { id: 'orders', label: `Lệnh chờ (${orders.length})` },
+    { id: 'orders', label: `Lệnh mở (${orders.length})` },
     { id: 'history', label: `Lịch sử giao dịch (${history.length})` }
   ];
 

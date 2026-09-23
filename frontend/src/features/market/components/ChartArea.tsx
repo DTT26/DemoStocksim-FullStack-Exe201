@@ -3296,8 +3296,9 @@ registerOverlay({
             stayInDrawingMode?: boolean;
             lockDrawing?: boolean;
             hideDrawing?: boolean;
-            previewTPSL?: { tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean } | null;
-            onTPSLChange?: (type: 'tp' | 'sl', price: number) => void;
+            previewTPSL?: { tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean; orderPrice?: number; orderType?: 'LIMIT' | 'STOP' } | null;
+            onTPSLChange?: (type: 'tp' | 'sl' | 'orderPrice', price: number) => void;
+            simulatorPositions?: any[];
             undoTrigger?: number;
             redoTrigger?: number;
             onUndoRedoChange?: (state: { canUndo: boolean; canRedo: boolean }) => void;
@@ -3331,6 +3332,7 @@ registerOverlay({
             pendingOrders,
             activeIndicators = [],
             activePosition,
+            simulatorPositions,
             onPriceUpdate,
             onPriceChange,
             isSelectingReplayStart,
@@ -4612,15 +4614,32 @@ registerOverlay({
                 });
               }
 
-              if (activePosition && activePosition.quantity > 0) {
-                const isBuy = activePosition.side === 'LONG';
-                const color = '#ffffff'; // White for entry line
+              // 1. Draw main entry price lines
+              const positionsToDraw: Array<{ quantity: number; averagePrice: number; side: 'LONG' | 'SHORT'; leverage?: number }> = [];
+              if (simulatorPositions && simulatorPositions.length > 0) {
+                simulatorPositions
+                  .filter((p: any) => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())
+                  .forEach((p: any) => {
+                    positionsToDraw.push({
+                      quantity: p.lot || p.quantity || 0,
+                      averagePrice: p.entryPrice || p.averagePrice || 0,
+                      side: p.side || 'LONG',
+                      leverage: p.leverage
+                    });
+                  });
+              } else if (activePosition && activePosition.quantity > 0) {
+                positionsToDraw.push(activePosition);
+              }
 
-                // 1. Draw main entry price line
+              positionsToDraw.forEach(pos => {
+                if (pos.quantity <= 0 || pos.averagePrice <= 0) return;
+                const isBuy = pos.side === 'LONG';
+                const color = '#ffffff';
+
                 chart.createOverlay({
                   name: 'horizontalStraightLine',
                   lock: true,
-                  points: [{ timestamp: allData[lastDataIndex].timestamp, value: activePosition.averagePrice }],
+                  points: [{ timestamp: allData[lastDataIndex].timestamp, value: pos.averagePrice }],
                   styles: {
                     line: { color: '#ffffff', size: 2, style: 'dashed', dashedValue: [5, 5] },
                     text: {
@@ -4636,7 +4655,71 @@ registerOverlay({
                       weight: 'bold',
                     },
                   },
-                  extendData: `${isBuy ? '▲ LONG' : '▼ SHORT'} ${activePosition.quantity.toFixed(2)} @ $${activePosition.averagePrice.toLocaleString('en-US')}`,
+                  extendData: `${isBuy ? '▲ LONG' : '▼ SHORT'} ${pos.quantity.toFixed(2)} @ $${pos.averagePrice.toLocaleString('en-US')}`,
+                });
+              });
+
+              // 1.5 Draw Preview Limit / Stop order line
+              if (previewTPSL?.enabled && previewTPSL.orderPrice && previewTPSL.orderPrice > 0 && previewTPSL.orderType) {
+                const isLimit = previewTPSL.orderType === 'LIMIT';
+                const color = isLimit ? '#2962ff' : '#e65100'; // Blue for limit, Orange for stop
+                const currentSide = previewTPSL.side || 'LONG';
+
+                chart.createOverlay({
+                  id: 'preview_order_line',
+                  name: 'horizontalStraightLine',
+                  lock: false,
+                  points: [{ timestamp: allData[lastDataIndex].timestamp, value: previewTPSL.orderPrice }],
+                  styles: {
+                    line: { color, size: 2, style: 'dashed', dashedValue: [5, 5] },
+                    point: {
+                      color,
+                      borderColor: '#ffffff',
+                      borderSize: 2,
+                      radius: 5,
+                      activeColor: '#ffffff',
+                      activeBorderColor: color,
+                      activeBorderSize: 3,
+                      activeRadius: 7
+                    },
+                    text: {
+                      color: '#ffffff',
+                      backgroundColor: color,
+                      paddingLeft: 6,
+                      paddingRight: 6,
+                      paddingTop: 3,
+                      paddingBottom: 3,
+                      borderRadius: 4,
+                      size: 10,
+                      family: 'Inter',
+                      weight: 'bold',
+                    },
+                  },
+                  extendData: `${previewTPSL.orderType} ${currentSide} (Xem trước) @ $${previewTPSL.orderPrice.toLocaleString('en-US')} ↕ Kéo`,
+                  onPressedMoveStart: () => {
+                    isDraggingRef.current = true;
+                  },
+                  onPressedMoving: (event: any) => {
+                    const newPrice = event.overlay?.points?.[0]?.value;
+                    if (typeof newPrice === 'number' && !isNaN(newPrice)) {
+                      const precision = getPricePrecision(newPrice);
+                      const cleanPrice = Number(newPrice.toFixed(precision));
+                      chart.overrideOverlay({
+                        id: 'preview_order_line',
+                        extendData: `${previewTPSL.orderType} ${currentSide} (Xem trước) @ $${cleanPrice.toLocaleString('en-US')} ↕ Kéo`
+                      });
+                      onTPSLChangeRef.current?.('orderPrice', cleanPrice);
+                    }
+                  },
+                  onPressedMoveEnd: (event: any) => {
+                    isDraggingRef.current = false;
+                    const newPrice = event.overlay?.points?.[0]?.value;
+                    if (typeof newPrice === 'number' && !isNaN(newPrice)) {
+                      const precision = getPricePrecision(newPrice);
+                      const cleanPrice = Number(newPrice.toFixed(precision));
+                      onTPSLChangeRef.current?.('orderPrice', cleanPrice);
+                    }
+                  }
                 });
               }
 
@@ -4782,20 +4865,26 @@ registerOverlay({
                 });
               }
 
-              // Draw Pending Orders
+              // 4. Draw Pending Orders (Lệnh mở)
               if (pendingOrders && pendingOrders.length > 0) {
-                const stockPending = pendingOrders.filter(o => o.symbol === selectedStock.symbol);
+                const stockPending = pendingOrders.filter(o => 
+                  o.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase()
+                );
                 stockPending.forEach(order => {
-                  const isBuy = order.side === 'LONG';
-                  const isLimit = order.type === 'LIMIT';
+                  const isBuy = (order.side || '').toUpperCase() === 'LONG';
+                  const isLimit = (order.type || '').toUpperCase() === 'LIMIT';
                   const color = isLimit ? '#2962ff' : '#e65100'; // Blue for limit, Orange for stop
+                  const orderPrice = Number(order.price || order.limitPrice || 0);
+                  const orderQty = order.quantity !== undefined ? order.quantity : (order.lot !== undefined ? order.lot : 0);
+
+                  if (orderPrice <= 0) return;
 
                   chart.createOverlay({
                     name: 'horizontalStraightLine',
                     lock: true,
-                    points: [{ timestamp: allData[lastDataIndex].timestamp, value: order.price }],
+                    points: [{ timestamp: allData[lastDataIndex].timestamp, value: orderPrice }],
                     styles: {
-                      line: { color, size: 1, style: 'dashed', dashedValue: [2, 2] },
+                      line: { color, size: 1, style: 'dashed', dashedValue: [3, 3] },
                       text: {
                         color: '#ffffff',
                         backgroundColor: color,
@@ -4803,11 +4892,11 @@ registerOverlay({
                         borderRadius: 2, size: 10, family: 'Inter', weight: 'bold',
                       },
                     },
-                    extendData: `${order.type} ${order.side} ${order.quantity?.toFixed(2) || ''} @ $${order.price.toLocaleString('en-US')}`,
+                    extendData: `${order.type || 'LIMIT'} ${order.side || ''} ${orderQty ? Number(orderQty).toFixed(2) : ''} @ $${orderPrice.toLocaleString('en-US')}`,
                   });
                 });
               }
-            }, [activePosition, pendingOrders, isReplaying, replayTime, selectedStock, previewTPSL]);
+            }, [activePosition, simulatorPositions, pendingOrders, isReplaying, replayTime, selectedStock, previewTPSL]);
 
             const priceColor = selectedStock.percent > 0 ? 'text-[#089981]' : selectedStock.percent < 0 ? 'text-[#f23645]' : 'text-[#787b86]';
             const isDark = theme === 'dark';
