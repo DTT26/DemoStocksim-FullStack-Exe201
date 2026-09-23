@@ -73,18 +73,26 @@ export const StudentAssignmentDetail = () => {
         console.warn('Backend fetch submission error:', e);
       }
 
-      // Khởi tạo checklist mặc định nếu chưa có
-      if (assData && assData.requirements) {
-        setChecklist(prev => {
-          const init: Record<string, boolean> = { ...prev };
-          assData.requirements.forEach((r: any) => {
-            if (init[r.id] === undefined) {
-              init[r.id] = r.completed || false;
-            }
-          });
-          return init;
+      // Khởi tạo checklist nếu chưa có
+      const reqList = (assData && assData.requirements && assData.requirements.length > 0)
+        ? assData.requirements
+        : [
+            { id: 'r1', text: 'Quan sát và áp dụng chỉ báo MACD trên biểu đồ' },
+            { id: 'r2', text: 'Quan sát và áp dụng chỉ báo RSI trên biểu đồ' },
+            { id: 'r3', text: 'Viết nhận định tóm tắt về xu hướng giá' },
+            { id: 'r4', text: 'Thực hành đặt lệnh Mua (Limit BUY) trên Trading Terminal' },
+            { id: 'r5', text: 'Thiết lập mức Cắt lỗ (Stop Loss) an toàn cho lệnh' }
+          ];
+
+      setChecklist(prev => {
+        const init: Record<string, boolean> = { ...prev };
+        reqList.forEach((r: any) => {
+          if (init[r.id] === undefined) {
+            init[r.id] = false;
+          }
         });
-      }
+        return init;
+      });
 
     } catch (err) {
       console.error('Failed to load assignment', err);
@@ -104,6 +112,16 @@ export const StudentAssignmentDetail = () => {
     }));
   };
 
+  const rawReqs = (assignment?.requirements && assignment.requirements.length > 0)
+    ? assignment.requirements
+    : [
+        { id: 'r1', text: 'Quan sát và áp dụng chỉ báo MACD trên biểu đồ' },
+        { id: 'r2', text: 'Quan sát và áp dụng chỉ báo RSI trên biểu đồ' },
+        { id: 'r3', text: 'Viết nhận định tóm tắt về xu hướng giá' },
+        { id: 'r4', text: 'Thực hành đặt lệnh Mua (Limit BUY) trên Trading Terminal' },
+        { id: 'r5', text: 'Thiết lập mức Cắt lỗ (Stop Loss) an toàn cho lệnh' }
+      ];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!analysisContent.trim()) {
@@ -118,9 +136,9 @@ export const StudentAssignmentDetail = () => {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
       const token = localStorage.getItem('token');
 
-      const checklistPayload = Object.entries(checklist).map(([requirementId, completed]) => ({
-        requirementId,
-        completed
+      const checklistPayload = rawReqs.map((req: any) => ({
+        requirementId: req.id,
+        completed: !!checklist[req.id]
       }));
 
       const res = await fetch(`${apiUrl}/assignments/${id}/submit`, {
@@ -171,14 +189,6 @@ export const StudentAssignmentDetail = () => {
       </div>
     );
   }
-
-  const rawReqs = assignment.requirements || [
-    { id: 'r1', text: 'Quan sát và áp dụng chỉ báo MACD trên biểu đồ' },
-    { id: 'r2', text: 'Quan sát và áp dụng chỉ báo RSI trên biểu đồ' },
-    { id: 'r3', text: 'Viết nhận định tóm tắt về xu hướng giá' },
-    { id: 'r4', text: 'Thực hành đặt lệnh Mua (Limit BUY) trên Trading Terminal' },
-    { id: 'r5', text: 'Thiết lập mức Cắt lỗ (Stop Loss) an toàn cho lệnh' }
-  ];
 
   const totalReqs = rawReqs.length;
   const completedReqs = rawReqs.filter((r: any) => checklist[r.id]).length;

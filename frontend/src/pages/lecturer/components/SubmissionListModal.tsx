@@ -197,10 +197,51 @@ export const SubmissionListModal = ({ isOpen, onClose, assignment }: SubmissionL
                   </div>
 
                   {/* Chi tiết bài nộp & checklist */}
-                  <div className="py-3 space-y-2 text-xs">
-                    <div className="flex items-center justify-between text-slate-400">
-                      <span>Tiêu chí checklist hoàn thành:</span>
-                      <span className="font-bold text-cyan-400 font-mono">{completedCount} / {totalReqs}</span>
+                  <div className="py-3 space-y-3 text-xs">
+                    {/* Checklist breakdown */}
+                    <div className="bg-[#0b0e17] p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="flex items-center justify-between text-slate-300 font-semibold pb-1.5 border-b border-white/5">
+                        <span>Checklist sinh viên đã tick hoàn thành:</span>
+                        <span className="font-mono text-cyan-400 font-bold">{completedCount} / {totalReqs}</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {assignment.requirements && assignment.requirements.length > 0 ? (
+                          assignment.requirements.map((req: any, i: number) => {
+                            const isDone = sub.checklistStatus?.find((c: any) => c.requirementId === req.id)?.completed;
+                            return (
+                              <div key={req.id || i} className="flex items-center gap-2">
+                                <span className={`w-4 h-4 rounded flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                                  isDone 
+                                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' 
+                                    : 'bg-slate-800 text-slate-500 border border-slate-700'
+                                }`}>
+                                  {isDone ? '✓' : '✗'}
+                                </span>
+                                <span className={isDone ? 'text-slate-200' : 'text-slate-500 line-through'}>
+                                  {req.text}
+                                </span>
+                              </div>
+                            );
+                          })
+                        ) : sub.checklistStatus && sub.checklistStatus.length > 0 ? (
+                          sub.checklistStatus.map((c: any, i: number) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <span className={`w-4 h-4 rounded flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                                c.completed 
+                                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' 
+                                  : 'bg-slate-800 text-slate-500 border border-slate-700'
+                              }`}>
+                                {c.completed ? '✓' : '✗'}
+                              </span>
+                              <span className={c.completed ? 'text-slate-200' : 'text-slate-500 line-through'}>
+                                Tiêu chí #{i + 1}
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <span className="text-slate-500 italic">Không có tiêu chí checklist cụ thể</span>
+                        )}
+                      </div>
                     </div>
 
                     <div>

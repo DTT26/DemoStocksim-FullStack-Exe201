@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings, Edit3, CheckCircle, Clock, Users, Search, Filter, BookOpen, PlusCircle, Target, Lock, MoreVertical, ClipboardCheck } from 'lucide-react';
+import { Settings, Edit3, CheckCircle, Clock, Users, Search, Filter, BookOpen, PlusCircle, Target, Lock, MoreVertical, ClipboardCheck, ListChecks } from 'lucide-react';
 import { AssignmentModal } from './components/AssignmentModal';
 import { AssignStudentsModal } from './components/AssignStudentsModal';
 import { SubmissionListModal } from './components/SubmissionListModal';
@@ -186,8 +186,21 @@ export const LecturerAssignments = () => {
                           <BookOpen className="w-5 h-5" />
                         </div>
                         <div>
-                          <h4 className="font-bold text-white text-base group-hover:text-indigo-400 transition-colors">{ass.title}</h4>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-white text-base group-hover:text-indigo-400 transition-colors">{ass.title}</h4>
+                            {ass.symbol && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                                {ass.symbol}
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs text-slate-400 mt-1 line-clamp-1 max-w-sm">{ass.description}</p>
+                          {ass.requirements && ass.requirements.length > 0 && (
+                            <div className="flex items-center gap-1.5 mt-1 text-[11px] text-indigo-400">
+                              <ListChecks className="w-3.5 h-3.5" />
+                              <span>{ass.requirements.length} tiêu chí checklist</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
