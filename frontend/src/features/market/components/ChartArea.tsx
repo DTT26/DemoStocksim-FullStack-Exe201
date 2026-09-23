@@ -3277,7 +3277,6 @@ registerOverlay({
             selectedStock: Stock;
             activeTimeframe: string;
             isReplaying: boolean;
-            replayIndex?: number;
             replayTime?: number | null;
             replayStepTrigger?: number;
             onReplayTimeChange?: (time: number) => void;
@@ -3324,7 +3323,6 @@ registerOverlay({
             selectedStock,
             activeTimeframe,
             isReplaying,
-            replayIndex = 0,
             replayTime,
             replayStepTrigger,
             onReplayTimeChange,
@@ -3350,9 +3348,13 @@ registerOverlay({
             const activeToolRef = useRef<string>('cursor');
             const activeTimeframeRef = useRef<string>(activeTimeframe);
             const isSelectingReplayStartRef = useRef(isSelectingReplayStart);
+            isSelectingReplayStartRef.current = isSelectingReplayStart;
             const onSelectReplayStartRef = useRef(onSelectReplayStart);
+            onSelectReplayStartRef.current = onSelectReplayStart;
             const replayTimeRef = useRef<number | null | undefined>(replayTime);
+            replayTimeRef.current = replayTime;
             const onReplayTimeChangeRef = useRef(onReplayTimeChange);
+            onReplayTimeChangeRef.current = onReplayTimeChange;
             const crosshairIndexRef = useRef<number | null>(null);
             const subscriberCallbackRef = useRef<((data: KLineData) => void) | null>(null);
 
@@ -4277,21 +4279,6 @@ registerOverlay({
               }
             }, [replayStepTrigger]);
 
-            // Send price update on replay index change to tick the simulator
-            useEffect(() => {
-              if (isReplaying) {
-                const cacheKey = `${selectedStock.symbol}-${activeTimeframe}`;
-                const allData = dataCache.get(cacheKey) || [];
-                if (allData.length > 0) {
-                  const currentIdx = Math.max(0, Math.min(allData.length - 1, Math.max(5, replayIndex) - 1));
-                  const currentCandle = allData[currentIdx];
-                  if (currentCandle && onPriceUpdate) {
-                    onPriceUpdate(currentCandle.close, currentCandle.timestamp);
-                  }
-                }
-              }
-            }, [replayIndex, isReplaying, selectedStock.symbol, activeTimeframe]);
-
             // Reload data when stock, timeframe, or replay state changes
             useEffect(() => {
               activeTimeframeRef.current = activeTimeframe;
@@ -4880,14 +4867,6 @@ registerOverlay({
                        : chartSettings.canvas.watermarkVal === 'Replay mode' && isReplaying ? 'Replay Mode' 
                        : selectedStock.symbol}
                     </span>
-                  </div>
-                )}
-
-                {/* Bar Replay banner */}
-                {isReplaying && (
-                  <div className="absolute top-2 right-4 z-10 flex items-center gap-2 bg-orange-900/70 border border-orange-600 text-orange-200 text-xs px-3 py-1.5 rounded-lg backdrop-blur pointer-events-none">
-                    <span className="animate-pulse w-2 h-2 rounded-full bg-orange-400 inline-block" />
-                    Bar Replay — Cây nến thứ {replayIndex} / {dataCache.get(`${selectedStock.symbol}-${activeTimeframe}`)?.length || 300}
                   </div>
                 )}
 
