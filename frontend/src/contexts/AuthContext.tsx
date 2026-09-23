@@ -9,6 +9,13 @@ export interface User {
   picture: string;
   role: 'student' | 'lecturer' | 'admin';
   balance?: number;
+  phone?: string;
+  bio?: string;
+  university?: string;
+  studentId?: string;
+  class?: string;
+  department?: string;
+  title?: string;
 }
 
 interface AuthContextType {

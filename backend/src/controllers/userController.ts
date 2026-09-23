@@ -44,12 +44,23 @@ export const updateMyProfile = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    user.name = req.body.name || user.name;
-    // Không cho phép tự đổi email hoặc role thông qua endpoint này
+    const { name, phone, bio, university, studentId, className, department, title, picture } = req.body;
+
+    if (name !== undefined) user.name = name;
+    if (phone !== undefined) user.phone = phone;
+    if (bio !== undefined) user.bio = bio;
+    if (university !== undefined) user.university = university;
+    if (studentId !== undefined) user.studentId = studentId;
+    if (req.body.class !== undefined) user.class = req.body.class;
+    else if (className !== undefined) user.class = className;
+    if (department !== undefined) user.department = department;
+    if (title !== undefined) user.title = title;
+    if (picture !== undefined) user.picture = picture;
 
     const updatedUser = await user.save();
     res.json(updatedUser);
   } catch (error) {
+    console.error('updateMyProfile error:', error);
     res.status(500).json({ message: 'Server Error' });
   }
 };
