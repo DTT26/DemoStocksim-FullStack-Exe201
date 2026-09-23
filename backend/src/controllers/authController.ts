@@ -15,13 +15,15 @@ export const googleLogin = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Captcha token is required' });
     }
 
-    // Verify reCAPTCHA token
-    const secretKey = process.env.RECAPTCHA_SECRET_KEY || '6LcONsctAAAAAMsiuaoK59V9lOoI-tP6xcaF_nBK';
+    // Verify reCAPTCHA v3 token
+    const secretKey = process.env.RECAPTCHA_SECRET_KEY || '6LehIsstAAAAAJrnfa0QbbVOoE_5MyNB78qVZP3g';
     const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${captchaToken}`;
     const captchaRes = await fetch(verifyUrl, { method: 'POST' });
     const captchaData = await captchaRes.json();
     
-    if (!captchaData.success) {
+    // reCAPTCHA v3 checks success flag and optional score (threshold >= 0.5)
+    if (!captchaData.success || (typeof captchaData.score === 'number' && captchaData.score < 0.5)) {
+      console.warn('reCAPTCHA v3 verification failed:', captchaData);
       return res.status(403).json({ message: 'Captcha verification failed' });
     }
 

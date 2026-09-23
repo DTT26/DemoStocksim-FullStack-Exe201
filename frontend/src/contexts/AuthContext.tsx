@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
 import { useGoogleLogin, googleLogout } from '@react-oauth/google';
 import { LoginModal } from '../components/LoginModal';
 
@@ -31,7 +31,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   login: () => {},
   logout: () => {},
-  refreshUser: async () => {}
+  refreshUser: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -41,6 +41,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string>('');
+  const captchaTokenRef = useRef<string>('');
 
   const fetchUser = async () => {
     try {
@@ -76,12 +77,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     onSuccess: async (tokenResponse) => {
       try {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+        const tokenToSend = captchaTokenRef.current || captchaToken;
         const res = await fetch(`${apiUrl}/auth/google`, { credentials: 'include',
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             access_token: tokenResponse.access_token,
-            captchaToken: captchaToken
+            captchaToken: tokenToSend
           }),
         });
         const data = await res.json();
@@ -132,6 +134,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isOpen={isLoginModalOpen} 
         onClose={() => setIsLoginModalOpen(false)} 
         onLoginGoogle={(token) => {
+          captchaTokenRef.current = token;
           setCaptchaToken(token);
           triggerGoogleLogin();
         }} 
