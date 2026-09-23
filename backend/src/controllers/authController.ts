@@ -150,8 +150,6 @@ export const registerRequest = async (req: Request, res: Response) => {
     res.status(200).json({
       message: 'Mã xác thực OTP đã được gửi tới email của bạn. Vui lòng kiểm tra hộp thư đến (hoặc hòm thư rác/spam).',
       email: cleanEmail,
-      // Trong môi trường development, trả về devOtp để tiện test nhanh
-      devOtp: process.env.NODE_ENV !== 'production' ? otp : undefined,
     });
   } catch (error) {
     console.error('registerRequest error:', error);
@@ -257,7 +255,6 @@ export const resendOtp = async (req: Request, res: Response) => {
 
     res.status(200).json({
       message: 'Mã xác thực OTP mới đã được gửi vào email của bạn.',
-      devOtp: process.env.NODE_ENV !== 'production' ? newOtp : undefined,
     });
   } catch (error) {
     console.error('resendOtp error:', error);

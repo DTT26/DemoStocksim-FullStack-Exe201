@@ -26,9 +26,9 @@ interface AuthContextType {
   logout: () => void;
   refreshUser: () => Promise<void>;
   loginWithEmail: (email: string, password: string, captchaToken?: string) => Promise<{ success: boolean; message?: string }>;
-  registerRequest: (name: string, email: string, password: string, termsAccepted: boolean, captchaToken?: string) => Promise<{ success: boolean; message?: string; devOtp?: string }>;
+  registerRequest: (name: string, email: string, password: string, termsAccepted: boolean, captchaToken?: string) => Promise<{ success: boolean; message?: string }>;
   verifyOtp: (email: string, otp: string) => Promise<{ success: boolean; message?: string }>;
-  resendOtp: (email: string) => Promise<{ success: boolean; message?: string; devOtp?: string }>;
+  resendOtp: (email: string) => Promise<{ success: boolean; message?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -174,7 +174,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         body: JSON.stringify({ name, email, password, termsAccepted, captchaToken: tokenToSend }),
       });
       const data = await res.json();
-      return { success: res.ok, message: data.message, devOtp: data.devOtp };
+      return { success: res.ok, message: data.message };
     } catch (err: any) {
       return { success: false, message: err.message || 'Lỗi kết nối khi gửi yêu cầu đăng ký' };
     }
@@ -215,7 +215,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         body: JSON.stringify({ email }),
       });
       const data = await res.json();
-      return { success: res.ok, message: data.message, devOtp: data.devOtp };
+      return { success: res.ok, message: data.message };
     } catch (err: any) {
       return { success: false, message: err.message || 'Lỗi kết nối khi gửi lại OTP' };
     }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   X, 
   ShieldCheck, 
@@ -47,10 +47,11 @@ export const LoginModal = ({ isOpen, onClose, onLoginGoogle }: LoginModalProps) 
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
   const [regTermsAccepted, setRegTermsAccepted] = useState(false);
 
-  const [otpCode, setOtpCode] = useState('');
+  // 6 ô vuông OTP states
+  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
+  const otpInputsRef = useRef<(HTMLInputElement | null)[]>([]);
   const [countdown, setCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
-  const [suggestedDevOtp, setSuggestedDevOtp] = useState<string | null>(null);
 
   // Reset state when opening/closing modal
   useEffect(() => {
@@ -58,8 +59,19 @@ export const LoginModal = ({ isOpen, onClose, onLoginGoogle }: LoginModalProps) 
       setErrorMsg('');
       setSuccessMsg('');
       setLoading(false);
+      setOtpDigits(['', '', '', '', '', '']);
     }
   }, [isOpen]);
+
+  // Focus ô OTP đầu tiên khi chuyển sang bước OTP
+  useEffect(() => {
+    if (registerStep === 'otp') {
+      setOtpDigits(['', '', '', '', '', '']);
+      setTimeout(() => {
+        otpInputsRef.current[0]?.focus();
+      }, 100);
+    }
+  }, [registerStep]);
 
   // Timer for OTP resend countdown
   useEffect(() => {
@@ -178,10 +190,7 @@ export const LoginModal = ({ isOpen, onClose, onLoginGoogle }: LoginModalProps) 
         setRegisterStep('otp');
         setCountdown(60);
         setCanResend(false);
-        setOtpCode('');
-        if (result.devOtp) {
-          setSuggestedDevOtp(result.devOtp);
-        }
+        setOtpDigits(['', '', '', '', '', '']);
         setSuccessMsg(result.message || 'Mã OTP đã được gửi về email của bạn.');
       } else {
         setErrorMsg(result.message || 'Không thể gửi yêu cầu đăng ký.');
@@ -193,10 +202,70 @@ export const LoginModal = ({ isOpen, onClose, onLoginGoogle }: LoginModalProps) 
     }
   };
 
+  // Xử lý từng ô nhập OTP (nhập số -> tự nhảy sang ô tiếp)
+  const handleOtpChange = (index: number, val: string) => {
+    const cleanVal = val.replace(/\D/g, '');
+    if (!cleanVal) {
+      const updated = [...otpDigits];
+      updated[index] = '';
+      setOtpDigits(updated);
+      return;
+    }
+
+    const digit = cleanVal.slice(-1);
+    const updated = [...otpDigits];
+    updated[index] = digit;
+    setOtpDigits(updated);
+
+    // Tự động nhảy sang ô tiếp theo
+    if (index < 5) {
+      otpInputsRef.current[index + 1]?.focus();
+    }
+  };
+
+  // Xử lý phím Backspace & mũi tên điều hướng giữa các ô OTP
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace') {
+      if (otpDigits[index]) {
+        const updated = [...otpDigits];
+        updated[index] = '';
+        setOtpDigits(updated);
+        e.preventDefault();
+      } else if (index > 0) {
+        const updated = [...otpDigits];
+        updated[index - 1] = '';
+        setOtpDigits(updated);
+        otpInputsRef.current[index - 1]?.focus();
+        e.preventDefault();
+      }
+    } else if (e.key === 'ArrowLeft' && index > 0) {
+      otpInputsRef.current[index - 1]?.focus();
+    } else if (e.key === 'ArrowRight' && index < 5) {
+      otpInputsRef.current[index + 1]?.focus();
+    }
+  };
+
+  // Xử lý dán mã OTP (Paste chuỗi 6 số)
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!pastedData) return;
+
+    const updated = [...otpDigits];
+    for (let i = 0; i < 6; i++) {
+      updated[i] = pastedData[i] || '';
+    }
+    setOtpDigits(updated);
+
+    const nextIndex = Math.min(pastedData.length, 5);
+    otpInputsRef.current[nextIndex]?.focus();
+  };
+
   // 4. Xử lý Đăng ký Bước 2: Xác thực mã OTP
   const handleVerifyOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!otpCode.trim() || otpCode.trim().length < 6) {
+    const otpCode = otpDigits.join('');
+    if (!otpCode || otpCode.length < 6) {
       setErrorMsg('Vui lòng nhập đủ 6 chữ số mã OTP.');
       return;
     }
@@ -204,7 +273,7 @@ export const LoginModal = ({ isOpen, onClose, onLoginGoogle }: LoginModalProps) 
     setLoading(true);
     setErrorMsg('');
     try {
-      const result = await verifyOtp(regEmail.trim(), otpCode.trim());
+      const result = await verifyOtp(regEmail.trim(), otpCode);
       if (result.success) {
         onClose();
       } else {
@@ -227,10 +296,11 @@ export const LoginModal = ({ isOpen, onClose, onLoginGoogle }: LoginModalProps) 
       if (result.success) {
         setCountdown(60);
         setCanResend(false);
-        if (result.devOtp) {
-          setSuggestedDevOtp(result.devOtp);
-        }
+        setOtpDigits(['', '', '', '', '', '']);
         setSuccessMsg('Đã gửi lại mã OTP mới vào email của bạn.');
+        setTimeout(() => {
+          otpInputsRef.current[0]?.focus();
+        }, 100);
       } else {
         setErrorMsg(result.message || 'Không thể gửi lại mã OTP.');
       }
@@ -597,41 +667,43 @@ export const LoginModal = ({ isOpen, onClose, onLoginGoogle }: LoginModalProps) 
                 </p>
               </div>
 
-              {/* Dev OTP helper badge if available */}
-              {suggestedDevOtp && (
-                <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between text-xs text-amber-300">
-                  <span>Mã OTP test nhanh: <strong className="font-mono text-sm">{suggestedDevOtp}</strong></span>
-                  <button
-                    type="button"
-                    onClick={() => setOtpCode(suggestedDevOtp)}
-                    className="px-2 py-1 bg-amber-500/20 hover:bg-amber-500/30 rounded font-semibold text-[11px] text-amber-200"
-                  >
-                    Điền nhanh
-                  </button>
-                </div>
-              )}
-
-              {/* Input OTP 6 số */}
+              {/* 6 ô vuông nhập mã OTP */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-2 text-center">
-                  Nhập mã 6 số (Hiệu lực trong 10 phút)
+                <label className="block text-xs font-semibold text-slate-300 mb-3 text-center">
+                  Nhập mã 6 chữ số (Hiệu lực trong 10 phút)
                 </label>
-                <input
-                  type="text"
-                  maxLength={6}
-                  required
-                  autoFocus
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                  placeholder="000000"
-                  className="w-full py-3 bg-[#172033] border-2 border-indigo-500/50 rounded-xl text-center text-2xl font-mono font-bold tracking-[10px] text-cyan-400 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30"
-                />
+                <div className="flex items-center justify-center gap-2 sm:gap-3">
+                  {otpDigits.map((digit, index) => (
+                    <input
+                      key={index}
+                      ref={(el) => {
+                        otpInputsRef.current[index] = el;
+                      }}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleOtpChange(index, e.target.value)}
+                      onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                      onPaste={handleOtpPaste}
+                      onFocus={(e) => e.target.select()}
+                      className={`w-11 h-13 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-mono font-bold rounded-xl bg-[#172033] border-2 transition-all outline-none
+                        ${
+                          digit
+                            ? 'border-cyan-400 text-cyan-300 bg-cyan-950/20 shadow-[0_0_12px_rgba(6,182,212,0.25)]'
+                            : 'border-[#253047] text-white hover:border-slate-500'
+                        }
+                        focus:border-indigo-500 focus:bg-[#1c273e] focus:ring-4 focus:ring-indigo-500/20`}
+                    />
+                  ))}
+                </div>
               </div>
 
               {/* Nút Xác nhận OTP */}
               <button
                 type="submit"
-                disabled={loading || otpCode.length < 6}
+                disabled={loading || otpDigits.join('').length < 6}
                 className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-[0.99] text-white shadow-lg shadow-emerald-600/20 transition-all disabled:opacity-50 cursor-pointer"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
