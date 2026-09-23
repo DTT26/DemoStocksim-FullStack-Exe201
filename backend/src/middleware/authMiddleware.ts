@@ -45,3 +45,23 @@ export const lecturer = (req: AuthRequest, res: Response, next: NextFunction) =>
     res.status(403).json({ message: 'Not authorized as a lecturer' });
   }
 };
+
+export const optionalProtect = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  let token;
+
+  if (req.cookies && req.cookies.token) {
+    token = req.cookies.token;
+  } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+
+  if (token) {
+    try {
+      const decoded: any = jwt.verify(token, process.env.JWT_ACCESS_SECRET || 'fallback_secret_key_change_this_in_production');
+      req.user = await User.findById(decoded.userId).select('-passwordHash');
+    } catch (error) {
+      // Token expired or invalid, continue without req.user
+    }
+  }
+  next();
+};

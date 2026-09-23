@@ -22,13 +22,17 @@ export const PositionsManager = ({ currentPrice }: PositionsManagerProps) => {
   ];
 
   const calculatePositionPnL = (p: any) => {
-    const currentExecPrice = p.side === 'LONG' ? store.currentBid : store.currentAsk;
+    const markPrice = store.currentPrice > 0 ? store.currentPrice : currentPrice;
+    const currentExecPrice = p.side === 'LONG' 
+      ? (store.currentBid > 0 ? store.currentBid : markPrice) 
+      : (store.currentAsk > 0 ? store.currentAsk : (markPrice + (store.session?.config.spread || 0.2)));
+    const actualQty = p.lot * 100000;
     const rawPnL = p.side === 'LONG' 
-      ? (currentExecPrice - p.entryPrice) * p.lot
-      : (p.entryPrice - currentExecPrice) * p.lot;
-    const netPnl = rawPnL - p.commission + p.accumulatedSwap;
+      ? (currentExecPrice - p.entryPrice) * actualQty
+      : (p.entryPrice - currentExecPrice) * actualQty;
+    const netPnl = rawPnL - (p.commission || 0) + (p.accumulatedSwap || 0);
     const roe = p.margin > 0 ? (netPnl / p.margin) * 100 : 0;
-    return { netPnl, roe };
+    return { netPnl, roe, markPrice, actualQty };
   };
 
   return (
@@ -95,9 +99,9 @@ export const PositionsManager = ({ currentPrice }: PositionsManagerProps) => {
                   return (
                     <tr key={p.id} className="hover:bg-[#f5f5f5] dark:hover:bg-[#1e222d] transition-colors">
                       <td className="px-4 py-2 font-bold">{p.symbol}</td>
-                      <td className="px-4 py-2">{p.lot.toLocaleString('vi-VN')}</td>
+                      <td className="px-4 py-2">{pnlInfo.actualQty.toLocaleString('vi-VN')}</td>
                       <td className="px-4 py-2">{p.entryPrice.toLocaleString('vi-VN')}</td>
-                      <td className="px-4 py-2">{store.currentPrice.toLocaleString('vi-VN')}</td>
+                      <td className="px-4 py-2">{pnlInfo.markPrice.toLocaleString('vi-VN')}</td>
                       <td className="px-4 py-2">{p.margin.toLocaleString('vi-VN', { maximumFractionDigits: 0 })}</td>
                       <td className={`px-4 py-2 font-bold ${p.side === 'LONG' ? 'text-[#089981]' : 'text-[#f23645]'}`}>{p.side} x{store.session!.config.leverage}</td>
                       <td className={`px-4 py-2 text-right font-mono font-bold ${pnlColor}`}>
@@ -105,7 +109,7 @@ export const PositionsManager = ({ currentPrice }: PositionsManagerProps) => {
                         <span className="text-[10px] ml-1">({pnlInfo.netPnl >= 0 ? '+' : ''}{pnlInfo.roe.toFixed(2)}%)</span>
                       </td>
                       <td className="px-4 py-2 text-center text-[#787b86]">
-                        {p.tp || '-'} / {p.sl || '-'}
+                        {p.tp ? p.tp.toLocaleString('vi-VN') : '-'} / {p.sl ? p.sl.toLocaleString('vi-VN') : '-'}
                       </td>
                       <td className="px-4 py-2 text-center">
                         <button 
@@ -148,7 +152,7 @@ export const PositionsManager = ({ currentPrice }: PositionsManagerProps) => {
                       {order.type} {store.session!.config.leverage}x
                     </td>
                     <td className="px-4 py-2 font-mono">{order.limitPrice.toLocaleString('vi-VN')}</td>
-                    <td className="px-4 py-2 font-mono">{order.lot?.toFixed(2)}</td>
+                    <td className="px-4 py-2 font-mono">{(order.lot * 100000).toLocaleString('vi-VN')}</td>
                     <td className="px-4 py-2 text-right">
                       <button onClick={() => store.cancelOrder(order.id)} className="text-[#f23645] hover:text-red-400 font-bold px-3 py-1">Hủy</button>
                     </td>

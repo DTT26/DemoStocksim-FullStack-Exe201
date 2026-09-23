@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import { tradingApi } from '../../services/tradingApi';
 import { useSimulatorStore } from '../../features/market/engine/useSimulatorStore';
 import { MOCK_TRADES, MOCK_STUDENT_PORTFOLIO } from '../../data/mockStudentData';
+import { useAuth } from '../../contexts/AuthContext';
 
 export const StudentJournal = () => {
+  const { user } = useAuth();
   const [filter, setFilter] = useState('All');
   const [trades, setTrades] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,7 +24,7 @@ export const StudentJournal = () => {
 
       // 1. Fetch real paper trading transactions from backend API
       try {
-        const res = await tradingApi.getTransactions();
+        const res = await tradingApi.getTransactions(user?._id);
         if (res.success && Array.isArray(res.data) && res.data.length > 0) {
           const apiTrades = res.data.map((tx: any) => {
             const desc = tx.description || '';
@@ -114,7 +116,7 @@ export const StudentJournal = () => {
 
   useEffect(() => {
     fetchJournalData();
-  }, []);
+  }, [user]);
 
   const filteredTrades = trades.filter(trade => {
     if (filter === 'All') return true;

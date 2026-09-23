@@ -1,16 +1,28 @@
 import { useState, useMemo, useEffect } from 'react';
-import { HelpCircle, Play, ChevronDown, Calendar, ArrowRight, Edit3, BarChart2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  HelpCircle, Play, PlayCircle, ChevronDown, ChevronLeft, Calendar, ArrowRight, Edit3, 
+  BarChart2, Eye, Trash2, Trophy, Target, Activity, Clock, Check, X 
+} from 'lucide-react';
 import { type Stock, STOCKS } from '../data';
 import { AuthOverlay } from './AuthOverlay';
 import { useAuth } from '../../../contexts/AuthContext';
-import { getSessions, createSession, type PaperSession } from '../../../services/marketApi';
+import { 
+  getSessions, createSession, updateSession, deleteSession, getSessionDetails, 
+  type PaperSession 
+} from '../../../services/marketApi';
 import { useSimulatorStore } from '../engine/useSimulatorStore';
 import { CustomDatePicker } from '../../../components/CustomDatePicker';
+import { SimulatorTradingPanel } from './SimulatorTradingPanel';
 
 interface SimulationPanelProps {
   currentSymbol: string;
+  selectedStock?: Stock;
+  currentPrice?: number;
   isReplaying: boolean;
   onStartSimulation: (config: SimulationConfig) => void;
+  onStartReplay?: () => void;
+  onSelectStock?: (stock: Stock) => void;
 }
 
 export interface SimulationConfig {
@@ -26,26 +38,204 @@ export interface SimulationConfig {
 }
 
 const DEFAULT_CONFIG: SimulationConfig = {
-  balance: 10000,
-  leverage: 1,
+  balance: 100_000_000,
+  leverage: 10,
   minLot: 0.01,
   lotStep: 0.01,
   maxMarginPercent: 95,
-  spread: 20,
-  commission: 7,
+  spread: 0.2,
+  commission: 0,
   swapLong: -0.5,
   swapShort: -0.3,
 };
 
-export const SimulationPanel = ({ currentSymbol, isReplaying, onStartSimulation }: SimulationPanelProps) => {
+export const SimulationPanel = ({ 
+  currentSymbol, 
+  selectedStock, 
+  currentPrice, 
+  isReplaying, 
+  onStartSimulation, 
+  onStartReplay,
+  onSelectStock 
+}: SimulationPanelProps) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'running' | 'completed'>('running');
+  const [currentView, setCurrentView] = useState<'list' | 'trading'>('list');
   const [isCreating, setIsCreating] = useState(false);
   const [showReplayWarning, setShowReplayWarning] = useState(false);
   
   const [config, setConfig] = useState<SimulationConfig>(DEFAULT_CONFIG);
 
   const [sessions, setSessions] = useState<PaperSession[]>([]);
+
+  // Selected completed session for detail view
+  const [selectedCompletedSession, setSelectedCompletedSession] = useState<PaperSession | null>(null);
+  const [sessionDetailData, setSessionDetailData] = useState<{ session: any; positions: any[]; orders: any[]; history: any[] } | null>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+
+  // Renaming state
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState<string>('');
+
+  // Deleting state
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const formatSessionMoney = (amount: number = 0) => {
+    if (Math.abs(amount) >= 1000000) {
+      return `${amount.toLocaleString('vi-VN', { maximumFractionDigits: 0 })} ₫`;
+    }
+    return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const formatSessionLastTime = (dStr?: string | Date) => {
+    if (!dStr) return '';
+    const d = new Date(dStr);
+    if (isNaN(d.getTime())) return '';
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${hours}:${minutes} ${day}/${month}/${year}`;
+  };
+
+  const formatSessionPnL = (amount: number = 0) => {
+    const sign = amount >= 0 ? '+' : '-';
+    const abs = Math.abs(amount);
+    if (abs >= 100000) {
+      return `${sign}${abs.toLocaleString('vi-VN', { maximumFractionDigits: 0 })} ₫`;
+    }
+    return `${sign}$${abs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const formatSessionDate = (dStr?: string | Date) => {
+    if (!dStr) return '';
+    const d = new Date(dStr);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = String(d.getFullYear()).slice(-2);
+    return `${day}/${month}/${year}`;
+  };
+
+  const handleContinueSession = async (session: any) => {
+    try {
+      if (!store.isActive || store.session?._id !== session._id) {
+        const { getSessionDetails } = await import('../../../services/marketApi');
+        const data = await getSessionDetails(session._id);
+        const effectiveStockPrice = (currentPrice && currentPrice > 0) 
+          ? currentPrice 
+          : (STOCKS.find((s: Stock) => s.symbol === data.session.symbol)?.price || 100);
+
+        store.loadSession(
+          {
+            _id: data.session._id,
+            name: data.session.name,
+            symbol: data.session.symbol,
+            timeframe: data.session.timeframe,
+            config: {
+              initialBalance: data.session.initialBalance,
+              leverage: data.session.leverage,
+              minLot: data.session.minLot,
+              lotStep: data.session.lotStep,
+              maxMarginPercent: data.session.maxMarginPercent,
+              spread: data.session.spread,
+              commission: data.session.commission,
+              swapLong: data.session.swapLong,
+              swapShort: data.session.swapShort
+            },
+            balance: data.session.balance,
+            equity: data.session.equity,
+            usedMargin: data.session.usedMargin,
+            freeMargin: data.session.freeMargin,
+            replayStartTime: data.session.replayStartTime,
+            replayCurrentTime: data.session.replayCurrentTime,
+            status: data.session.status
+          },
+          data.positions,
+          data.orders,
+          data.history,
+          effectiveStockPrice
+        );
+
+        if (onSelectStock && data.session.symbol) {
+          const matchStock = STOCKS.find(s => s.symbol === data.session.symbol);
+          if (matchStock) onSelectStock(matchStock);
+        }
+      }
+      setCurrentView('trading');
+    } catch (error) {
+      console.error("Failed to continue session", error);
+    }
+  };
+
+  const handleCompleteSession = async (session: any, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    try {
+      if (store.isActive && store.session?._id === session._id) {
+        await store.endSession();
+      } else {
+        await updateSession(session._id, {
+          sessionData: {
+            status: 'completed',
+            completedAt: new Date().toISOString()
+          }
+        });
+      }
+      await fetchSessions();
+      if (currentView === 'trading' && store.session?._id === session._id) {
+        setCurrentView('list');
+      }
+    } catch (error) {
+      console.error("Failed to complete session", error);
+    }
+  };
+
+  const handleRename = async (sessionId: string, e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!editingName.trim()) return;
+    try {
+      await updateSession(sessionId, { sessionData: { name: editingName.trim() } });
+      setSessions(prev => prev.map(s => s._id === sessionId ? { ...s, name: editingName.trim() } : s));
+      if (selectedCompletedSession?._id === sessionId) {
+        setSelectedCompletedSession(prev => prev ? { ...prev, name: editingName.trim() } : null);
+      }
+      setEditingSessionId(null);
+    } catch (err) {
+      console.error('Failed to rename session', err);
+    }
+  };
+
+  const handleDeleteSession = async (sessionId: string) => {
+    try {
+      setIsDeleting(true);
+      await deleteSession(sessionId);
+      setSessions(prev => prev.filter(s => s._id !== sessionId));
+      if (selectedCompletedSession?._id === sessionId) {
+        setSelectedCompletedSession(null);
+        setSessionDetailData(null);
+      }
+      setDeletingSessionId(null);
+    } catch (err) {
+      console.error('Failed to delete session', err);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleViewSessionDetail = async (session: PaperSession) => {
+    setSelectedCompletedSession(session);
+    setIsLoadingDetail(true);
+    try {
+      const data = await getSessionDetails(session._id);
+      setSessionDetailData(data);
+    } catch (err) {
+      console.error('Failed to fetch session detail', err);
+    } finally {
+      setIsLoadingDetail(false);
+    }
+  };
 
   const fetchSessions = async () => {
     if (user) {
@@ -144,6 +334,7 @@ export const SimulationPanel = ({ currentSymbol, isReplaying, onStartSimulation 
       setIsCreating(false);
 
       // Start locally
+      const stockPrice = (currentPrice && currentPrice > 0) ? currentPrice : (STOCKS.find((s: Stock) => s.symbol === newSession.symbol)?.price || 100);
       store.startSession({
         _id: newSession._id,
         name: newSession.name,
@@ -167,7 +358,8 @@ export const SimulationPanel = ({ currentSymbol, isReplaying, onStartSimulation 
         replayStartTime: newSession.replayStartTime,
         replayCurrentTime: newSession.replayCurrentTime,
         status: newSession.status
-      });
+      }, stockPrice);
+      setCurrentView('trading');
     } catch (error) {
       console.error("Failed to create session", error);
     }
@@ -189,7 +381,7 @@ export const SimulationPanel = ({ currentSymbol, isReplaying, onStartSimulation 
           {/* SỐ DƯ BAN ĐẦU */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[11px] font-bold text-white tracking-wider flex items-center gap-1.5 uppercase">
-              Số dư ban đầu ($)
+              Số dư ban đầu (VND)
               <HelpCircle className="w-3.5 h-3.5 text-[#787b86]" />
             </label>
             <input 
@@ -340,6 +532,18 @@ export const SimulationPanel = ({ currentSymbol, isReplaying, onStartSimulation 
     );
   }
 
+  if (currentView === 'trading' && store.isActive && store.session) {
+    const sessionStock = STOCKS.find(s => s.symbol === store.session!.symbol) || selectedStock || STOCKS[0];
+    return (
+      <div className="w-[320px] border-l border-[#e6e8ea] dark:border-[#2a2e39] bg-white dark:bg-[#131722] shrink-0 h-full flex flex-col text-[#1e2329] dark:text-[#d1d4dc] font-sans">
+        <SimulatorTradingPanel
+          selectedStock={sessionStock}
+          onBack={() => setCurrentView('list')}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="w-[320px] border-l border-[#e6e8ea] dark:border-[#2a2e39] bg-white dark:bg-[#131722] shrink-0 h-full flex flex-col text-[#1e2329] dark:text-[#d1d4dc] font-sans relative">
       {!user ? (
@@ -397,68 +601,13 @@ export const SimulationPanel = ({ currentSymbol, isReplaying, onStartSimulation 
                 setIsCreating(true);
               }
             }}
-            className="w-full bg-[#089981] hover:bg-[#089981]/90 text-white font-bold py-2.5 rounded-md flex items-center justify-center gap-2 transition-colors shrink-0 uppercase text-sm mb-4"
+            className="w-full bg-[#089981] hover:bg-[#089981]/90 text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 transition-colors shrink-0 uppercase text-sm mb-4 shadow-lg shadow-[#089981]/20"
           >
-            <Play className="w-4 h-4 fill-white" />
+            <PlayCircle className="w-5 h-5 fill-white/20 stroke-white" />
             BẮT ĐẦU PHIÊN MỚI
           </button>
           
-          {store.isActive && store.session ? (
-            <div className="flex-1 flex flex-col gap-4 pb-4">
-              <div className="bg-[#1e222d] border border-[#089981] rounded-lg p-4 shadow-lg shadow-[#089981]/10">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="font-bold text-white text-lg">{store.session.symbol}</span>
-                  <span className="text-xs text-[#089981] bg-[#089981]/10 px-2 py-1 rounded font-bold animate-pulse">ĐANG CHẠY</span>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="flex flex-col">
-                    <span className="text-xs text-[#787b86] mb-1">Tài sản (Equity)</span>
-                    <span className="font-mono font-bold text-lg text-white">
-                      ${store.session.equity.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs text-[#787b86] mb-1">Số dư (Balance)</span>
-                    <span className="font-mono font-bold text-lg text-[#d1d4dc]">
-                      ${store.session.balance.toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-2 bg-[#131722] p-3 rounded border border-[#2a2e39]">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[#787b86]">Ký quỹ đã dùng</span>
-                    <span className="font-mono text-white">${store.session.usedMargin.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[#787b86]">Ký quỹ khả dụng</span>
-                    <span className="font-mono text-white">${store.session.freeMargin.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm mt-2 pt-2 border-t border-[#2a2e39]">
-                    <span className="text-[#787b86]">Mức Ký quỹ</span>
-                    <span className={`font-mono font-bold ${
-                      store.session.usedMargin > 0 && (store.session.equity / store.session.usedMargin * 100) < 100 
-                        ? 'text-red-500' 
-                        : 'text-emerald-500'
-                    }`}>
-                      {store.session.usedMargin > 0 
-                        ? ((store.session.equity / store.session.usedMargin) * 100).toFixed(2) + '%'
-                        : '∞'
-                      }
-                    </span>
-                  </div>
-                </div>
-
-                <button 
-                  onClick={() => store.endSession()}
-                  className="w-full mt-4 bg-transparent border border-red-500/50 hover:bg-red-500/10 text-red-500 font-bold py-2 rounded transition-colors text-sm"
-                >
-                  KẾT THÚC PHIÊN
-                </button>
-              </div>
-            </div>
-          ) : activeSessions.length === 0 ? (
+          {activeSessions.length === 0 ? (
             <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col items-center justify-center p-6 text-center text-[#787b86]">
               <div className="w-16 h-16 rounded-full bg-[#f0f1f3] dark:bg-[#1e222d] flex items-center justify-center mb-4">
                 <Play className="w-8 h-8 text-[#a0a3af] dark:text-[#434651] ml-1" />
@@ -468,197 +617,529 @@ export const SimulationPanel = ({ currentSymbol, isReplaying, onStartSimulation 
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-3 pb-4">
-              {activeSessions.map((session: any) => (
-                <div 
-                  key={session._id} 
-                  className="bg-[#f8f9fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-lg p-3 cursor-pointer hover:border-[#089981] transition-colors"
-                  onClick={async () => {
-                    try {
-                      const { getSessionDetails } = await import('../../../services/marketApi');
-                      const data = await getSessionDetails(session._id);
-                      
-                      store.loadSession(
-                        {
-                          _id: data.session._id,
-                          name: data.session.name,
-                          symbol: data.session.symbol,
-                          timeframe: data.session.timeframe,
-                          config: {
-                            initialBalance: data.session.initialBalance,
-                            leverage: data.session.leverage,
-                            minLot: data.session.minLot,
-                            lotStep: data.session.lotStep,
-                            maxMarginPercent: data.session.maxMarginPercent,
-                            spread: data.session.spread,
-                            commission: data.session.commission,
-                            swapLong: data.session.swapLong,
-                            swapShort: data.session.swapShort
-                          },
-                          balance: data.session.balance,
-                          equity: data.session.equity,
-                          usedMargin: data.session.usedMargin,
-                          freeMargin: data.session.freeMargin,
-                          replayStartTime: data.session.replayStartTime,
-                          replayCurrentTime: data.session.replayCurrentTime,
-                          status: data.session.status
-                        },
-                        data.positions,
-                        data.orders,
-                        data.history
-                      );
-                    } catch (error) {
-                      console.error("Failed to load session", error);
-                    }
-                  }}
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-bold text-[#1e2329] dark:text-white text-base">{session.symbol}</span>
-                    <span className="text-xs text-[#089981] bg-[#089981]/10 px-2 py-0.5 rounded font-bold">Đang chạy</span>
+              {activeSessions.map((session: any) => {
+                const isCurrentlyActiveInStore = store.isActive && store.session?._id === session._id;
+                const currentBalance = isCurrentlyActiveInStore ? store.session!.balance : (session.balance || session.initialBalance || 0);
+                const lastTime = isCurrentlyActiveInStore 
+                  ? (store.currentTime || session.replayCurrentTime || session.updatedAt || session.createdAt)
+                  : (session.replayCurrentTime || session.updatedAt || session.createdAt);
+
+                return (
+                  <div 
+                    key={session._id} 
+                    className="bg-[#161a29] border border-[#2a2e39] rounded-xl p-3.5 flex flex-col gap-2 hover:border-[#3d4560] transition-colors relative"
+                  >
+                    {/* Header: Name & Edit Icon */}
+                    <div className="flex items-center justify-between gap-2">
+                      {editingSessionId === session._id ? (
+                        <form onSubmit={(e) => handleRename(session._id, e)} className="flex items-center gap-1 flex-1">
+                          <input
+                            type="text"
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            className="bg-[#1e222d] border border-[#089981] text-white text-sm rounded px-2 py-1 flex-1 outline-none font-bold"
+                            autoFocus
+                            onBlur={() => handleRename(session._id)}
+                          />
+                          <button type="submit" className="p-1 text-emerald-400 hover:text-emerald-300">
+                            <Check className="w-4 h-4" />
+                          </button>
+                        </form>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                            <span className="font-bold text-white text-[15px] truncate">
+                              {session.name || `${session.symbol} · ${formatSessionDate(session.createdAt)}`}
+                            </span>
+                            {isCurrentlyActiveInStore && (
+                              <span className="text-[9px] text-[#089981] bg-[#089981]/15 px-1.5 py-0.5 rounded font-bold shrink-0">
+                                Đang mở
+                              </span>
+                            )}
+                          </div>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingSessionId(session._id);
+                              setEditingName(session.name || `${session.symbol} · ${formatSessionDate(session.createdAt)}`);
+                            }}
+                            className="text-[#787b86] hover:text-white transition-colors p-1 shrink-0"
+                            title="Đổi tên phiên"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Subtitle: symbol · timeframe */}
+                    <div className="text-xs text-[#8c92a4] font-medium">
+                      {session.symbol} &middot; {session.timeframe || '4h'}
+                    </div>
+
+                    {/* SỐ DƯ */}
+                    <div className="text-xs text-[#8c92a4] font-medium flex items-center gap-1.5">
+                      <span>SỐ DƯ:</span>
+                      <span className="text-white font-bold font-mono text-[13px]">
+                        {formatSessionMoney(currentBalance)}
+                      </span>
+                    </div>
+
+                    {/* Gần nhất */}
+                    <div className="text-xs text-[#8c92a4] font-medium flex items-center gap-1.5 mb-1">
+                      <span>Gần nhất:</span>
+                      <span className="text-white font-bold font-mono text-[13px]">
+                        {formatSessionLastTime(lastTime)}
+                      </span>
+                    </div>
+
+                    {/* Action buttons: Tiếp tục & Hoàn thành */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-[#2a2e39]/60">
+                      <button
+                        onClick={() => handleContinueSession(session)}
+                        className="flex-1 py-2 px-3 rounded-lg border border-[#089981]/50 bg-[#0e2722] hover:bg-[#133730] text-[#089981] dark:text-[#26a69a] font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        Tiếp tục
+                      </button>
+                      <button
+                        onClick={(e) => handleCompleteSession(session, e)}
+                        className="flex-1 py-2 px-3 rounded-lg border border-[#f23645]/40 bg-[#2b1723] hover:bg-[#3d1e31] text-[#f23645] font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                        Hoàn thành
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center text-sm font-mono">
-                    <span className="text-[#787b86]">Số dư:</span>
-                    <span className="font-bold text-[#1e2329] dark:text-[#d1d4dc]">${session.balance?.toLocaleString() || session.initialBalance?.toLocaleString()}</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
       )}
 
           {activeTab === 'completed' && (
-            <div className="flex flex-col px-4 flex-1 overflow-hidden">
-              <div className="flex items-center justify-between mb-4 shrink-0">
-                <h3 className="font-bold text-[#1e2329] dark:text-white text-base">Lịch sử Phiên</h3>
-                <span className="bg-[#f0f1f3] dark:bg-[#1e222d] text-[#1e2329] dark:text-white text-xs font-bold px-2 py-0.5 rounded">{completedSessions.length}</span>
-              </div>
-              
-              <div className="flex gap-2 mb-4 shrink-0">
-                {/* Symbol Filter Dropdown */}
-                <div className="relative flex-1">
-                  <button 
-                    onClick={() => { setShowSymbolDropdown(!showSymbolDropdown); setShowDatePicker(false); }}
-                    className={`w-full bg-transparent border rounded px-3 py-1.5 text-sm flex items-center justify-between hover:border-[#787b86] transition-colors ${
-                      symbolFilter ? 'border-[#2962ff] text-[#2962ff]' : 'border-[#e6e8ea] dark:border-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]'
-                    }`}
-                  >
-                    <span className="truncate">{symbolFilter || 'Tất cả mã...'}</span>
-                    <ChevronDown className="w-4 h-4 text-[#787b86]" />
-                  </button>
-                  {showSymbolDropdown && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-[#1e222d] border border-[#2a2e39] rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+            selectedCompletedSession ? (
+              /* --- VIEW 2: CHI TIẾT PHIÊN HOÀN TẤT --- */
+              <div className="flex flex-col px-4 flex-1 overflow-hidden">
+                {/* Back button */}
+                <button
+                  onClick={() => { setSelectedCompletedSession(null); setSessionDetailData(null); }}
+                  className="flex items-center gap-1 text-xs text-[#818cf8] hover:text-[#a5b4fc] transition-colors py-2 font-medium self-start mb-2"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span>Quay lại danh sách phiên</span>
+                </button>
+
+                {/* Title & Subtitle */}
+                <div className="mb-4">
+                  {editingSessionId === selectedCompletedSession._id ? (
+                    <form onSubmit={(e) => handleRename(selectedCompletedSession._id, e)} className="flex items-center gap-1.5 mb-1">
+                      <input
+                        type="text"
+                        value={editingName}
+                        autoFocus
+                        onChange={e => setEditingName(e.target.value)}
+                        className="bg-[#1e222d] border border-blue-500 rounded px-2 py-1 text-sm text-white outline-none w-full font-bold"
+                      />
+                      <button type="submit" className="text-green-400 hover:text-green-300 p-1"><Check className="w-4 h-4" /></button>
+                      <button type="button" onClick={() => setEditingSessionId(null)} className="text-red-400 hover:text-red-300 p-1"><X className="w-4 h-4" /></button>
+                    </form>
+                  ) : (
+                    <div className="flex items-center gap-2 group">
+                      <h3 className="font-bold text-white text-base truncate" title={selectedCompletedSession.name}>
+                        {selectedCompletedSession.name || `${selectedCompletedSession.symbol} - ${selectedCompletedSession.timeframe || '4h'}`}
+                      </h3>
                       <button 
-                        onClick={() => { setSymbolFilter(''); setShowSymbolDropdown(false); }}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-[#2a2e39] transition-colors ${
-                          !symbolFilter ? 'text-[#2962ff] font-bold' : 'text-[#d1d4dc]'
-                        }`}
+                        onClick={() => { setEditingSessionId(selectedCompletedSession._id); setEditingName(selectedCompletedSession.name || ''); }}
+                        className="text-[#787b86] hover:text-white transition-colors opacity-70 group-hover:opacity-100"
+                        title="Đổi tên"
                       >
-                        Tất cả mã
+                        <Edit3 className="w-3.5 h-3.5" />
                       </button>
-                      {completedSymbols.map(sym => (
+                    </div>
+                  )}
+                  <div className="text-xs text-[#787b86] mt-0.5 font-medium">
+                    {selectedCompletedSession.symbol} &middot; {selectedCompletedSession.timeframe || '4h'} &middot; {formatSessionDate(selectedCompletedSession.completedAt || selectedCompletedSession.startedAt)}
+                  </div>
+                </div>
+
+                {/* 2x2 Prominent Stat Cards Grid */}
+                {(() => {
+                  const historyList = sessionDetailData?.history || [];
+                  const detailStats = sessionDetailData?.session?.statistics || selectedCompletedSession.statistics;
+                  const totalTrades = detailStats?.totalTrades ?? (historyList.length > 0 ? historyList.length : 0);
+                  const wins = detailStats?.wins ?? historyList.filter((h: any) => h.netPnL > 0).length;
+                  const winRate = detailStats?.winRate ?? (totalTrades > 0 ? (wins / totalTrades) * 100 : 0);
+                  const currentBal = sessionDetailData?.session?.balance ?? selectedCompletedSession.balance ?? selectedCompletedSession.initialBalance ?? 0;
+                  const initBal = sessionDetailData?.session?.initialBalance ?? selectedCompletedSession.initialBalance ?? currentBal;
+                  const netPnL = detailStats?.netPnL ?? (historyList.length > 0 ? historyList.reduce((s: number, h: any) => s + (h.netPnL || 0), 0) : (currentBal - initBal));
+
+                  return (
+                    <>
+                      <div className="grid grid-cols-2 gap-2.5 mb-5">
+                        {/* Card 1: LỆNH */}
+                        <div className="bg-[#151924] border border-[#2a2e39] rounded-xl p-3 flex flex-col justify-between">
+                          <div className="flex items-center gap-1.5 text-[#787b86] text-[11px] font-bold uppercase tracking-wider">
+                            <BarChart2 className="w-3.5 h-3.5 text-[#787b86]" />
+                            <span>LỆNH</span>
+                          </div>
+                          <div className="font-mono text-xl font-bold text-white mt-2">
+                            {totalTrades}
+                          </div>
+                        </div>
+
+                        {/* Card 2: TỶ LỆ THẮNG */}
+                        <div className="bg-[#151924] border border-[#2a2e39] rounded-xl p-3 flex flex-col justify-between">
+                          <div className="flex items-center gap-1.5 text-[#787b86] text-[11px] font-bold uppercase tracking-wider">
+                            <Trophy className="w-3.5 h-3.5 text-[#787b86]" />
+                            <span>TỶ LỆ THẮNG</span>
+                          </div>
+                          <div className="font-mono text-xl font-bold text-white mt-2">
+                            {winRate.toFixed(1)}%
+                          </div>
+                        </div>
+
+                        {/* Card 3: SỐ DƯ */}
+                        <div className="bg-[#151924] border border-[#2a2e39] rounded-xl p-3 flex flex-col justify-between">
+                          <div className="flex items-center gap-1.5 text-[#787b86] text-[11px] font-bold uppercase tracking-wider">
+                            <Target className="w-3.5 h-3.5 text-[#787b86]" />
+                            <span>SỐ DƯ</span>
+                          </div>
+                          <div className="font-mono text-lg font-bold text-white mt-2 truncate" title={formatSessionMoney(currentBal)}>
+                            {formatSessionMoney(currentBal)}
+                          </div>
+                        </div>
+
+                        {/* Card 4: LỜI / LỖ (PNL) */}
+                        <div className="bg-[#151924] border border-[#2a2e39] rounded-xl p-3 flex flex-col justify-between">
+                          <div className="flex items-center gap-1.5 text-[#787b86] text-[11px] font-bold uppercase tracking-wider">
+                            <Activity className="w-3.5 h-3.5 text-[#787b86]" />
+                            <span>LỜI / LỖ (PNL)</span>
+                          </div>
+                          <div className={`font-mono text-lg font-bold mt-2 truncate ${netPnL >= 0 ? 'text-[#089981]' : 'text-[#f23645]'}`} title={formatSessionPnL(netPnL)}>
+                            {formatSessionPnL(netPnL)}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Trades List Section */}
+                      <div className="flex items-center justify-between mb-2 shrink-0">
+                        <h4 className="text-xs font-bold text-[#d1d4dc] uppercase tracking-wider">
+                          Lệnh ({historyList.length})
+                        </h4>
+                      </div>
+
+                      <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-2 pb-4">
+                        {isLoadingDetail ? (
+                          <div className="text-center py-8 text-xs text-[#787b86]">Đang tải chi tiết lệnh...</div>
+                        ) : historyList.length === 0 ? (
+                          <div className="text-center py-8 text-xs text-[#787b86]">
+                            Không có lệnh nào trong phiên này
+                          </div>
+                        ) : (
+                          historyList.map((tx: any, idx: number) => {
+                            const isLong = tx.side === 'LONG';
+                            const isWin = tx.netPnL >= 0;
+                            return (
+                              <div key={tx.id || idx} className="bg-[#151924] border border-[#2a2e39] rounded-lg p-2.5 text-xs flex flex-col gap-1.5 hover:border-[#3a4052] transition-colors">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${isLong ? 'bg-[#089981]/20 text-[#089981]' : 'bg-[#f23645]/20 text-[#f23645]'}`}>
+                                      {tx.side}
+                                    </span>
+                                    <span className="font-bold text-white">{tx.symbol}</span>
+                                    <span className="text-[#787b86] text-[10px]">
+                                      {(tx.lot * 100000).toLocaleString('vi-VN')} CP ({tx.lot} Lot)
+                                    </span>
+                                  </div>
+                                  <span className={`font-mono font-bold ${isWin ? 'text-[#089981]' : 'text-[#f23645]'}`}>
+                                    {formatSessionPnL(tx.netPnL)}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between text-[11px] text-[#787b86] font-mono">
+                                  <div>
+                                    {tx.entryPrice?.toLocaleString('vi-VN')} &rarr; {tx.exitPrice?.toLocaleString('vi-VN')}
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="bg-[#1e222d] px-1.5 py-0.5 rounded text-[10px] text-[#d1d4dc]">{tx.closeReason || 'MANUAL'}</span>
+                                    {tx.closeTime && <span>{new Date(tx.closeTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            ) : (
+              /* --- VIEW 1: DANH SÁCH PHIÊN HOÀN TẤT --- */
+              <div className="flex flex-col px-4 flex-1 overflow-hidden">
+                <div className="flex items-center justify-between mb-3 shrink-0">
+                  <h3 className="font-bold text-[#1e2329] dark:text-white text-base">Lịch sử Phiên</h3>
+                  <span className="bg-[#2a1d45] text-[#a78bfa] border border-[#6b21a8]/30 text-xs font-bold px-2 py-0.5 rounded-full">
+                    {completedSessions.length}
+                  </span>
+                </div>
+                
+                <div className="flex gap-2 mb-3 shrink-0">
+                  {/* Symbol Filter Dropdown */}
+                  <div className="relative flex-1">
+                    <button 
+                      onClick={() => { setShowSymbolDropdown(!showSymbolDropdown); setShowDatePicker(false); }}
+                      className={`w-full bg-transparent border rounded px-3 py-1.5 text-xs flex items-center justify-between hover:border-[#787b86] transition-colors ${
+                        symbolFilter ? 'border-[#2962ff] text-[#2962ff]' : 'border-[#e6e8ea] dark:border-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]'
+                      }`}
+                    >
+                      <span className="truncate">{symbolFilter || 'Tất cả mã...'}</span>
+                      <ChevronDown className="w-3.5 h-3.5 text-[#787b86]" />
+                    </button>
+                    {showSymbolDropdown && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-[#1e222d] border border-[#2a2e39] rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
                         <button 
-                          key={sym}
-                          onClick={() => { setSymbolFilter(sym); setShowSymbolDropdown(false); }}
-                          className={`w-full text-left px-3 py-2 text-sm hover:bg-[#2a2e39] transition-colors ${
-                            symbolFilter === sym ? 'text-[#2962ff] font-bold' : 'text-[#d1d4dc]'
+                          onClick={() => { setSymbolFilter(''); setShowSymbolDropdown(false); }}
+                          className={`w-full text-left px-3 py-2 text-xs hover:bg-[#2a2e39] transition-colors ${
+                            !symbolFilter ? 'text-[#2962ff] font-bold' : 'text-[#d1d4dc]'
                           }`}
                         >
-                          {sym}
+                          Tất cả mã
                         </button>
-                      ))}
-                      {completedSymbols.length === 0 && (
-                        <div className="px-3 py-2 text-sm text-[#787b86]">Không có mã nào</div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Date Range Filter */}
-                <div className="relative flex-1">
-                  <button 
-                    onClick={() => { setShowDatePicker(!showDatePicker); setShowSymbolDropdown(false); }}
-                    className={`w-full bg-transparent border rounded px-3 py-1.5 text-sm flex items-center justify-between hover:border-[#787b86] transition-colors ${
-                      (dateFrom || dateTo) ? 'border-[#2962ff] text-[#2962ff]' : 'border-[#e6e8ea] dark:border-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]'
-                    }`}
-                  >
-                    <span className="flex items-center gap-1.5 truncate">
-                      <Calendar className="w-4 h-4" />
-                      {(dateFrom || dateTo) 
-                        ? `${dateFrom ? new Date(dateFrom).toLocaleDateString('vi-VN', {day:'2-digit',month:'2-digit'}) : '...'} - ${dateTo ? new Date(dateTo).toLocaleDateString('vi-VN', {day:'2-digit',month:'2-digit'}) : '...'}`
-                        : 'Khoảng ngày'
-                      }
-                    </span>
-                  </button>
-                  {showDatePicker && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-[#1e222d] border border-[#2a2e39] rounded-lg shadow-xl z-50 p-3 space-y-2">
-                      <CustomDatePicker 
-                        label="Từ ngày"
-                        value={dateFrom} 
-                        onChange={(val) => setDateFrom(val)}
-                        align="right"
-                      />
-                      <div className="mt-2"></div>
-                      <CustomDatePicker 
-                        label="Đến ngày"
-                        value={dateTo} 
-                        onChange={(val) => setDateTo(val)}
-                        align="right"
-                      />
-                      <div className="flex gap-2 pt-1">
-                        <button 
-                          onClick={() => { setDateFrom(''); setDateTo(''); setShowDatePicker(false); }}
-                          className="flex-1 text-xs text-[#787b86] hover:text-[#d1d4dc] py-1.5 rounded border border-[#2a2e39] hover:border-[#787b86] transition-colors"
-                        >
-                          Xóa lọc
-                        </button>
-                        <button 
-                          onClick={() => setShowDatePicker(false)}
-                          className="flex-1 text-xs text-white bg-[#2962ff] hover:bg-[#2962ff]/90 py-1.5 rounded font-medium transition-colors"
-                        >
-                          Áp dụng
-                        </button>
+                        {completedSymbols.map(sym => (
+                          <button 
+                            key={sym}
+                            onClick={() => { setSymbolFilter(sym); setShowSymbolDropdown(false); }}
+                            className={`w-full text-left px-3 py-2 text-xs hover:bg-[#2a2e39] transition-colors ${
+                              symbolFilter === sym ? 'text-[#2962ff] font-bold' : 'text-[#d1d4dc]'
+                            }`}
+                          >
+                            {sym}
+                          </button>
+                        ))}
+                        {completedSymbols.length === 0 && (
+                          <div className="px-3 py-2 text-xs text-[#787b86]">Không có mã nào</div>
+                        )}
                       </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="bg-[#089981]/10 dark:bg-[#089981]/10 border border-[#089981]/20 rounded-lg p-4 cursor-pointer hover:bg-[#089981]/20 transition-colors shrink-0 mb-8">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded bg-[#089981] flex items-center justify-center shrink-0">
-                    <Edit3 className="w-5 h-5 text-white" />
+                    )}
                   </div>
-                  <div className="flex-1 pr-4">
-                    <h4 className="font-bold text-[#089981] text-sm mb-1">Mở Nhật ký Giao dịch</h4>
-                    <p className="text-xs text-[#787b86] leading-relaxed">Xem lại, gắn thẻ và phân tích các phiên giao dịch</p>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-[#089981] shrink-0 mt-1" />
-                </div>
-              </div>
 
-              {completedSessions.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center pb-10">
-                  <p className="font-bold text-[#1e2329] dark:text-white text-base">Chưa có phiên nào hoàn tất</p>
+                  {/* Date Range Filter */}
+                  <div className="relative flex-1">
+                    <button 
+                      onClick={() => { setShowDatePicker(!showDatePicker); setShowSymbolDropdown(false); }}
+                      className={`w-full bg-transparent border rounded px-3 py-1.5 text-xs flex items-center justify-between hover:border-[#787b86] transition-colors ${
+                        (dateFrom || dateTo) ? 'border-[#2962ff] text-[#2962ff]' : 'border-[#e6e8ea] dark:border-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]'
+                      }`}
+                    >
+                      <span className="flex items-center gap-1.5 truncate">
+                        <Calendar className="w-3.5 h-3.5" />
+                        {(dateFrom || dateTo) 
+                          ? `${dateFrom ? new Date(dateFrom).toLocaleDateString('vi-VN', {day:'2-digit',month:'2-digit'}) : '...'} - ${dateTo ? new Date(dateTo).toLocaleDateString('vi-VN', {day:'2-digit',month:'2-digit'}) : '...'}`
+                          : 'Khoảng ngày...'
+                        }
+                      </span>
+                    </button>
+                    {showDatePicker && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-[#1e222d] border border-[#2a2e39] rounded-lg shadow-xl z-50 p-3 space-y-2">
+                        <CustomDatePicker 
+                          label="Từ ngày"
+                          value={dateFrom} 
+                          onChange={(val) => setDateFrom(val)}
+                          align="right"
+                        />
+                        <div className="mt-2"></div>
+                        <CustomDatePicker 
+                          label="Đến ngày"
+                          value={dateTo} 
+                          onChange={(val) => setDateTo(val)}
+                          align="right"
+                        />
+                        <div className="flex gap-2 pt-1">
+                          <button 
+                            onClick={() => { setDateFrom(''); setDateTo(''); setShowDatePicker(false); }}
+                            className="flex-1 text-xs text-[#787b86] hover:text-[#d1d4dc] py-1.5 rounded border border-[#2a2e39] hover:border-[#787b86] transition-colors"
+                          >
+                            Xóa lọc
+                          </button>
+                          <button 
+                            onClick={() => setShowDatePicker(false)}
+                            className="flex-1 text-xs text-white bg-[#2962ff] hover:bg-[#2962ff]/90 py-1.5 rounded font-medium transition-colors"
+                          >
+                            Áp dụng
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-3">
-                  {completedSessions.map(session => (
-                    <div key={session._id} className="bg-[#f8f9fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-lg p-3">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-bold text-[#1e2329] dark:text-white text-base">{session.symbol}</span>
-                        <span className="text-xs text-[#787b86] bg-[#e6e8ea] dark:bg-[#2a2e39] px-2 py-0.5 rounded font-bold">Hoàn tất</span>
-                      </div>
-                      <div className="flex justify-between items-center text-sm font-mono">
-                        <span className="text-[#787b86]">Số dư cuối:</span>
-                        <span className="font-bold text-[#1e2329] dark:text-[#d1d4dc]">${session.balance?.toLocaleString() || session.initialBalance?.toLocaleString()}</span>
-                      </div>
+
+                {/* Banner: Mở Nhật ký Giao dịch */}
+                <div 
+                  onClick={() => navigate('/journal')}
+                  className="bg-[#089981]/10 border border-[#089981]/25 rounded-lg p-3 cursor-pointer hover:bg-[#089981]/20 transition-all shrink-0 mb-3 group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-[#089981] flex items-center justify-center shrink-0 shadow-sm">
+                      <Edit3 className="w-4 h-4 text-white" />
                     </div>
-                  ))}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-[#089981] text-xs mb-0.5 group-hover:text-emerald-400 transition-colors">
+                        Mở Nhật ký Giao dịch
+                      </h4>
+                      <p className="text-[11px] text-[#787b86] truncate">
+                        Xem lại, gắn thẻ và phân tích các phiên giao dịch
+                      </p>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-[#089981] shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                  </div>
                 </div>
-              )}
-            </div>
+
+                {/* List of completed session cards */}
+                {completedSessions.length === 0 ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center pb-10">
+                    <p className="font-bold text-[#787b86] text-sm">Chưa có phiên nào hoàn tất</p>
+                  </div>
+                ) : (
+                  <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-3 pb-4">
+                    {completedSessions.map(session => {
+                      const finalBalance = session.balance ?? session.initialBalance ?? 0;
+                      const initialBal = session.initialBalance ?? finalBalance;
+                      const netPnL = session.statistics?.netPnL ?? (finalBalance - initialBal);
+                      const totalTrades = session.statistics?.totalTrades ?? 0;
+                      const winRate = session.statistics?.winRate ?? 0;
+
+                      return (
+                        <div 
+                          key={session._id} 
+                          className="bg-[#131722] border border-[#2a2e39] rounded-xl p-3 flex flex-col gap-2.5 hover:border-[#3a4052] transition-colors"
+                        >
+                          {/* Card Header */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              {editingSessionId === session._id ? (
+                                <form onSubmit={(e) => handleRename(session._id, e)} className="flex items-center gap-1">
+                                  <input
+                                    type="text"
+                                    value={editingName}
+                                    autoFocus
+                                    onChange={e => setEditingName(e.target.value)}
+                                    className="bg-[#1e222d] border border-blue-500 rounded px-1.5 py-0.5 text-xs text-white outline-none w-full font-bold"
+                                  />
+                                  <button type="submit" className="text-green-400 hover:text-green-300 p-0.5"><Check className="w-3.5 h-3.5" /></button>
+                                  <button type="button" onClick={() => setEditingSessionId(null)} className="text-red-400 hover:text-red-300 p-0.5"><X className="w-3.5 h-3.5" /></button>
+                                </form>
+                              ) : (
+                                <div className="flex items-center gap-1.5 group">
+                                  <h4 className="font-bold text-white text-sm truncate" title={session.name || `${session.symbol} - ${session.timeframe || '4h'}`}>
+                                    {session.name || `${session.symbol} - ${session.timeframe || '4h'}`}
+                                  </h4>
+                                  <button 
+                                    onClick={() => { setEditingSessionId(session._id); setEditingName(session.name || `${session.symbol} - ${session.timeframe || '4h'}`); }}
+                                    className="text-[#787b86] hover:text-white transition-colors opacity-70 group-hover:opacity-100"
+                                    title="Đổi tên phiên"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              )}
+                              <div className="text-[11px] text-[#787b86] font-medium mt-0.5">
+                                {session.symbol} &middot; {session.timeframe || '4h'}
+                              </div>
+                            </div>
+
+                            {/* Action buttons: [👁 Xem] & [🗑] */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                onClick={() => handleViewSessionDetail(session)}
+                                className="bg-[#261f3d] hover:bg-[#342756] text-[#b392f0] text-xs font-semibold px-2.5 py-1 rounded flex items-center gap-1 border border-[#6b21a8]/30 transition-all active:scale-95"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                <span>Xem</span>
+                              </button>
+                              <button
+                                onClick={() => setDeletingSessionId(session._id)}
+                                className="text-[#787b86] hover:text-red-400 hover:bg-red-950/20 p-1 rounded transition-colors"
+                                title="Xóa phiên"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Metrics Grid 2x2 */}
+                          <div className="grid grid-cols-2 gap-y-2 text-xs">
+                            <div>
+                              <div className="text-[10px] text-[#787b86] uppercase font-bold tracking-wider">SỐ DƯ</div>
+                              <div className="font-mono font-bold text-white text-xs mt-0.5 truncate" title={formatSessionMoney(finalBalance)}>
+                                {formatSessionMoney(finalBalance)}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-[#787b86] uppercase font-bold tracking-wider">LỆNH</div>
+                              <div className="font-mono font-bold text-white text-xs mt-0.5">
+                                {totalTrades}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-[#787b86] uppercase font-bold tracking-wider">TỶ LỆ THẮNG</div>
+                              <div className="font-mono font-bold text-white text-xs mt-0.5">
+                                {winRate.toFixed(1)}%
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-[#787b86] uppercase font-bold tracking-wider">LỜI / LỖ (PNL)</div>
+                              <div className={`font-mono font-bold text-xs mt-0.5 truncate ${netPnL >= 0 ? 'text-[#089981]' : 'text-[#f23645]'}`} title={formatSessionPnL(netPnL)}>
+                                {formatSessionPnL(netPnL)}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Footer Date */}
+                          <div className="flex items-center gap-1 text-[11px] text-[#787b86] pt-1.5 border-t border-[#2a2e39]/50">
+                            <Clock className="w-3 h-3" />
+                            <span>{formatSessionDate(session.completedAt || session.startedAt)}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )
           )}
         </>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingSessionId && (
+        <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-50 px-4 backdrop-blur-sm">
+          <div className="bg-[#1e222d] rounded-lg p-5 w-full border border-[#2a2e39] shadow-2xl flex flex-col items-center text-center">
+            <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center mb-3 text-red-500">
+              <Trash2 className="w-5 h-5" />
+            </div>
+            <h3 className="text-white font-bold mb-1">Xóa phiên giao dịch?</h3>
+            <p className="text-xs text-[#787b86] mb-4">
+              Toàn bộ lịch sử lệnh và dữ liệu của phiên này sẽ bị xóa vĩnh viễn.
+            </p>
+            <div className="flex gap-2 w-full">
+              <button
+                onClick={() => setDeletingSessionId(null)}
+                className="flex-1 bg-[#2a2e39] hover:bg-[#363a45] text-white text-xs font-bold py-2 rounded transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => handleDeleteSession(deletingSessionId)}
+                disabled={isDeleting}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2 rounded transition-colors disabled:opacity-50"
+              >
+                {isDeleting ? 'Đang xóa...' : 'Xóa phiên'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Replay Warning Modal */}
@@ -674,12 +1155,23 @@ export const SimulationPanel = ({ currentSymbol, isReplaying, onStartSimulation 
               <br/><br/>
               Vui lòng bật Replay trên thanh công cụ phía trên và chọn một điểm bắt đầu.
             </p>
-            <button 
-              onClick={() => setShowReplayWarning(false)}
-              className="w-full bg-[#2962ff] hover:bg-[#2962ff]/90 text-white font-bold py-2 rounded transition-colors"
-            >
-              Đã hiểu
-            </button>
+            <div className="flex gap-2 w-full">
+              <button 
+                onClick={() => setShowReplayWarning(false)}
+                className="flex-1 bg-[#2a2e39] hover:bg-[#363a45] text-white font-bold py-2 rounded transition-colors text-sm"
+              >
+                Đóng
+              </button>
+              <button 
+                onClick={() => {
+                  setShowReplayWarning(false);
+                  onStartReplay?.();
+                }}
+                className="flex-1 bg-[#2962ff] hover:bg-[#2962ff]/90 text-white font-bold py-2 rounded transition-colors text-sm"
+              >
+                Bật Replay ngay
+              </button>
+            </div>
           </div>
         </div>
       )}

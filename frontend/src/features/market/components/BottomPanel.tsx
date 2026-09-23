@@ -3,6 +3,7 @@ import { X, CheckSquare, Square, Settings2, ChevronDown, ChevronUp } from 'lucid
 import { STOCKS } from '../data';
 import { tradingApi } from '../../../services/tradingApi';
 import { useAlert } from '../../../contexts/AlertContext';
+import { useAuth } from '../../../contexts/AuthContext';
 
 interface Transaction {
   _id: string;
@@ -38,6 +39,7 @@ export const BottomPanel = ({
   refreshTrigger
 }: BottomPanelProps) => {
   const { showAlert } = useAlert();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'positions' | 'orders' | 'history' | 'trade_history'>('positions');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   
@@ -49,7 +51,7 @@ export const BottomPanel = ({
     if (activeTab === 'trade_history') {
       const fetchHistory = async () => {
         try {
-          const res = await tradingApi.getTransactions();
+          const res = await tradingApi.getTransactions(user?._id);
           if (res.success && res.data) {
             setTransactions(res.data);
           }
@@ -59,7 +61,7 @@ export const BottomPanel = ({
       };
       fetchHistory();
     }
-  }, [activeTab, refreshTrigger]);
+  }, [activeTab, refreshTrigger, user]);
 
   const posList = Object.entries(positions).map(([symbol, p]) => ({ symbol, ...p }));
   const displayPositions = currentPairOnly 

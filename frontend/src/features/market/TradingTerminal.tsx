@@ -20,7 +20,6 @@ import { TickerHeader } from './components/TickerHeader';
 import { CoinInfoPanel } from './components/CoinInfoPanel';
 import { ContractInfoPanel } from './components/ContractInfoPanel';
 import { tradingApi } from '../../services/tradingApi';
-import { SimulatorTradingPanel } from './components/SimulatorTradingPanel';
 import { PositionsManager } from './components/PositionsManager';
 import { useSimulatorStore } from './engine/useSimulatorStore';
 import { useNotificationStore } from '../../stores/useNotificationStore';
@@ -69,7 +68,7 @@ export const TradingTerminal = () => {
 
   const [activeRightPanel, setActiveRightPanel] = useState<'watchlist' | 'order' | 'simulation' | 'calculator' | null>('watchlist');
 
-  const { user } = useAuth();
+  const { user, login } = useAuth();
   const { addNotification } = useNotificationStore();
 
   const [watchlists, setWatchlists] = useState<Watchlist[]>(() => {
@@ -252,7 +251,7 @@ export const TradingTerminal = () => {
 
   const fetchPortfolio = async () => {
     try {
-      const res = await tradingApi.getPortfolio();
+      const res = await tradingApi.getPortfolio(user?._id);
       if (res.success && res.data) {
         if (res.data.wallet) {
           setBalance(res.data.wallet.availableBalance);
@@ -285,13 +284,26 @@ export const TradingTerminal = () => {
     }
   }, [user]);
 
+  // Ensure simulator store receives valid price immediately when active
+  useEffect(() => {
+    if (store.isActive && store.session && selectedStock?.price > 0) {
+      if (store.currentPrice === 0) {
+        store.tick(selectedStock.price, new Date().toISOString());
+      }
+    }
+  }, [store.isActive, store.session, selectedStock?.price, store.currentPrice]);
+
   const handleTrade = async (type: 'buy' | 'sell' | 'close' | 'limit_buy' | 'limit_sell' | 'stop_buy' | 'stop_sell', price: number, margin: number, leverage: number, tp?: number, sl?: number) => {
+    if (!user) {
+      login();
+      return { success: false, message: 'Vui lòng đăng nhập để thực hiện giao dịch' };
+    }
     try {
       if (type === 'close') {
         const pos = positions[selectedStock.symbol];
         if (!pos) return { success: false, message: 'Không có vị thế để đóng' };
 
-        const res = await tradingApi.closePosition(selectedStock.symbol, pos.side, price);
+        const res = await tradingApi.closePosition(selectedStock.symbol, pos.side, price, user._id);
         if (res.success) {
           await fetchPortfolio();
           setTradeCount(c => c + 1);
@@ -300,7 +312,7 @@ export const TradingTerminal = () => {
         }
       } else if (type === 'limit_buy' || type === 'limit_sell') {
         const side = type === 'limit_buy' ? 'LONG' : 'SHORT';
-        const res = await tradingApi.placeLimitOrder(selectedStock.symbol, side, price, margin, leverage, sl, tp, 'LIMIT');
+        const res = await tradingApi.placeLimitOrder(selectedStock.symbol, side, price, margin, leverage, sl, tp, 'LIMIT', user._id);
         if (res.success) {
           await fetchPortfolio();
           setTradeCount(c => c + 1);
@@ -309,7 +321,7 @@ export const TradingTerminal = () => {
         }
       } else if (type === 'stop_buy' || type === 'stop_sell') {
         const side = type === 'stop_buy' ? 'LONG' : 'SHORT';
-        const res = await tradingApi.placeLimitOrder(selectedStock.symbol, side, price, margin, leverage, sl, tp, 'STOP');
+        const res = await tradingApi.placeLimitOrder(selectedStock.symbol, side, price, margin, leverage, sl, tp, 'STOP', user._id);
         if (res.success) {
           await fetchPortfolio();
           setTradeCount(c => c + 1);
@@ -317,7 +329,7 @@ export const TradingTerminal = () => {
           return { success: true, message: res.message };
         }
       } else if (type === 'buy') {
-        const res = await tradingApi.buyStock(selectedStock.symbol, margin, leverage, price, sl, tp);
+        const res = await tradingApi.buyStock(selectedStock.symbol, margin, leverage, price, sl, tp, user._id);
         if (res.success) {
           await fetchPortfolio();
           const order: TradeOrder = {
@@ -330,7 +342,7 @@ export const TradingTerminal = () => {
           return { success: true, message: `✅ Mở LONG ${selectedStock.symbol} thành công` };
         }
       } else if (type === 'sell') {
-        const res = await tradingApi.sellStock(selectedStock.symbol, margin, leverage, price);
+        const res = await tradingApi.sellStock(selectedStock.symbol, margin, leverage, price, user._id);
         if (res.success) {
           await fetchPortfolio();
           const order: TradeOrder = {
@@ -351,7 +363,7 @@ export const TradingTerminal = () => {
 
   const handleCancelOrder = async (orderId: string) => {
     try {
-      const res = await tradingApi.cancelLimitOrder(orderId);
+      const res = await tradingApi.cancelLimitOrder(orderId, user?._id);
       if (res.success) {
         await fetchPortfolio();
         setTradeCount(c => c + 1);
@@ -368,7 +380,7 @@ export const TradingTerminal = () => {
       const pos = positions[selectedStock.symbol];
       if (!pos) return { success: false, message: 'Không có vị thế' };
 
-      const res = await tradingApi.updateTPSL(selectedStock.symbol, pos.side, tp, sl);
+      const res = await tradingApi.updateTPSL(selectedStock.symbol, pos.side, tp, sl, user?._id);
       if (res.success) {
         await fetchPortfolio();
         addNotification({ title: 'Cập nhật TP/SL', message: `Đã cập nhật Chốt lời/Cắt lỗ cho vị thế ${pos.side} mã ${selectedStock.symbol}.`, type: 'info' });
@@ -387,7 +399,7 @@ export const TradingTerminal = () => {
 
       const currentPrice = symbolToClose === selectedStock.symbol ? selectedStock.price : (STOCKS.find(s => s.symbol === symbolToClose)?.price || pos.averagePrice);
 
-      const res = await tradingApi.closePosition(symbolToClose, pos.side, currentPrice);
+      const res = await tradingApi.closePosition(symbolToClose, pos.side, currentPrice, user?._id);
       if (res.success) {
         await fetchPortfolio();
         setTradeCount(c => c + 1);
@@ -402,7 +414,7 @@ export const TradingTerminal = () => {
 
   const handleAddMargin = async (symbol: string, side: 'LONG' | 'SHORT', amount: number) => {
     try {
-      const res = await tradingApi.addMargin(symbol, side, amount);
+      const res = await tradingApi.addMargin(symbol, side, amount, user?._id);
       if (res.success) {
         await fetchPortfolio();
         addNotification({ title: 'Thêm ký quỹ', message: `Đã bơm thêm ${amount.toLocaleString('vi-VN')}₫ ký quỹ cho vị thế ${side} mã ${symbol}.`, type: 'info' });
@@ -487,10 +499,10 @@ export const TradingTerminal = () => {
       if (shouldExecute) {
         (window as any)[key] = true;
         // Khớp lệnh: 1. Hủy lệnh chờ, 2. Mở lệnh thật
-        tradingApi.cancelLimitOrder(order._id)
+        tradingApi.cancelLimitOrder(order._id, user?._id)
           .then(() => {
             if (order.side === 'LONG') {
-              return tradingApi.buyStock(order.symbol, order.margin, order.leverage, order.price, order.stopLoss, order.takeProfit);
+              return tradingApi.buyStock(order.symbol, order.margin, order.leverage, order.price, order.stopLoss, order.takeProfit, user?._id);
             } else {
               return handleTrade(order.side === 'LONG' ? 'buy' : 'sell', order.price, order.margin, order.leverage, order.takeProfit, order.stopLoss);
             }
@@ -538,9 +550,10 @@ export const TradingTerminal = () => {
 
   const handleStartSimulation = (config: SimulationConfig) => {
     console.log("Start simulation with config:", config);
-    // Ideally we enter replay mode and reset states with the config
-    setIsSelectingReplayStart(true);
-    setIsReplaying(false);
+    // Only enter replay selection mode if replay is not already active
+    if (!isReplaying) {
+      setIsSelectingReplayStart(true);
+    }
   };
 
   const handleStopReplay = () => {
@@ -653,7 +666,7 @@ export const TradingTerminal = () => {
                   currentPrice={selectedStock.price}
                   onClosePosition={async (symbol, side, price) => {
                     try {
-                      const res = await tradingApi.closePosition(symbol, side, price);
+                      const res = await tradingApi.closePosition(symbol, side, price, user?._id);
                       if (res.success) {
                         await fetchPortfolio();
                         setTradeCount(c => c + 1);
@@ -672,7 +685,7 @@ export const TradingTerminal = () => {
                   onCancelOrder={handleCancelOrder}
                   onUpdateTPSL={async (symbol, side, tp, sl) => {
                     try {
-                      const res = await tradingApi.updateTPSL(symbol, side, tp, sl);
+                      const res = await tradingApi.updateTPSL(symbol, side, tp, sl, user?._id);
                       if (res.success) {
                         await fetchPortfolio();
                         return { success: true, message: '✅ Đã cập nhật TP/SL' };
@@ -719,37 +732,35 @@ export const TradingTerminal = () => {
           )}
 
           {activeRightPanel === 'order' && (
-            store.isActive ? (
-              <SimulatorTradingPanel
-                selectedStock={selectedStock}
-              />
-            ) : (
-              <RightSidebar
-                selectedStock={selectedStock}
-                positions={positions}
-                balance={balance}
-                onStockSelect={(stock) => {
-                  handleStockSelect(stock);
-                  setEditingSymbol(null);
-                }}
-                onTrade={handleTrade}
-                onUpdateTPSL={async (symbol, side, tp, sl) => {
-                  const res = await handleUpdateTPSL(tp, sl);
-                  if (res.success) setEditingSymbol(null);
-                  return res;
-                }}
-                onAddMargin={handleAddMargin}
-                isEditing={editingSymbol === selectedStock.symbol}
-                onCancelEdit={() => setEditingSymbol(null)}
-              />
-            )
+            <RightSidebar
+              selectedStock={selectedStock}
+              positions={positions}
+              balance={balance}
+              onStockSelect={(stock) => {
+                handleStockSelect(stock);
+                setEditingSymbol(null);
+              }}
+              onTrade={handleTrade}
+              onUpdateTPSL={async (symbol, side, tp, sl) => {
+                const res = await handleUpdateTPSL(tp, sl);
+                if (res.success) setEditingSymbol(null);
+                return res;
+              }}
+              onAddMargin={handleAddMargin}
+              isEditing={editingSymbol === selectedStock.symbol}
+              onCancelEdit={() => setEditingSymbol(null)}
+            />
           )}
 
           {activeRightPanel === 'simulation' && (
             <SimulationPanel
               currentSymbol={selectedStock.symbol}
+              selectedStock={selectedStock}
+              currentPrice={selectedStock.price}
               isReplaying={isReplaying}
               onStartSimulation={handleStartSimulation}
+              onStartReplay={handleStartReplaySelection}
+              onSelectStock={handleStockSelect}
             />
           )}
 

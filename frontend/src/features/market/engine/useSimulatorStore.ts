@@ -21,8 +21,8 @@ interface SimulatorState {
   currentTime: string;
 
   // Actions
-  startSession: (session: SimSession) => void;
-  loadSession: (session: SimSession, positions: SimPosition[], orders: SimOrder[], history: SimHistory[]) => void;
+  startSession: (session: SimSession, initialPrice?: number) => void;
+  loadSession: (session: SimSession, positions: SimPosition[], orders: SimOrder[], history: SimHistory[], initialPrice?: number) => void;
   endSession: () => void;
   
   // Replay Tick (Called heavily)
@@ -36,6 +36,7 @@ interface SimulatorState {
   
   // Risk Mgmt
   updateTPSL: (positionId: string, sl?: number, tp?: number) => void;
+  setLeverage: (leverage: number) => void;
   
   // App state mgmt
   reset: () => void;
@@ -67,27 +68,34 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
     });
   },
 
-  startSession: (session) => {
+  startSession: (session, initialPrice) => {
+    const initP = initialPrice && initialPrice > 0 ? initialPrice : 0;
+    const spread = session.config.spread > 0 ? session.config.spread : 0.2;
     set({
       isActive: true,
       session,
       positions: [],
       orders: [],
       history: [],
-      currentPrice: 0,
-      currentBid: 0,
-      currentAsk: 0,
+      currentPrice: initP,
+      currentBid: initP,
+      currentAsk: initP > 0 ? initP + spread : 0,
       currentTime: session.replayStartTime,
     });
   },
 
-  loadSession: (session, positions, orders, history) => {
+  loadSession: (session, positions, orders, history, initialPrice) => {
+    const initP = initialPrice && initialPrice > 0 ? initialPrice : 0;
+    const spread = session.config.spread > 0 ? session.config.spread : 0.2;
     set({
       isActive: true,
       session,
       positions,
       orders,
       history,
+      currentPrice: initP,
+      currentBid: initP,
+      currentAsk: initP > 0 ? initP + spread : 0,
       currentTime: session.replayCurrentTime,
     });
   },
@@ -204,14 +212,10 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
         
         // PnL Calculation
         const currentExecPrice = pos.side === 'LONG' ? bid : ask;
-        // PnL = (Exit - Entry) * Lot * ContractSize
-        // Simplification for Crypto/Stocks where 1 Lot = 1 Unit: PnL = (Exit - Entry) * Lot
-        // Let's use simple multiplier. Assuming 1 lot = 1 unit for now to avoid forex pip math complexity, or we can use CONTRACT_SIZE.
-        // Let's use 1 Lot = 1 Unit for universal assets (Crypto/Stocks).
-        const multiplier = 1; 
+        const actualQty = pos.lot * CONTRACT_SIZE;
         const rawPnL = pos.side === 'LONG' 
-          ? (currentExecPrice - pos.entryPrice) * pos.lot * multiplier
-          : (pos.entryPrice - currentExecPrice) * pos.lot * multiplier;
+          ? (currentExecPrice - pos.entryPrice) * actualQty
+          : (pos.entryPrice - currentExecPrice) * actualQty;
         
         const netPnL = rawPnL - pos.commission + pos.accumulatedSwap;
         
@@ -262,37 +266,48 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       if (usedMargin > 0) {
         const marginLevel = (equity / usedMargin) * 100;
         if (marginLevel <= 50) {
-          // Liquidate largest loser first, or all. Let's liquidate all for simplicity.
-          for (let i = positions.length - 1; i >= 0; i--) {
-            const pos = positions[i];
-            const currentExecPrice = pos.side === 'LONG' ? bid : ask;
-            const multiplier = 1;
-            const rawPnL = pos.side === 'LONG' 
-              ? (currentExecPrice - pos.entryPrice) * pos.lot * multiplier
-              : (pos.entryPrice - currentExecPrice) * pos.lot * multiplier;
-            const netPnL = rawPnL - pos.commission + pos.accumulatedSwap;
-            
-            balance += netPnL;
-            
+          // Force close most losing position
+          let worstPosIndex = -1;
+          let worstPnL = 0;
+          for (let k = 0; k < positions.length; k++) {
+            const p = positions[k];
+            const pExecPrice = p.side === 'LONG' ? bid : ask;
+            const pQty = p.lot * CONTRACT_SIZE;
+            const pPnL = p.side === 'LONG' 
+              ? (pExecPrice - p.entryPrice) * pQty 
+              : (p.entryPrice - pExecPrice) * pQty;
+            if (pPnL < worstPnL) {
+              worstPnL = pPnL;
+              worstPosIndex = k;
+            }
+          }
+
+          if (worstPosIndex !== -1) {
+            const forcePos = positions[worstPosIndex];
+            const forceExecPrice = forcePos.side === 'LONG' ? bid : ask;
+            const forceQty = forcePos.lot * CONTRACT_SIZE;
+            const forceRawPnL = forcePos.side === 'LONG'
+              ? (forceExecPrice - forcePos.entryPrice) * forceQty
+              : (forcePos.entryPrice - forceExecPrice) * forceQty;
+            const forceNetPnL = forceRawPnL - forcePos.commission + forcePos.accumulatedSwap;
+
+            balance += forceNetPnL;
             history.push({
               id: Date.now().toString() + Math.random(),
-              symbol: pos.symbol,
-              side: pos.side,
-              lot: pos.lot,
-              entryPrice: pos.entryPrice,
-              exitPrice: currentExecPrice,
+              symbol: forcePos.symbol,
+              side: forcePos.side,
+              lot: forcePos.lot,
+              entryPrice: forcePos.entryPrice,
+              exitPrice: forceExecPrice,
               closeReason: 'STOP_OUT',
-              grossPnL: rawPnL,
-              netPnL,
-              setupTag: pos.setupTag,
-              openTime: pos.createdAt,
+              grossPnL: forceRawPnL,
+              netPnL: forceNetPnL,
+              setupTag: forcePos.setupTag,
+              openTime: forcePos.createdAt,
               closeTime: time
             });
-            positions.splice(i, 1);
+            positions.splice(worstPosIndex, 1);
           }
-          // Reset after liquidation
-          usedMargin = 0;
-          floatingPnL = 0;
         }
       }
 
@@ -312,7 +327,8 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
 
         if (triggered) {
           // Open position
-          const reqMargin = (execPrice * ord.lot) / config.leverage;
+          const ordActualQty = ord.lot * CONTRACT_SIZE;
+          const reqMargin = (execPrice * ordActualQty) / config.leverage;
           const comm = config.commission * ord.lot;
           
           // Check max margin limit before executing
@@ -370,8 +386,17 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
     const { currentBid, currentAsk, currentTime, session } = state;
     const config = session.config;
 
-    const execPrice = side === 'LONG' ? currentAsk : currentBid;
-    const margin = (execPrice * lot) / config.leverage;
+    let bid = currentBid;
+    let ask = currentAsk;
+    if (bid <= 0 || ask <= 0) {
+      const base = state.currentPrice > 0 ? state.currentPrice : 114.36;
+      bid = base;
+      ask = base + (config.spread > 0 ? config.spread : 0.2);
+    }
+
+    const execPrice = side === 'LONG' ? ask : bid;
+    const actualQty = lot * CONTRACT_SIZE;
+    const margin = (execPrice * actualQty) / config.leverage;
     const commission = config.commission * lot;
 
     const maxAllowedMargin = session.equity * (config.maxMarginPercent / 100);
@@ -394,13 +419,21 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       margin,
       commission,
       accumulatedSwap: 0,
-      createdAt: currentTime
+      createdAt: currentTime || new Date().toISOString()
     };
 
-    set(draft => ({
-      positions: [...draft.positions, newPos]
-    }));
-    // Note: the next tick() will immediately calculate the initial loss due to spread and update equity
+    set(draft => {
+      const positions = [...draft.positions, newPos];
+      const usedMargin = positions.reduce((sum, p) => sum + p.margin, 0);
+      return {
+        positions,
+        session: {
+          ...draft.session!,
+          usedMargin,
+          freeMargin: draft.session!.equity - usedMargin
+        }
+      };
+    });
   },
 
   placePendingOrder: (type, side, price, lot, sl, tp, setupTag) => {
@@ -417,7 +450,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       sl,
       tp,
       setupTag,
-      createdAt: state.currentTime
+      createdAt: state.currentTime || new Date().toISOString()
     };
 
     set(draft => ({
@@ -438,12 +471,19 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       if (posIndex === -1) return draft;
 
       const pos = positions[posIndex];
-      const currentExecPrice = pos.side === 'LONG' ? draft.currentBid : draft.currentAsk;
-      
-      const multiplier = 1;
+      let bid = draft.currentBid;
+      let ask = draft.currentAsk;
+      if (bid <= 0 || ask <= 0) {
+        const base = draft.currentPrice > 0 ? draft.currentPrice : pos.entryPrice;
+        bid = base;
+        ask = base + (draft.session?.config.spread || 0.2);
+      }
+
+      const currentExecPrice = pos.side === 'LONG' ? bid : ask;
+      const actualQty = pos.lot * CONTRACT_SIZE;
       const rawPnL = pos.side === 'LONG' 
-        ? (currentExecPrice - pos.entryPrice) * pos.lot * multiplier
-        : (pos.entryPrice - currentExecPrice) * pos.lot * multiplier;
+        ? (currentExecPrice - pos.entryPrice) * actualQty
+        : (pos.entryPrice - currentExecPrice) * actualQty;
       
       const netPnL = rawPnL - pos.commission + pos.accumulatedSwap;
       
@@ -461,18 +501,29 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
         netPnL,
         setupTag: pos.setupTag,
         openTime: pos.createdAt,
-        closeTime: draft.currentTime
+        closeTime: draft.currentTime || new Date().toISOString()
       });
 
       positions.splice(posIndex, 1);
+
+      const usedMargin = positions.reduce((sum, p) => sum + p.margin, 0);
+      const remainingFloatingPnL = positions.reduce((sum, p) => {
+        const pExecPrice = p.side === 'LONG' ? bid : ask;
+        const pQty = p.lot * CONTRACT_SIZE;
+        const pRaw = p.side === 'LONG' ? (pExecPrice - p.entryPrice) * pQty : (p.entryPrice - pExecPrice) * pQty;
+        return sum + (pRaw - p.commission + p.accumulatedSwap);
+      }, 0);
+      const equity = balance + remainingFloatingPnL;
 
       return {
         positions,
         history,
         session: {
           ...draft.session!,
-          balance
-          // equity and freeMargin will auto-recalc in the next tick()
+          balance,
+          equity,
+          usedMargin,
+          freeMargin: equity - usedMargin
         }
       };
     });
@@ -488,5 +539,21 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
     set(draft => ({
       positions: draft.positions.map(p => p.id === positionId ? { ...p, sl, tp } : p)
     }));
+  },
+
+  setLeverage: (leverage) => {
+    set(draft => {
+      if (!draft.session) return {};
+      return {
+        session: {
+          ...draft.session,
+          config: {
+            ...draft.session.config,
+            leverage
+          }
+        }
+      };
+    });
   }
 }));
+

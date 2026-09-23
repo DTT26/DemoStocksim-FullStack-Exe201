@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import User from '../models/User';
+import Wallet from '../models/Wallet';
 import jwt from 'jsonwebtoken';
 
 export const googleLogin = async (req: Request, res: Response) => {
@@ -49,6 +50,12 @@ export const googleLogin = async (req: Request, res: Response) => {
         role: 'student', // Mặc định là student
       });
       await user.save();
+
+      await Wallet.create({
+        userId: user._id,
+        balance: 100000000,
+        availableBalance: 100000000
+      });
     } else {
       // Cập nhật thông tin nếu cần thiết (ví dụ: avatar mới)
       let updated = false;

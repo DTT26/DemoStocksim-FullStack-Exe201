@@ -4,8 +4,10 @@ import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { MOCK_TRADES } from '../../data/mockStudentData';
 import { tradingApi } from '../../services/tradingApi';
 import { useSimulatorStore } from '../../features/market/engine/useSimulatorStore';
+import { useAuth } from '../../contexts/AuthContext';
 
 export const StudentTradeDetail = () => {
+  const { user } = useAuth();
   const { tradeId } = useParams<{ tradeId: string }>();
   const [trade, setTrade] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -45,7 +47,7 @@ export const StudentTradeDetail = () => {
 
       // 3. Check backend transactions
       try {
-        const res = await tradingApi.getTransactions();
+        const res = await tradingApi.getTransactions(user?._id);
         if (res.success && Array.isArray(res.data)) {
           const tx = res.data.find((t: any) => t._id === tradeId);
           if (tx) {
@@ -58,7 +60,9 @@ export const StudentTradeDetail = () => {
             const price = priceMatch ? parseFloat(priceMatch[1].replace(/,/g, '')) : 0;
             const pnlMatch = desc.match(/Lợi nhuận:\s*(-?[\d.,]+)/);
             let pnl = 0;
-            if (pnlMatch) pnl = parseFloat(pnlMatch[1].replace(/,/g, ''));
+            if (pnlMatch) {
+              pnl = parseFloat(pnlMatch[1].replace(/,/g, ''));
+            }
 
             setTrade({
               id: tx._id,
@@ -66,16 +70,18 @@ export const StudentTradeDetail = () => {
               side: isBuy ? 'BUY' : 'SELL',
               quantity: 1,
               entryPrice: price,
-              exitPrice: isClose ? price : undefined,
+              exitPrice: price,
               pnl,
-              returnRate: pnl !== 0 && tx.amount ? parseFloat(((pnl / Math.abs(tx.amount)) * 100).toFixed(2)) : 0,
-              status: isClose ? 'CLOSED' : 'EXECUTED',
+              returnRate: 0,
+              status: isClose ? 'CLOSED' : 'OPEN',
               entryTime: tx.createdAt,
               exitTime: isClose ? tx.createdAt : undefined,
               commission: 0,
-              simulation: 'Vietnam Stock Challenge #01',
-              notes: desc
+              simulation: 'Paper Trading',
+              notes: tx.description
             });
+            setLoading(false);
+            return;
           }
         }
       } catch (e) {
@@ -86,7 +92,7 @@ export const StudentTradeDetail = () => {
     };
 
     findTrade();
-  }, [tradeId]);
+  }, [tradeId, user]);
 
   if (loading) {
     return (

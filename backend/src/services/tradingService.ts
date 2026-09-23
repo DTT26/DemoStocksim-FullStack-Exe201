@@ -5,6 +5,18 @@ import Order, { OrderSide, OrderType, OrderStatus } from '../models/Order';
 import Transaction, { TransactionType } from '../models/Transaction';
 
 export class TradingService {
+  static async getOrCreateWallet(userId: string) {
+    let wallet = await Wallet.findOne({ userId });
+    if (!wallet) {
+      wallet = await Wallet.create({
+        userId,
+        balance: 100000000,
+        availableBalance: 100000000
+      });
+    }
+    return wallet;
+  }
+
   /**
    * Khớp lệnh MUA trực tiếp (Market Buy)
    */
@@ -16,8 +28,7 @@ export class TradingService {
     const marginRequired = margin;
     const quantity = (margin * leverage) / currentPrice;
 
-    const wallet = await Wallet.findOne({ userId });
-    if (!wallet) throw new Error("Wallet not found");
+    const wallet = await this.getOrCreateWallet(userId);
     if (wallet.availableBalance < marginRequired) {
       throw new Error(`Ký quỹ không đủ. Cần ${marginRequired.toLocaleString('vi-VN')} đ`);
     }
@@ -63,8 +74,7 @@ export class TradingService {
     const marginRequired = margin;
     const quantity = (margin * leverage) / currentPrice;
 
-    const wallet = await Wallet.findOne({ userId });
-    if (!wallet) throw new Error("Wallet not found");
+    const wallet = await this.getOrCreateWallet(userId);
     if (wallet.availableBalance < marginRequired) {
       throw new Error(`Ký quỹ không đủ. Cần ${marginRequired.toLocaleString('vi-VN')} đ`);
     }
@@ -123,8 +133,7 @@ export class TradingService {
     }
 
     // Cộng trả tiền về Ví
-    const wallet = await Wallet.findOne({ userId });
-    if (!wallet) throw new Error("Wallet not found");
+    const wallet = await this.getOrCreateWallet(userId);
     wallet.balance += totalReturn;
     wallet.availableBalance += totalReturn;
     await wallet.save();
@@ -156,8 +165,7 @@ export class TradingService {
   static async addMargin(userId: string, symbol: string, side: 'LONG'|'SHORT', amount: number) {
     if (amount <= 0) throw new Error("Số tiền bơm thêm phải lớn hơn 0");
 
-    const wallet = await Wallet.findOne({ userId });
-    if (!wallet) throw new Error("Wallet not found");
+    const wallet = await this.getOrCreateWallet(userId);
     if (wallet.availableBalance < amount) {
       throw new Error(`Số dư không đủ. Cần ${amount.toLocaleString('vi-VN')} đ`);
     }
@@ -192,8 +200,7 @@ export class TradingService {
     if (leverage < 1 || leverage > 1000) throw new Error("Đòn bẩy không hợp lệ");
     if (price <= 0) throw new Error("Giá chờ không hợp lệ");
 
-    const wallet = await Wallet.findOne({ userId });
-    if (!wallet) throw new Error("Wallet not found");
+    const wallet = await this.getOrCreateWallet(userId);
     if (wallet.availableBalance < margin) {
       throw new Error(`Ký quỹ không đủ. Cần ${margin.toLocaleString('vi-VN')} đ`);
     }
@@ -236,7 +243,7 @@ export class TradingService {
     await order.save();
 
     // Hoàn tiền ký quỹ
-    const wallet = await Wallet.findOne({ userId });
+    const wallet = await this.getOrCreateWallet(userId);
     if (wallet) {
        wallet.balance += order.margin;
        wallet.availableBalance += order.margin;
@@ -255,7 +262,7 @@ export class TradingService {
    * Lấy Danh mục đầu tư (Portfolio)
    */
   static async getPortfolio(userId: string) {
-    const wallet = await Wallet.findOne({ userId });
+    const wallet = await this.getOrCreateWallet(userId);
     const holdings = await Holding.find({ userId });
     const pendingOrders = await Order.find({ userId, status: OrderStatus.PENDING });
     

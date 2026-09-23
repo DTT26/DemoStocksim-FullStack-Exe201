@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import { TrendingUp, Target, Activity, Zap } from 'lucide-react';
 import { tradingApi } from '../../services/tradingApi';
+import { useAuth } from '../../contexts/AuthContext';
 
 export const StudentPerformance = () => {
+  const { user } = useAuth();
   const [timeRange, setTimeRange] = useState('1M');
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -23,8 +25,8 @@ export const StudentPerformance = () => {
     const fetchRealPerformance = async () => {
       try {
         const [txRes, pfRes] = await Promise.all([
-          tradingApi.getTransactions(),
-          tradingApi.getPortfolio()
+          tradingApi.getTransactions(user?._id),
+          tradingApi.getPortfolio(user?._id)
         ]);
 
         let transactions: any[] = [];
@@ -131,7 +133,7 @@ export const StudentPerformance = () => {
     };
 
     fetchRealPerformance();
-  }, []);
+  }, [user]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
