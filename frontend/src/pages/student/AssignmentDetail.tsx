@@ -1,135 +1,456 @@
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Calendar, Clock, CheckCircle2, User, PlayCircle } from 'lucide-react';
+import { 
+  ArrowLeft, Calendar, CheckCircle2, User, PlayCircle, 
+  Send, Award, AlertCircle, FileText, Check, Clock, TrendingUp
+} from 'lucide-react';
 import { MOCK_ASSIGNMENTS } from '../../data/mockStudentData';
 
 export const StudentAssignmentDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const assignment = MOCK_ASSIGNMENTS.find(a => a.id === id);
+  const [assignment, setAssignment] = useState<any>(null);
+  const [submission, setSubmission] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Form submission state
+  const [analysisContent, setAnalysisContent] = useState('');
+  const [checklist, setChecklist] = useState<Record<string, boolean>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [toastMsg, setToastMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const fetchAssignmentData = async () => {
+    setLoading(true);
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      };
+
+      // 1. Lấy thông tin bài tập
+      let assData: any = null;
+      try {
+        const assRes = await fetch(`${apiUrl}/assignments/${id}`, {
+          credentials: 'include',
+          headers
+        });
+        if (assRes.ok) {
+          assData = await assRes.json();
+        }
+      } catch (e) {
+        console.warn('Backend fetch assignment error:', e);
+      }
+
+      // Fallback sang mock data nếu không tìm thấy trên backend
+      if (!assData) {
+        assData = MOCK_ASSIGNMENTS.find(a => a.id === id);
+      }
+
+      setAssignment(assData);
+
+      // 2. Lấy thông tin bài nộp của sinh viên nếu có
+      try {
+        const subRes = await fetch(`${apiUrl}/assignments/${id}/submission`, {
+          credentials: 'include',
+          headers
+        });
+        if (subRes.ok) {
+          const subData = await subRes.json();
+          if (subData) {
+            setSubmission(subData);
+            setAnalysisContent(subData.content || '');
+            if (subData.checklistStatus && Array.isArray(subData.checklistStatus)) {
+              const map: Record<string, boolean> = {};
+              subData.checklistStatus.forEach((item: any) => {
+                map[item.requirementId] = item.completed;
+              });
+              setChecklist(map);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Backend fetch submission error:', e);
+      }
+
+      // Khởi tạo checklist mặc định nếu chưa có
+      if (assData && assData.requirements) {
+        setChecklist(prev => {
+          const init: Record<string, boolean> = { ...prev };
+          assData.requirements.forEach((r: any) => {
+            if (init[r.id] === undefined) {
+              init[r.id] = r.completed || false;
+            }
+          });
+          return init;
+        });
+      }
+
+    } catch (err) {
+      console.error('Failed to load assignment', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAssignmentData();
+  }, [id]);
+
+  const toggleChecklist = (reqId: string) => {
+    setChecklist(prev => ({
+      ...prev,
+      [reqId]: !prev[reqId]
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!analysisContent.trim()) {
+      setToastMsg({ text: 'Vui lòng nhập nội dung phân tích / giải trình lệnh giao dịch', type: 'error' });
+      return;
+    }
+
+    setSubmitting(true);
+    setToastMsg(null);
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const token = localStorage.getItem('token');
+
+      const checklistPayload = Object.entries(checklist).map(([requirementId, completed]) => ({
+        requirementId,
+        completed
+      }));
+
+      const res = await fetch(`${apiUrl}/assignments/${id}/submit`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          content: analysisContent,
+          checklistStatus: checklistPayload
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setSubmission(data.submission);
+        setToastMsg({ text: '🎉 Nộp bài tập thành công! Giảng viên sẽ chấm điểm bài làm của bạn.', type: 'success' });
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setToastMsg({ text: err.message || 'Lỗi khi nộp bài tập', type: 'error' });
+      }
+    } catch (err: any) {
+      setToastMsg({ text: err.message || 'Lỗi kết nối máy chủ', type: 'error' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-3" />
+        <span>Đang tải thông tin bài tập...</span>
+      </div>
+    );
+  }
 
   if (!assignment) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-        <h2 className="text-xl font-bold text-white mb-2">Assignment not found</h2>
-        <p>This assignment might have been removed or doesn't exist.</p>
+        <h2 className="text-xl font-bold text-white mb-2">Không tìm thấy bài tập</h2>
+        <p>Bài tập này có thể đã bị gỡ bỏ hoặc bạn không có quyền truy cập.</p>
         <Link to="/student/assignments" className="mt-6 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-          Back to Assignments
+          Quay lại danh sách bài tập
         </Link>
       </div>
     );
   }
 
-  const getStatusColor = (status: string) => {
-    switch(status) {
-      case 'In Progress': return 'bg-amber-500/10 text-amber-500 border border-amber-500/20';
-      case 'Completed': return 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20';
-      case 'Overdue': return 'bg-rose-500/10 text-rose-500 border border-rose-500/20';
-      default: return 'bg-slate-500/10 text-slate-400 border border-slate-500/20';
-    }
-  };
+  const rawReqs = assignment.requirements || [
+    { id: 'r1', text: 'Quan sát và áp dụng chỉ báo MACD trên biểu đồ' },
+    { id: 'r2', text: 'Quan sát và áp dụng chỉ báo RSI trên biểu đồ' },
+    { id: 'r3', text: 'Viết nhận định tóm tắt về xu hướng giá' },
+    { id: 'r4', text: 'Thực hành đặt lệnh Mua (Limit BUY) trên Trading Terminal' },
+    { id: 'r5', text: 'Thiết lập mức Cắt lỗ (Stop Loss) an toàn cho lệnh' }
+  ];
+
+  const totalReqs = rawReqs.length;
+  const completedReqs = rawReqs.filter((r: any) => checklist[r.id]).length;
+  const progressPercent = Math.min(100, Math.round((completedReqs / totalReqs) * 100));
+
+  const isGraded = submission?.status === 'GRADED';
+  const isSubmitted = submission?.status === 'SUBMITTED' || isGraded;
+
+  const targetSymbol = (assignment.symbol || 'FPT').toLowerCase();
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 max-w-5xl mx-auto">
-      <div className="flex items-center gap-4">
-        <Link to="/student/assignments" className="p-2 text-slate-400 hover:text-white hover:bg-[#172033] rounded-lg transition-colors">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
-            {assignment.title}
-            <span className={`px-2.5 py-0.5 rounded text-xs font-bold uppercase ${getStatusColor(assignment.status)}`}>
-              {assignment.status}
-            </span>
-          </h1>
+    <div className="space-y-6 animate-in fade-in duration-500 max-w-5xl mx-auto pb-12">
+      {/* Header bar */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Link to="/student/assignments" className="p-2 text-slate-400 hover:text-white hover:bg-[#172033] rounded-lg transition-colors">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-white tracking-tight">
+                {assignment.title}
+              </h1>
+              {isGraded ? (
+                <span className="px-3 py-1 rounded-full text-xs font-bold uppercase bg-purple-500/10 text-purple-400 border border-purple-500/30 flex items-center gap-1">
+                  <Award className="w-3.5 h-3.5" />
+                  Đã chấm điểm: {submission.score}đ
+                </span>
+              ) : isSubmitted ? (
+                <span className="px-3 py-1 rounded-full text-xs font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Đã nộp bài
+                </span>
+              ) : (
+                <span className="px-3 py-1 rounded-full text-xs font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5" />
+                  Đang làm
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              Mã cổ phiếu trọng tâm: <strong className="text-cyan-400 font-mono text-sm">{assignment.symbol || 'FPT'}</strong>
+            </p>
+          </div>
         </div>
+
+        <Link
+          to={`/trade/${targetSymbol}`}
+          className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-500/20 transition-all hover:scale-[1.02]"
+        >
+          <TrendingUp className="w-4 h-4" />
+          <span>Mở Trading Terminal ({assignment.symbol || 'FPT'})</span>
+        </Link>
       </div>
 
+      {/* Thông báo kết quả / Toast */}
+      {toastMsg && (
+        <div className={`p-4 rounded-xl text-sm font-medium flex items-center justify-between border ${
+          toastMsg.type === 'success' 
+            ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30' 
+            : 'bg-rose-500/10 text-rose-300 border-rose-500/30'
+        }`}>
+          <span>{toastMsg.text}</span>
+          <button onClick={() => setToastMsg(null)} className="text-slate-400 hover:text-white">✕</button>
+        </div>
+      )}
+
+      {/* Banner kết quả chấm điểm nếu đã Graded */}
+      {isGraded && (
+        <div className="bg-gradient-to-r from-purple-950/40 via-[#172033] to-amber-950/30 border border-amber-500/30 rounded-2xl p-6 shadow-xl text-slate-200">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                <Award className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Kết Quả Đánh Giá Của Giảng Viên</h3>
+                <p className="text-xs text-slate-400">
+                  Chấm bởi: <strong className="text-slate-200">{submission.gradedBy?.name || 'Giảng viên phụ trách'}</strong> vào ngày {new Date(submission.gradedAt).toLocaleDateString('vi-VN')}
+                </p>
+              </div>
+            </div>
+            <div className="text-right bg-amber-500/10 border border-amber-500/30 px-5 py-2 rounded-2xl">
+              <span className="text-[11px] text-amber-300 font-semibold block uppercase tracking-wider">Điểm số</span>
+              <span className="text-3xl font-black text-amber-400 font-mono">{submission.score} <span className="text-sm font-normal text-slate-400">/ 100</span></span>
+            </div>
+          </div>
+          {submission.feedback && (
+            <div className="pt-4 text-sm leading-relaxed">
+              <span className="text-xs uppercase tracking-wider text-slate-400 font-bold block mb-1">Lời nhận xét:</span>
+              <p className="text-slate-200 bg-white/5 p-3 rounded-xl border border-white/5 whitespace-pre-wrap">{submission.feedback}</p>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Cột chính bên trái: Hướng dẫn, Checklist & Form nộp bài */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-[#111827] rounded-2xl border border-[#253047] p-6 sm:p-8 shadow-lg">
-            <h2 className="text-xl font-bold text-white mb-4">Instructions</h2>
-            <div className="prose prose-invert max-w-none text-slate-300">
-              <p>{assignment.instructions}</p>
+          
+          {/* Hướng dẫn đề bài */}
+          <div className="bg-[#111827] rounded-2xl border border-[#253047] p-6 shadow-lg">
+            <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-indigo-400" />
+              <span>Yêu cầu & Hướng dẫn làm bài</span>
+            </h2>
+            <div className="text-slate-300 text-sm leading-relaxed whitespace-pre-line bg-[#172033]/60 p-4 rounded-xl border border-[#253047]">
+              {assignment.instructions || assignment.description || 'Vui lòng thực hiện theo các yêu cầu trong checklist và giao dịch trên màn hình Trading Terminal.'}
             </div>
           </div>
 
+          {/* Checklist tiêu chí */}
           <div className="bg-[#111827] rounded-2xl border border-[#253047] overflow-hidden shadow-lg">
-            <div className="p-6 border-b border-[#253047] flex justify-between items-center">
-              <h2 className="text-xl font-bold text-white">Requirements checklist</h2>
-              <span className="text-sm font-semibold text-indigo-400">
-                {assignment.requirementsCompleted} / {assignment.totalRequirements} completed
+            <div className="p-5 border-b border-[#253047] flex justify-between items-center bg-[#172033]/50">
+              <div>
+                <h2 className="text-base font-bold text-white">Checklist yêu cầu bài tập</h2>
+                <p className="text-xs text-slate-400 mt-0.5">Đánh dấu vào các mục bạn đã thực hiện hoàn thành</p>
+              </div>
+              <span className="text-xs font-bold text-indigo-400 font-mono bg-indigo-500/10 px-2.5 py-1 rounded border border-indigo-500/20">
+                {completedReqs} / {totalReqs} ({progressPercent}%)
               </span>
             </div>
+            
             <div className="divide-y divide-[#253047]">
-              {assignment.requirements.map(req => (
-                <div key={req.id} className="p-4 sm:p-6 flex items-start gap-4 hover:bg-[#172033]/50 transition-colors">
-                  <div className={`mt-0.5 shrink-0 w-6 h-6 rounded-full flex items-center justify-center border-2 ${
-                    req.completed ? 'border-emerald-500 bg-emerald-500/20 text-emerald-500' : 'border-slate-500 border-dashed text-transparent'
-                  }`}>
-                    {req.completed && <CheckCircle2 className="w-4 h-4" />}
-                  </div>
-                  <div>
-                    <p className={`text-base font-medium ${req.completed ? 'text-slate-400 line-through' : 'text-white'}`}>
+              {rawReqs.map((req: any) => {
+                const isChecked = !!checklist[req.id];
+                return (
+                  <div 
+                    key={req.id} 
+                    onClick={() => toggleChecklist(req.id)}
+                    className="p-4 flex items-center gap-3.5 hover:bg-[#172033]/60 transition-colors cursor-pointer select-none"
+                  >
+                    <div className={`shrink-0 w-6 h-6 rounded-lg flex items-center justify-center border transition-all ${
+                      isChecked 
+                        ? 'border-emerald-500 bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20' 
+                        : 'border-slate-600 bg-white/5 text-transparent hover:border-indigo-400'
+                    }`}>
+                      {isChecked && <Check className="w-4 h-4 stroke-[3]" />}
+                    </div>
+                    <p className={`text-sm font-medium transition-colors ${
+                      isChecked ? 'text-slate-400 line-through' : 'text-slate-200'
+                    }`}>
                       {req.text}
                     </p>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
+
+          {/* Form nộp bài tập */}
+          <div className="bg-[#111827] rounded-2xl border border-[#253047] p-6 shadow-lg space-y-4">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <Send className="w-5 h-5 text-indigo-400" />
+              <span>Bài làm & Phân tích của sinh viên</span>
+            </h2>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-2">
+                  Nội dung phân tích kỹ thuật, lý do vào lệnh & chiến lược quản trị rủi ro:
+                </label>
+                <textarea
+                  rows={6}
+                  value={analysisContent}
+                  onChange={(e) => setAnalysisContent(e.target.value)}
+                  placeholder="Ví dụ: Dựa trên chỉ báo RSI chạm vùng quá bán 28 và đường MACD chuẩn bị cắt lên Signal line tại khung H1, tôi đã lên kế hoạch đặt lệnh Mua Limit giá 135.500 VND..."
+                  className="w-full p-4 bg-[#172033] border border-[#253047] rounded-xl text-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none leading-relaxed placeholder:text-slate-500 font-sans"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-xs text-slate-400">
+                  {isSubmitted && submission?.submittedAt ? (
+                    <span>Đã nộp bài lúc: <strong className="text-slate-200">{new Date(submission.submittedAt).toLocaleString('vi-VN')}</strong></span>
+                  ) : (
+                    <span>Chưa gửi bài nộp</span>
+                  )}
+                </span>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-6 py-2.5 bg-[#0088ff] hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-500/25 transition-all flex items-center gap-2 hover:scale-[1.02]"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>{submitting ? 'Đang gửi...' : isSubmitted ? 'Cập nhật bài nộp' : 'Nộp bài tập'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
         </div>
 
+        {/* Cột thông tin phụ bên phải */}
         <div className="space-y-6">
-          <div className="bg-[#111827] rounded-2xl border border-[#253047] p-6 shadow-lg">
-            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Assignment Info</h3>
+          
+          {/* Hộp thông tin Assignment Info */}
+          <div className="bg-[#111827] rounded-2xl border border-[#253047] p-6 shadow-lg space-y-5">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-[#253047] pb-3">
+              Thông Tin Bài Tập
+            </h3>
             
-            <div className="space-y-4">
+            <div className="space-y-3.5 text-xs">
               <div>
-                <p className="text-xs text-slate-500 mb-1">Simulation</p>
-                <p className="text-sm font-medium text-white">{assignment.simulation}</p>
+                <span className="text-slate-500 block mb-0.5">Kỳ thi mô phỏng:</span>
+                <span className="font-semibold text-white text-sm">
+                  {assignment.simulationId?.name || assignment.simulation || 'Vietnam Stock Challenge'}
+                </span>
               </div>
+
               <div>
-                <p className="text-xs text-slate-500 mb-1">Lecturer</p>
-                <p className="text-sm font-medium text-white flex items-center gap-2">
-                  <User className="w-4 h-4 text-slate-400" />
-                  {assignment.lecturer}
-                </p>
+                <span className="text-slate-500 block mb-0.5">Giảng viên phụ trách:</span>
+                <span className="font-medium text-slate-200 flex items-center gap-2">
+                  <User className="w-4 h-4 text-indigo-400" />
+                  {assignment.createdBy?.name || assignment.lecturer || 'TS. Nguyễn Văn A'}
+                </span>
               </div>
+
               <div>
-                <p className="text-xs text-slate-500 mb-1">Deadline</p>
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-rose-400" />
-                  <p className="text-sm font-medium text-rose-400">
-                    {new Date(assignment.deadline).toLocaleString()}
-                  </p>
+                <span className="text-slate-500 block mb-0.5">Hạn nộp bài (Deadline):</span>
+                <div className="flex items-center gap-1.5 text-rose-400 font-semibold font-mono">
+                  <Calendar className="w-4 h-4 shrink-0" />
+                  <span>{new Date(assignment.deadline).toLocaleString('vi-VN')}</span>
                 </div>
+              </div>
+
+              <div>
+                <span className="text-slate-500 block mb-0.5">Mã cổ phiếu thực hành:</span>
+                <span className="px-2.5 py-1 bg-cyan-950/40 text-cyan-400 font-bold font-mono rounded border border-cyan-500/30 inline-block">
+                  {assignment.symbol || 'FPT'}
+                </span>
               </div>
             </div>
 
-            <div className="mt-8 pt-6 border-t border-[#253047]">
-              <div className="flex justify-between text-xs mb-2">
-                <span className="text-slate-400">Overall Progress</span>
-                <span className="text-white font-bold">{assignment.progress}%</span>
+            {/* Thanh tiến độ */}
+            <div className="pt-4 border-t border-[#253047]">
+              <div className="flex justify-between text-xs mb-1.5">
+                <span className="text-slate-400">Tiến độ hoàn thành:</span>
+                <span className="text-indigo-400 font-bold font-mono">{progressPercent}%</span>
               </div>
-              <div className="w-full bg-[#253047] rounded-full h-2">
+              <div className="w-full bg-[#253047] rounded-full h-2 overflow-hidden">
                 <div 
-                  className={`h-2 rounded-full ${assignment.progress === 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`} 
-                  style={{ width: `${assignment.progress}%` }}
-                ></div>
+                  className={`h-full rounded-full transition-all duration-300 ${progressPercent === 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`} 
+                  style={{ width: `${progressPercent}%` }}
+                />
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-indigo-900/40 to-[#111827] rounded-2xl border border-indigo-500/20 p-6 shadow-lg text-center">
-            <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center mx-auto mb-4">
-              <PlayCircle className="w-6 h-6 text-indigo-400" />
+          {/* Hộp hành động mở Trading Terminal */}
+          <div className="bg-gradient-to-br from-indigo-950/40 via-[#111827] to-[#111827] rounded-2xl border border-indigo-500/30 p-6 shadow-xl text-center space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center mx-auto text-indigo-400">
+              <PlayCircle className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-bold text-white mb-2">Ready to complete?</h3>
-            <p className="text-sm text-slate-400 mb-6">Enter the simulation to execute the required trades and analysis.</p>
-            <Link to="/trade/sim-01" className="block w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors shadow-lg shadow-indigo-600/20">
-              Open Trading Terminal
+            <div>
+              <h3 className="text-base font-bold text-white mb-1">Thực hành trên sàn giả lập</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Mở Trading Terminal với mã <strong className="text-cyan-400">{assignment.symbol || 'FPT'}</strong> để áp dụng chỉ báo kỹ thuật và đặt lệnh thị trường.
+              </p>
+            </div>
+            <Link 
+              to={`/trade/${targetSymbol}`} 
+              className="block w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/25 transition-all hover:scale-[1.02]"
+            >
+              Mở Trading Terminal ({assignment.symbol || 'FPT'})
             </Link>
           </div>
+
         </div>
+
       </div>
     </div>
   );

@@ -13,6 +13,7 @@ export const AssignmentModal = ({ isOpen, onClose, onSaved, assignmentToEdit, si
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     title: '',
+    symbol: 'FPT',
     description: '',
     instructions: '',
     simulationId: '',
@@ -28,6 +29,7 @@ export const AssignmentModal = ({ isOpen, onClose, onSaved, assignmentToEdit, si
       if (assignmentToEdit) {
         setFormData({
           title: assignmentToEdit.title || '',
+          symbol: assignmentToEdit.symbol || 'FPT',
           description: assignmentToEdit.description || '',
           instructions: assignmentToEdit.instructions || '',
           simulationId: assignmentToEdit.simulationId?._id || assignmentToEdit.simulationId || '',
@@ -36,6 +38,7 @@ export const AssignmentModal = ({ isOpen, onClose, onSaved, assignmentToEdit, si
       } else {
         setFormData({
           title: '',
+          symbol: 'FPT',
           description: '',
           instructions: '',
           simulationId: simulations.length > 0 ? simulations[0]._id : '',
@@ -171,6 +174,19 @@ export const AssignmentModal = ({ isOpen, onClose, onSaved, assignmentToEdit, si
                         <option key={sim._id} value={sim._id}>{sim.name}</option>
                       ))}
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-300 mb-2">Target Stock Symbol (Mã cổ phiếu) *</label>
+                    <input
+                      type="text"
+                      name="symbol"
+                      required
+                      value={formData.symbol}
+                      onChange={handleChange}
+                      placeholder="e.g. FPT, HPG, VNM, VN30"
+                      className="w-full px-4 py-2.5 bg-[#172033] border border-[#253047] rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-white placeholder:text-slate-500 font-mono uppercase"
+                    />
                   </div>
                   
                   <div>

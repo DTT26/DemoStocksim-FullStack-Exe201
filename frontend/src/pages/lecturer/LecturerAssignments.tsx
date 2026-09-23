@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Settings, Edit3, CheckCircle, Clock, Users, Search, Filter, BookOpen, PlusCircle, Target, Lock, MoreVertical } from 'lucide-react';
+import { Settings, Edit3, CheckCircle, Clock, Users, Search, Filter, BookOpen, PlusCircle, Target, Lock, MoreVertical, ClipboardCheck } from 'lucide-react';
 import { AssignmentModal } from './components/AssignmentModal';
 import { AssignStudentsModal } from './components/AssignStudentsModal';
+import { SubmissionListModal } from './components/SubmissionListModal';
 
 export const LecturerAssignments = () => {
   const [assignments, setAssignments] = useState<any[]>([]);
@@ -15,6 +16,7 @@ export const LecturerAssignments = () => {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [assignmentToEdit, setAssignmentToEdit] = useState<any>(null);
   const [assignmentToAssign, setAssignmentToAssign] = useState<any>(null);
+  const [assignmentForSubmissions, setAssignmentForSubmissions] = useState<any>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -220,6 +222,15 @@ export const LecturerAssignments = () => {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <button 
+                          onClick={() => setAssignmentForSubmissions(ass)}
+                          className="px-2.5 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                          title="Xem bài nộp và chấm điểm"
+                        >
+                          <ClipboardCheck className="w-4 h-4" />
+                          <span>Bài nộp ({ass.submissionCount || 0})</span>
+                        </button>
+
+                        <button 
                           onClick={() => handleOpenAssignModal(ass)}
                           className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-colors"
                           title="Assign to Students"
@@ -279,6 +290,15 @@ export const LecturerAssignments = () => {
         assignment={assignmentToAssign}
         onSaved={() => {
           setIsAssignModalOpen(false);
+          fetchData();
+        }}
+      />
+
+      <SubmissionListModal
+        isOpen={!!assignmentForSubmissions}
+        assignment={assignmentForSubmissions}
+        onClose={() => {
+          setAssignmentForSubmissions(null);
           fetchData();
         }}
       />
