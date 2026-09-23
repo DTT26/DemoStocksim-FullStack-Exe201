@@ -81,6 +81,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (res.ok) {
           // Backend has already set the HttpOnly cookies for token and refreshToken
+          if (data.token) {
+            localStorage.setItem('token', data.token);
+          }
+          if (data.refreshToken) {
+            localStorage.setItem('refreshToken', data.refreshToken);
+          }
           await fetchUser();
         } else {
           console.error('Backend login failed:', data.message);

@@ -83,19 +83,19 @@ export const googleLogin = async (req: Request, res: Response) => {
       { expiresIn: '30d' } // 30 ngày cho Refresh Token
     );
 
-    // Đặt cookie cho token
+    // Đặt cookie cho token (đồng bộ 7 ngày với JWT Access Token)
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 15 * 60 * 1000 // 15 phút
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 ngày
     });
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 ngày
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 ngày
     });
 
     // Trả về token và thông tin cơ bản
@@ -144,8 +144,8 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
     res.cookie('token', newAccessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 15 * 60 * 1000
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 ngày
     });
 
     res.json({ accessToken: newAccessToken });

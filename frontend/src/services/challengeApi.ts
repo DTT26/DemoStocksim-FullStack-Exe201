@@ -1,16 +1,16 @@
 const ROOT_API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const API_BASE_URL = `${ROOT_API}/challenge`;
 
-// Tự động gia hạn token khi access token hết hạn
+// Tự động gia hạn token khi access token hết hạn (hỗ trợ cả HttpOnly Cookie lẫn localStorage)
 const tryRefreshToken = async (): Promise<string | null> => {
   const refreshToken = localStorage.getItem('refreshToken');
-  if (!refreshToken) return null;
 
   try {
     const res = await fetch(`${ROOT_API}/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
+      credentials: 'include',
+      body: JSON.stringify({ refreshToken: refreshToken || undefined }),
     });
     if (res.ok) {
       const data = await res.json();
@@ -25,7 +25,7 @@ const tryRefreshToken = async (): Promise<string | null> => {
   return null;
 };
 
-// Wrapper fetch có tự động gắn Auth Bearer và tự refresh token nếu 401
+// Wrapper fetch có tự động gửi HttpOnly cookie (credentials: 'include') và gắn Auth Bearer nếu có
 const authenticatedFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
   let token = localStorage.getItem('token');
   const headers: Record<string, string> = {
@@ -34,7 +34,7 @@ const authenticatedFetch = async (url: string, options: RequestInit = {}): Promi
     ...((options.headers as any) || {}),
   };
 
-  let res = await fetch(url, { ...options, headers });
+  let res = await fetch(url, { credentials: 'include', ...options, headers });
 
   // Nếu gặp 401 (token expired), tự động làm mới và thử lại 1 lần
   if (res.status === 401) {
@@ -44,7 +44,7 @@ const authenticatedFetch = async (url: string, options: RequestInit = {}): Promi
         ...headers,
         'Authorization': `Bearer ${newToken}`,
       };
-      res = await fetch(url, { ...options, headers: retryHeaders });
+      res = await fetch(url, { credentials: 'include', ...options, headers: retryHeaders });
     }
   }
 

@@ -7,26 +7,36 @@ export interface AuthRequest extends Request {
 }
 
 export const protect = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  let token;
+  const jwtSecret = process.env.JWT_ACCESS_SECRET || 'fallback_secret_key_change_this_in_production';
+  const tokensToTry: string[] = [];
 
   if (req.cookies && req.cookies.token) {
-    token = req.cookies.token;
-  } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-    token = req.headers.authorization.split(' ')[1];
+    tokensToTry.push(req.cookies.token);
+  }
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    const bearer = req.headers.authorization.split(' ')[1];
+    if (bearer && !tokensToTry.includes(bearer)) {
+      tokensToTry.push(bearer);
+    }
   }
 
-  if (token) {
+  for (const token of tokensToTry) {
     try {
-      const decoded: any = jwt.verify(token, process.env.JWT_ACCESS_SECRET || 'fallback_secret_key_change_this_in_production');
-
-      req.user = await User.findById(decoded.userId).select('-passwordHash');
-      next();
+      const decoded: any = jwt.verify(token, jwtSecret);
+      const user = await User.findById(decoded.userId).select('-passwordHash');
+      if (user) {
+        req.user = user;
+        return next();
+      }
     } catch (error) {
-      console.error(error);
-      res.status(401).json({ message: 'Not authorized, token failed' });
+      // Thử token tiếp theo nếu có
     }
+  }
+
+  if (tokensToTry.length > 0) {
+    return res.status(401).json({ message: 'Not authorized, token failed or expired' });
   } else {
-    res.status(401).json({ message: 'Not authorized, no token' });
+    return res.status(401).json({ message: 'Not authorized, no token' });
   }
 };
 
@@ -47,20 +57,29 @@ export const lecturer = (req: AuthRequest, res: Response, next: NextFunction) =>
 };
 
 export const optionalProtect = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  let token;
+  const jwtSecret = process.env.JWT_ACCESS_SECRET || 'fallback_secret_key_change_this_in_production';
+  const tokensToTry: string[] = [];
 
   if (req.cookies && req.cookies.token) {
-    token = req.cookies.token;
-  } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-    token = req.headers.authorization.split(' ')[1];
+    tokensToTry.push(req.cookies.token);
+  }
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    const bearer = req.headers.authorization.split(' ')[1];
+    if (bearer && !tokensToTry.includes(bearer)) {
+      tokensToTry.push(bearer);
+    }
   }
 
-  if (token) {
+  for (const token of tokensToTry) {
     try {
-      const decoded: any = jwt.verify(token, process.env.JWT_ACCESS_SECRET || 'fallback_secret_key_change_this_in_production');
-      req.user = await User.findById(decoded.userId).select('-passwordHash');
+      const decoded: any = jwt.verify(token, jwtSecret);
+      const user = await User.findById(decoded.userId).select('-passwordHash');
+      if (user) {
+        req.user = user;
+        break;
+      }
     } catch (error) {
-      // Token expired or invalid, continue without req.user
+      // Continue trying next token
     }
   }
   next();
