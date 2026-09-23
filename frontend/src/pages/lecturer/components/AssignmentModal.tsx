@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { X, Check, ChevronRight, ChevronLeft, Target, BookOpen, AlertCircle, Calendar, ListChecks, Plus, Trash2, Sparkles } from 'lucide-react';
+import { X, Check, ChevronRight, ChevronLeft, Target, BookOpen, AlertCircle, Calendar, ListChecks, Plus, Trash2, Sparkles, ChevronDown } from 'lucide-react';
+import { STOCKS } from '../../../features/market/data';
 
 interface RequirementItem {
   id: string;
@@ -44,6 +45,7 @@ export const AssignmentModal = ({ isOpen, onClose, onSaved, assignmentToEdit, si
     deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     requirements: DEFAULT_REQUIREMENTS as RequirementItem[]
   });
+  const [customSymbolMode, setCustomSymbolMode] = useState(false);
   const [newReqText, setNewReqText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -54,9 +56,12 @@ export const AssignmentModal = ({ isOpen, onClose, onSaved, assignmentToEdit, si
       setError('');
       setNewReqText('');
       if (assignmentToEdit) {
+        const sym = (assignmentToEdit.symbol || 'FPT').toUpperCase();
+        const isStandard = STOCKS.some(s => s.symbol.toUpperCase() === sym);
+        setCustomSymbolMode(!isStandard);
         setFormData({
           title: assignmentToEdit.title || '',
-          symbol: assignmentToEdit.symbol || 'FPT',
+          symbol: sym,
           description: assignmentToEdit.description || '',
           instructions: assignmentToEdit.instructions || '',
           simulationId: assignmentToEdit.simulationId?._id || assignmentToEdit.simulationId || '',
@@ -66,6 +71,7 @@ export const AssignmentModal = ({ isOpen, onClose, onSaved, assignmentToEdit, si
             : DEFAULT_REQUIREMENTS
         });
       } else {
+        setCustomSymbolMode(false);
         setFormData({
           title: '',
           symbol: 'FPT',
@@ -124,11 +130,16 @@ export const AssignmentModal = ({ isOpen, onClose, onSaved, assignmentToEdit, si
         
       const method = assignmentToEdit ? 'PUT' : 'POST';
 
+      const payload = {
+        ...formData,
+        symbol: (formData.symbol || 'FPT').trim().toUpperCase()
+      };
+
       const response = await fetch(url, { 
         credentials: 'include',
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
 
       if (response.ok) {
@@ -231,16 +242,112 @@ export const AssignmentModal = ({ isOpen, onClose, onSaved, assignmentToEdit, si
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-slate-300 mb-2">Mã cổ phiếu trọng tâm (Target Stock Symbol) *</label>
-                    <input
-                      type="text"
-                      name="symbol"
-                      required
-                      value={formData.symbol}
-                      onChange={handleChange}
-                      placeholder="Ví dụ: FPT, HPG, VNM, VIC"
-                      className="w-full px-4 py-2.5 bg-[#172033] border border-[#253047] rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-white placeholder:text-slate-500 font-mono uppercase"
-                    />
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-semibold text-slate-300">Mã cổ phiếu trọng tâm (Target Stock Symbol) *</label>
+                      <button
+                        type="button"
+                        onClick={() => setCustomSymbolMode(!customSymbolMode)}
+                        className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors font-medium"
+                      >
+                        {customSymbolMode ? '← Chọn từ danh sách mã' : '+ Nhập mã tùy chỉnh'}
+                      </button>
+                    </div>
+
+                    {customSymbolMode ? (
+                      <input
+                        type="text"
+                        name="symbol"
+                        required
+                        value={formData.symbol}
+                        onChange={(e) => {
+                          setFormData(prev => ({ ...prev, symbol: e.target.value.toUpperCase() }));
+                        }}
+                        placeholder="Ví dụ: FPT, HPG, VNM, VIC"
+                        className="w-full px-4 py-2.5 bg-[#172033] border border-[#253047] rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-white placeholder:text-slate-500 font-mono uppercase"
+                      />
+                    ) : (
+                      <div className="relative">
+                        <select
+                          name="symbol"
+                          required
+                          value={formData.symbol}
+                          onChange={handleChange}
+                          className="w-full px-4 py-2.5 pr-10 bg-[#172033] border border-[#253047] rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-white font-mono cursor-pointer appearance-none"
+                        >
+                          {formData.symbol && !STOCKS.some(s => s.symbol.toUpperCase() === formData.symbol.toUpperCase()) && (
+                            <option value={formData.symbol}>{formData.symbol} (Mã hiện tại / Tùy chỉnh)</option>
+                          )}
+                          
+                          <optgroup label="🇻🇳 Cổ phiếu Việt Nam (HOSE / UPCOM)">
+                            {STOCKS.filter(s => s.market === 'Cổ phiếu' && (s.exchange === 'HOSE' || s.exchange === 'UPCOM' || s.exchange === 'HNX')).map(s => (
+                              <option key={s.symbol} value={s.symbol}>
+                                {s.symbol} — {s.name} ({s.exchange})
+                              </option>
+                            ))}
+                          </optgroup>
+
+                          <optgroup label="🪙 Tiền điện tử (Crypto)">
+                            {STOCKS.filter(s => s.market === 'Tiền điện tử (Crypto)').map(s => (
+                              <option key={s.symbol} value={s.symbol}>
+                                {s.symbol} — {s.name} {s.isFutures ? '[Futures]' : '[Spot]'}
+                              </option>
+                            ))}
+                          </optgroup>
+
+                          <optgroup label="🇺🇸 Cổ phiếu Mỹ (US Stocks)">
+                            {STOCKS.filter(s => s.market === 'Cổ phiếu' && (s.exchange === 'NASDAQ' || s.exchange === 'NYSE')).map(s => (
+                              <option key={s.symbol} value={s.symbol}>
+                                {s.symbol} — {s.name} ({s.exchange})
+                              </option>
+                            ))}
+                          </optgroup>
+
+                          <optgroup label="📈 Hàng hóa & Ngoại hối (Forex)">
+                            {STOCKS.filter(s => s.market === 'Hàng hóa' || s.market === 'Ngoại hối (Forex)').map(s => (
+                              <option key={s.symbol} value={s.symbol}>
+                                {s.symbol} — {s.name} ({s.exchange || s.market})
+                              </option>
+                            ))}
+                          </optgroup>
+
+                          <optgroup label="📊 Chỉ số thị trường (Indices)">
+                            {STOCKS.filter(s => s.market === 'Chỉ số').map(s => (
+                              <option key={s.symbol} value={s.symbol}>
+                                {s.symbol} — {s.name} ({s.exchange})
+                              </option>
+                            ))}
+                          </optgroup>
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                      </div>
+                    )}
+
+                    {/* Stock badge preview */}
+                    {(() => {
+                      const currentStock = STOCKS.find(s => s.symbol.toUpperCase() === (formData.symbol || '').toUpperCase());
+                      if (!currentStock) return null;
+                      return (
+                        <div className="mt-2 flex items-center justify-between px-3 py-1.5 bg-[#0e1524] rounded-lg border border-[#1e2a42] text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-slate-300">{currentStock.name}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-700/50 text-slate-300 font-mono">
+                              {currentStock.exchange}
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              {currentStock.market}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-white">
+                              ${currentStock.price.toLocaleString('vi-VN')}
+                            </span>
+                            <span className={`font-mono text-[11px] font-semibold ${currentStock.type === 'up' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              {currentStock.change > 0 ? '+' : ''}{currentStock.percent}%
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                   
                   <div>
@@ -416,7 +523,14 @@ export const AssignmentModal = ({ isOpen, onClose, onSaved, assignmentToEdit, si
                     </div>
                     <div>
                       <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Mã cổ phiếu</p>
-                      <p className="text-cyan-400 font-mono font-bold">{formData.symbol}</p>
+                      <p className="text-cyan-400 font-mono font-bold flex items-center gap-2">
+                        <span>{formData.symbol}</span>
+                        {STOCKS.find(s => s.symbol.toUpperCase() === (formData.symbol || '').toUpperCase()) && (
+                          <span className="text-xs text-slate-400 font-sans font-normal">
+                            — {STOCKS.find(s => s.symbol.toUpperCase() === (formData.symbol || '').toUpperCase())?.name}
+                          </span>
+                        )}
+                      </p>
                     </div>
                   </div>
 
