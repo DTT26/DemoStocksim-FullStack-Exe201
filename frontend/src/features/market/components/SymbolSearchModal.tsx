@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { X, Search } from 'lucide-react';
-import { STOCKS, type Stock, type MarketCategory } from '../data';
+import { STOCKS, type Stock, type MarketCategory, formatVolume } from '../data';
 import { AssetAvatar, ExchangeBadge } from './AssetAvatar';
 
 interface SymbolSearchModalProps {
@@ -26,6 +26,8 @@ export const SymbolSearchModal = ({ isOpen, onClose, onSelect, watchlistMode, ac
   const [activeCategory, setActiveCategory] = useState<'Tất cả' | MarketCategory>('Tất cả');
   const [activeExchange, setActiveExchange] = useState<string>('Tất cả');
   const [activeType, setActiveType] = useState<'Tất cả' | 'Spot' | 'Futures'>('Tất cả');
+  const [volatilityFilter, setVolatilityFilter] = useState<'all' | 'gainers' | 'losers' | 'volatile'>('all');
+  const [volumeFilter, setVolumeFilter] = useState<'all' | 'vol_desc' | 'vol_over_1b'>('all');
 
   // Reset sub-filters when category changes
   const handleCategoryChange = (cat: 'Tất cả' | MarketCategory) => {
@@ -45,7 +47,7 @@ export const SymbolSearchModal = ({ isOpen, onClose, onSelect, watchlistMode, ac
   }, [activeCategory]);
 
   const filteredStocks = useMemo(() => {
-    return STOCKS.filter((stock) => {
+    let list = STOCKS.filter((stock) => {
       const matchesSearch =
         stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
         stock.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -56,10 +58,28 @@ export const SymbolSearchModal = ({ isOpen, onClose, onSelect, watchlistMode, ac
       let matchesType = true;
       if (activeType === 'Spot') matchesType = !stock.isFutures;
       if (activeType === 'Futures') matchesType = !!stock.isFutures;
+
+      let matchesVol = true;
+      if (volumeFilter === 'vol_over_1b') {
+        matchesVol = (stock.volume24h || 0) >= 1_000_000_000;
+      }
       
-      return matchesSearch && matchesCategory && matchesExchange && matchesType;
+      return matchesSearch && matchesCategory && matchesExchange && matchesType && matchesVol;
     });
-  }, [searchQuery, activeCategory, activeExchange, activeType]);
+
+    // Sắp xếp theo Biến động hoặc Khối lượng
+    if (volatilityFilter === 'gainers') {
+      list = [...list].sort((a, b) => b.percent - a.percent);
+    } else if (volatilityFilter === 'losers') {
+      list = [...list].sort((a, b) => a.percent - b.percent);
+    } else if (volatilityFilter === 'volatile') {
+      list = [...list].sort((a, b) => Math.abs(b.percent) - Math.abs(a.percent));
+    } else if (volumeFilter === 'vol_desc') {
+      list = [...list].sort((a, b) => (b.volume24h || 0) - (a.volume24h || 0));
+    }
+
+    return list;
+  }, [searchQuery, activeCategory, activeExchange, activeType, volatilityFilter, volumeFilter]);
 
   if (!isOpen) return null;
 
@@ -109,14 +129,15 @@ export const SymbolSearchModal = ({ isOpen, onClose, onSelect, watchlistMode, ac
           ))}
         </div>
 
-        {/* Sub Filters (Exchange & Type) */}
-        <div className="px-5 py-3 border-b border-[#e6e8ea] dark:border-[#2a2e39] flex flex-wrap items-center gap-3 bg-[#f8f9fa] dark:bg-[#131722]/50">
+        {/* Sub Filters (Exchange, Type, Volatility & Volume) */}
+        <div className="px-5 py-3 border-b border-[#e6e8ea] dark:border-[#2a2e39] flex flex-wrap items-center gap-4 bg-[#f8f9fa] dark:bg-[#131722]/50 text-xs">
+          {/* Exchange Filter */}
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-[#787b86]">Sàn GD:</span>
+            <span className="font-semibold text-[#787b86]">Sàn GD:</span>
             <select 
               value={activeExchange}
               onChange={(e) => setActiveExchange(e.target.value)}
-              className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc] text-xs rounded px-2 py-1 focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
+              className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc] text-xs rounded px-2.5 py-1 focus:outline-none focus:border-blue-500 transition-colors cursor-pointer font-medium"
             >
               {availableExchanges.map(ex => (
                 <option key={ex} value={ex}>{ex}</option>
@@ -124,9 +145,10 @@ export const SymbolSearchModal = ({ isOpen, onClose, onSelect, watchlistMode, ac
             </select>
           </div>
           
+          {/* Spot / Futures */}
           {(activeCategory === 'Tất cả' || activeCategory === 'Tiền điện tử (Crypto)') && (
             <div className="flex items-center gap-2 border-l border-[#e6e8ea] dark:border-[#2a2e39] pl-3">
-              <span className="text-xs font-semibold text-[#787b86]">Loại:</span>
+              <span className="font-semibold text-[#787b86]">Loại:</span>
               <div className="flex bg-[#e6e8ea] dark:bg-[#2a2e39] rounded p-0.5">
                 {['Tất cả', 'Spot', 'Futures'].map(type => (
                   <button
@@ -144,13 +166,62 @@ export const SymbolSearchModal = ({ isOpen, onClose, onSelect, watchlistMode, ac
               </div>
             </div>
           )}
+
+          {/* Volatility Filter */}
+          <div className="flex items-center gap-2 border-l border-[#e6e8ea] dark:border-[#2a2e39] pl-3">
+            <span className="font-semibold text-[#787b86]">Biến động:</span>
+            <div className="flex bg-[#e6e8ea] dark:bg-[#2a2e39] rounded p-0.5">
+              {[
+                { id: 'all', label: 'Tất cả' },
+                { id: 'gainers', label: '🚀 Tăng mạnh' },
+                { id: 'losers', label: '📉 Giảm mạnh' },
+                { id: 'volatile', label: '⚡ Biến động lớn' }
+              ].map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => setVolatilityFilter(item.id as any)}
+                  className={`text-[11px] px-2 py-0.5 rounded transition-colors font-medium ${
+                    volatilityFilter === item.id 
+                      ? 'bg-white dark:bg-[#1e222d] text-blue-600 dark:text-blue-400 shadow-sm' 
+                      : 'text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Volume Filter */}
+          <div className="flex items-center gap-2 border-l border-[#e6e8ea] dark:border-[#2a2e39] pl-3">
+            <span className="font-semibold text-[#787b86]">Khối lượng:</span>
+            <div className="flex bg-[#e6e8ea] dark:bg-[#2a2e39] rounded p-0.5">
+              {[
+                { id: 'all', label: 'Tất cả' },
+                { id: 'vol_desc', label: '🔥 Volume cao nhất' },
+                { id: 'vol_over_1b', label: '> 1B' }
+              ].map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => setVolumeFilter(item.id as any)}
+                  className={`text-[11px] px-2 py-0.5 rounded transition-colors font-medium ${
+                    volumeFilter === item.id 
+                      ? 'bg-white dark:bg-[#1e222d] text-blue-600 dark:text-blue-400 shadow-sm' 
+                      : 'text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Results List */}
         <div className="flex-1 overflow-y-auto">
           {filteredStocks.length === 0 ? (
             <div className="flex items-center justify-center h-full text-[#787b86]">
-              Không tìm thấy kết quả nào.
+              Không tìm thấy kết quả nào phù hợp.
             </div>
           ) : (
             <div className="flex flex-col py-2">
@@ -183,6 +254,16 @@ export const SymbolSearchModal = ({ isOpen, onClose, onSelect, watchlistMode, ac
                         Max {stock.leverageInfo.max}x
                       </span>
                     </div>
+
+                    {/* Volume 24h (hidden in watchlist mode) */}
+                    {!watchlistMode && (
+                      <div className="w-28 flex flex-col items-end justify-center pr-2">
+                        <span className="text-[10px] text-[#787b86]">Vol 24h</span>
+                        <span className="font-mono text-xs font-semibold text-[#1e2329] dark:text-[#d1d4dc]">
+                          {formatVolume(stock.volume24h)}
+                        </span>
+                      </div>
+                    )}
 
                     {/* Price & CHG% (hidden in watchlist mode) */}
                     {!watchlistMode && (

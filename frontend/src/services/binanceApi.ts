@@ -7,6 +7,7 @@ export interface FetchKlinesParams {
   interval: BinanceInterval;
   limit?: number;
   isFutures?: boolean;
+  startTime?: number; // Thêm startTime để lấy nến từ mốc thời gian trở đi
   endTime?: number; // Thêm endTime để tải dữ liệu lịch sử
 }
 
@@ -24,10 +25,10 @@ export const cleanBinanceSymbol = (symbol: string): string => {
 /**
  * Lấy dữ liệu OHLCV từ Binance (Spot hoặc Futures)
  */
-export const fetchBinanceKlines = async ({ symbol, interval, limit = 500, isFutures = false, endTime }: FetchKlinesParams): Promise<KLineData[]> => {
+export const fetchBinanceKlines = async ({ symbol, interval, limit = 500, isFutures = false, startTime, endTime }: FetchKlinesParams): Promise<KLineData[]> => {
   const cleanSymbol = cleanBinanceSymbol(symbol);
   
-  const cacheKey = `${cleanSymbol}-${interval}-${isFutures ? 'futures' : 'spot'}-${limit}-${endTime || 'latest'}`;
+  const cacheKey = `${cleanSymbol}-${interval}-${isFutures ? 'futures' : 'spot'}-${limit}-${startTime || 0}-${endTime || 'latest'}`;
   
   if (klineCache.has(cacheKey)) {
     return klineCache.get(cacheKey)!;
@@ -35,6 +36,9 @@ export const fetchBinanceKlines = async ({ symbol, interval, limit = 500, isFutu
 
   const baseUrl = isFutures ? 'https://fapi.binance.com/fapi/v1' : 'https://api.binance.com/api/v3';
   let url = `${baseUrl}/klines?symbol=${cleanSymbol}&interval=${interval}&limit=${limit}`;
+  if (startTime) {
+    url += `&startTime=${startTime}`;
+  }
   if (endTime) {
     url += `&endTime=${endTime}`;
   }

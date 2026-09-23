@@ -4,8 +4,10 @@ import { Play, Square, Users, Edit3, Settings, UserPlus, Search, Filter, MoreVer
 import { SimulationModal } from './components/SimulationModal';
 import { ParticipantsModal } from './components/ParticipantsModal';
 import { ConfirmModal } from '../../components/ConfirmModal';
+import { useModal } from '../../contexts/ModalContext';
 
 export const LecturerSimulations = () => {
+  const { showConfirm, showAlert } = useModal();
   const [simulations, setSimulations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('All');
@@ -51,6 +53,7 @@ export const LecturerSimulations = () => {
   };
 
   const handleUpdateStatus = async (id: string, action: 'start' | 'end') => {
+
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
       const response = await fetch(`${apiUrl}/simulations/${id}/${action}`, { 

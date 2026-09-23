@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { LogOut, Sun, Globe, Keyboard, LayoutDashboard } from 'lucide-react';
+import { LogOut, Sun, Globe, Keyboard, LayoutDashboard, Trophy } from 'lucide-react';
 import { googleLogout } from '@react-oauth/google';
 import { Link } from 'react-router-dom';
 
@@ -14,9 +14,20 @@ interface User {
 interface UserDropdownProps {
   user: User;
   onLogout: () => void;
+  isChallenge?: boolean;
+  challengeLevelName?: string;
+  accountRankName?: string;
+  certCount?: number;
 }
 
-export const UserDropdown = ({ user, onLogout }: UserDropdownProps) => {
+export const UserDropdown = ({ 
+  user, 
+  onLogout, 
+  isChallenge = false, 
+  challengeLevelName,
+  accountRankName,
+  certCount
+}: UserDropdownProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -63,13 +74,49 @@ export const UserDropdown = ({ user, onLogout }: UserDropdownProps) => {
             </div>
           </div>
 
-          {/* Balance (Nếu có) */}
+          {/* Balance (Phân định rõ Tài khoản Thi vs Tài khoản Thường) */}
           {user.balance !== undefined && (
-            <div className="px-4 py-2 border-b border-[#2a2e39] hover:bg-[#2a2e39] cursor-pointer flex items-center gap-3">
-              <span className="w-4 h-4 rounded-full border border-gray-400 flex items-center justify-center text-[10px]">C</span>
-              <span className="font-semibold text-white">{user.balance.toLocaleString('vi-VN')} ₫</span>
+            <div className="px-4 py-2.5 border-b border-[#2a2e39] hover:bg-[#2a2e39]/50 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="w-4 h-4 rounded-full border border-gray-400 flex items-center justify-center text-[10px]">C</span>
+                <div>
+                  <span className="font-semibold text-white block text-sm">${(user.balance || 0).toLocaleString('en-US')}</span>
+                  <span className="text-[10px] text-[#787b86]">
+                    {isChallenge ? `Tài khoản thi (${challengeLevelName || 'Cấp Vốn'})` : 'Tài khoản thường (Standard)'}
+                  </span>
+                </div>
+              </div>
+              {isChallenge ? (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                  THI
+                </span>
+              ) : (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 font-bold border border-blue-500/30">
+                  DEMO
+                </span>
+              )}
             </div>
           )}
+
+          {/* Account Rank Info (Cho user biết tài khoản đang đạt tới cấp độ nào) */}
+          <div className="px-4 py-2.5 border-b border-[#2a2e39] bg-white/[0.02] flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                <Trophy className="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <span className="text-[10px] text-[#787b86] block font-medium">Hạng tài khoản đạt được</span>
+                <span className="font-bold text-xs text-amber-300">
+                  {accountRankName || 'Cấp 1 - Tập Sự'}
+                </span>
+              </div>
+            </div>
+            {certCount !== undefined && certCount > 0 && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 font-bold">
+                {certCount}/6 Bằng
+              </span>
+            )}
+          </div>
 
           {/* Menu Items */}
           <div className="py-1 border-b border-[#2a2e39]">

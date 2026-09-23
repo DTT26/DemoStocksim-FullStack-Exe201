@@ -23,6 +23,13 @@ import { tradingApi } from '../../services/tradingApi';
 import { PositionsManager } from './components/PositionsManager';
 import { useSimulatorStore } from './engine/useSimulatorStore';
 import { useNotificationStore } from '../../stores/useNotificationStore';
+import { Trophy, RefreshCw, ChevronRight, Pause, Play, Square } from 'lucide-react';
+import { challengeApi } from '../../services/challengeApi';
+import type { UserChallengeState, ChallengeLevelConfig } from '../challenge/types';
+import { ChallengeModal } from '../challenge/ChallengeModal';
+import { useModal } from '../../contexts/ModalContext';
+
+const MAX_RESETS_PER_WEEK = 4;
 
 export interface TradeOrder {
   id: string;
@@ -38,7 +45,7 @@ export interface TradeOrder {
 export const TradingTerminal = () => {
   const { simulationId } = useParams<{ simulationId?: string }>();
   const navigate = useNavigate();
-
+  const { showAlert, showConfirm } = useModal();
   const [activeTool, setActiveTool] = useState<string>('cursor');
   const [selectedStock, setSelectedStock] = useState<Stock>(() => {
     if (simulationId) {
@@ -55,7 +62,7 @@ export const TradingTerminal = () => {
 
   const [tradeOrders, setTradeOrders] = useState<TradeOrder[]>([]);
   const [activeTimeframe, setActiveTimeframe] = useState<string>('D');
-  const [balance, setBalance] = useState<number>(100_000_000);
+  const [balance, setBalance] = useState<number>(10_000);
   const [positions, setPositions] = useState<Record<string, { quantity: number, averagePrice: number, side: 'LONG' | 'SHORT', leverage: number, tp?: number, sl?: number }>>({});
   const store = useSimulatorStore();
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
@@ -208,15 +215,78 @@ export const TradingTerminal = () => {
   // Bar Replay state
   const [isReplaying, setIsReplaying] = useState(false);
   const [isSelectingReplayStart, setIsSelectingReplayStart] = useState(false);
-  const [replayIndex, setReplayIndex] = useState(0);
+  const [replayTime, setReplayTime] = useState<number | null>(null);
+  const [replayStepTrigger, setReplayStepTrigger] = useState(0);
   const [totalBars, setTotalBars] = useState(1000);
   const [goToRealtimeTrigger, setGoToRealtimeTrigger] = useState(0);
 
   // Added missing states
   const [activeTab, setActiveTab] = useState<'chart' | 'coin_info' | 'info'>('chart');
+  const [previewTPSL, setPreviewTPSL] = useState<{ tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean } | null>(null);
+  const [draggedTPSL, setDraggedTPSL] = useState<{ tp?: number; sl?: number } | null>(null);
 
-  const handleToolClick = (toolName: string) => {
-    setActiveTool(toolName === activeTool && toolName !== 'cursor' ? activeTool : toolName);
+  // Undo / Redo triggers & state
+  const [undoTrigger, setUndoTrigger] = useState(0);
+  const [redoTrigger, setRedoTrigger] = useState(0);
+  const [undoRedoState, setUndoRedoState] = useState({ canUndo: false, canRedo: false });
+
+  // Authentication & 6-Level Prop Trading Challenge State (100% Backend Sync)
+  const [challengeLevels, setChallengeLevels] = useState<ChallengeLevelConfig[]>([]);
+  const [challengeState, setChallengeState] = useState<UserChallengeState>({
+    currentLevel: 1,
+    unlockedLevels: [1],
+    status: 'NOT_STARTED',
+    startingCapitalUSD: 10_000,
+    dayStartEquityUSD: 10_000,
+    currentEquityUSD: 10_000,
+    currentBalanceUSD: 10_000,
+    totalProfitUSD: 0,
+    dailyLossUSD: 0,
+    maxLossUSD: 0,
+    tradingDaysCount: 0,
+    tradingDates: [],
+    resetsUsedThisWeek: 0,
+    weekResetTimestamp: 0,
+    certificates: [],
+  });
+  const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
+
+  // Tải cấu hình cấp độ từ Backend API
+  useEffect(() => {
+    challengeApi.getLevels().then(res => {
+      if (res && res.success && res.levels) {
+        setChallengeLevels(res.levels);
+      }
+    }).catch(err => {
+      console.warn('Lỗi tải cấp độ từ backend:', err);
+    });
+  }, []);
+
+  const currentChallengeLevel = challengeLevels.find(l => l.id === challengeState.currentLevel) || challengeLevels[0] || {
+    id: 1,
+    levelName: 'Tập Sự',
+    badge: 'Cấp 1',
+    capitalUSD: 10_000,
+    capitalVND: 250_000_000,
+    profitTargetPercent: 8,
+    dailyLossLimitPercent: 4,
+    maxDrawdownPercent: 8,
+    minTradingDays: 2,
+    maxLeverage: 20,
+  };
+
+  // Tính toán Cấp độ cao nhất tài khoản đã đạt được (để hiển thị khi không trong bài thi)
+  const maxCertLevel = challengeState.certificates && challengeState.certificates.length > 0
+    ? Math.max(...challengeState.certificates.map(c => c.levelId))
+    : 0;
+  const maxUnlockedLevel = challengeState.unlockedLevels && challengeState.unlockedLevels.length > 0
+    ? Math.max(...challengeState.unlockedLevels)
+    : 1;
+  const accountRankLevelId = Math.max(maxCertLevel, maxUnlockedLevel);
+  const accountRankConfig = challengeLevels.find(l => l.id === accountRankLevelId) || {
+    id: accountRankLevelId,
+    levelName: accountRankLevelId === 6 ? 'Bậc Thầy' : `Level ${accountRankLevelId}`,
+    badge: `Cấp ${accountRankLevelId}`
   };
 
   useEffect(() => {
@@ -241,30 +311,31 @@ export const TradingTerminal = () => {
     if (isReplaying || isSelectingReplayStart) {
       setIsReplaying(false);
       setIsSelectingReplayStart(false);
-      setReplayIndex(0);
+      setReplayTime(null);
     }
   };
 
-  const handlePriceChange = (newPrice: number) => {
-    setSelectedStock(prev => prev.price === newPrice ? prev : { ...prev, price: newPrice });
-  };
-
-  const fetchPortfolio = async () => {
+  const fetchPortfolio = async (targetUserId?: string) => {
     try {
-      const res = await tradingApi.getPortfolio(user?._id);
+      const uid = targetUserId || user?._id;
+      const res = await tradingApi.getPortfolio(uid);
       if (res.success && res.data) {
         if (res.data.wallet) {
           setBalance(res.data.wallet.availableBalance);
         }
-        if (res.data.holdings) {
+        if (res.data.holdings && Array.isArray(res.data.holdings)) {
           const newPositions: Record<string, { quantity: number, averagePrice: number, side: 'LONG' | 'SHORT', leverage: number, tp?: number, sl?: number }> = {};
           res.data.holdings.forEach((h: any) => {
             newPositions[h.symbol] = { quantity: h.quantity, averagePrice: h.averagePrice, side: h.side, leverage: h.leverage, tp: h.tp, sl: h.sl };
           });
           setPositions(newPositions);
+        } else {
+          setPositions({});
         }
-        if (res.data.pendingOrders) {
+        if (res.data.pendingOrders && Array.isArray(res.data.pendingOrders)) {
           setPendingOrders(res.data.pendingOrders);
+        } else {
+          setPendingOrders([]);
         }
       }
     } catch (e) {
@@ -272,17 +343,47 @@ export const TradingTerminal = () => {
     }
   };
 
+  // Khi user đăng nhập hoặc đổi tài khoản, nạp đúng tiến trình thi từ Backend API
   useEffect(() => {
-    if (user) {
-      fetchPortfolio();
+    if (user?._id) {
+      challengeApi.getMyChallenge().then(async (res) => {
+        if (res.success && res.challenge) {
+          setChallengeState(res.challenge);
+          if (res.challenge.status === 'ACTIVE' || res.challenge.status === 'PAUSED') {
+            setBalance(res.challenge.currentBalanceUSD || res.challenge.startingCapitalUSD);
+          }
+          await fetchPortfolio(user._id);
+        }
+      }).catch(err => {
+        console.warn('Backend getMyChallenge error:', err);
+      });
+      fetchPortfolio(user._id);
     } else {
       setPositions({});
       setPendingOrders([]);
       setTradeOrders([]);
       setBalance(100_000_000);
       store.reset();
+      setChallengeState({
+        currentLevel: 1,
+        unlockedLevels: [1],
+        status: 'NOT_STARTED',
+        startingCapitalUSD: 10_000,
+        dayStartEquityUSD: 10_000,
+        currentEquityUSD: 10_000,
+        currentBalanceUSD: 10_000,
+        totalProfitUSD: 0,
+        dailyLossUSD: 0,
+        maxLossUSD: 0,
+        tradingDaysCount: 0,
+        tradingDates: [],
+        resetsUsedThisWeek: 0,
+        weekResetTimestamp: 0,
+        certificates: [],
+      });
+      fetchPortfolio();
     }
-  }, [user]);
+  }, [user?._id]);
 
   // Ensure simulator store receives valid price immediately when active
   useEffect(() => {
@@ -292,6 +393,167 @@ export const TradingTerminal = () => {
       }
     }
   }, [store.isActive, store.session, selectedStock?.price, store.currentPrice]);
+
+  const calculateUnrealizedPnL = () => {
+    let totalPnL = 0;
+    Object.entries(positions).forEach(([sym, pos]) => {
+      const currentPrice = sym === selectedStock.symbol ? selectedStock.price : (STOCKS.find(s => s.symbol === sym)?.price || pos.averagePrice);
+      const diff = pos.side === 'LONG' ? (currentPrice - pos.averagePrice) : (pos.averagePrice - currentPrice);
+      totalPnL += diff * pos.quantity;
+    });
+    return totalPnL;
+  };
+
+  // Đánh giá chỉ số rủi ro thời gian thực qua Backend Service
+  useEffect(() => {
+    if (challengeState.status === 'ACTIVE' && user?._id) {
+      const uPnL = calculateUnrealizedPnL();
+      challengeApi.evaluateRisk(uPnL, false).then(res => {
+        if (res && res.success && res.challenge) {
+          if (res.challenge.status !== challengeState.status || res.challenge.totalProfitUSD !== challengeState.totalProfitUSD) {
+            setChallengeState(res.challenge);
+            if (res.challenge.status === 'FAILED') {
+              showToast(`❌ Bài thi đã vi phạm: ${res.challenge.breachReason}`, 'warning');
+            } else if (res.challenge.status === 'PASSED') {
+              showToast(`🏆 CHÚC MỪNG! Bạn đã hoàn thành xuất sắc bài thi Level ${res.challenge.currentLevel}!`, 'info');
+            }
+          }
+        }
+      }).catch(err => {
+        console.error('Lỗi đánh giá rủi ro từ backend:', err);
+      });
+    }
+  }, [selectedStock.price, positions, user?._id]);
+
+  const handleChallengeStateUpdate = async (newState: UserChallengeState) => {
+    setChallengeState(newState);
+    if (newState.status === 'ACTIVE' || newState.status === 'PAUSED') {
+      // Khi bắt đầu hoặc reset bài thi: Lập tức đặt số dư tương ứng với cấp độ đó và dọn trắng vị thế
+      setBalance(newState.currentBalanceUSD || newState.startingCapitalUSD);
+      setPositions({});
+      setPendingOrders([]);
+    }
+    await fetchPortfolio(user?._id);
+  };
+
+  const handlePauseChallenge = async () => {
+    try {
+      const res = await challengeApi.pauseChallenge();
+      if (res.success && res.challenge) {
+        setChallengeState(res.challenge);
+        showAlert({
+          title: 'Tạm dừng bài thi',
+          message: '⏸️ Đã tạm dừng bài thi cấp vốn. Giám sát rủi ro tạm thời được hoãn.',
+          type: 'info'
+        });
+      }
+    } catch (e: any) {
+      showAlert({
+        title: 'Lỗi tạm dừng bài thi',
+        message: `Lỗi: ${e.message}`,
+        type: 'error'
+      });
+    }
+  };
+
+  const handleResumeChallenge = async () => {
+    try {
+      const res = await challengeApi.resumeChallenge();
+      if (res.success && res.challenge) {
+        setChallengeState(res.challenge);
+        showAlert({
+          title: 'Tiếp tục bài thi',
+          message: '▶️ Đã tiếp tục bài thi cấp vốn!',
+          type: 'success'
+        });
+      }
+    } catch (e: any) {
+      showAlert({
+        title: 'Lỗi tiếp tục bài thi',
+        message: `Lỗi: ${e.message}`,
+        type: 'error'
+      });
+    }
+  };
+
+  const handleEndChallenge = async () => {
+    const confirmed = await showConfirm({
+      title: 'Xác nhận kết thúc bài thi',
+      message: 'Bạn có chắc chắn muốn KẾT THÚC bài thi này để quay về trạng thái tài khoản thường không?',
+      type: 'danger',
+      confirmText: 'Kết thúc bài thi',
+      cancelText: 'Hủy bỏ',
+    });
+    if (!confirmed) {
+      return;
+    }
+    try {
+      const res = await challengeApi.endChallenge();
+      if (res.success && res.challenge) {
+        setChallengeState(res.challenge);
+        setPositions({});
+        setPendingOrders([]);
+        await fetchPortfolio(user?._id); // Khôi phục lại 100% số dư và vị thế tài khoản thường trước khi thi
+        showAlert({
+          title: 'Đã kết thúc bài thi',
+          message: '⏹️ Đã kết thúc bài thi cấp vốn. Đã khôi phục đầy đủ số dư và vị thế tài khoản thường của bạn!',
+          type: 'success'
+        });
+      }
+    } catch (e: any) {
+      showAlert({
+        title: 'Lỗi kết thúc bài thi',
+        message: `Lỗi: ${e.message}`,
+        type: 'error'
+      });
+    }
+  };
+
+  const handleUndo = () => {
+    if (undoRedoState.canUndo) {
+      setUndoTrigger(t => t + 1);
+    }
+  };
+
+  const handleRedo = () => {
+    if (undoRedoState.canRedo) {
+      setRedoTrigger(t => t + 1);
+    }
+  };
+
+  // Keyboard shortcut listener (Ctrl+Z: Undo, Ctrl+Y: Redo)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) {
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      } else if (
+        (e.ctrlKey || e.metaKey) &&
+        (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))
+      ) {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undoRedoState.canUndo, undoRedoState.canRedo]);
+
+  const handleTPSLDragChange = (type: 'tp' | 'sl', price: number) => {
+    setPreviewTPSL(prev => prev ? { ...prev, [type]: price } : { enabled: true, [type]: price });
+    setDraggedTPSL(prev => ({ ...prev, [type]: price }));
+  };
+
+  const handleToolClick = (toolName: string) => {
+    setActiveTool(toolName === activeTool && toolName !== 'cursor' ? activeTool : toolName);
+  };
+
+  const handlePriceChange = (newPrice: number) => {
+    setSelectedStock(prev => prev.price === newPrice ? prev : { ...prev, price: newPrice });
+  };
 
   const handleTrade = async (type: 'buy' | 'sell' | 'close' | 'limit_buy' | 'limit_sell' | 'stop_buy' | 'stop_sell', price: number, margin: number, leverage: number, tp?: number, sl?: number) => {
     if (!user) {
@@ -362,6 +624,15 @@ export const TradingTerminal = () => {
   };
 
   const handleCancelOrder = async (orderId: string) => {
+    const confirmed = await showConfirm({
+      title: 'Xác nhận hủy lệnh',
+      message: 'Bạn có chắc chắn muốn hủy lệnh chờ này không?',
+      type: 'warning',
+      confirmText: 'Hủy lệnh',
+      cancelText: 'Quay lại',
+    });
+    if (!confirmed) return;
+
     try {
       const res = await tradingApi.cancelLimitOrder(orderId, user?._id);
       if (res.success) {
@@ -369,9 +640,19 @@ export const TradingTerminal = () => {
         setTradeCount(c => c + 1);
         showToast('Đã hủy lệnh chờ thành công!', 'info');
         addNotification({ title: 'Hủy lệnh', message: `Lệnh chờ đã bị hủy.`, type: 'warning' });
+        showAlert({
+          title: 'Hủy lệnh',
+          message: 'Đã hủy lệnh chờ thành công!',
+          type: 'success'
+        });
       }
     } catch (e: any) {
       showToast(e.message || 'Hủy lệnh thất bại', 'warning');
+      showAlert({
+        title: 'Hủy lệnh thất bại',
+        message: e.message || 'Hủy lệnh thất bại',
+        type: 'error'
+      });
     }
   };
 
@@ -463,7 +744,7 @@ export const TradingTerminal = () => {
       handleTrade('close', execPrice, 0, 0).then(res => {
         (window as any)[`isClosing_${key}`] = false;
         if (res.success) {
-          showToast(`⚠️ HỆ THỐNG TỰ ĐỘNG ĐÓNG VỊ THẾ!\nLý do: ${reason}\nGiá: ${execPrice.toLocaleString('vi-VN')}₫`, 'warning');
+          showToast(`⚠️ HỆ THỐNG TỰ ĐỘNG ĐÓNG VỊ THẾ!\nLý do: ${reason}\nGiá: $${execPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, 'warning');
           addNotification({ title: 'Đóng lệnh tự động', message: `Vị thế ${pos.side} mã ${selectedStock.symbol} tự động đóng do: ${reason}.`, type: 'warning' });
         }
       }).catch(() => {
@@ -528,8 +809,8 @@ export const TradingTerminal = () => {
     setIsSelectingReplayStart(false);
   };
 
-  const handleConfirmReplayStart = (fromIndex: number) => {
-    setReplayIndex(fromIndex);
+  const handleConfirmReplayStart = (timestamp: number) => {
+    setReplayTime(timestamp);
     setIsSelectingReplayStart(false);
     setIsReplaying(true);
   };
@@ -539,13 +820,13 @@ export const TradingTerminal = () => {
     if (isReplaying || isSelectingReplayStart) {
       setIsReplaying(false);
       setIsSelectingReplayStart(false);
-      setReplayIndex(0);
+      setReplayTime(null);
     }
     setGoToRealtimeTrigger(t => t + 1);
   };
 
   const handleReplayNext = () => {
-    setReplayIndex(i => i + 1);
+    setReplayStepTrigger(t => t + 1);
   };
 
   const handleStartSimulation = (config: SimulationConfig) => {
@@ -558,35 +839,128 @@ export const TradingTerminal = () => {
 
   const handleStopReplay = () => {
     setIsReplaying(false);
-    setReplayIndex(0);
+    setReplayTime(null);
   };
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden bg-white dark:bg-[#131722] text-[#1e2329] dark:text-[#d1d4dc]">
-      <ToolbarNavbar balance={balance} onOpenSettings={() => setIsSettingsModalOpen(true)} />
-      {/* Simulation Header */}
-      <div className="h-8 bg-[#1e222d] border-b border-[#2a2e39] flex items-center px-4 justify-between text-xs text-[#d1d4dc] shrink-0">
-        <div className="flex items-center gap-3">
-          <span className="font-semibold text-white">Vietnam Stock Challenge #01</span>
-          <span className="flex items-center gap-1 text-emerald-400 font-bold bg-emerald-900/30 px-1.5 py-0.5 rounded">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> LIVE
-          </span>
+      <ToolbarNavbar 
+        balance={balance} 
+        onOpenSettings={() => setIsSettingsModalOpen(true)}
+        onOpenChallenge={() => setIsChallengeModalOpen(true)}
+        challengeLevelName={currentChallengeLevel.badge}
+        challengeStatus={challengeState.status}
+        accountRankBadge={accountRankConfig.badge}
+        accountRankName={`${accountRankConfig.badge} - ${accountRankConfig.levelName}`}
+        certCount={challengeState.certificates?.length || 0}
+      />
+      
+      {/* Dynamic Prop Challenge Header Bar - Chỉ hiển thị khi đang trong bài thi hoặc có kết quả */}
+      {challengeState.status !== 'NOT_STARTED' && (
+        <div className="h-9 bg-[#161a24] border-b border-[#232936] flex items-center px-4 justify-between text-xs text-[#d1d4dc] shrink-0 animate-in fade-in duration-150">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-white flex items-center gap-1.5">
+                <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                <span>{currentChallengeLevel.levelName}</span>
+              </span>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                challengeState.status === 'ACTIVE' 
+                  ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/30'
+                  : challengeState.status === 'PAUSED'
+                  ? 'bg-amber-900/30 text-amber-300 border-amber-500/30'
+                  : challengeState.status === 'PASSED'
+                  ? 'bg-purple-900/30 text-purple-400 border-purple-500/30'
+                  : challengeState.status === 'FAILED'
+                  ? 'bg-rose-900/30 text-rose-400 border-rose-500/30'
+                  : 'bg-slate-800 text-slate-400 border-slate-700'
+              }`}>
+                {challengeState.status === 'ACTIVE' && '🟢 ĐANG THI (LIVE)'}
+                {challengeState.status === 'PAUSED' && '⏸️ ĐANG TẠM DỪNG'}
+                {challengeState.status === 'PASSED' && '🏆 ĐÃ ĐỖ'}
+                {challengeState.status === 'FAILED' && '🔴 BỊ VI PHẠM'}
+              </span>
+            </div>
+
+            <div className="hidden md:flex items-center gap-4 border-l border-[#232936] pl-3 text-[11px]">
+              {/* Target */}
+              <div className="flex items-center gap-1">
+                <span className="text-slate-400">Mục tiêu:</span>
+                <span className="font-bold text-emerald-400 font-mono">
+                  {challengeState.totalProfitUSD >= 0 ? '+' : ''}${challengeState.totalProfitUSD.toLocaleString('en-US', { maximumFractionDigits: 0 })} / +${((currentChallengeLevel.capitalUSD * currentChallengeLevel.profitTargetPercent) / 100).toLocaleString('en-US')}
+                </span>
+              </div>
+
+              {/* Daily Loss */}
+              <div className="flex items-center gap-1">
+                <span className="text-slate-400">Lỗ ngày:</span>
+                <span className="font-bold text-amber-400 font-mono">
+                  -${challengeState.dailyLossUSD.toLocaleString('en-US', { maximumFractionDigits: 0 })} / -${((currentChallengeLevel.capitalUSD * currentChallengeLevel.dailyLossLimitPercent) / 100).toLocaleString('en-US')}
+                </span>
+              </div>
+
+              {/* Max Drawdown */}
+              <div className="flex items-center gap-1">
+                <span className="text-slate-400">Sụt giảm tối đa:</span>
+                <span className="font-bold text-rose-400 font-mono">
+                  -${challengeState.maxLossUSD.toLocaleString('en-US', { maximumFractionDigits: 0 })} / -${((currentChallengeLevel.capitalUSD * currentChallengeLevel.maxDrawdownPercent) / 100).toLocaleString('en-US')}
+                </span>
+              </div>
+
+              {/* Reset Quota */}
+              <div className="flex items-center gap-1 text-cyan-400">
+                <RefreshCw className="w-3 h-3" />
+                <span>Reset: <strong>{MAX_RESETS_PER_WEEK - challengeState.resetsUsedThisWeek}/{MAX_RESETS_PER_WEEK}</strong></span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            {challengeState.status === 'ACTIVE' && (
+              <button
+                onClick={handlePauseChallenge}
+                className="flex items-center gap-1 px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded text-[11px] font-semibold transition-all"
+                title="Tạm dừng bài thi để quay về giao dịch tự do"
+              >
+                <Pause className="w-3 h-3" />
+                <span>Tạm Dừng</span>
+              </button>
+            )}
+
+            {challengeState.status === 'PAUSED' && (
+              <button
+                onClick={handleResumeChallenge}
+                className="flex items-center gap-1 px-2.5 py-1 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 rounded text-[11px] font-bold transition-all"
+                title="Tiếp tục bài thi cấp vốn"
+              >
+                <Play className="w-3 h-3" />
+                <span>Tiếp Tục Thi</span>
+              </button>
+            )}
+
+            {(challengeState.status === 'ACTIVE' || challengeState.status === 'PAUSED' || challengeState.status === 'FAILED') && (
+              <button
+                onClick={handleEndChallenge}
+                className="flex items-center gap-1 px-2 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded text-[11px] font-semibold transition-all"
+                title="Hủy bài thi để trở về tài khoản thường"
+              >
+                <Square className="w-3 h-3" />
+                <span>Hủy Thi</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => setIsChallengeModalOpen(true)}
+              className="flex items-center gap-1 px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded text-[11px] font-bold transition-all"
+            >
+              <span>Chi Tiết Bài Thi</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[#787b86]">Rank</span>
-            <span className="font-bold text-blue-400">#7 / 42</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[#787b86]">Return</span>
-            <span className="font-bold text-emerald-400">+8.52%</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[#787b86]">Simulation Time</span>
-            <span className="font-mono text-slate-300">2026-09-12 14:30</span>
-          </div>
-        </div>
-      </div>
+      )}
+
       <div className="flex flex-1 overflow-hidden">
         <LeftToolbar activeTool={activeTool} onToolSelect={handleToolClick} />
         <div className="flex flex-col flex-1 overflow-hidden">
@@ -598,8 +972,9 @@ export const TradingTerminal = () => {
             onTimeframeChange={setActiveTimeframe}
             isReplaying={isReplaying}
             isSelectingReplayStart={isSelectingReplayStart}
-            replayIndex={replayIndex}
+            replayTime={replayTime}
             totalBars={totalBars}
+            isChallengeActive={challengeState.status === 'ACTIVE'}
             onStartReplay={handleStartReplaySelection}
             onCancelReplay={handleCancelReplaySelection}
             onReplayNext={handleReplayNext}
@@ -608,6 +983,10 @@ export const TradingTerminal = () => {
             onOpenSearch={() => setIsSearchModalOpen(true)}
             onOpenIndicator={() => setIsIndicatorModalOpen(true)}
             activeIndicatorCount={activeIndicators.length}
+            canUndo={undoRedoState.canUndo}
+            canRedo={undoRedoState.canRedo}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
           />
 
           {activeTab === 'chart' && (
@@ -620,7 +999,9 @@ export const TradingTerminal = () => {
                   isReplaying={isReplaying}
                   isSelectingReplayStart={isSelectingReplayStart}
                   onSelectReplayStart={handleConfirmReplayStart}
-                  replayIndex={replayIndex}
+                  replayTime={replayTime}
+                  replayStepTrigger={replayStepTrigger}
+                  onReplayTimeChange={setReplayTime}
                   goToRealtimeTrigger={goToRealtimeTrigger}
                   onDataLoaded={setTotalBars}
                   tradeOrders={tradeOrders.filter(o => o.symbol === selectedStock.symbol)}
@@ -638,6 +1019,11 @@ export const TradingTerminal = () => {
                         } : undefined)
                       : (positions[selectedStock.symbol] as any)
                   }
+                  previewTPSL={previewTPSL}
+                  onTPSLChange={handleTPSLDragChange}
+                  undoTrigger={undoTrigger}
+                  redoTrigger={redoTrigger}
+                  onUndoRedoChange={setUndoRedoState}
                   chartSettings={chartSettings}
                   onPriceUpdate={(price, timestamp) => {
                     setSelectedStock(prev => {
@@ -734,7 +1120,7 @@ export const TradingTerminal = () => {
           {activeRightPanel === 'order' && (
             <RightSidebar
               selectedStock={selectedStock}
-              positions={positions}
+              positions={positions as any}
               balance={balance}
               onStockSelect={(stock) => {
                 handleStockSelect(stock);
@@ -749,6 +1135,8 @@ export const TradingTerminal = () => {
               onAddMargin={handleAddMargin}
               isEditing={editingSymbol === selectedStock.symbol}
               onCancelEdit={() => setEditingSymbol(null)}
+              onPreviewTPSLChange={setPreviewTPSL}
+              draggedTPSL={draggedTPSL}
             />
           )}
 
@@ -807,7 +1195,6 @@ export const TradingTerminal = () => {
           );
         }}
       />
-
       {isSettingsModalOpen && (
         <ChartSettingsModal
           onClose={() => setIsSettingsModalOpen(false)}
@@ -815,6 +1202,14 @@ export const TradingTerminal = () => {
           onSettingsChange={setChartSettings}
         />
       )}
+
+      <ChallengeModal
+        isOpen={isChallengeModalOpen}
+        onClose={() => setIsChallengeModalOpen(false)}
+        challengeState={challengeState}
+        onStateUpdate={handleChallengeStateUpdate}
+        userName={user?.name || 'Trader'}
+      />
     </div>
   );
 };

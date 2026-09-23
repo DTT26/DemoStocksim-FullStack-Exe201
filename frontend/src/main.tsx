@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AlertProvider } from "./contexts/AlertContext";
+import { ModalProvider } from "./contexts/ModalContext";
 import App from "./App.tsx";
 import "./index.css";
 
@@ -17,7 +18,9 @@ createRoot(document.getElementById("root")!).render(
         <ThemeProvider>
           <AuthProvider>
             <AlertProvider>
-              <App />
+              <ModalProvider>
+                <App />
+              </ModalProvider>
             </AlertProvider>
           </AuthProvider>
         </ThemeProvider>

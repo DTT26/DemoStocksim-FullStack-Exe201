@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Wallet, ChevronRight, ChevronLeft, Settings2 } from 'lucide-react';
-import { STOCKS, type Stock, generateOHLCV } from '../data';
+import { STOCKS, type Stock, generateOHLCV, getPricePrecision } from '../data';
 import { useAuth } from '../../../contexts/AuthContext';
-import { useAlert } from '../../../contexts/AlertContext';
+import { useModal } from '../../../contexts/ModalContext';
 import { OrderBook } from './OrderBook';
 
 interface RightSidebarProps {
@@ -15,11 +15,13 @@ interface RightSidebarProps {
   onAddMargin?: (symbol: string, side: 'LONG' | 'SHORT', amount: number) => Promise<{ success: boolean; message: string }>;
   isEditing?: boolean;
   onCancelEdit?: () => void;
+  onPreviewTPSLChange?: (tpsl: { tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean } | null) => void;
+  draggedTPSL?: { tp?: number; sl?: number } | null;
 }
 
-export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect, onTrade, onUpdateTPSL, onAddMargin, isEditing, onCancelEdit }: RightSidebarProps) => {
+export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect, onTrade, onUpdateTPSL, onAddMargin, isEditing, onCancelEdit, onPreviewTPSLChange, draggedTPSL }: RightSidebarProps) => {
   const { user, login } = useAuth();
-  const { showAlert } = useAlert();
+  const { showAlert } = useModal();
   const [activeSidebarTab, setActiveSidebarTab] = useState<'orderbook' | 'trade'>('trade');
   const [orderType, setOrderType] = useState<'market' | 'limit' | 'stop'>('market');
   const [isExpanded, setIsExpanded] = useState(true);
@@ -49,8 +51,21 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
     } else {
       setTp('');
       setSl('');
+      setShowTPSL(false);
     }
   }, [selectedStock.symbol, positions]);
+
+  // Listen for real-time drag updates from chart
+  useEffect(() => {
+    if (draggedTPSL) {
+      if (draggedTPSL.tp !== undefined) {
+        setTp(draggedTPSL.tp.toString());
+      }
+      if (draggedTPSL.sl !== undefined) {
+        setSl(draggedTPSL.sl.toString());
+      }
+    }
+  }, [draggedTPSL]);
 
   const showToast = (msg: string, ok: boolean) => {
     setToast({ msg, ok });
@@ -89,34 +104,34 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
 
     // Validation
     if (orderType === 'limit') {
-      if (p <= 0) { showAlert('Giá Limit không hợp lệ', 'error'); return; }
+      if (p <= 0) return showAlert({ title: 'Giá không hợp lệ', message: 'Giá Limit không hợp lệ', type: 'warning' });
       if (type === 'buy' && p >= selectedStock.price) {
-        showAlert(`Giá mua Limit (${p}) phải THẤP HƠN giá thị trường hiện tại (${selectedStock.price})`, 'error'); return;
+        return showAlert({ title: 'Giá Limit không hợp lệ', message: `Giá mua Limit (${p}) phải THẤP HƠN giá thị trường hiện tại (${selectedStock.price})`, type: 'warning' });
       }
       if (type === 'sell' && p <= selectedStock.price) {
-        showAlert(`Giá bán Limit (${p}) phải CAO HƠN giá thị trường hiện tại (${selectedStock.price})`, 'error'); return;
+        return showAlert({ title: 'Giá Limit không hợp lệ', message: `Giá bán Limit (${p}) phải CAO HƠN giá thị trường hiện tại (${selectedStock.price})`, type: 'warning' });
       }
     } else if (orderType === 'stop') {
-      if (p <= 0) { showAlert('Giá Stop không hợp lệ', 'error'); return; }
+      if (p <= 0) return showAlert({ title: 'Giá không hợp lệ', message: 'Giá Stop không hợp lệ', type: 'warning' });
       if (type === 'buy' && p <= selectedStock.price) {
-        showAlert(`Giá mua Stop (${p}) phải CAO HƠN giá thị trường hiện tại (${selectedStock.price})`, 'error'); return;
+        return showAlert({ title: 'Giá Stop không hợp lệ', message: `Giá mua Stop (${p}) phải CAO HƠN giá thị trường hiện tại (${selectedStock.price})`, type: 'warning' });
       }
       if (type === 'sell' && p >= selectedStock.price) {
-        showAlert(`Giá bán Stop (${p}) phải THẤP HƠN giá thị trường hiện tại (${selectedStock.price})`, 'error'); return;
+        return showAlert({ title: 'Giá Stop không hợp lệ', message: `Giá bán Stop (${p}) phải THẤP HƠN giá thị trường hiện tại (${selectedStock.price})`, type: 'warning' });
       }
     }
 
     if (tpVal !== undefined) {
-      if (type === 'buy' && tpVal <= p) { showAlert('Chốt lời (TP) của lệnh LONG phải CAO HƠN giá mở lệnh', 'error'); return; }
-      if (type === 'sell' && tpVal >= p) { showAlert('Chốt lời (TP) của lệnh SHORT phải THẤP HƠN giá mở lệnh', 'error'); return; }
+      if (type === 'buy' && tpVal <= p) return showAlert({ title: 'Thiết lập TP/SL', message: 'Chốt lời (TP) của lệnh LONG phải CAO HƠN giá mở lệnh', type: 'warning' });
+      if (type === 'sell' && tpVal >= p) return showAlert({ title: 'Thiết lập TP/SL', message: 'Chốt lời (TP) của lệnh SHORT phải THẤP HƠN giá mở lệnh', type: 'warning' });
     }
     if (slVal !== undefined) {
-      if (type === 'buy' && slVal >= p) { showAlert('Cắt lỗ (SL) của lệnh LONG phải THẤP HƠN giá mở lệnh', 'error'); return; }
-      if (type === 'sell' && slVal <= p) { showAlert('Cắt lỗ (SL) của lệnh SHORT phải CAO HƠN giá mở lệnh', 'error'); return; }
+      if (type === 'buy' && slVal >= p) return showAlert({ title: 'Thiết lập TP/SL', message: 'Cắt lỗ (SL) của lệnh LONG phải THẤP HƠN giá mở lệnh', type: 'warning' });
+      if (type === 'sell' && slVal <= p) return showAlert({ title: 'Thiết lập TP/SL', message: 'Cắt lỗ (SL) của lệnh SHORT phải CAO HƠN giá mở lệnh', type: 'warning' });
     }
 
     if (m <= 0) {
-      showToast('Khối lượng Lot phải lớn hơn 0!', false);
+      showAlert({ title: 'Khối lượng không hợp lệ', message: 'Khối lượng Lot phải lớn hơn 0!', type: 'warning' });
       return;
     }
 
@@ -158,6 +173,23 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
   }
   const pnlColor = pnl >= 0 ? 'text-[#089981]' : 'text-[#f23645]';
   const pnlSign = pnl >= 0 ? '+' : '';
+
+  // Synchronize preview TP/SL with parent chart
+  useEffect(() => {
+    if (showTPSL) {
+      const currentSide = held > 0 && side ? side : 'LONG';
+      const tpNum = tp ? parseFloat(tp) : undefined;
+      const slNum = sl ? parseFloat(sl) : undefined;
+      onPreviewTPSLChange?.({
+        enabled: true,
+        tp: (tpNum !== undefined && !isNaN(tpNum)) ? tpNum : undefined,
+        sl: (slNum !== undefined && !isNaN(slNum)) ? slNum : undefined,
+        side: currentSide
+      });
+    } else {
+      onPreviewTPSLChange?.(null);
+    }
+  }, [showTPSL, tp, sl, side, held, onPreviewTPSLChange]);
 
   if (!isExpanded) {
     return (
@@ -230,7 +262,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                 <span className="text-[#787b86] text-[10px]">{stock.name}</span>
               </div>
               <div className={`w-20 text-right font-mono font-semibold ${stock.type === 'up' ? 'text-[#089981]' : 'text-[#f23645]'}`}>
-                {stock.price.toLocaleString('vi-VN')}
+                {stock.price >= 100 ? stock.price.toLocaleString('vi-VN') : stock.price.toFixed(getPricePrecision(stock.price))}
               </div>
               <div className={`w-14 text-right flex items-center justify-end gap-0.5 ${stock.type === 'up' ? 'text-[#089981]' : 'text-[#f23645]'}`}>
                 {stock.type === 'up' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
@@ -245,285 +277,307 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
       {user ? (
         <div className="border-t border-[#2a2e39] p-3 flex flex-col gap-2.5 shrink-0 bg-[#131722]">
           {/* Balance row */}
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1 text-[#787b86]">
-                  <Wallet className="w-3 h-3" />
-                  <span>Balance</span>
-                </div>
-                <span className="font-mono text-green-400 font-semibold">{balance.toLocaleString('vi-VN')} ₫</span>
-              </div>
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-1 text-[#787b86]">
+              <Wallet className="w-3 h-3" />
+              <span>Balance</span>
+            </div>
+            <span className="font-mono text-green-400 font-semibold">${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>
 
-              {/* Holding & PnL section removed */}
+          {/* Holding & PnL section removed */}
 
-              {/* Order type */}
-              <div className="flex gap-1.5 text-xs font-semibold pb-1">
-                <button
-                  onClick={() => { if (!isEditing) setOrderType('market'); }}
-                  className={`flex-1 py-1.5 rounded uppercase transition-colors ${orderType === 'market'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#d1d4dc]')
-                    }`}
-                >
-                  Thị trường
-                </button>
-                <button
-                  onClick={() => { if (!isEditing) setOrderType('limit'); }}
-                  className={`flex-1 py-1.5 rounded uppercase transition-colors ${orderType === 'limit'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#d1d4dc]')
-                    }`}
-                >
-                  Limit
-                </button>
-                <button
-                  onClick={() => { if (!isEditing) setOrderType('stop'); }}
-                  className={`flex-1 py-1.5 rounded uppercase transition-colors ${orderType === 'stop'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#d1d4dc]')
-                    }`}
-                >
-                  Stop
-                </button>
-              </div>
+          {/* Order type */}
+          <div className="flex gap-1.5 text-xs font-semibold pb-1">
+            <button
+              onClick={() => { if (!isEditing) setOrderType('market'); }}
+              className={`flex-1 py-1.5 rounded uppercase transition-colors ${orderType === 'market'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#d1d4dc]')
+                }`}
+            >
+              Thị trường
+            </button>
+            <button
+              onClick={() => { if (!isEditing) setOrderType('limit'); }}
+              className={`flex-1 py-1.5 rounded uppercase transition-colors ${orderType === 'limit'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#d1d4dc]')
+                }`}
+            >
+              Limit
+            </button>
+            <button
+              onClick={() => { if (!isEditing) setOrderType('stop'); }}
+              className={`flex-1 py-1.5 rounded uppercase transition-colors ${orderType === 'stop'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#d1d4dc]')
+                }`}
+            >
+              Stop
+            </button>
+          </div>
 
-              {/* Price & Qty inputs */}
-              <div className="flex gap-2">
-                <div className="flex flex-col gap-1 flex-1">
-                  <label className="text-[10px] text-[#787b86] uppercase tracking-wider">
-                    {isEditing ? 'Giá vào lệnh' : `Giá ${orderType === 'market' ? '(Thị trường)' : '(VND)'}`}
-                  </label>
-                  {isEditing ? (
-                    <div className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
-                      {avgPrice.toLocaleString('vi-VN')}
-                    </div>
-                  ) : orderType === 'market' ? (
-                    <div className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
-                      {selectedStock.price.toLocaleString('vi-VN')}
-                    </div>
-                  ) : (
-                    <input
-                      type="number"
-                      disabled={isEditing}
-                      value={limitPriceStr}
-                      placeholder="VD: 112000"
-                      onChange={e => setLimitPriceStr(e.target.value)}
-                      className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full disabled:opacity-50"
-                    />
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-1 flex-1">
-                  <label className="text-[10px] text-[#787b86] uppercase tracking-wider">Khối lượng (Lot)</label>
-                  {isEditing ? (
-                    <div className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
-                      {(held / 100000).toLocaleString('vi-VN')}
-                    </div>
-                  ) : (
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={lotStr}
-                      onChange={e => setLotStr(e.target.value)}
-                      className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full"
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* Custom Leverage Slider Inline */}
-              <div className={`flex flex-col gap-1 mt-1 ${isEditing ? 'opacity-50' : ''}`}>
-                <div className="flex justify-between items-center px-1">
-                  <label className="text-[10px] text-[#787b86] uppercase tracking-wider">Đòn bẩy</label>
-                  <span className="text-xs font-mono font-bold text-[#1e2329] dark:text-white">{isEditing ? posLeverage : leverage}X</span>
-                </div>
-
-                <div className="relative mt-2 mb-5 mx-1">
-                  <input
-                    type="range"
-                    min="1"
-                    max={leverageInfo.max}
-                    value={isEditing ? posLeverage : leverage}
-                    disabled={isEditing}
-                    onChange={e => setLev(parseInt(e.target.value))}
-                    className="w-full h-[3px] appearance-none cursor-pointer relative z-10 bg-transparent custom-leverage-slider m-0 p-0 block disabled:cursor-not-allowed"
-                    style={{
-                      background: `linear-gradient(to right, var(--lev-fill) ${(((isEditing ? posLeverage : leverage) - 1) / (leverageInfo.max - 1)) * 100}%, var(--lev-bg) ${(((isEditing ? posLeverage : leverage) - 1) / (leverageInfo.max - 1)) * 100}%)`
-                    }}
-                  />
-
-                  {/* Markers layer */}
-                  <div className="absolute top-[1.5px] left-[7px] right-[7px] pointer-events-none z-20">
-                    {/* Base 1x */}
-                    <div
-                      className="absolute top-0 -translate-y-[14px] -translate-x-1/2 flex flex-col items-center justify-start cursor-pointer pointer-events-auto group w-[30px] h-[40px]"
-                      style={{ left: '0%' }}
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLev(1); }}
-                    >
-                      <div className="w-2.5 h-2.5 rounded-full bg-[#1e2329] dark:bg-white transition-transform group-hover:scale-125 shrink-0 mt-[10px]" />
-                      <span className="text-[10px] font-semibold text-[#1e2329] dark:text-white whitespace-nowrap mt-1">1X</span>
-                    </div>
-
-                    {leverageInfo.marks.map(m => {
-                      const percent = ((m - 1) / (leverageInfo.max - 1)) * 100;
-                      const isActive = leverage >= m;
-                      return (
-                        <div
-                          key={m}
-                          className="absolute top-0 -translate-y-[14px] -translate-x-1/2 flex flex-col items-center justify-start cursor-pointer pointer-events-auto group w-[40px] h-[40px]"
-                          style={{ left: `${percent}%` }}
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLev(m); }}
-                        >
-                          <div className={`w-2.5 h-2.5 rounded-full transition-transform group-hover:scale-125 shrink-0 mt-[10px] ${isActive ? 'bg-[#1e2329] dark:bg-white' : 'bg-[#e6e8ea] dark:bg-[#2a2e39]'}`} />
-                          <span className={`text-[10px] font-semibold whitespace-nowrap mt-1 transition-colors ${isActive ? 'text-[#1e2329] dark:text-[#d1d4dc] group-hover:text-black dark:group-hover:text-white' : 'text-[#787b86] group-hover:text-[#1e2329] dark:group-hover:text-white'}`}>
-                            {m}X
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* TP / SL Toggle */}
-              <div className="flex items-center gap-2 mt-2">
-                <input
-                  type="checkbox"
-                  id="toggle-tpsl"
-                  checked={showTPSL}
-                  disabled={isEditing}
-                  onChange={(e) => {
-                    setShowTPSL(e.target.checked);
-                    if (!e.target.checked) {
-                      setTp('');
-                      setSl('');
-                    }
-                  }}
-                  className="w-3.5 h-3.5 accent-blue-600 cursor-pointer"
-                />
-                <label htmlFor="toggle-tpsl" className="text-xs text-[#787b86] cursor-pointer hover:text-[#d1d4dc] transition-colors">
-                  Thiết lập Chốt lời / Cắt lỗ (TP/SL)
-                </label>
-              </div>
-
-              {/* TP / SL inputs */}
-              {showTPSL && (
-                <div className="flex gap-2 border-t border-[#2a2e39]/50 pt-2 mt-1">
-                  <div className="flex flex-col gap-1 flex-1">
-                    <div className="flex justify-between items-center">
-                      <label className="text-[10px] text-[#089981] uppercase tracking-wider font-semibold">Chốt lời (TP)</label>
-                    </div>
-                    <input
-                      type="number"
-                      value={tp}
-                      placeholder="Tùy chọn"
-                      onChange={e => setTp(e.target.value)}
-                      className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-[#089981] transition-colors w-full placeholder:text-[#434651]"
-                    />
-                    {held > 0 && (
-                      <input
-                        type="range"
-                        min={(avgPrice * 0.5).toFixed(1)}
-                        max={(avgPrice * 1.5).toFixed(1)}
-                        step="0.1"
-                        value={tp || selectedStock.price}
-                        onChange={e => setTp(e.target.value)}
-                        className="w-full accent-[#089981] mt-1 h-1 bg-[#2a2e39] rounded-lg appearance-none cursor-pointer"
-                      />
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-1 flex-1">
-                    <div className="flex justify-between items-center">
-                      <label className="text-[10px] text-[#f23645] uppercase tracking-wider font-semibold">Cắt lỗ (SL)</label>
-                    </div>
-                    <input
-                      type="number"
-                      value={sl}
-                      placeholder="Tùy chọn"
-                      onChange={e => setSl(e.target.value)}
-                      className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-[#f23645] transition-colors w-full placeholder:text-[#434651]"
-                    />
-                    {held > 0 && (
-                      <input
-                        type="range"
-                        min={(avgPrice * 0.5).toFixed(1)}
-                        max={(avgPrice * 1.5).toFixed(1)}
-                        step="0.1"
-                        value={sl || selectedStock.price}
-                        onChange={e => setSl(e.target.value)}
-                        className="w-full accent-[#f23645] mt-1 h-1 bg-[#2a2e39] rounded-lg appearance-none cursor-pointer"
-                      />
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Total info */}
-              <div className="flex items-center justify-between text-xs pt-2">
-                <span className="text-[#787b86]">Ký quỹ yêu cầu</span>
-                <span className="font-mono text-[#d1d4dc] font-bold">{requiredMargin.toLocaleString('vi-VN', { maximumFractionDigits: 0 })} ₫</span>
-              </div>
-              <div className="flex items-center justify-between text-[10px] pb-2">
-                <span className="text-[#787b86]">Khối lượng thực tế</span>
-                <span className="font-mono text-[#787b86]">{actualQty.toLocaleString('vi-VN')}</span>
-              </div>
-
-              {/* Buttons */}
+          {/* Price & Qty inputs */}
+          <div className="flex gap-2">
+            <div className="flex flex-col gap-1 flex-1">
+              <label className="text-[10px] text-[#787b86] uppercase tracking-wider">
+                {isEditing ? 'Giá vào lệnh' : `Giá ${orderType === 'market' ? '(Thị trường)' : '(VND)'}`}
+              </label>
               {isEditing ? (
-                <div className="flex gap-2">
-                  <button
-                    onClick={onCancelEdit}
-                    disabled={isSubmitting}
-                    className="flex-1 bg-[#2a2e39] hover:bg-[#363a45] text-white font-bold py-2.5 rounded text-sm transition-all"
-                  >
-                    HỦY SỬA
-                  </button>
-                  <button
-                    onClick={handleUpdateTPSL}
-                    disabled={isSubmitting}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold py-2.5 rounded text-sm transition-all"
-                  >
-                    LƯU CẬP NHẬT
-                  </button>
+                <div className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
+                  {avgPrice >= 100 ? avgPrice.toLocaleString('vi-VN') : avgPrice.toFixed(getPricePrecision(avgPrice))}
+                </div>
+              ) : orderType === 'market' ? (
+                <div className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
+                  {selectedStock.price >= 100 ? selectedStock.price.toLocaleString('vi-VN') : selectedStock.price.toFixed(getPricePrecision(selectedStock.price))}
                 </div>
               ) : (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleTrade('buy')}
-                    disabled={isSubmitting}
-                    className="flex-1 bg-[#089981] hover:bg-[#089981]/80 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded text-sm transition-all"
-                  >
-                    LONG
-                  </button>
-                  <button
-                    onClick={() => handleTrade('sell')}
-                    disabled={isSubmitting}
-                    className="flex-1 bg-[#f23645] hover:bg-[#f23645]/80 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded text-sm transition-all"
-                  >
-                    SHORT
-                  </button>
-                </div>
-              )}
-
-              {/* Toast notification */}
-              {toast && (
-                <div className={`text-xs px-3 py-2 rounded text-center font-medium transition-all ${toast.ok ? 'bg-green-900/50 text-green-300 border border-green-700' : 'bg-red-900/50 text-red-300 border border-red-700'
-                  }`}>
-                  {toast.msg}
-                </div>
+                <input
+                  type="number"
+                  disabled={isEditing}
+                  value={limitPriceStr}
+                  placeholder="VD: 112000"
+                  onChange={e => setLimitPriceStr(e.target.value)}
+                  className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full disabled:opacity-50"
+                />
               )}
             </div>
-          ) : (
-            <div className="border-t border-[#2a2e39] p-6 flex flex-col items-center justify-center text-center gap-4 shrink-0 bg-[#131722]">
-              <Wallet className="w-8 h-8 text-[#434651]" />
-              <p className="text-[#787b86] text-xs">Vui lòng đăng nhập để xem số dư và thực hiện giao dịch.</p>
+
+            <div className="flex flex-col gap-1 flex-1">
+              <label className="text-[10px] text-[#787b86] uppercase tracking-wider">Khối lượng (Lot)</label>
+              {isEditing ? (
+                <div className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
+                  {(held / 100000).toLocaleString('vi-VN')}
+                </div>
+              ) : (
+                <input
+                  type="number"
+                  step="0.01"
+                  value={lotStr}
+                  onChange={e => setLotStr(e.target.value)}
+                  className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full"
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Custom Leverage Slider Inline */}
+          <div className={`flex flex-col gap-1 mt-1 ${isEditing ? 'opacity-50' : ''}`}>
+            <div className="flex justify-between items-center px-1">
+              <label className="text-[10px] text-[#787b86] uppercase tracking-wider">Đòn bẩy</label>
+              <span className="text-xs font-mono font-bold text-[#1e2329] dark:text-white">{isEditing ? posLeverage : leverage}X</span>
+            </div>
+
+            <div className="relative mt-2 mb-5 mx-1">
+              <input
+                type="range"
+                min="1"
+                max={leverageInfo.max}
+                value={isEditing ? posLeverage : leverage}
+                disabled={isEditing}
+                onChange={e => setLev(parseInt(e.target.value))}
+                className="w-full h-[3px] appearance-none cursor-pointer relative z-10 bg-transparent custom-leverage-slider m-0 p-0 block disabled:cursor-not-allowed"
+                style={{
+                  background: `linear-gradient(to right, var(--lev-fill) ${(((isEditing ? posLeverage : leverage) - 1) / (leverageInfo.max - 1)) * 100}%, var(--lev-bg) ${(((isEditing ? posLeverage : leverage) - 1) / (leverageInfo.max - 1)) * 100}%)`
+                }}
+              />
+
+              {/* Markers layer */}
+              <div className="absolute top-[1.5px] left-[7px] right-[7px] pointer-events-none z-20">
+                {/* Base 1x */}
+                <div
+                  className="absolute top-0 -translate-y-[14px] -translate-x-1/2 flex flex-col items-center justify-start cursor-pointer pointer-events-auto group w-[30px] h-[40px]"
+                  style={{ left: '0%' }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLev(1); }}
+                >
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#1e2329] dark:bg-white transition-transform group-hover:scale-125 shrink-0 mt-[10px]" />
+                  <span className="text-[10px] font-semibold text-[#1e2329] dark:text-white whitespace-nowrap mt-1">1X</span>
+                </div>
+
+                {leverageInfo.marks.map(m => {
+                  const percent = ((m - 1) / (leverageInfo.max - 1)) * 100;
+                  const isActive = leverage >= m;
+                  return (
+                    <div
+                      key={m}
+                      className="absolute top-0 -translate-y-[14px] -translate-x-1/2 flex flex-col items-center justify-start cursor-pointer pointer-events-auto group w-[40px] h-[40px]"
+                      style={{ left: `${percent}%` }}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLev(m); }}
+                    >
+                      <div className={`w-2.5 h-2.5 rounded-full transition-transform group-hover:scale-125 shrink-0 mt-[10px] ${isActive ? 'bg-[#1e2329] dark:bg-white' : 'bg-[#e6e8ea] dark:bg-[#2a2e39]'}`} />
+                      <span className={`text-[10px] font-semibold whitespace-nowrap mt-1 transition-colors ${isActive ? 'text-[#1e2329] dark:text-[#d1d4dc] group-hover:text-black dark:group-hover:text-white' : 'text-[#787b86] group-hover:text-[#1e2329] dark:group-hover:text-white'}`}>
+                        {m}X
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* TP / SL Toggle */}
+          <div className="flex items-center gap-2 mt-2">
+            <input
+              type="checkbox"
+              id="toggle-tpsl"
+              checked={showTPSL}
+              disabled={isEditing}
+              onChange={(e) => {
+                const isChecked = e.target.checked;
+                setShowTPSL(isChecked);
+                if (isChecked) {
+                  const refPrice = orderType === 'limit' && parseFloat(limitPriceStr) > 0 
+                    ? parseFloat(limitPriceStr) 
+                    : (held > 0 && avgPrice > 0 ? avgPrice : selectedStock.price);
+                  const precision = getPricePrecision(refPrice);
+                  const currentSide = held > 0 && side ? side : 'LONG';
+
+                  let newTp = tp;
+                  let newSl = sl;
+                  if (!newTp) {
+                    const tpFactor = currentSide === 'LONG' ? 1.05 : 0.95;
+                    newTp = (refPrice * tpFactor).toFixed(precision);
+                    setTp(newTp);
+                  }
+                  if (!newSl) {
+                    const slFactor = currentSide === 'LONG' ? 0.97 : 1.03;
+                    newSl = (refPrice * slFactor).toFixed(precision);
+                    setSl(newSl);
+                  }
+                } else {
+                  setTp('');
+                  setSl('');
+                }
+              }}
+              className="w-3.5 h-3.5 accent-blue-600 cursor-pointer"
+            />
+            <label htmlFor="toggle-tpsl" className="text-xs text-[#787b86] cursor-pointer hover:text-[#d1d4dc] transition-colors">
+              Thiết lập Chốt lời / Cắt lỗ (TP/SL)
+            </label>
+          </div>
+
+          {/* TP / SL inputs */}
+          {showTPSL && (() => {
+            const baseRefPrice = held > 0 && avgPrice > 0 ? avgPrice : (orderType === 'limit' && parseFloat(limitPriceStr) > 0 ? parseFloat(limitPriceStr) : selectedStock.price);
+            const sliderPrecision = getPricePrecision(baseRefPrice);
+            const sliderStep = baseRefPrice > 1000 ? '1' : baseRefPrice > 10 ? '0.1' : Math.pow(10, -sliderPrecision).toString();
+
+            return (
+              <div className="flex gap-2 border-t border-[#2a2e39]/50 pt-2 mt-1">
+                <div className="flex flex-col gap-1 flex-1">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] text-[#089981] uppercase tracking-wider font-semibold">Chốt lời (TP)</label>
+                  </div>
+                  <input
+                    type="number"
+                    value={tp}
+                    placeholder="Tùy chọn"
+                    onChange={e => setTp(e.target.value)}
+                    className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-[#089981] transition-colors w-full placeholder:text-[#434651]"
+                  />
+                  <input
+                    type="range"
+                    min={(baseRefPrice * 0.5).toFixed(sliderPrecision)}
+                    max={(baseRefPrice * 1.5).toFixed(sliderPrecision)}
+                    step={sliderStep}
+                    value={tp || baseRefPrice}
+                    onChange={e => setTp(e.target.value)}
+                    className="w-full accent-[#089981] mt-1 h-1 bg-[#2a2e39] rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+                <div className="flex flex-col gap-1 flex-1">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] text-[#f23645] uppercase tracking-wider font-semibold">Cắt lỗ (SL)</label>
+                  </div>
+                  <input
+                    type="number"
+                    value={sl}
+                    placeholder="Tùy chọn"
+                    onChange={e => setSl(e.target.value)}
+                    className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-[#f23645] transition-colors w-full placeholder:text-[#434651]"
+                  />
+                  <input
+                    type="range"
+                    min={(baseRefPrice * 0.5).toFixed(sliderPrecision)}
+                    max={(baseRefPrice * 1.5).toFixed(sliderPrecision)}
+                    step={sliderStep}
+                    value={sl || baseRefPrice}
+                    onChange={e => setSl(e.target.value)}
+                    className="w-full accent-[#f23645] mt-1 h-1 bg-[#2a2e39] rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Total info */}
+          <div className="flex items-center justify-between text-xs pt-2">
+            <span className="text-[#787b86]">Ký quỹ yêu cầu</span>
+            <span className="font-mono text-[#d1d4dc] font-bold">${requiredMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>
+          <div className="flex items-center justify-between text-[10px] pb-2">
+            <span className="text-[#787b86]">Khối lượng thực tế</span>
+            <span className="font-mono text-[#787b86]">{actualQty.toLocaleString('vi-VN')}</span>
+          </div>
+
+          {/* Buttons */}
+          {isEditing ? (
+            <div className="flex gap-2">
               <button
-                onClick={() => login()}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2.5 rounded transition-colors"
+                onClick={onCancelEdit}
+                disabled={isSubmitting}
+                className="flex-1 bg-[#2a2e39] hover:bg-[#363a45] text-white font-bold py-2.5 rounded text-sm transition-all"
               >
-                Đăng nhập
+                HỦY SỬA
+              </button>
+              <button
+                onClick={handleUpdateTPSL}
+                disabled={isSubmitting}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold py-2.5 rounded text-sm transition-all"
+              >
+                LƯU CẬP NHẬT
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleTrade('buy')}
+                disabled={isSubmitting}
+                className="flex-1 bg-[#089981] hover:bg-[#089981]/80 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded text-sm transition-all"
+              >
+                LONG
+              </button>
+              <button
+                onClick={() => handleTrade('sell')}
+                disabled={isSubmitting}
+                className="flex-1 bg-[#f23645] hover:bg-[#f23645]/80 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded text-sm transition-all"
+              >
+                SHORT
               </button>
             </div>
           )}
+
+          {/* Toast notification */}
+          {toast && (
+            <div className={`text-xs px-3 py-2 rounded text-center font-medium transition-all ${toast.ok ? 'bg-green-900/50 text-green-300 border border-green-700' : 'bg-red-900/50 text-red-300 border border-red-700'
+              }`}>
+              {toast.msg}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="border-t border-[#2a2e39] p-6 flex flex-col items-center justify-center text-center gap-4 shrink-0 bg-[#131722]">
+          <Wallet className="w-8 h-8 text-[#434651]" />
+          <p className="text-[#787b86] text-xs">Vui lòng đăng nhập để xem số dư và thực hiện giao dịch.</p>
+          <button
+            onClick={() => login()}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2.5 rounded transition-colors"
+          >
+            Đăng nhập
+          </button>
+        </div>
+      )}
     </div>
   );
 };

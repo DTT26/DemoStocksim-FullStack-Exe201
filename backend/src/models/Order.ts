@@ -30,6 +30,7 @@ export interface IOrder extends Document {
   stopLoss?: number;
   takeProfit?: number;
   status: OrderStatus;
+  accountType: 'STANDARD' | 'CHALLENGE';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -45,7 +46,8 @@ const OrderSchema: Schema = new Schema({
   leverage: { type: Number, required: true, default: 1 },
   stopLoss: { type: Number },
   takeProfit: { type: Number },
-  status: { type: String, enum: Object.values(OrderStatus), default: OrderStatus.PENDING }
+  status: { type: String, enum: Object.values(OrderStatus), default: OrderStatus.PENDING },
+  accountType: { type: String, enum: ['STANDARD', 'CHALLENGE'], default: 'STANDARD' }
 }, { timestamps: true });
 
 export default mongoose.model<IOrder>('Order', OrderSchema);

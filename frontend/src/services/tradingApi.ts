@@ -1,20 +1,40 @@
-const getBaseUrl = () => {
-  const envUrl = import.meta.env.VITE_API_URL;
-  if (envUrl) {
-    return `${envUrl}/trade`;
+const ROOT_API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = `${ROOT_API}/trade`;
+
+// Fallback UserID chỉ dành khi hoàn toàn không có tài khoản đăng nhập
+export const DUMMY_USER_ID = '64f7b1e4a3b9c2d1e8f9a0b1';
+
+export const getActiveUserId = (providedUserId?: string): string => {
+  if (providedUserId) return providedUserId;
+  const storedUserId = localStorage.getItem('userId');
+  if (storedUserId) return storedUserId;
+
+  const token = localStorage.getItem('token');
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (payload.userId) return payload.userId;
+    } catch {}
   }
-  return 'http://localhost:3000/api/trade';
+  return DUMMY_USER_ID;
 };
 
-const API_BASE_URL = getBaseUrl();
+const getHeaders = () => {
+  const token = localStorage.getItem('token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  };
+};
 
 export const tradingApi = {
   buyStock: async (symbol: string, margin: number, leverage: number, currentPrice: number, sl?: number, tp?: number, userId?: string) => {
+    const actualUserId = getActiveUserId(userId);
     const res = await fetch(`${API_BASE_URL}/buy`, {
       credentials: 'include',
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, symbol, margin, leverage, currentPrice, stopLoss: sl, takeProfit: tp })
+      headers: getHeaders(),
+      body: JSON.stringify({ userId: actualUserId, symbol, margin, leverage, currentPrice, stopLoss: sl, takeProfit: tp })
     });
     if (!res.ok) {
       const error = await res.json();
@@ -24,11 +44,12 @@ export const tradingApi = {
   },
 
   sellStock: async (symbol: string, margin: number, leverage: number, currentPrice: number, userId?: string) => {
+    const actualUserId = getActiveUserId(userId);
     const res = await fetch(`${API_BASE_URL}/sell`, {
       credentials: 'include',
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, symbol, margin, leverage, currentPrice })
+      headers: getHeaders(),
+      body: JSON.stringify({ userId: actualUserId, symbol, margin, leverage, currentPrice })
     });
     if (!res.ok) {
       const error = await res.json();
@@ -38,11 +59,12 @@ export const tradingApi = {
   },
 
   closePosition: async (symbol: string, side: 'LONG'|'SHORT', currentPrice: number, userId?: string) => {
+    const actualUserId = getActiveUserId(userId);
     const res = await fetch(`${API_BASE_URL}/close`, {
       credentials: 'include',
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, symbol, side, currentPrice })
+      headers: getHeaders(),
+      body: JSON.stringify({ userId: actualUserId, symbol, side, currentPrice })
     });
     if (!res.ok) {
       const error = await res.json();
@@ -52,11 +74,12 @@ export const tradingApi = {
   },
 
   updateTPSL: async (symbol: string, side: 'LONG'|'SHORT', takeProfit?: number, stopLoss?: number, userId?: string) => {
+    const actualUserId = getActiveUserId(userId);
     const res = await fetch(`${API_BASE_URL}/tpsl`, {
       credentials: 'include',
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, symbol, side, takeProfit, stopLoss })
+      headers: getHeaders(),
+      body: JSON.stringify({ userId: actualUserId, symbol, side, takeProfit, stopLoss })
     });
     if (!res.ok) {
       const error = await res.json();
@@ -66,11 +89,12 @@ export const tradingApi = {
   },
 
   addMargin: async (symbol: string, side: 'LONG'|'SHORT', amount: number, userId?: string) => {
+    const actualUserId = getActiveUserId(userId);
     const res = await fetch(`${API_BASE_URL}/margin/add`, {
       credentials: 'include',
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, symbol, side, amount })
+      headers: getHeaders(),
+      body: JSON.stringify({ userId: actualUserId, symbol, side, amount })
     });
     if (!res.ok) {
       const error = await res.json();
@@ -80,23 +104,42 @@ export const tradingApi = {
   },
 
   getPortfolio: async (userId?: string) => {
-    const url = userId ? `${API_BASE_URL}/portfolio/${userId}` : `${API_BASE_URL}/portfolio`;
-    const res = await fetch(url, { credentials: 'include' });
+    const actualUserId = getActiveUserId(userId);
+    const url = actualUserId ? `${API_BASE_URL}/portfolio/${actualUserId}` : `${API_BASE_URL}/portfolio`;
+    const res = await fetch(url, {
+      credentials: 'include',
+      headers: getHeaders()
+    });
     return await res.json();
   },
 
   getTransactions: async (userId?: string) => {
-    const url = userId ? `${API_BASE_URL}/transactions/${userId}` : `${API_BASE_URL}/transactions`;
-    const res = await fetch(url, { credentials: 'include' });
+    const actualUserId = getActiveUserId(userId);
+    const url = actualUserId ? `${API_BASE_URL}/transactions/${actualUserId}` : `${API_BASE_URL}/transactions`;
+    const res = await fetch(url, {
+      credentials: 'include',
+      headers: getHeaders()
+    });
     return await res.json();
   },
 
-  placeLimitOrder: async (symbol: string, side: 'LONG'|'SHORT', limitPrice: number, margin: number, leverage: number, stopLoss?: number, takeProfit?: number, orderType: 'LIMIT' | 'STOP' = 'LIMIT', userId?: string) => {
+  placeLimitOrder: async (
+    symbol: string,
+    side: 'LONG'|'SHORT',
+    limitPrice: number,
+    margin: number,
+    leverage: number,
+    stopLoss?: number,
+    takeProfit?: number,
+    orderType: 'LIMIT' | 'STOP' = 'LIMIT',
+    userId?: string
+  ) => {
+    const actualUserId = getActiveUserId(userId);
     const res = await fetch(`${API_BASE_URL}/limit`, {
       credentials: 'include',
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, symbol, side, limitPrice, margin, leverage, stopLoss, takeProfit, orderType })
+      headers: getHeaders(),
+      body: JSON.stringify({ userId: actualUserId, symbol, side, limitPrice, margin, leverage, stopLoss, takeProfit, orderType })
     });
     if (!res.ok) {
       const error = await res.json();
@@ -106,11 +149,12 @@ export const tradingApi = {
   },
 
   cancelLimitOrder: async (orderId: string, userId?: string) => {
+    const actualUserId = getActiveUserId(userId);
     const res = await fetch(`${API_BASE_URL}/limit/cancel`, {
       credentials: 'include',
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, orderId })
+      headers: getHeaders(),
+      body: JSON.stringify({ userId: actualUserId, orderId })
     });
     if (!res.ok) {
       const error = await res.json();
@@ -119,4 +163,3 @@ export const tradingApi = {
     return await res.json();
   }
 };
-

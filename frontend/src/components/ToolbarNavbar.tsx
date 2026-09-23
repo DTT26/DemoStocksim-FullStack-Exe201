@@ -1,21 +1,36 @@
 import { useState } from 'react';
-import { Settings, User, Bell, Moon, Sun, Globe } from 'lucide-react';
+import { Settings, User, Bell, Moon, Sun, Globe, Trophy } from 'lucide-react';
 import { UserDropdown } from './UserDropdown';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { useAlert } from '../contexts/AlertContext';
+import { useModal } from '../contexts/ModalContext';
 import { LanguageModal } from './LanguageModal';
 import { NotificationDropdown } from './NotificationDropdown';
 
 interface ToolbarNavbarProps {
   balance: number;
   onOpenSettings?: () => void;
+  onOpenChallenge?: () => void;
+  challengeLevelName?: string;
+  challengeStatus?: string;
+  accountRankBadge?: string;
+  accountRankName?: string;
+  certCount?: number;
 }
 
-export const ToolbarNavbar = ({ balance, onOpenSettings }: ToolbarNavbarProps) => {
+export const ToolbarNavbar = ({ 
+  balance, 
+  onOpenSettings,
+  onOpenChallenge, 
+  challengeLevelName, 
+  challengeStatus,
+  accountRankBadge,
+  accountRankName,
+  certCount
+}: ToolbarNavbarProps) => {
   const { user, login, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { showAlert } = useAlert();
+  const { showAlert } = useModal();
   const isDarkMode = theme === 'dark';
   const [language, setLanguage] = useState('VI');
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
@@ -23,9 +38,33 @@ export const ToolbarNavbar = ({ balance, onOpenSettings }: ToolbarNavbarProps) =
   return (
     <>
       <nav className="h-12 bg-white dark:bg-[#131722] border-b border-[#e6e8ea] dark:border-[#2a2e39] flex items-center px-4 justify-between text-[#1e2329] dark:text-[#d1d4dc] text-sm shrink-0 relative z-50">
-        {/* Logo StockSim */}
-        <div className="flex items-center">
-          <img src="/images/logo.jpg" alt="StockSim" className="h-7 object-contain rounded" />
+        {/* Logo & Prop Firm Challenge */}
+        <div className="flex items-center gap-3">
+          <img src="/images/logo.jpg" alt="AITRADEX" className="h-7 object-contain rounded" />
+          
+          {/* Nút Thử Thách Quỹ (Prop Firm Challenge) */}
+          <button
+            onClick={onOpenChallenge}
+            className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-yellow-500/20 hover:from-amber-500/30 hover:to-yellow-500/30 border border-amber-500/40 text-amber-600 dark:text-amber-400 font-bold text-xs transition-all shadow-sm shadow-amber-500/10 hover:scale-[1.02]"
+            title={`Thử Thách Cấp Vốn Quỹ • Hạng tài khoản: ${accountRankName || 'Cấp 1'}`}
+          >
+            <Trophy className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+            <span>Thử Thách Quỹ</span>
+            {challengeStatus === 'ACTIVE' ? (
+              <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Thi {challengeLevelName}</span>
+              </span>
+            ) : challengeStatus === 'PAUSED' ? (
+              <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-[10px] font-extrabold text-amber-600 dark:text-amber-300 border border-amber-500/30">
+                Tạm dừng {challengeLevelName}
+              </span>
+            ) : (
+              <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-[10px] font-extrabold text-amber-700 dark:text-amber-300 border border-amber-500/30" title="Cấp bậc cao nhất tài khoản đã đạt được">
+                {accountRankBadge || 'Cấp 1'}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Simulation Info (Centered) */}
@@ -81,7 +120,14 @@ export const ToolbarNavbar = ({ balance, onOpenSettings }: ToolbarNavbarProps) =
           <div className="w-px h-4 bg-[#2a2e39] mx-1" />
 
           {user ? (
-            <UserDropdown user={{ ...user, balance }} onLogout={logout} />
+            <UserDropdown 
+              user={{ ...user, balance }} 
+              onLogout={logout} 
+              isChallenge={challengeStatus === 'ACTIVE' || challengeStatus === 'PAUSED'}
+              challengeLevelName={challengeLevelName}
+              accountRankName={accountRankName}
+              certCount={certCount}
+            />
           ) : (
             <button 
               onClick={() => login()} 

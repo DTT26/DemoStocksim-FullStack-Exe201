@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Calendar, Users, DollarSign, BarChart2, PlusCircle, ArrowRight } from 'lucide-react';
-import { useAlert } from '../../contexts/AlertContext';
+import { useModal } from '../../contexts/ModalContext';
 
 export const SimulationsList = () => {
-  const { showAlert } = useAlert();
+  const { showAlert } = useModal();
   const [simulations, setSimulations] = useState<any[]>([]);
   const [participations, setParticipations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,14 +51,26 @@ export const SimulationsList = () => {
       if (response.ok) {
         // Refresh data to show "Enter Simulation" button
         fetchData();
-        showAlert('Successfully joined the simulation', 'success');
+        showAlert({
+          title: 'Thành công',
+          message: 'Tham gia mô phỏng thành công!',
+          type: 'success'
+        });
       } else {
         const data = await response.json();
-        showAlert(data.message || 'Failed to join simulation', 'error');
+        showAlert({
+          title: 'Tham gia mô phỏng thất bại',
+          message: data.message || 'Failed to join simulation',
+          type: 'error'
+        });
       }
     } catch (error) {
       console.error('Error joining simulation:', error);
-      showAlert('An error occurred while joining the simulation', 'error');
+      showAlert({
+        title: 'Lỗi',
+        message: 'An error occurred while joining the simulation',
+        type: 'error'
+      });
     } finally {
       setJoiningId(null);
     }

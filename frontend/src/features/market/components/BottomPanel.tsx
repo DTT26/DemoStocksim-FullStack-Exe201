@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { X, CheckSquare, Square, Settings2, ChevronDown, ChevronUp } from 'lucide-react';
 import { STOCKS } from '../data';
 import { tradingApi } from '../../../services/tradingApi';
-import { useAlert } from '../../../contexts/AlertContext';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useModal } from '../../../contexts/ModalContext';
 
 interface Transaction {
   _id: string;
@@ -38,8 +38,8 @@ export const BottomPanel = ({
   onEditPosition,
   refreshTrigger
 }: BottomPanelProps) => {
-  const { showAlert } = useAlert();
   const { user } = useAuth();
+  const { showAlert } = useModal();
   const [activeTab, setActiveTab] = useState<'positions' | 'orders' | 'history' | 'trade_history'>('positions');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   
@@ -383,7 +383,11 @@ export const BottomPanel = ({
                   const amt = parseInt(addingMargin.amount, 10);
                   if (!isNaN(amt) && amt > 0) {
                     const res = await onAddMargin(addingMargin.symbol, addingMargin.side, amt);
-                    showAlert(res.message, res.success ? 'success' : 'error');
+                    showAlert({
+                      title: res.success ? 'Ký quỹ thành công' : 'Ký quỹ thất bại',
+                      message: res.message,
+                      type: res.success ? 'success' : 'error'
+                    });
                     if (res.success) setAddingMargin(null);
                   }
                 }}

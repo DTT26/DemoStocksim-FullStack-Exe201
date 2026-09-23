@@ -9,6 +9,7 @@ export interface IHolding extends Document {
   leverage: number;
   tp?: number;
   sl?: number;
+  accountType: 'STANDARD' | 'CHALLENGE';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -21,12 +22,13 @@ const HoldingSchema: Schema = new Schema({
   averagePrice: { type: Number, required: true },
   leverage: { type: Number, required: true, default: 1 },
   tp: { type: Number, required: false },
-  sl: { type: Number, required: false }
+  sl: { type: Number, required: false },
+  accountType: { type: String, enum: ['STANDARD', 'CHALLENGE'], default: 'STANDARD' }
 }, {
   timestamps: true
 });
 
-// A user should only have one holding record per symbol
-HoldingSchema.index({ userId: 1, symbol: 1 }, { unique: true });
+// A user can hold positions separately in STANDARD vs CHALLENGE accounts
+HoldingSchema.index({ userId: 1, symbol: 1, accountType: 1 }, { unique: true });
 
 export default mongoose.model<IHolding>('Holding', HoldingSchema);

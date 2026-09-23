@@ -74,13 +74,13 @@ export const googleLogin = async (req: Request, res: Response) => {
     const token = jwt.sign(
       { userId: user._id, email: user.email, role: user.role },
       jwtSecret,
-      { expiresIn: '15m' } // Hạn ngắn cho Access Token
+      { expiresIn: '7d' } // 7 ngày cho Access Token để phiên giao dịch không bị gián đoạn
     );
 
     const refreshToken = jwt.sign(
       { userId: user._id },
       refreshSecret,
-      { expiresIn: '7d' } // Hạn dài cho Refresh Token
+      { expiresIn: '30d' } // 30 ngày cho Refresh Token
     );
 
     // Đặt cookie cho token
@@ -138,7 +138,7 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
     const newAccessToken = jwt.sign(
       { userId: user._id, email: user.email, role: user.role },
       jwtSecret,
-      { expiresIn: '15m' }
+      { expiresIn: '7d' }
     );
 
     res.cookie('token', newAccessToken, {

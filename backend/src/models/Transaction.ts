@@ -13,6 +13,7 @@ export interface ITransaction extends Document {
   type: TransactionType;
   amount: number;
   description: string;
+  accountType: 'STANDARD' | 'CHALLENGE';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,7 +23,8 @@ const TransactionSchema: Schema = new Schema({
   orderId: { type: Schema.Types.ObjectId, ref: 'Order' }, // Optional, as Deposit/Withdrawal might not have an order
   type: { type: String, enum: Object.values(TransactionType), required: true },
   amount: { type: Number, required: true },
-  description: { type: String }
+  description: { type: String },
+  accountType: { type: String, enum: ['STANDARD', 'CHALLENGE'], default: 'STANDARD' }
 }, { timestamps: true });
 
 export default mongoose.model<ITransaction>('Transaction', TransactionSchema);
