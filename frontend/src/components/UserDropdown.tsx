@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { LogOut, Sun, Globe, Keyboard, LayoutDashboard, Trophy } from 'lucide-react';
+import { LogOut, Keyboard, LayoutDashboard, Trophy } from 'lucide-react';
 import { googleLogout } from '@react-oauth/google';
 import { Link } from 'react-router-dom';
 
@@ -124,17 +124,6 @@ export const UserDropdown = ({
               <LayoutDashboard className="w-4 h-4" />
               <span>My Dashboard</span>
             </Link>
-            <button className="w-full text-left px-4 py-2 hover:bg-[#2a2e39] flex items-center justify-between transition-colors">
-              <div className="flex items-center gap-3">
-                <Globe className="w-4 h-4 text-[#787b86]" />
-                <span>Ngôn ngữ</span>
-              </div>
-              <span className="text-xs text-[#787b86]">{'>'}</span>
-            </button>
-            <button className="w-full text-left px-4 py-2 hover:bg-[#2a2e39] flex items-center gap-3 transition-colors">
-              <Sun className="w-4 h-4 text-[#787b86]" />
-              <span>Giao diện sáng</span>
-            </button>
             <button className="w-full text-left px-4 py-2 hover:bg-[#2a2e39] flex items-center gap-3 transition-colors">
               <Keyboard className="w-4 h-4 text-[#787b86]" />
               <span>Phím tắt</span>
