@@ -1,17 +1,33 @@
 import { useState } from 'react';
-import { Settings, User, Bell, Moon, Sun, Globe } from 'lucide-react';
+import { Settings, User, Bell, Moon, Sun, Globe, Trophy } from 'lucide-react';
 import { UserDropdown } from './UserDropdown';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useModal } from '../contexts/ModalContext';
 import { LanguageModal } from './LanguageModal';
 
 interface ToolbarNavbarProps {
   balance: number;
+  onOpenChallenge?: () => void;
+  challengeLevelName?: string;
+  challengeStatus?: string;
+  accountRankBadge?: string;
+  accountRankName?: string;
+  certCount?: number;
 }
 
-export const ToolbarNavbar = ({ balance }: ToolbarNavbarProps) => {
+export const ToolbarNavbar = ({ 
+  balance, 
+  onOpenChallenge, 
+  challengeLevelName, 
+  challengeStatus,
+  accountRankBadge,
+  accountRankName,
+  certCount
+}: ToolbarNavbarProps) => {
   const { user, login, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { showAlert } = useModal();
   const isDarkMode = theme === 'dark';
   const [language, setLanguage] = useState('VI');
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
@@ -20,8 +36,32 @@ export const ToolbarNavbar = ({ balance }: ToolbarNavbarProps) => {
     <>
       <nav className="h-12 bg-white dark:bg-[#131722] border-b border-[#e6e8ea] dark:border-[#2a2e39] flex items-center px-4 justify-between text-[#1e2329] dark:text-[#d1d4dc] text-sm shrink-0 relative z-50">
         {/* Logo AITRADEX */}
-        <div className="flex items-center">
+        <div className="flex items-center gap-3">
           <img src="/images/logo.jpg" alt="AITRADEX" className="h-7 object-contain rounded" />
+          
+          {/* Nút Thử Thách Quỹ (Prop Firm Challenge) */}
+          <button
+            onClick={onOpenChallenge}
+            className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-yellow-500/20 hover:from-amber-500/30 hover:to-yellow-500/30 border border-amber-500/40 text-amber-600 dark:text-amber-400 font-bold text-xs transition-all shadow-sm shadow-amber-500/10 hover:scale-[1.02]"
+            title={`Thử Thách Cấp Vốn Quỹ • Hạng tài khoản: ${accountRankName || 'Cấp 1'}`}
+          >
+            <Trophy className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+            <span>Thử Thách Quỹ</span>
+            {challengeStatus === 'ACTIVE' ? (
+              <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Thi {challengeLevelName}</span>
+              </span>
+            ) : challengeStatus === 'PAUSED' ? (
+              <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-[10px] font-extrabold text-amber-600 dark:text-amber-300 border border-amber-500/30">
+                Tạm dừng {challengeLevelName}
+              </span>
+            ) : (
+              <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-[10px] font-extrabold text-amber-700 dark:text-amber-300 border border-amber-500/30" title="Cấp bậc cao nhất tài khoản đã đạt được">
+                {accountRankBadge || 'Cấp 1'}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Simulation Info (Centered) */}
@@ -51,7 +91,7 @@ export const ToolbarNavbar = ({ balance }: ToolbarNavbarProps) => {
         {/* Right side controls */}
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => alert('Chức năng Thông báo đang được phát triển!')}
+            onClick={() => showAlert({ title: 'Thông báo', message: 'Chức năng Thông báo đang được phát triển!', type: 'info' })}
             className="hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]"
             title="Thông báo"
           >
@@ -73,7 +113,7 @@ export const ToolbarNavbar = ({ balance }: ToolbarNavbarProps) => {
             <span className="text-xs font-semibold">{language}</span>
           </button>
           <button 
-            onClick={() => alert('Cài đặt')}
+            onClick={() => showAlert({ title: 'Cài đặt', message: 'Chức năng Cài đặt đang được phát triển!', type: 'info' })}
             className="hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]"
             title="Cài đặt"
           >
@@ -83,7 +123,14 @@ export const ToolbarNavbar = ({ balance }: ToolbarNavbarProps) => {
           <div className="w-px h-4 bg-[#e6e8ea] dark:bg-[#2a2e39] mx-1" />
 
           {user ? (
-            <UserDropdown user={{ ...user, balance }} onLogout={logout} />
+            <UserDropdown 
+              user={{ ...user, balance }} 
+              onLogout={logout} 
+              isChallenge={challengeStatus === 'ACTIVE' || challengeStatus === 'PAUSED'}
+              challengeLevelName={challengeLevelName}
+              accountRankName={accountRankName}
+              certCount={certCount}
+            />
           ) : (
             <button 
               onClick={() => login()} 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, BarChart2, Play, Pause, Square, ChevronRight, CandlestickChart, Settings, RefreshCcw } from 'lucide-react';
+import { Search, BarChart2, Play, Pause, Square, ChevronRight, CandlestickChart, Settings, RefreshCcw, Undo2, Redo2 } from 'lucide-react';
 import { TIMEFRAMES, getPricePrecision, type Stock } from '../data';
 import { AssetAvatar } from './AssetAvatar';
 
@@ -11,8 +11,9 @@ interface TickerHeaderProps {
   onTimeframeChange: (t: string) => void;
   isReplaying: boolean;
   isSelectingReplayStart: boolean;
-  replayIndex: number;
+  replayTime?: number | null;
   totalBars?: number;
+  isChallengeActive?: boolean;
   onStartReplay: () => void;
   onCancelReplay: () => void;
   onReplayNext: () => void;
@@ -21,11 +22,17 @@ interface TickerHeaderProps {
   onOpenSearch: () => void;
   onOpenIndicator: () => void;
   activeIndicatorCount: number;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
 }
 
 export const TickerHeader = ({ 
-  stock, activeTab, onTabChange, activeTimeframe, onTimeframeChange, isReplaying, isSelectingReplayStart, replayIndex, totalBars = 1000,
-  onStartReplay, onCancelReplay, onReplayNext, onStopReplay, onGoToRealtime, onOpenSearch, onOpenIndicator, activeIndicatorCount 
+  stock, activeTab, onTabChange, activeTimeframe, onTimeframeChange, isReplaying, isSelectingReplayStart, replayTime, totalBars = 1000,
+  isChallengeActive = false,
+  onStartReplay, onCancelReplay, onReplayNext, onStopReplay, onGoToRealtime, onOpenSearch, onOpenIndicator, activeIndicatorCount,
+  canUndo = false, canRedo = false, onUndo, onRedo
 }: TickerHeaderProps) => {
   const [autoPlay, setAutoPlay] = useState(false);
   const [intervalId, setIntervalId] = useState<ReturnType<typeof setInterval> | null>(null);
@@ -47,7 +54,14 @@ export const TickerHeader = ({
     onStopReplay();
   };
 
-  const reachedEnd = totalBars > 0 && replayIndex >= totalBars;
+  const reachedEnd = replayTime ? replayTime >= Date.now() - 60000 : false;
+
+  const formatReplayTime = (timestamp?: number | null) => {
+    if (!timestamp) return '';
+    const d = new Date(timestamp);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
 
   const precision = getPricePrecision(stock.price);
   const markPrice = (stock.price * 1.0002).toFixed(precision);
@@ -200,6 +214,15 @@ export const TickerHeader = ({
                 Hủy
               </button>
             </div>
+          ) : isChallengeActive ? (
+            <button
+              disabled
+              title="Bài thi cấp vốn yêu cầu 100% dữ liệu thời gian thực (Real-time) để đảm bảo tính minh bạch, không được dùng Replay."
+              className="flex items-center gap-1.5 px-2 py-1 rounded text-slate-400 opacity-40 cursor-not-allowed border border-dashed border-slate-600/40"
+            >
+              <Play className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline text-xs">Replay (Khóa khi thi)</span>
+            </button>
           ) : !isReplaying ? (
             <button
               onClick={onStartReplay}
@@ -209,10 +232,15 @@ export const TickerHeader = ({
               <span className="hidden sm:inline">Replay</span>
             </button>
           ) : (
-            <div className="flex items-center gap-1 bg-orange-100 dark:bg-orange-900/40 border border-orange-300 dark:border-orange-700/60 rounded px-2 py-0.5 shrink-0">
-              <span className="text-orange-700 dark:text-orange-300 text-xs font-semibold mr-1 flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 bg-orange-100 dark:bg-orange-900/40 border border-orange-300 dark:border-orange-700/60 rounded px-2 py-0.5 shrink-0">
+              <span className="text-orange-700 dark:text-orange-300 text-xs font-semibold flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse inline-block" />
-                {reachedEnd ? '✅ Đã đến hiện tại' : 'Replay'}
+                <span>{reachedEnd ? '✅ Đã đến hiện tại' : 'Replay'}</span>
+                {replayTime && (
+                  <span className="font-mono text-[11px] bg-orange-200 dark:bg-orange-800/70 text-orange-900 dark:text-orange-200 px-1.5 py-0.5 rounded font-semibold">
+                    {formatReplayTime(replayTime)}
+                  </span>
+                )}
               </span>
               {!reachedEnd && !autoPlay && (
                 <button onClick={onReplayNext} title="Nến tiếp theo (Bước tiếp)" className="p-1 text-orange-600 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-700/40 rounded transition-colors">
@@ -230,6 +258,28 @@ export const TickerHeader = ({
             </div>
           )}
 
+          <div className="w-px h-4 bg-[#e6e8ea] dark:bg-[#2a2e39] mx-1 hidden sm:block" />
+
+          {/* Undo & Redo (Quay lại & Làm lại) */}
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={onUndo}
+              disabled={!canUndo}
+              title="Hoàn tác (Ctrl+Z)"
+              className="p-1 rounded transition-colors text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39] disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <Undo2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={onRedo}
+              disabled={!canRedo}
+              title="Làm lại (Ctrl+Y)"
+              className="p-1 rounded transition-colors text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39] disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <Redo2 className="w-4 h-4" />
+            </button>
+          </div>
+          
           <div className="w-px h-4 bg-[#e6e8ea] dark:bg-[#2a2e39] mx-1 hidden sm:block" />
           
           <button 

@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import { Play, Square, Users, Edit3, Settings, UserPlus } from 'lucide-react';
 import { SimulationModal } from './components/SimulationModal';
 import { ParticipantsModal } from './components/ParticipantsModal';
+import { useModal } from '../../contexts/ModalContext';
 
 export const LecturerSimulations = () => {
+  const { showConfirm, showAlert } = useModal();
   const [simulations, setSimulations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -39,7 +41,14 @@ export const LecturerSimulations = () => {
   }, []);
 
   const handleUpdateStatus = async (id: string, action: 'start' | 'end') => {
-    if (!window.confirm(`Are you sure you want to ${action} this simulation?`)) return;
+    const ok = await showConfirm({
+      title: action === 'start' ? 'Bắt đầu phiên mô phỏng' : 'Kết thúc phiên mô phỏng',
+      message: `Bạn có chắc chắn muốn ${action === 'start' ? 'bắt đầu' : 'kết thúc'} phiên mô phỏng này không?`,
+      type: action === 'end' ? 'danger' : 'info',
+      confirmText: action === 'start' ? 'Bắt đầu' : 'Kết thúc',
+      cancelText: 'Hủy bỏ'
+    });
+    if (!ok) return;
     
     try {
       const token = localStorage.getItem('token');

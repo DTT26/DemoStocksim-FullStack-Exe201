@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Calendar, Users, DollarSign, BarChart2, PlusCircle, ArrowRight } from 'lucide-react';
+import { useModal } from '../../contexts/ModalContext';
 
 export const SimulationsList = () => {
+  const { showAlert } = useModal();
   const [simulations, setSimulations] = useState<any[]>([]);
   const [participations, setParticipations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,11 +58,19 @@ export const SimulationsList = () => {
         fetchData();
       } else {
         const data = await response.json();
-        alert(data.message || 'Failed to join simulation');
+        showAlert({
+          title: 'Tham gia mô phỏng thất bại',
+          message: data.message || 'Failed to join simulation',
+          type: 'error'
+        });
       }
     } catch (error) {
       console.error('Error joining simulation:', error);
-      alert('An error occurred while joining the simulation');
+      showAlert({
+        title: 'Lỗi',
+        message: 'An error occurred while joining the simulation',
+        type: 'error'
+      });
     } finally {
       setJoiningId(null);
     }
