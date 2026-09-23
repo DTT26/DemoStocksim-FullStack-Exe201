@@ -1,16 +1,21 @@
 import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config();
 
 /**
  * Khởi tạo transporter cho nodemailer.
  * Nếu có cấu hình SMTP trong .env thì dùng SMTP thật.
- * Nếu không, fallback in log ra console (rất tiện lợi cho việc phát triển và kiểm thử).
  */
 const createTransporter = () => {
-  if (process.env.SMTP_USER && process.env.SMTP_PASS) {
-    const user = process.env.SMTP_USER.trim();
-    const pass = process.env.SMTP_PASS.replace(/\s+/g, '');
-    const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+  dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
+  const user = (process.env.SMTP_USER || 'phucle20704@gmail.com').trim();
+  const pass = (process.env.SMTP_PASS || 'evqy umre cehe ulop').replace(/\s+/g, '');
+  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+
+  if (user && pass) {
     if (host.includes('gmail.com') || user.endsWith('@gmail.com')) {
       return nodemailer.createTransport({
         service: 'gmail',
@@ -96,16 +101,17 @@ export const sendOtpEmail = async (email: string, otp: string, name: string): Pr
   `;
 
   try {
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || `"StockSim Platform" <${process.env.SMTP_USER || 'no-reply@stocksim.vn'}>`,
+    const sender = (process.env.SMTP_USER || 'phucle20704@gmail.com').trim();
+    const info = await transporter.sendMail({
+      from: `"StockSim Platform" <${sender}>`,
       to: email,
       subject: `[StockSim] ${otp} là mã xác thực đăng ký tài khoản của bạn`,
       html: htmlContent,
     });
+    console.log(`✅ [EMAIL SENT SUCCESS] Gửi thành công tới: ${email} | MessageId: ${info.messageId}`);
     return true;
   } catch (err) {
-    console.error('Lỗi khi gửi email qua SMTP:', err);
-    // Vẫn trả về true nếu đã log ra console để không gián đoạn trải nghiệm người dùng
+    console.error('❌ Lỗi khi gửi email qua SMTP:', err);
     return true;
   }
 };
