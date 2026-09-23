@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
 import { useGoogleLogin, googleLogout } from '@react-oauth/google';
 import { LoginModal } from '../components/LoginModal';
+import { SuspendedModal } from '../components/SuspendedModal';
 
 export interface User {
   _id: string;
@@ -41,6 +42,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string>('');
+  const [suspendedModal, setSuspendedModal] = useState<{ isOpen: boolean; message: string } | null>(null);
   const captchaTokenRef = useRef<string>('');
 
   const fetchUser = async () => {
@@ -56,6 +58,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           localStorage.setItem('userId', userData._id);
         }
       } else {
+        if (res.status === 403) {
+          const errData = await res.json().catch(() => ({}));
+          if (errData.message && (errData.message.includes('Suspended') || errData.message.includes('khóa'))) {
+            setSuspendedModal({
+              isOpen: true,
+              message: errData.message
+            });
+          }
+        }
         setUser(null);
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
@@ -99,7 +110,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           await fetchUser();
         } else {
           console.error('Backend login failed:', data.message);
-          alert(data.message || 'Đăng nhập không thành công');
+          setSuspendedModal({
+            isOpen: true,
+            message: data.message || 'Tài khoản của bạn đã bị khóa hoặc tạm ngưng (Suspended). Vui lòng liên hệ Quản trị viên để được hỗ trợ.'
+          });
         }
       } catch (err) {
         console.error('Failed to authenticate', err);
@@ -139,6 +153,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setCaptchaToken(token);
           triggerGoogleLogin();
         }} 
+      />
+      <SuspendedModal 
+        isOpen={Boolean(suspendedModal?.isOpen)} 
+        message={suspendedModal?.message} 
+        onClose={() => setSuspendedModal(null)} 
       />
     </AuthContext.Provider>
   );
