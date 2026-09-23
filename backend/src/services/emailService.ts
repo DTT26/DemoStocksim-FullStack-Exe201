@@ -7,14 +7,22 @@ import nodemailer from 'nodemailer';
  */
 const createTransporter = () => {
   if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+    const user = process.env.SMTP_USER.trim();
+    const pass = process.env.SMTP_PASS.replace(/\s+/g, '');
+    const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+
+    if (host.includes('gmail.com') || user.endsWith('@gmail.com')) {
+      return nodemailer.createTransport({
+        service: 'gmail',
+        auth: { user, pass },
+      });
+    }
+
     return nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      host,
       port: parseInt(process.env.SMTP_PORT || '587', 10),
-      secure: process.env.SMTP_SECURE === 'true', // true cho 465, false cho các cổng khác
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: { user, pass },
     });
   }
   return null;
