@@ -7,7 +7,7 @@ export interface User {
   _id: string;
   name: string;
   email: string;
-  picture: string;
+  picture?: string;
   role: 'student' | 'lecturer' | 'admin';
   balance?: number;
   phone?: string;
@@ -25,6 +25,10 @@ interface AuthContextType {
   login: () => void;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  loginWithEmail: (email: string, password: string, captchaToken?: string) => Promise<{ success: boolean; message?: string }>;
+  registerRequest: (name: string, email: string, password: string, termsAccepted: boolean, captchaToken?: string) => Promise<{ success: boolean; message?: string; devOtp?: string }>;
+  verifyOtp: (email: string, otp: string) => Promise<{ success: boolean; message?: string }>;
+  resendOtp: (email: string) => Promise<{ success: boolean; message?: string; devOtp?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -33,6 +37,10 @@ const AuthContext = createContext<AuthContextType>({
   login: () => {},
   logout: () => {},
   refreshUser: async () => {},
+  loginWithEmail: async () => ({ success: false }),
+  registerRequest: async () => ({ success: false }),
+  verifyOtp: async () => ({ success: false }),
+  resendOtp: async () => ({ success: false }),
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -84,12 +92,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     fetchUser();
   }, []);
 
+  // Đăng nhập bằng Google
   const triggerGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
         const tokenToSend = captchaTokenRef.current || captchaToken;
-        const res = await fetch(`${apiUrl}/auth/google`, { credentials: 'include',
+        const res = await fetch(`${apiUrl}/auth/google`, { 
+          credentials: 'include',
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
@@ -100,7 +110,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const data = await res.json();
         
         if (res.ok) {
-          // Backend has already set the HttpOnly cookies for token and refreshToken
           if (data.token) {
             localStorage.setItem('token', data.token);
           }
@@ -122,6 +131,96 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     onError: () => console.log('Login Failed')
   });
 
+  // Đăng nhập bằng Email & Mật khẩu
+  const loginWithEmail = async (email: string, password: string, captchaToken?: string) => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const tokenToSend = captchaToken || captchaTokenRef.current;
+      const res = await fetch(`${apiUrl}/auth/login`, {
+        credentials: 'include',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, captchaToken: tokenToSend }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        if (data.token) localStorage.setItem('token', data.token);
+        if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
+        await fetchUser();
+        return { success: true, message: data.message };
+      } else {
+        if (res.status === 403 && data.message && (data.message.includes('Suspended') || data.message.includes('khóa'))) {
+          setSuspendedModal({
+            isOpen: true,
+            message: data.message
+          });
+        }
+        return { success: false, message: data.message || 'Đăng nhập không thành công' };
+      }
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Lỗi kết nối máy chủ' };
+    }
+  };
+
+  // Bước 1: Yêu cầu đăng ký tài khoản & nhận mã OTP
+  const registerRequest = async (name: string, email: string, password: string, termsAccepted: boolean, captchaToken?: string) => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const tokenToSend = captchaToken || captchaTokenRef.current;
+      const res = await fetch(`${apiUrl}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password, termsAccepted, captchaToken: tokenToSend }),
+      });
+      const data = await res.json();
+      return { success: res.ok, message: data.message, devOtp: data.devOtp };
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Lỗi kết nối khi gửi yêu cầu đăng ký' };
+    }
+  };
+
+  // Bước 2: Xác thực mã OTP và hoàn tất đăng ký
+  const verifyOtp = async (email: string, otp: string) => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const res = await fetch(`${apiUrl}/auth/verify-otp`, {
+        credentials: 'include',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        if (data.token) localStorage.setItem('token', data.token);
+        if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
+        await fetchUser();
+        return { success: true, message: data.message };
+      } else {
+        return { success: false, message: data.message || 'Mã OTP không hợp lệ' };
+      }
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Lỗi kết nối khi xác thực OTP' };
+    }
+  };
+
+  // Gửi lại mã OTP
+  const resendOtp = async (email: string) => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const res = await fetch(`${apiUrl}/auth/resend-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      return { success: res.ok, message: data.message, devOtp: data.devOtp };
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Lỗi kết nối khi gửi lại OTP' };
+    }
+  };
+
   const login = () => setIsLoginModalOpen(true);
 
   const logout = async () => {
@@ -135,7 +234,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (err) {
       console.error('Failed to logout on backend', err);
     }
-    // Also remove from localStorage in case it's still there from previous version
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('userId');
@@ -143,7 +241,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser: fetchUser }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      login, 
+      logout, 
+      refreshUser: fetchUser,
+      loginWithEmail,
+      registerRequest,
+      verifyOtp,
+      resendOtp,
+    }}>
       {children}
       <LoginModal 
         isOpen={isLoginModalOpen} 

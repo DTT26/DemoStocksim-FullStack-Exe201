@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 interface User {
   name: string;
   email: string;
-  picture: string;
+  picture?: string;
   balance?: number;
   role?: string;
 }
