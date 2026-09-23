@@ -23,6 +23,8 @@ interface SimulationPanelProps {
   onStartSimulation: (config: SimulationConfig) => void;
   onStartReplay?: () => void;
   onSelectStock?: (stock: Stock) => void;
+  onPreviewTPSLChange?: (tpsl: { tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean } | null) => void;
+  draggedTPSL?: { tp?: number; sl?: number } | null;
 }
 
 export interface SimulationConfig {
@@ -56,7 +58,9 @@ export const SimulationPanel = ({
   isReplaying, 
   onStartSimulation, 
   onStartReplay,
-  onSelectStock 
+  onSelectStock,
+  onPreviewTPSLChange,
+  draggedTPSL
 }: SimulationPanelProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -539,6 +543,8 @@ export const SimulationPanel = ({
         <SimulatorTradingPanel
           selectedStock={sessionStock}
           onBack={() => setCurrentView('list')}
+          onPreviewTPSLChange={onPreviewTPSLChange}
+          draggedTPSL={draggedTPSL}
         />
       </div>
     );

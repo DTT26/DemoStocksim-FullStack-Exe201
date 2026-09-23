@@ -1178,6 +1178,8 @@ export const TradingTerminal = () => {
               onStartSimulation={handleStartSimulation}
               onStartReplay={handleStartReplaySelection}
               onSelectStock={handleStockSelect}
+              onPreviewTPSLChange={setPreviewTPSL}
+              draggedTPSL={draggedTPSL}
             />
           )}
 
