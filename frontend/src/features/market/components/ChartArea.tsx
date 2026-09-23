@@ -3572,113 +3572,76 @@ registerOverlay({
               });
             };
 
-            // Apply theme dynamically to klinecharts
-            useEffect(() => {
-              if (chartRef.current) {
-                chartRef.current.setStyles(theme === 'dark' ? 'dark' : 'light');
-                // Override grid and candle styles
-                chartRef.current.setStyles({
-                  grid: {
-                    horizontal: { 
-                      color: chartSettings.canvas.hGridShow ? chartSettings.canvas.hGridColor : 'transparent',
-                      size: 1, 
-                      style: chartSettings.canvas.hGridStyle === '—' ? 'solid' : 'dashed'
-                    },
-                    vertical: { 
-                      color: chartSettings.canvas.vGridShow ? chartSettings.canvas.vGridColor : 'transparent',
-                      size: 1, 
-                      style: chartSettings.canvas.vGridStyle === '—' ? 'solid' : 'dashed'
-                    },
-                  },
-                  crosshair: {
-                    horizontal: {
-                      line: { 
-                        color: chartSettings.canvas.crosshairColor,
-                        style: chartSettings.canvas.crosshairStyle === '—' ? 'solid' : 'dashed'
-                      }
-                    },
-                    vertical: {
-                      line: {
-                        color: chartSettings.canvas.crosshairColor,
-                        style: chartSettings.canvas.crosshairStyle === '—' ? 'solid' : 'dashed'
-                      }
-                    }
-                  },
-                  xAxis: {
-                    tickText: { color: chartSettings.scales.textColor, size: chartSettings.scales.textSize },
-                    axisLine: { color: chartSettings.scales.lineColor }
-                  },
-                  yAxis: {
-                    tickText: { color: chartSettings.scales.textColor, size: chartSettings.scales.textSize },
-                    axisLine: { color: chartSettings.scales.lineColor }
-                  },
-                  candle: {
-                    tooltip: {
-                      showRule: 'always',
-                      showType: 'standard',
-                      legend: {
-                        template: (data: any) => {
-                          const d = data.current;
-                          if (!d) return [];
-                          const time = new Date(d.timestamp).toLocaleString('vi-VN', {
-                            hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
-                          });
-                          let precision = getPricePrecision(d.close || selectedStock.price || 1);
-                          const customPrecision = chartSettingsRef.current?.symbol?.precision;
-                          if (customPrecision && customPrecision !== 'Default') {
-                            if (customPrecision === '1') precision = 0;
-                            else if (customPrecision === '1/10') precision = 1;
-                            else if (customPrecision === '1/100') precision = 2;
-                            else if (customPrecision === '1/1000') precision = 3;
-                          }
-                          return [
-                            {
-                              title: '',
-                              value: {
-                                text: `Time: ${time}   Open: ${Number(d.open).toFixed(precision)}   High: ${Number(d.high).toFixed(precision)}   Low: ${Number(d.low).toFixed(precision)}   Close: ${Number(d.close).toFixed(precision)}   Volume: ${(d.volume / 1000).toFixed(2)}K`,
-                                color: theme === 'dark' ? '#c4c6cb' : '#131722'
-                              }
-                            }
-                          ];
-                        }
-                      }
-                    },
-                    bar: {
-                      upColor: chartSettings.candle.bodyUp,
-                      downColor: chartSettings.candle.bodyDown,
-                      upBorderColor: chartSettings.candle.borderUp,
-                      downBorderColor: chartSettings.candle.borderDown,
-                      upWickColor: chartSettings.candle.wickUp,
-                      downWickColor: chartSettings.candle.wickDown,
-                    }
-                  }
-                });
-                updateCrosshairStyles(chartRef.current, activeToolRef.current);
-              }
-            }, [theme, chartSettings]);
-
-            // Apply chart settings when they change
+            // Apply theme and chart settings dynamically to klinecharts
             useEffect(() => {
               const chart = chartRef.current;
               if (!chart || !chartSettings) return;
+
+              const isDark = theme === 'dark';
+              chart.setStyles(isDark ? 'dark' : 'light');
+
+              // Resolve dynamic colors for light vs dark mode if using default dark palette
+              const defaultGridDark = '#2a2e39';
+              const hGridColor = (!isDark && chartSettings.canvas.hGridColor === defaultGridDark)
+                ? '#f0f3f6'
+                : chartSettings.canvas.hGridColor;
+              const vGridColor = (!isDark && chartSettings.canvas.vGridColor === defaultGridDark)
+                ? '#f0f3f6'
+                : chartSettings.canvas.vGridColor;
+              const textColor = (!isDark && chartSettings.scales.textColor === '#d1d4dc')
+                ? '#50535e'
+                : chartSettings.scales.textColor;
+              const lineColor = (!isDark && chartSettings.scales.lineColor === defaultGridDark)
+                ? '#e0e3eb'
+                : chartSettings.scales.lineColor;
 
               chart.setStyles({
                 grid: {
                   horizontal: {
                     show: chartSettings.canvas.hGridShow,
                     size: 1,
-                    color: chartSettings.canvas.hGridColor,
+                    color: chartSettings.canvas.hGridShow ? hGridColor : 'transparent',
                     style: chartSettings.canvas.hGridStyle === '—' ? 'solid' : 'dashed',
                   },
                   vertical: {
                     show: chartSettings.canvas.vGridShow,
                     size: 1,
-                    color: chartSettings.canvas.vGridColor,
+                    color: chartSettings.canvas.vGridShow ? vGridColor : 'transparent',
                     style: chartSettings.canvas.vGridStyle === '—' ? 'solid' : 'dashed',
                   }
                 },
                 candle: {
                   type: 'candle_solid',
+                  tooltip: {
+                    showRule: 'always',
+                    showType: 'standard',
+                    legend: {
+                      template: (data: any) => {
+                        const d = data.current;
+                        if (!d) return [];
+                        const time = new Date(d.timestamp).toLocaleString('vi-VN', {
+                          hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
+                        });
+                        let precision = getPricePrecision(d.close || selectedStock.price || 1);
+                        const customPrecision = chartSettingsRef.current?.symbol?.precision;
+                        if (customPrecision && customPrecision !== 'Default') {
+                          if (customPrecision === '1') precision = 0;
+                          else if (customPrecision === '1/10') precision = 1;
+                          else if (customPrecision === '1/100') precision = 2;
+                          else if (customPrecision === '1/1000') precision = 3;
+                        }
+                        return [
+                          {
+                            title: '',
+                            value: {
+                              text: `Time: ${time}   Open: ${Number(d.open).toFixed(precision)}   High: ${Number(d.high).toFixed(precision)}   Low: ${Number(d.low).toFixed(precision)}   Close: ${Number(d.close).toFixed(precision)}   Volume: ${(d.volume / 1000).toFixed(2)}K`,
+                              color: isDark ? '#c4c6cb' : '#131722'
+                            }
+                          }
+                        ];
+                      }
+                    }
+                  },
                   bar: {
                     upColor: chartSettings.candle.bodyUp,
                     downColor: chartSettings.candle.bodyDown,
@@ -3745,14 +3708,16 @@ registerOverlay({
                   }
                 },
                 xAxis: {
-                  axisLine: { color: chartSettings.scales.lineColor },
-                  tickText: { color: chartSettings.scales.textColor, size: chartSettings.scales.textSize, family: 'Inter' },
+                  axisLine: { color: lineColor },
+                  tickText: { color: textColor, size: chartSettings.scales.textSize, family: 'Inter' },
                 },
                 yAxis: {
-                  axisLine: { color: chartSettings.scales.lineColor },
-                  tickText: { color: chartSettings.scales.textColor, size: chartSettings.scales.textSize, family: 'Inter' },
+                  axisLine: { color: lineColor },
+                  tickText: { color: textColor, size: chartSettings.scales.textSize, family: 'Inter' },
                 }
               });
+
+              updateCrosshairStyles(chart, activeToolRef.current);
 
               try {
                 const anyChart = chart as any;
@@ -3775,7 +3740,7 @@ registerOverlay({
               } catch (e) {
                 // Ignored if API is not available in this version
               }
-            }, [chartSettings]);
+            }, [theme, chartSettings]);
 
             // Init chart ONCE
             useEffect(() => {
@@ -4858,10 +4823,18 @@ registerOverlay({
             }, [activePosition, pendingOrders, isReplaying, replayTime, selectedStock, previewTPSL]);
 
             const priceColor = selectedStock.percent > 0 ? 'text-[#089981]' : selectedStock.percent < 0 ? 'text-[#f23645]' : 'text-[#787b86]';
+            const isDark = theme === 'dark';
+            const isDefaultDarkBg = chartSettings.canvas.bgSolid === '#131722' || 
+              (chartSettings.canvas.bgGradientTop === '#131722' && chartSettings.canvas.bgGradientBottom === '#1e222d');
 
-            const bgStyle = chartSettings.canvas.bgType === 'Solid' 
-              ? { backgroundColor: chartSettings.canvas.bgSolid } 
-              : { background: `linear-gradient(to bottom, ${chartSettings.canvas.bgGradientTop}, ${chartSettings.canvas.bgGradientBottom})` };
+            let bgStyle: React.CSSProperties = {};
+            if (!isDark && isDefaultDarkBg) {
+              bgStyle = { backgroundColor: '#ffffff' };
+            } else if (chartSettings.canvas.bgType === 'Solid') {
+              bgStyle = { backgroundColor: chartSettings.canvas.bgSolid };
+            } else {
+              bgStyle = { background: `linear-gradient(to bottom, ${chartSettings.canvas.bgGradientTop}, ${chartSettings.canvas.bgGradientBottom})` };
+            }
 
             return (
               <div
@@ -4872,10 +4845,10 @@ registerOverlay({
                 {/* Symbol header */}
                 <div className="absolute top-2 left-4 z-10 pointer-events-none flex items-baseline gap-2 flex-wrap">
                   {['Ticker', 'Ticker and description', 'Name'].includes(chartSettings.status.title) && (
-                    <span className="text-white font-bold text-sm">{selectedStock.symbol}</span>
+                    <span className="text-[#131722] dark:text-white font-bold text-sm">{selectedStock.symbol}</span>
                   )}
                   {['Description', 'Ticker and description'].includes(chartSettings.status.title) && (
-                    <span className="text-[#787b86] text-xs">{selectedStock.name}</span>
+                    <span className="text-gray-500 dark:text-[#787b86] text-xs">{selectedStock.name}</span>
                   )}
                   
                   {chartSettings.status.openMarketStatus && (
@@ -4893,14 +4866,14 @@ registerOverlay({
                     </span>
                   )}
                   {chartSettings.status.volume && (
-                    <span className="text-[#787b86] text-xs ml-2">Vol: {(dataCache.get(`${selectedStock.symbol}-${activeTimeframe}`)?.slice(-1)[0]?.volume || 0).toFixed(0)}</span>
+                    <span className="text-gray-500 dark:text-[#787b86] text-xs ml-2">Vol: {(dataCache.get(`${selectedStock.symbol}-${activeTimeframe}`)?.slice(-1)[0]?.volume || 0).toFixed(0)}</span>
                   )}
                 </div>
 
                 {/* Watermark overlay */}
                 {chartSettings.canvas.watermarkVal !== 'Hidden' && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[1] overflow-hidden opacity-[0.03]">
-                    <span className="text-[120px] font-bold text-white select-none whitespace-nowrap">
+                    <span className="text-[120px] font-bold text-gray-900 dark:text-white select-none whitespace-nowrap">
                       {chartSettings.canvas.watermarkVal === 'Ticker' ? selectedStock.symbol 
                        : chartSettings.canvas.watermarkVal === 'Description' ? selectedStock.name
                        : chartSettings.canvas.watermarkVal === 'Interval' ? activeTimeframe
