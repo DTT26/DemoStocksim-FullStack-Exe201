@@ -132,6 +132,8 @@ export const TradingTerminal = () => {
     maxLeverage: 20,
   };
 
+  const isChallengeActive = challengeState.status === 'ACTIVE' || challengeState.status === 'PAUSED';
+
   // Tính toán Cấp độ cao nhất tài khoản đã đạt được (để hiển thị khi không trong bài thi)
   const maxCertLevel = challengeState.certificates && challengeState.certificates.length > 0
     ? Math.max(...challengeState.certificates.map(c => c.levelId))
@@ -887,6 +889,8 @@ export const TradingTerminal = () => {
             selectedStock={selectedStock}
             positions={positions as any}
             balance={balance}
+            maxAllowedLeverage={isChallengeActive ? currentChallengeLevel.maxLeverage : undefined}
+            challengeBadge={isChallengeActive ? `${currentChallengeLevel.badge} (${currentChallengeLevel.levelName})` : undefined}
             onStockSelect={(stock) => {
               handleStockSelect(stock);
               setEditingSymbol(null);

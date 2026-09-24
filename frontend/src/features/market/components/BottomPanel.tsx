@@ -164,16 +164,16 @@ export const BottomPanel = ({
                   return (
                     <tr key={p.symbol} className="hover:bg-[#f5f5f5] dark:hover:bg-[#1e222d] transition-colors">
                       <td className="px-4 py-2 font-bold">{p.symbol}</td>
-                      <td className="px-4 py-2">{p.quantity.toLocaleString('vi-VN')}</td>
-                      <td className="px-4 py-2">{p.averagePrice.toLocaleString('vi-VN')}</td>
-                      <td className="px-4 py-2">{markPrice.toLocaleString('vi-VN')}</td>
-                      <td className="px-4 py-2">
-                        {margin.toLocaleString('vi-VN', { maximumFractionDigits: 0 })}
+                      <td className="px-4 py-2 font-mono">{p.quantity.toLocaleString('en-US', { maximumFractionDigits: 4 })}</td>
+                      <td className="px-4 py-2 font-mono">${p.averagePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="px-4 py-2 font-mono">${markPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="px-4 py-2 font-mono">
+                        ${margin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         <button onClick={() => setAddingMargin({ symbol: p.symbol, side: p.side, amount: '' })} className="ml-2 text-blue-500 hover:text-blue-400 font-bold">+</button>
                       </td>
                       <td className={`px-4 py-2 font-bold ${p.side === 'LONG' ? 'text-[#089981]' : 'text-[#f23645]'}`}>{p.side} x{p.leverage}</td>
                       <td className={`px-4 py-2 text-right font-mono font-bold ${pnl >= 0 ? 'text-[#089981]' : 'text-[#f23645]'}`}>
-                        {pnl >= 0 ? '+' : ''}{pnl.toLocaleString('vi-VN', { maximumFractionDigits: 0 })} 
+                        {pnl >= 0 ? '+' : '-'}${Math.abs(pnl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
                         <span className="text-[10px] ml-1">({pnl >= 0 ? '+' : ''}{roe.toFixed(2)}%)</span>
                       </td>
                       <td className="px-4 py-2 text-center text-[#787b86]">

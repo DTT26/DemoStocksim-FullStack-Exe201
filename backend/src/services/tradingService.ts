@@ -5,6 +5,7 @@ import Order, { OrderSide, OrderType, OrderStatus } from '../models/Order';
 import Transaction, { TransactionType } from '../models/Transaction';
 import Challenge from '../models/Challenge';
 import { WalletService } from './walletService';
+import { CHALLENGE_LEVELS } from './challengeService';
 
 export class TradingService {
   /**
@@ -62,7 +63,7 @@ export class TradingService {
    */
   static async openLong(userId: string, symbol: string, margin: number, leverage: number, currentPrice: number, stopLoss?: number, takeProfit?: number) {
     if (margin <= 0) throw new Error("Ký quỹ (Margin) phải lớn hơn 0");
-    if (leverage < 1 || leverage > 125) throw new Error("Đòn bẩy không hợp lệ");
+    if (leverage < 1 || leverage > 500) throw new Error("Đòn bẩy không hợp lệ");
 
     const ctx = await this.getActiveContext(userId);
     if (ctx.isChallenge && ctx.challenge) {
@@ -74,6 +75,10 @@ export class TradingService {
       }
       if (ctx.challenge.status === 'PASSED') {
         throw new Error('Bài thi đã hoàn thành xuất sắc! Vui lòng nâng cấp độ tiếp theo.');
+      }
+      const levelConfig = CHALLENGE_LEVELS.find(l => l.id === ctx.challenge?.currentLevel) || CHALLENGE_LEVELS[0];
+      if (leverage > levelConfig.maxLeverage) {
+        throw new Error(`Đòn bẩy tối đa cho bài thi Cấp ${levelConfig.id} (${levelConfig.levelName}) là ${levelConfig.maxLeverage}X`);
       }
     }
 
@@ -133,7 +138,7 @@ export class TradingService {
    */
   static async openShort(userId: string, symbol: string, margin: number, leverage: number, currentPrice: number, stopLoss?: number, takeProfit?: number) {
     if (margin <= 0) throw new Error("Ký quỹ (Margin) phải lớn hơn 0");
-    if (leverage < 1 || leverage > 125) throw new Error("Đòn bẩy không hợp lệ");
+    if (leverage < 1 || leverage > 500) throw new Error("Đòn bẩy không hợp lệ");
 
     const marginRequired = margin;
     const quantity = (margin * leverage) / currentPrice;
@@ -148,6 +153,10 @@ export class TradingService {
       }
       if (ctx.challenge.status === 'PASSED') {
         throw new Error('Bài thi đã hoàn thành xuất sắc! Vui lòng nâng cấp độ tiếp theo.');
+      }
+      const levelConfig = CHALLENGE_LEVELS.find(l => l.id === ctx.challenge?.currentLevel) || CHALLENGE_LEVELS[0];
+      if (leverage > levelConfig.maxLeverage) {
+        throw new Error(`Đòn bẩy tối đa cho bài thi Cấp ${levelConfig.id} (${levelConfig.levelName}) là ${levelConfig.maxLeverage}X`);
       }
     }
 
@@ -312,6 +321,10 @@ export class TradingService {
       }
       if (ctx.challenge.status === 'PASSED') {
         throw new Error('Bài thi đã hoàn thành xuất sắc! Vui lòng nâng cấp độ tiếp theo.');
+      }
+      const levelConfig = CHALLENGE_LEVELS.find(l => l.id === ctx.challenge?.currentLevel) || CHALLENGE_LEVELS[0];
+      if (leverage > levelConfig.maxLeverage) {
+        throw new Error(`Đòn bẩy tối đa cho bài thi Cấp ${levelConfig.id} (${levelConfig.levelName}) là ${levelConfig.maxLeverage}X`);
       }
     }
 
