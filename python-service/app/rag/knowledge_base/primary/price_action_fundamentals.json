@@ -1,0 +1,44 @@
+[
+  {
+    "id": "pa_001",
+    "title": "Market Structure: Higher Highs, Higher Lows and Trend Identification",
+    "concept": "Market Structure",
+    "framework": "PRICE_ACTION",
+    "content": "Cấu trúc thị trường trong Price Action được định nghĩa bởi chuỗi các đỉnh và đáy. Xu hướng tăng (Uptrend) được xác lập khi giá liên tục tạo đỉnh cao hơn (Higher High - HH) và đáy cao hơn (Higher Low - HL). Xu hướng giảm (Downtrend) khi giá tạo đỉnh thấp hơn (Lower High - LH) và đáy thấp hơn (Lower Low - LL). Vùng đi ngang (Consolidation/Trading Range) xuất hiện khi giá dao động giữa vùng hỗ trợ đáy và kháng cự đỉnh mà không bứt phá dứt khoát. Điểm cốt lõi của Price Action là giao dịch thuận xu hướng cấu trúc chính, và chỉ tìm điểm đảo chiều khi có sự phá vỡ cấu trúc có xác nhận (Breakout & Retest).",
+    "source": "Reading Price Charts Bar by Bar: The Technical Analysis of Price Action for the Serious Trader",
+    "sourceUrl": "https://www.wiley.com/en-us/Reading+Price+Charts+Bar+by+Bar-p-9780470443958",
+    "author": "Al Brooks",
+    "publishedDate": "2009-04-01",
+    "sourceType": "PRIMARY",
+    "tags": ["PRICE_ACTION", "Market Structure", "Higher High", "Higher Low", "Trend"],
+    "language": "vi"
+  },
+  {
+    "id": "pa_002",
+    "title": "Breakout, Pullback and Support/Resistance Retest",
+    "concept": "Breakout / Retest",
+    "framework": "PRICE_ACTION",
+    "content": "Một trong những setup cổ điển và có độ tin cậy cao nhất của Price Action là Breakout - Pullback - Retest. Khi giá bứt phá vượt qua một ngưỡng Hỗ trợ hoặc Kháng cự quan trọng bằng nến thân dài và khối lượng tăng (Breakout), trader kỷ luật không nên FOMO mua đuổi ngay đỉnh nến breakout. Thay vào đó, kiên nhẫn đợi giá thoái lui (Pullback) kiểm tra lại vùng cản cũ (bây giờ trở thành hỗ trợ mới theo nguyên lý Polarity Principle) và quan sát phản ứng nến từ chối (Rejection Wick/Pinbar) để tìm điểm vào lệnh với mức dừng lỗ chặt chẽ ngay dưới vùng hỗ trợ.",
+    "source": "Understanding Price Action: practical analysis of the 5-minute time frame",
+    "sourceUrl": "https://www.amazon.com/Understanding-Price-Action-practical-analysis/dp/9082278601",
+    "author": "Bob Volman",
+    "publishedDate": "2014-10-15",
+    "sourceType": "PRIMARY",
+    "tags": ["PRICE_ACTION", "Breakout", "Retest", "Support", "Resistance", "Pullback"],
+    "language": "vi"
+  },
+  {
+    "id": "pa_003",
+    "title": "Rejection, Pinbar and False Breakout (Trap)",
+    "concept": "Rejection",
+    "framework": "PRICE_ACTION",
+    "content": "Nến từ chối (Rejection) đặc trưng bởi phần râu nến dài (ít nhất gấp 2-3 lần thân nến) phản ánh sự phản công tức thì của phe đối lập tại một ngưỡng cản trọng yếu. Pinbar hoặc búa ngược (Shooting Star/Hammer) xuất hiện tại vùng kháng cự cho thấy phe mua đã cố gắng đẩy giá lên cao nhưng bị phe bán hấp thụ hoàn toàn và đạp giá quay trở lại. Khi hiện tượng này xảy ra ngoài biên của một Trading Range, nó tạo ra một cú phá vỡ giả (False Breakout / Bull Trap / Bear Trap), báo hiệu một đợt di chuyển mạnh về phía biên đối diện.",
+    "source": "Price Action Trading Secrets & Bar-by-bar Candlestick Analysis",
+    "sourceUrl": "https://www.albrooks.com",
+    "author": "Al Brooks",
+    "publishedDate": "2012-01-10",
+    "sourceType": "PRIMARY",
+    "tags": ["PRICE_ACTION", "Pinbar", "Rejection", "False Breakout", "Trap"],
+    "language": "vi"
+  }
+]

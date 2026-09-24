@@ -51,11 +51,11 @@ export const StudentAssignmentDetail = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-[#131722] rounded-xl border border-[#2a2e39]">
                 <div className="text-[#787b86] text-xs font-semibold uppercase mb-1">Initial Capital</div>
-                <div className="text-white font-bold font-mono">100,000,000 VND</div>
+                <div className="text-white font-bold font-mono">$10,000 USD</div>
               </div>
               <div className="p-4 bg-[#131722] rounded-xl border border-[#2a2e39]">
                 <div className="text-[#787b86] text-xs font-semibold uppercase mb-1">Allowed Pairs</div>
-                <div className="text-white font-bold font-mono">FPT/VND only</div>
+                <div className="text-white font-bold font-mono">BTC/USDT only</div>
               </div>
               <div className="p-4 bg-[#131722] rounded-xl border border-[#2a2e39]">
                 <div className="text-[#787b86] text-xs font-semibold uppercase mb-1">Max Leverage</div>

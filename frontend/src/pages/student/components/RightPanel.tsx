@@ -2,10 +2,10 @@ import { Flame, Target, CalendarDays, LineChart } from 'lucide-react';
 
 export const RightPanel = () => {
   const marketIndices = [
-    { name: 'VN-Index', value: '1,284.50', change: '+12.4 (+0.9%)', isPositive: true },
-    { name: 'VN30', value: '1,310.20', change: '+15.2 (+1.1%)', isPositive: true },
-    { name: 'USD/VND', value: '25,240', change: '-10 (-0.04%)', isPositive: false },
-    { name: 'Gold (SJC)', value: '81.5M', change: '0.0 (0.00%)', isPositive: true },
+    { name: 'S&P 500', value: '5,120.50', change: '+25.4 (+0.50%)', isPositive: true },
+    { name: 'Nasdaq 100', value: '18,050.20', change: '+110.5 (+0.62%)', isPositive: true },
+    { name: 'Bitcoin (BTC)', value: '$64,200.50', change: '+1,200.5 (+1.90%)', isPositive: true },
+    { name: 'Gold (XAU/USD)', value: '$2,350.50', change: '+15.2 (+0.65%)', isPositive: true },
   ];
 
   return (

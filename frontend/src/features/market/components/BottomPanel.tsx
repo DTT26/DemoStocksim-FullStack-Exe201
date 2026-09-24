@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { X, CheckSquare, Square, Settings2, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, CheckSquare, Square, Settings2, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { STOCKS } from '../data';
 import { tradingApi } from '../../../services/tradingApi';
 import { useModal } from '../../../contexts/ModalContext';
+import { TradeReviewModal } from '../../ai/TradeReviewModal';
 
 interface Transaction {
   _id: string;
@@ -44,6 +45,7 @@ export const BottomPanel = ({
   const [addingMargin, setAddingMargin] = useState<{symbol: string, side: 'LONG'|'SHORT', amount: string} | null>(null);
   const [currentPairOnly, setCurrentPairOnly] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
+  const [reviewTradeData, setReviewTradeData] = useState<any | null>(null);
 
   useEffect(() => {
     if (activeTab === 'trade_history') {
@@ -178,10 +180,25 @@ export const BottomPanel = ({
                         {p.tp || '-'} / {p.sl || '-'}
                         <button onClick={() => onEditPosition(p.symbol)} className="ml-2 text-blue-500 hover:text-blue-400 font-medium">Sửa</button>
                       </td>
-                      <td className="px-4 py-2 text-center">
+                      <td className="px-4 py-2 text-center flex items-center justify-center gap-1.5">
+                        <button 
+                          onClick={() => setReviewTradeData({
+                            symbol: p.symbol,
+                            side: p.side === 'LONG' ? 'BUY' : 'SELL',
+                            entryPrice: p.averagePrice,
+                            stopLoss: p.sl,
+                            takeProfit: p.tp,
+                            quantity: p.quantity,
+                            timeframe: '15m'
+                          })}
+                          className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 px-2 py-1 rounded text-[11px] font-semibold transition-colors flex items-center gap-1"
+                          title="Đánh giá quy trình lệnh bằng AI"
+                        >
+                          <Sparkles className="w-3 h-3" /> AI
+                        </button>
                         <button 
                           onClick={() => onClosePosition && onClosePosition(p.symbol, p.side, markPrice)}
-                          className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-[#d1d4dc] dark:hover:text-white px-3 py-1 rounded text-[11px] font-medium transition-colors"
+                          className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-[#d1d4dc] dark:hover:text-white px-2.5 py-1 rounded text-[11px] font-medium transition-colors"
                         >
                           Đóng lệnh
                         </button>
@@ -237,7 +254,8 @@ export const BottomPanel = ({
                 <th className="px-4 py-2 font-medium">Thời gian</th>
                 <th className="px-4 py-2 font-medium">Loại</th>
                 <th className="px-4 py-2 font-medium">Chi tiết</th>
-                <th className="px-4 py-2 font-medium text-right">Biến động (VND)</th>
+                <th className="px-4 py-2 font-medium text-right">Biến động ($)</th>
+                <th className="px-4 py-2 font-medium text-right">AI Phân Tích</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e6e8ea] dark:divide-[#2a2e39]/50">
@@ -327,6 +345,30 @@ export const BottomPanel = ({
                       <td className={`px-4 py-2 text-right font-mono font-semibold ${colorClass}`}>
                         {isPositive ? '+' : '-'}{displayAmount.toLocaleString('vi-VN')}
                       </td>
+                      <td className="px-4 py-2 text-right">
+                        <button
+                          onClick={() => {
+                            const desc = tx.description || '';
+                            const match = desc.match(/(Mua|Bán)\s+(\w+)\s+KL:\s*([\d,.]+)/i);
+                            const sym = match ? match[2] : selectedSymbol;
+                            const isBuy = tx.type.includes('BUY') || (match && match[1].toLowerCase() === 'mua');
+                            setReviewTradeData({
+                              orderId: tx._id,
+                              symbol: sym,
+                              side: isBuy ? 'BUY' : 'SELL',
+                              entryPrice: currentPrice,
+                              exitPrice: isBuy ? currentPrice * 1.02 : currentPrice * 0.98,
+                              stopLoss: currentPrice * 0.97,
+                              takeProfit: currentPrice * 1.05,
+                              quantity: 100,
+                              timeframe: '15m'
+                            });
+                          }}
+                          className="px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-[10px] font-semibold inline-flex items-center gap-1 transition-colors"
+                        >
+                          <Sparkles className="w-2.5 h-2.5" /> Review
+                        </button>
+                      </td>
                     </tr>
                   );
                 })
@@ -387,6 +429,15 @@ export const BottomPanel = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Trade Review Modal */}
+      {reviewTradeData && (
+        <TradeReviewModal
+          isOpen={true}
+          onClose={() => setReviewTradeData(null)}
+          tradeData={reviewTradeData}
+        />
       )}
     </div>
   );

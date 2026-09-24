@@ -322,22 +322,22 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
           <div className="flex gap-2">
             <div className="flex flex-col gap-1 flex-1">
               <label className="text-[10px] text-[#787b86] uppercase tracking-wider">
-                {isEditing ? 'Giá vào lệnh' : `Giá ${orderType === 'market' ? '(Thị trường)' : '(VND)'}`}
+                {isEditing ? 'Giá vào lệnh' : `Giá ${orderType === 'market' ? '(Thị trường)' : '(USD)'}`}
               </label>
               {isEditing ? (
                 <div className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
-                  {avgPrice >= 100 ? avgPrice.toLocaleString('vi-VN') : avgPrice.toFixed(getPricePrecision(avgPrice))}
+                  {avgPrice >= 100 ? avgPrice.toLocaleString('en-US') : avgPrice.toFixed(getPricePrecision(avgPrice))}
                 </div>
               ) : orderType === 'market' ? (
                 <div className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
-                  {selectedStock.price >= 100 ? selectedStock.price.toLocaleString('vi-VN') : selectedStock.price.toFixed(getPricePrecision(selectedStock.price))}
+                  {selectedStock.price >= 100 ? selectedStock.price.toLocaleString('en-US') : selectedStock.price.toFixed(getPricePrecision(selectedStock.price))}
                 </div>
               ) : (
                 <input
                   type="number"
                   disabled={isEditing}
                   value={limitPriceStr}
-                  placeholder="VD: 112000"
+                  placeholder="VD: 64500"
                   onChange={e => setLimitPriceStr(e.target.value)}
                   className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full disabled:opacity-50"
                 />

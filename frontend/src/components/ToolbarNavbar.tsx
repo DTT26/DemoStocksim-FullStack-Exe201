@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, User, Bell, Moon, Sun, Globe, Trophy } from 'lucide-react';
+import { Settings, User, Bell, Moon, Sun, Globe, Trophy, Sparkles } from 'lucide-react';
 import { UserDropdown } from './UserDropdown';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -9,6 +9,7 @@ import { LanguageModal } from './LanguageModal';
 interface ToolbarNavbarProps {
   balance: number;
   onOpenChallenge?: () => void;
+  onOpenAiTutor?: () => void;
   challengeLevelName?: string;
   challengeStatus?: string;
   accountRankBadge?: string;
@@ -19,6 +20,7 @@ interface ToolbarNavbarProps {
 export const ToolbarNavbar = ({ 
   balance, 
   onOpenChallenge, 
+  onOpenAiTutor,
   challengeLevelName, 
   challengeStatus,
   accountRankBadge,
@@ -36,7 +38,7 @@ export const ToolbarNavbar = ({
     <>
       <nav className="h-12 bg-white dark:bg-[#131722] border-b border-[#e6e8ea] dark:border-[#2a2e39] flex items-center px-4 justify-between text-[#1e2329] dark:text-[#d1d4dc] text-sm shrink-0 relative z-50">
         {/* Logo AITRADEX */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <img src="/images/logo.jpg" alt="AITRADEX" className="h-7 object-contain rounded" />
           
           {/* Nút Thử Thách Quỹ (Prop Firm Challenge) */}
@@ -61,6 +63,16 @@ export const ToolbarNavbar = ({
                 {accountRankBadge || 'Cấp 1'}
               </span>
             )}
+          </button>
+
+          {/* Nút AI Trading Tutor & Trade Reviewer */}
+          <button
+            onClick={onOpenAiTutor}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-amber-500/20 hover:from-blue-500/30 hover:to-amber-500/30 border border-blue-500/40 text-blue-600 dark:text-blue-300 font-bold text-xs transition-all shadow-sm shadow-blue-500/10 hover:scale-[1.02]"
+            title="Mở Trợ lý & Gia sư AI Trading Tutor (Hỏi đáp, So sánh chiến lược, RAG)"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+            <span>AI Tutor</span>
           </button>
         </div>
 

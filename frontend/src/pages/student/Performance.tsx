@@ -11,7 +11,7 @@ export const StudentPerformance = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-[#1e222d] p-6 rounded-2xl border border-[#2a2e39] shadow-sm">
           <p className="text-sm font-medium text-[#787b86] uppercase tracking-wider mb-2">Total Portfolio Value</p>
-          <h3 className="text-2xl font-bold text-white">108,520,000 ₫</h3>
+          <h3 className="text-2xl font-bold text-white">$10,852.00</h3>
         </div>
         <div className="bg-[#1e222d] p-6 rounded-2xl border border-[#2a2e39] shadow-sm">
           <p className="text-sm font-medium text-[#787b86] uppercase tracking-wider mb-2">Total Return</p>

@@ -20,9 +20,9 @@ export const SimulationDetail = () => {
               Live
             </span>
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Vietnam Stock Challenge #01 {id ? `(${id})` : ''}</h1>
+          <h1 className="text-3xl font-bold text-white tracking-tight">Global Trading Challenge #01 {id ? `(${id})` : ''}</h1>
           <p className="text-[#787b86] mt-4 text-lg max-w-2xl">
-            Compete with students across the university in a 3-month trading challenge using HOSE real market data.
+            Compete with students across the university in a 3-month trading challenge using global real market data.
             Focus on technical analysis and risk management.
           </p>
         </div>
@@ -36,14 +36,14 @@ export const SimulationDetail = () => {
                 <DollarSign className="w-4 h-4" />
                 <span className="text-sm font-medium">Initial Capital</span>
               </div>
-              <p className="text-xl font-bold text-white">100,000,000 VND</p>
+              <p className="text-xl font-bold text-white">$10,000 USD</p>
             </div>
             <div>
               <div className="flex items-center gap-2 text-[#787b86] mb-2">
                 <BarChart2 className="w-4 h-4" />
                 <span className="text-sm font-medium">Market</span>
               </div>
-              <p className="text-xl font-bold text-white">HOSE</p>
+              <p className="text-xl font-bold text-white">Crypto & US Stocks</p>
             </div>
             <div>
               <div className="flex items-center gap-2 text-[#787b86] mb-2">

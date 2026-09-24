@@ -25,8 +25,8 @@ export const SimulationModal = ({ isOpen, onClose, onSaved, simulationToEdit }: 
       setFormData({
         name: simulationToEdit.name || '',
         description: simulationToEdit.description || '',
-        initialBalance: simulationToEdit.initialBalance || 100000000,
-        market: simulationToEdit.market || 'VN',
+        initialBalance: simulationToEdit.initialBalance || 10000,
+        market: simulationToEdit.market || 'GLOBAL',
         startDate: simulationToEdit.startDate ? new Date(simulationToEdit.startDate).toISOString().split('T')[0] : '',
         endDate: simulationToEdit.endDate ? new Date(simulationToEdit.endDate).toISOString().split('T')[0] : '',
       });
@@ -34,8 +34,8 @@ export const SimulationModal = ({ isOpen, onClose, onSaved, simulationToEdit }: 
       setFormData({
         name: '',
         description: '',
-        initialBalance: 100000000,
-        market: 'VN',
+        initialBalance: 10000,
+        market: 'GLOBAL',
         startDate: new Date().toISOString().split('T')[0],
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       });
@@ -133,13 +133,13 @@ export const SimulationModal = ({ isOpen, onClose, onSaved, simulationToEdit }: 
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-semibold text-[#d1d4dc] mb-2">Initial Balance (VND)</label>
+                <label className="block text-sm font-semibold text-[#d1d4dc] mb-2">Initial Balance (USD)</label>
                 <input
                   type="number"
                   name="initialBalance"
                   required
                   min="0"
-                  step="1000000"
+                  step="1000"
                   value={formData.initialBalance}
                   onChange={handleChange}
                   className="w-full px-4 py-2.5 bg-[#131722] border border-[#2a2e39] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-[#1e222d] transition-colors"
@@ -154,8 +154,9 @@ export const SimulationModal = ({ isOpen, onClose, onSaved, simulationToEdit }: 
                   onChange={handleChange}
                   className="w-full px-4 py-2.5 bg-[#131722] border border-[#2a2e39] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-[#1e222d] transition-colors"
                 >
-                  <option value="VN">Vietnam (HOSE, HNX)</option>
-                  <option value="US">US Market</option>
+                  <option value="GLOBAL">Crypto & US Stocks</option>
+                  <option value="CRYPTO">Crypto Only</option>
+                  <option value="US">US Stocks Only</option>
                 </select>
               </div>
             </div>

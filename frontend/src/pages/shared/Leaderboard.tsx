@@ -33,7 +33,7 @@ export const Leaderboard = () => {
           const data = await response.json();
           // Map real users to mock leaderboard data (sorted by mock performance)
           const leaderboardData = data.map((u: any, index: number) => {
-            const basePortfolio = 100000000; // 100M VND
+            const basePortfolio = 10000; // $10,000 USD
             // Generate some pseudo-random but consistent performance based on index
             const performanceMulti = 1 + (data.length - index) * 0.05; 
             const portfolio = basePortfolio * performanceMulti;
@@ -170,10 +170,10 @@ export const Leaderboard = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right font-mono font-medium">
-                        {(user.portfolio / 1000000).toFixed(1)}M
+                        ${user.portfolio.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className={`px-6 py-4 text-right font-mono font-bold ${user.profit > 0 ? 'text-emerald-600' : user.profit < 0 ? 'text-red-600' : 'text-[#787b86]'}`}>
-                        {user.profit > 0 ? '+' : ''}{(user.profit / 1000000).toFixed(1)}M
+                        {user.profit >= 0 ? '+$' : '-$'}{Math.abs(user.profit).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className={`px-6 py-4 text-right font-mono font-bold ${user.returnRate > 0 ? 'text-emerald-600' : user.returnRate < 0 ? 'text-red-600' : 'text-[#787b86]'}`}>
                         {user.returnRate > 0 ? '+' : ''}{user.returnRate.toFixed(2)}%

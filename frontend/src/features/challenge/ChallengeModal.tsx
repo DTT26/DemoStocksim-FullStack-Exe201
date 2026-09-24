@@ -58,7 +58,6 @@ export const ChallengeModal: React.FC<ChallengeModalProps> = ({
     levelName: 'Tập Sự',
     badge: 'Cấp 1',
     capitalUSD: 10_000,
-    capitalVND: 250_000_000,
     profitTargetPercent: 8,
     dailyLossLimitPercent: 4,
     maxDrawdownPercent: 8,

@@ -19,6 +19,7 @@ import { LecturerAssignments } from './pages/lecturer/LecturerAssignments';
 import { LecturerStudents } from './pages/lecturer/LecturerStudents';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminUsers } from './pages/admin/Users';
+import { AiLearningDashboard } from './features/ai/AiLearningDashboard';
 
 function App() {
   const { user, loading } = useAuth();
@@ -53,8 +54,12 @@ function App() {
             <Route path="assignments" element={<StudentAssignments />} />
             <Route path="assignments/:id" element={<StudentAssignmentDetail />} />
             <Route path="performance" element={<StudentPerformance />} />
+            <Route path="learning-dashboard" element={<AiLearningDashboard />} />
           </Route>
         </Route>
+
+        {/* Learning Dashboard direct route */}
+        <Route path="learning-dashboard" element={<AiLearningDashboard />} />
 
         {/* Shared Routes (require login but any role) */}
         <Route element={<ProtectedRoute />}>

@@ -19,7 +19,7 @@ export const StudentDashboard = () => {
           <div className="flex justify-between items-start">
             <div>
               <p className="text-sm font-medium text-[#787b86]">Portfolio Value</p>
-              <h3 className="text-2xl font-bold text-white mt-1">108.5M ₫</h3>
+              <h3 className="text-2xl font-bold text-white mt-1">$10,850.00</h3>
             </div>
             <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
               <Briefcase className="w-5 h-5" />
@@ -83,9 +83,9 @@ export const StudentDashboard = () => {
                     </span>
                     <span className="text-sm text-[#787b86] font-medium">Started Sep 12, 2026</span>
                   </div>
-                  <h3 className="text-2xl font-bold text-white">Vietnam Stock Challenge #01</h3>
+                  <h3 className="text-2xl font-bold text-white">Global Trading Challenge #01</h3>
                   <p className="text-[#787b86] mt-2 max-w-lg">
-                    Practice trading with 100M VND starting capital on the HOSE market. Complete assignments and compete for the highest return.
+                    Practice trading with $10,000 USD starting capital on Crypto & US Markets. Complete assignments and compete for the highest return.
                   </p>
                 </div>
               </div>

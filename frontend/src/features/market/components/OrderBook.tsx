@@ -19,7 +19,7 @@ export const OrderBook = ({ symbol, currentPrice, isUp }: OrderBookProps) => {
   const [buyRatio, setBuyRatio] = useState(92);
 
   const baseSymbol = symbol.replace('USDT', '').replace('.P', '');
-  const quoteSymbol = symbol.includes('USDT') ? 'USDT' : 'VND';
+  const quoteSymbol = symbol.includes('USDT') ? 'USDT' : 'USD';
   
   // Decide decimal places based on price
   const priceDecimals = currentPrice < 10 ? 4 : (currentPrice > 1000 ? 1 : 2);

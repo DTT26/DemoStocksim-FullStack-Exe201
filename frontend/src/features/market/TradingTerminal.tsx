@@ -17,6 +17,7 @@ import { challengeApi } from '../../services/challengeApi';
 import type { UserChallengeState, ChallengeLevelConfig } from '../challenge/types';
 import { ChallengeModal } from '../challenge/ChallengeModal';
 import { useModal } from '../../contexts/ModalContext';
+import { AiTutorDrawer } from '../ai/AiTutorDrawer';
 
 const MAX_RESETS_PER_WEEK = 4;
 
@@ -91,6 +92,7 @@ export const TradingTerminal = () => {
     certificates: [],
   });
   const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
+  const [isAiTutorOpen, setIsAiTutorOpen] = useState(false);
 
   // Tải cấu hình cấp độ từ Backend API
   useEffect(() => {
@@ -108,7 +110,6 @@ export const TradingTerminal = () => {
     levelName: 'Tập Sự',
     badge: 'Cấp 1',
     capitalUSD: 10_000,
-    capitalVND: 250_000_000,
     profitTargetPercent: 8,
     dailyLossLimitPercent: 4,
     maxDrawdownPercent: 8,
@@ -616,6 +617,7 @@ export const TradingTerminal = () => {
       <ToolbarNavbar 
         balance={balance} 
         onOpenChallenge={() => setIsChallengeModalOpen(true)}
+        onOpenAiTutor={() => setIsAiTutorOpen(true)}
         challengeLevelName={currentChallengeLevel.badge}
         challengeStatus={challengeState.status}
         accountRankBadge={accountRankConfig.badge}
@@ -912,6 +914,12 @@ export const TradingTerminal = () => {
         challengeState={challengeState}
         onStateUpdate={handleChallengeStateUpdate}
         userName={user?.name || 'Trader'}
+      />
+      <AiTutorDrawer
+        isOpen={isAiTutorOpen}
+        onClose={() => setIsAiTutorOpen(false)}
+        currentSymbol={selectedStock.symbol}
+        currentPrice={selectedStock.price}
       />
     </div>
   );
