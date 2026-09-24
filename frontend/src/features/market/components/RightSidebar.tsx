@@ -207,12 +207,12 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
   }
 
   return (
-    <div className="w-[280px] flex flex-col bg-[#131722] flex-1 min-h-0 overflow-hidden">
+    <div className="w-[280px] flex flex-col bg-white dark:bg-[#131722] border-l border-[#e6e8ea] dark:border-[#2a2e39] flex-1 min-h-0 overflow-hidden text-[#1e2329] dark:text-[#d1d4dc]">
       {/* Header Tabs Sổ lệnh / Giao dịch */}
-      <div className="flex items-center border-b border-[#2a2e39] shrink-0">
+      <div className="flex items-center border-b border-[#e6e8ea] dark:border-[#2a2e39] shrink-0">
         <button
           onClick={() => setIsExpanded(false)}
-          className="p-3 text-[#787b86] hover:text-[#d1d4dc] hover:bg-[#1e222d] transition-colors border-r border-[#2a2e39]"
+          className="p-3 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] hover:bg-[#f0f3fa] dark:hover:bg-[#1e222d] transition-colors border-r border-[#e6e8ea] dark:border-[#2a2e39]"
           title="Thu gọn"
         >
           <ChevronRight className="w-4 h-4" />
@@ -220,18 +220,18 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
         <div className="flex-1 flex items-center">
           <button
             onClick={() => setActiveSidebarTab('orderbook')}
-            className={`flex-1 py-3 text-xs font-semibold transition-colors ${activeSidebarTab === 'orderbook' ? 'text-white border-b-2 border-blue-500' : 'text-[#787b86] hover:text-[#d1d4dc]'}`}
+            className={`flex-1 py-3 text-xs font-semibold transition-colors ${activeSidebarTab === 'orderbook' ? 'text-blue-600 dark:text-white border-b-2 border-blue-500' : 'text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
           >
             Sổ lệnh
           </button>
           <button
             onClick={() => setActiveSidebarTab('trade')}
-            className={`flex-1 py-3 text-xs font-semibold transition-colors ${activeSidebarTab === 'trade' ? 'text-white border-b-2 border-blue-500' : 'text-[#787b86] hover:text-[#d1d4dc]'}`}
+            className={`flex-1 py-3 text-xs font-semibold transition-colors ${activeSidebarTab === 'trade' ? 'text-blue-600 dark:text-white border-b-2 border-blue-500' : 'text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
           >
             Giao dịch
           </button>
         </div>
-        <button className="p-3 text-[#787b86] hover:text-[#d1d4dc] hover:bg-[#1e222d] transition-colors">
+        <button className="p-3 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] hover:bg-[#f0f3fa] dark:hover:bg-[#1e222d] transition-colors">
           <Settings2 className="w-4 h-4" />
         </button>
       </div>
@@ -242,7 +242,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto min-h-0">
-          <div className="flex items-center px-2 py-2 border-b border-[#2a2e39] text-[10px] uppercase tracking-wider text-[#787b86] font-semibold">
+          <div className="flex items-center px-2 py-2 border-b border-[#e6e8ea] dark:border-[#2a2e39] text-[10px] uppercase tracking-wider text-[#787b86] font-semibold">
             <div className="flex-1 ml-1">Symbol</div>
             <div className="w-20 text-right">Price</div>
             <div className="w-14 text-right">Chg%</div>
@@ -252,13 +252,13 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
             <div
               key={stock.symbol}
               onClick={() => { onStockSelect(stock); }}
-              className={`flex items-center px-3 py-2 text-xs cursor-pointer transition-colors border-b border-[#2a2e39]/40 ${selectedStock.symbol === stock.symbol
-                ? 'bg-blue-900/20 border-l-2 border-l-blue-500'
-                : 'hover:bg-[#1e222d]'
+              className={`flex items-center px-3 py-2 text-xs cursor-pointer transition-colors border-b border-[#e6e8ea] dark:border-[#2a2e39]/40 ${selectedStock.symbol === stock.symbol
+                ? 'bg-blue-50 dark:bg-blue-900/20 border-l-2 border-l-blue-500'
+                : 'hover:bg-[#f0f3fa] dark:hover:bg-[#1e222d]'
                 }`}
             >
               <div className="flex-1 flex flex-col">
-                <span className="text-[#d1d4dc] font-semibold">{stock.symbol}</span>
+                <span className="text-[#1e2329] dark:text-[#d1d4dc] font-semibold">{stock.symbol}</span>
                 <span className="text-[#787b86] text-[10px]">{stock.name}</span>
               </div>
               <div className={`w-20 text-right font-mono font-semibold ${stock.type === 'up' ? 'text-[#089981]' : 'text-[#f23645]'}`}>
@@ -275,17 +275,15 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
 
       {/* Order Entry */}
       {user ? (
-        <div className="border-t border-[#2a2e39] p-3 flex flex-col gap-2.5 shrink-0 bg-[#131722]">
+        <div className="border-t border-[#e6e8ea] dark:border-[#2a2e39] p-3 flex flex-col gap-2.5 shrink-0 bg-[#f8f9fa] dark:bg-[#131722]">
           {/* Balance row */}
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-1 text-[#787b86]">
               <Wallet className="w-3 h-3" />
               <span>Balance</span>
             </div>
-            <span className="font-mono text-green-400 font-semibold">${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span className="font-mono text-green-600 dark:text-green-400 font-semibold">${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
-
-          {/* Holding & PnL section removed */}
 
           {/* Order type */}
           <div className="flex gap-1.5 text-xs font-semibold pb-1">
@@ -293,7 +291,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
               onClick={() => { if (!isEditing) setOrderType('market'); }}
               className={`flex-1 py-1.5 rounded uppercase transition-colors ${orderType === 'market'
                   ? 'bg-blue-600 text-white'
-                  : 'bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#d1d4dc]')
+                  : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]')
                 }`}
             >
               Thị trường
@@ -302,7 +300,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
               onClick={() => { if (!isEditing) setOrderType('limit'); }}
               className={`flex-1 py-1.5 rounded uppercase transition-colors ${orderType === 'limit'
                   ? 'bg-blue-600 text-white'
-                  : 'bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#d1d4dc]')
+                  : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]')
                 }`}
             >
               Limit
@@ -311,7 +309,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
               onClick={() => { if (!isEditing) setOrderType('stop'); }}
               className={`flex-1 py-1.5 rounded uppercase transition-colors ${orderType === 'stop'
                   ? 'bg-blue-600 text-white'
-                  : 'bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#d1d4dc]')
+                  : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]')
                 }`}
             >
               Stop
@@ -325,11 +323,11 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                 {isEditing ? 'Giá vào lệnh' : `Giá ${orderType === 'market' ? '(Thị trường)' : '(USD)'}`}
               </label>
               {isEditing ? (
-                <div className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
+                <div className="bg-[#f0f3fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
                   {avgPrice >= 100 ? avgPrice.toLocaleString('en-US') : avgPrice.toFixed(getPricePrecision(avgPrice))}
                 </div>
               ) : orderType === 'market' ? (
-                <div className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
+                <div className="bg-[#f0f3fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
                   {selectedStock.price >= 100 ? selectedStock.price.toLocaleString('en-US') : selectedStock.price.toFixed(getPricePrecision(selectedStock.price))}
                 </div>
               ) : (
@@ -339,7 +337,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                   value={limitPriceStr}
                   placeholder="VD: 64500"
                   onChange={e => setLimitPriceStr(e.target.value)}
-                  className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full disabled:opacity-50"
+                  className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full disabled:opacity-50"
                 />
               )}
             </div>
@@ -347,7 +345,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
             <div className="flex flex-col gap-1 flex-1">
               <label className="text-[10px] text-[#787b86] uppercase tracking-wider">Khối lượng (Lot)</label>
               {isEditing ? (
-                <div className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
+                <div className="bg-[#f0f3fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
                   {(held / 100000).toLocaleString('vi-VN')}
                 </div>
               ) : (
@@ -356,7 +354,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                   step="0.01"
                   value={lotStr}
                   onChange={e => setLotStr(e.target.value)}
-                  className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full"
+                  className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full"
                 />
               )}
             </div>
@@ -452,7 +450,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
               }}
               className="w-3.5 h-3.5 accent-blue-600 cursor-pointer"
             />
-            <label htmlFor="toggle-tpsl" className="text-xs text-[#787b86] cursor-pointer hover:text-[#d1d4dc] transition-colors">
+            <label htmlFor="toggle-tpsl" className="text-xs text-[#787b86] cursor-pointer hover:text-[#1e2329] dark:hover:text-[#d1d4dc] transition-colors">
               Thiết lập Chốt lời / Cắt lỗ (TP/SL)
             </label>
           </div>
@@ -464,7 +462,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
             const sliderStep = baseRefPrice > 1000 ? '1' : baseRefPrice > 10 ? '0.1' : Math.pow(10, -sliderPrecision).toString();
 
             return (
-              <div className="flex gap-2 border-t border-[#2a2e39]/50 pt-2 mt-1">
+              <div className="flex gap-2 border-t border-[#e6e8ea] dark:border-[#2a2e39]/50 pt-2 mt-1">
                 <div className="flex flex-col gap-1 flex-1">
                   <div className="flex justify-between items-center">
                     <label className="text-[10px] text-[#089981] uppercase tracking-wider font-semibold">Chốt lời (TP)</label>
@@ -474,7 +472,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                     value={tp}
                     placeholder="Tùy chọn"
                     onChange={e => setTp(e.target.value)}
-                    className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-[#089981] transition-colors w-full placeholder:text-[#434651]"
+                    className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-[#089981] transition-colors w-full placeholder:text-[#787b86] dark:placeholder:text-[#434651]"
                   />
                   <input
                     type="range"
@@ -483,7 +481,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                     step={sliderStep}
                     value={tp || baseRefPrice}
                     onChange={e => setTp(e.target.value)}
-                    className="w-full accent-[#089981] mt-1 h-1 bg-[#2a2e39] rounded-lg appearance-none cursor-pointer"
+                    className="w-full accent-[#089981] mt-1 h-1 bg-[#e6e8ea] dark:bg-[#2a2e39] rounded-lg appearance-none cursor-pointer"
                   />
                 </div>
                 <div className="flex flex-col gap-1 flex-1">
@@ -495,7 +493,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                     value={sl}
                     placeholder="Tùy chọn"
                     onChange={e => setSl(e.target.value)}
-                    className="bg-[#1e222d] border border-[#2a2e39] rounded px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-[#f23645] transition-colors w-full placeholder:text-[#434651]"
+                    className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-[#f23645] transition-colors w-full placeholder:text-[#787b86] dark:placeholder:text-[#434651]"
                   />
                   <input
                     type="range"
@@ -504,7 +502,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                     step={sliderStep}
                     value={sl || baseRefPrice}
                     onChange={e => setSl(e.target.value)}
-                    className="w-full accent-[#f23645] mt-1 h-1 bg-[#2a2e39] rounded-lg appearance-none cursor-pointer"
+                    className="w-full accent-[#f23645] mt-1 h-1 bg-[#e6e8ea] dark:bg-[#2a2e39] rounded-lg appearance-none cursor-pointer"
                   />
                 </div>
               </div>
@@ -514,7 +512,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
           {/* Total info */}
           <div className="flex items-center justify-between text-xs pt-2">
             <span className="text-[#787b86]">Ký quỹ yêu cầu</span>
-            <span className="font-mono text-[#d1d4dc] font-bold">${requiredMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span className="font-mono text-[#1e2329] dark:text-[#d1d4dc] font-bold">${requiredMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <div className="flex items-center justify-between text-[10px] pb-2">
             <span className="text-[#787b86]">Khối lượng thực tế</span>

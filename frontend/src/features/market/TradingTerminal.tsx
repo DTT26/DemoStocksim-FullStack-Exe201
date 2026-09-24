@@ -45,6 +45,12 @@ export const TradingTerminal = () => {
   const [toast, setToast] = useState<{ msg: string, type: 'info' | 'warning' } | null>(null);
   const [editingSymbol, setEditingSymbol] = useState<string | null>(null);
 
+  // Toggles for lower toolbar buttons
+  const [magnetMode, setMagnetMode] = useState(false);
+  const [stayInDrawingMode, setStayInDrawingMode] = useState(false);
+  const [lockDrawing, setLockDrawing] = useState(false);
+  const [hideDrawing, setHideDrawing] = useState(false);
+
   const showToast = (msg: string, type: 'info' | 'warning' = 'info') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4000);
@@ -65,6 +71,15 @@ export const TradingTerminal = () => {
   const [isIndicatorModalOpen, setIsIndicatorModalOpen] = useState(false);
   const [previewTPSL, setPreviewTPSL] = useState<{ tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean } | null>(null);
   const [draggedTPSL, setDraggedTPSL] = useState<{ tp?: number; sl?: number } | null>(null);
+
+  const handleToolClick = (toolName: string) => {
+    if (toolName === activeTool && toolName !== 'cursor') {
+      setActiveTool('cursor');
+      setTimeout(() => setActiveTool(toolName), 10);
+    } else {
+      setActiveTool(toolName);
+    }
+  };
 
   // Undo / Redo triggers & state
   const [undoTrigger, setUndoTrigger] = useState(0);
@@ -346,10 +361,6 @@ export const TradingTerminal = () => {
   const handleTPSLDragChange = (type: 'tp' | 'sl', price: number) => {
     setPreviewTPSL(prev => prev ? { ...prev, [type]: price } : { enabled: true, [type]: price });
     setDraggedTPSL(prev => ({ ...prev, [type]: price }));
-  };
-
-  const handleToolClick = (toolName: string) => {
-    setActiveTool(toolName === activeTool && toolName !== 'cursor' ? activeTool : toolName);
   };
 
   const handleStockSelect = (stock: Stock) => {
@@ -732,7 +743,18 @@ export const TradingTerminal = () => {
       )}
 
       <div className="flex flex-1 overflow-hidden">
-        <LeftToolbar activeTool={activeTool} onToolSelect={handleToolClick} />
+        <LeftToolbar 
+          activeTool={activeTool} 
+          onToolSelect={handleToolClick} 
+          magnetMode={magnetMode}
+          onToggleMagnet={() => setMagnetMode(!magnetMode)}
+          stayInDrawingMode={stayInDrawingMode}
+          onToggleStayInDrawingMode={() => setStayInDrawingMode(!stayInDrawingMode)}
+          lockDrawing={lockDrawing}
+          onToggleLock={() => setLockDrawing(!lockDrawing)}
+          hideDrawing={hideDrawing}
+          onToggleHide={() => setHideDrawing(!hideDrawing)}
+        />
         <div className="flex flex-col flex-1 overflow-hidden">
           <TickerHeader
             stock={selectedStock}
@@ -764,6 +786,11 @@ export const TradingTerminal = () => {
               <div className="flex flex-col flex-1 min-h-[300px] overflow-hidden border-b border-[#2a2e39]">
                 <ChartArea
                   activeTool={activeTool}
+                  onToolSelect={setActiveTool}
+                  magnetMode={magnetMode}
+                  stayInDrawingMode={stayInDrawingMode}
+                  lockDrawing={lockDrawing}
+                  hideDrawing={hideDrawing}
                   selectedStock={selectedStock}
                   activeTimeframe={activeTimeframe}
                   isReplaying={isReplaying}
