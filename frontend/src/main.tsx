@@ -4,6 +4,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { AlertProvider } from "./contexts/AlertContext";
 import { ModalProvider } from "./contexts/ModalContext";
 import App from "./App.tsx";
 import "./index.css";
@@ -16,9 +17,11 @@ createRoot(document.getElementById("root")!).render(
       <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
         <ThemeProvider>
           <AuthProvider>
-            <ModalProvider>
-              <App />
-            </ModalProvider>
+            <AlertProvider>
+              <ModalProvider>
+                <App />
+              </ModalProvider>
+            </AlertProvider>
           </AuthProvider>
         </ThemeProvider>
       </GoogleOAuthProvider>

@@ -8,6 +8,10 @@ import { WalletService } from './walletService';
 import { CHALLENGE_LEVELS } from './challengeService';
 
 export class TradingService {
+  static async getOrCreateWallet(userId: string) {
+    return WalletService.getOrCreateWallet(userId);
+  }
+
   /**
    * Xác định ngữ cảnh tài khoản đang giao dịch:
    * - Nếu User đang có bài thi Cấp Vốn 'ACTIVE' hoặc 'PAUSED' -> Dùng Tài khoản Bài Thi (CHALLENGE)
@@ -119,8 +123,24 @@ export class TradingService {
       });
     }
 
+    const order = await Order.create({
+      userId,
+      symbol,
+      side: OrderSide.LONG,
+      type: OrderType.MARKET,
+      quantity,
+      price: currentPrice,
+      margin: marginRequired,
+      leverage,
+      stopLoss,
+      takeProfit,
+      status: OrderStatus.FILLED,
+      accountType: ctx.accountType
+    });
+
     await Transaction.create({
       userId,
+      orderId: order._id,
       type: TransactionType.BUY_STOCK,
       amount: marginRequired,
       accountType: ctx.accountType,
@@ -204,9 +224,25 @@ export class TradingService {
       });
     }
 
+    const order = await Order.create({
+      userId,
+      symbol,
+      side: OrderSide.SHORT,
+      type: OrderType.MARKET,
+      quantity,
+      price: currentPrice,
+      margin: marginRequired,
+      leverage,
+      stopLoss,
+      takeProfit,
+      status: OrderStatus.FILLED,
+      accountType: ctx.accountType
+    });
+
     await Transaction.create({
       userId,
-      type: TransactionType.SELL_STOCK,
+      orderId: order._id,
+      type: TransactionType.BUY_STOCK,
       amount: marginRequired,
       accountType: ctx.accountType,
       description: `Mở SHORT ${symbol} ở giá $${currentPrice.toLocaleString('en-US', {maximumFractionDigits:2})} | Margin: $${margin} | x${leverage} | Qty: ${quantity.toFixed(4)} [${ctx.isChallenge ? 'Cấp Vốn' : 'Tài khoản thường'}]`,
@@ -230,7 +266,7 @@ export class TradingService {
   }
 
   /**
-   * 3. ĐÓNG VỊ THẾ (Chốt lời/Lỗ)
+   * ĐÓNG VỊ THẾ (Close Position) - Chốt lời/Cắt lỗ theo giá thị trường
    */
   static async closePosition(userId: string, symbol: string, side: 'LONG'|'SHORT', currentPrice: number) {
     const ctx = await this.getActiveContext(userId);
@@ -262,8 +298,22 @@ export class TradingService {
     // Xóa vị thế
     await Holding.deleteOne({ _id: holding._id });
 
+    const order = await Order.create({
+      userId,
+      symbol,
+      side: side === 'LONG' ? OrderSide.SHORT : OrderSide.LONG,
+      type: OrderType.MARKET,
+      quantity: qty,
+      price: currentPrice,
+      margin: marginReturned,
+      leverage: holding.leverage || 1,
+      status: OrderStatus.FILLED,
+      accountType: ctx.accountType
+    });
+
     await Transaction.create({
       userId,
+      orderId: order._id,
       type: TransactionType.DEPOSIT,
       amount: totalReturn,
       accountType: ctx.accountType,
@@ -328,17 +378,20 @@ export class TradingService {
 
     await Transaction.create({
       userId,
-      type: TransactionType.DEPOSIT,
-      amount: -amount,
+      type: TransactionType.BUY_STOCK,
+      amount,
       accountType: ctx.accountType,
-      description: `Bơm $${amount.toLocaleString('en-US')} ký quỹ vào lệnh ${side} ${symbol}`
+      description: `Bơm thêm $${amount.toLocaleString('en-US')} ký quỹ vào vị thế ${side} ${symbol}. Đòn bẩy mới: x${newLeverage.toFixed(1)}`
     });
 
-    return { success: true, message: `Bơm $${amount.toLocaleString('en-US')} ký quỹ thành công!` };
+    return {
+      success: true,
+      message: `Bơm thêm $${amount.toLocaleString('en-US')} thành công! Đòn bẩy mới: x${newLeverage.toFixed(1)}`
+    };
   }
 
   /**
-   * ĐẶT LỆNH CHỜ (LIMIT / STOP ORDER)
+   * ĐẶT LỆNH CHỜ (Limit / Stop Order)
    */
   static async placeLimitOrder(userId: string, symbol: string, side: 'LONG'|'SHORT', price: number, margin: number, leverage: number, stopLoss?: number, takeProfit?: number, orderType: 'LIMIT' | 'STOP' = 'LIMIT') {
     if (margin <= 0) throw new Error("Ký quỹ (Margin) phải lớn hơn 0");
@@ -429,6 +482,8 @@ export class TradingService {
     const holdings = await Holding.find({ userId, accountType: ctx.accountType });
     const pendingOrders = await Order.find({ userId, status: OrderStatus.PENDING, accountType: ctx.accountType });
 
+    // Note: To calculate accurate Real-time PnL, the controller should fetch current prices from API
+    // and map them into the holdings array before returning to frontend.
     return {
       wallet: {
         balance: ctx.balance,

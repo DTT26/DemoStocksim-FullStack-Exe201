@@ -11,7 +11,7 @@ export const LandingPage = () => {
       </div>
       
       <h1 className="text-5xl font-extrabold text-white tracking-tight mb-6">
-        Welcome to StockSim Edu
+        Welcome to StockSim
       </h1>
       
       <p className="text-xl text-[#787b86] max-w-2xl mb-12 leading-relaxed">

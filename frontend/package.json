@@ -11,14 +11,17 @@
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
+    "@types/react-google-recaptcha": "^2.1.9",
     "jwt-decode": "^4.0.0",
     "klinecharts": "^10.0.3",
     "lucide-react": "^1.45.0",
     "puppeteer": "^25.10.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-google-recaptcha": "^3.1.0",
     "react-router-dom": "^7.18.3",
-    "recharts": "^3.10.1"
+    "recharts": "^3.10.1",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",

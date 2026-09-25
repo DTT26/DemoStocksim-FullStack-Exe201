@@ -1,0 +1,220 @@
+import { useState } from 'react';
+import { useSimulatorStore } from '../engine/useSimulatorStore';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+
+interface PositionsManagerProps {
+  currentPrice: number;
+}
+
+export const PositionsManager = ({ currentPrice }: PositionsManagerProps) => {
+  const store = useSimulatorStore();
+  const [activeTab, setActiveTab] = useState<'positions' | 'orders' | 'history'>('positions');
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  if (!store.isActive || !store.session) return null;
+
+  const { positions, orders, history } = store;
+
+  const tabs = [
+    { id: 'positions', label: `Vị thế (${positions.length})` },
+    { id: 'orders', label: `Lệnh mở (${orders.length})` },
+    { id: 'history', label: `Lịch sử giao dịch (${history.length})` }
+  ];
+
+  const calculatePositionPnL = (p: any) => {
+    const markPrice = store.currentPrice > 0 ? store.currentPrice : currentPrice;
+    const currentExecPrice = p.side === 'LONG' 
+      ? (store.currentBid > 0 ? store.currentBid : markPrice) 
+      : (store.currentAsk > 0 ? store.currentAsk : (markPrice + (store.session?.config.spread || 0.2)));
+    const actualQty = p.lot * 100000;
+    const rawPnL = p.side === 'LONG' 
+      ? (currentExecPrice - p.entryPrice) * actualQty
+      : (p.entryPrice - currentExecPrice) * actualQty;
+    const netPnl = rawPnL - (p.commission || 0) + (p.accumulatedSwap || 0);
+    const roe = p.margin > 0 ? (netPnl / p.margin) * 100 : 0;
+    return { netPnl, roe, markPrice, actualQty };
+  };
+
+  return (
+    <div className={`border-t border-[#e6e8ea] dark:border-[#2a2e39] bg-white dark:bg-[#0b0e11] flex flex-col shrink-0 overflow-hidden text-xs text-[#787b86] transition-all duration-300 ${isExpanded ? 'h-64' : 'h-10'}`}>
+      {/* Header Tabs */}
+      <div className="flex items-center justify-between border-b border-[#e6e8ea] dark:border-[#2a2e39] px-2 h-10 shrink-0 bg-[#f8f9fa] dark:bg-[#131722]">
+        <div className="flex items-center gap-6 h-full">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                if (activeTab === tab.id) {
+                  setIsExpanded(!isExpanded);
+                } else {
+                  setActiveTab(tab.id as any);
+                  setIsExpanded(true);
+                }
+              }}
+              className={`h-full relative font-medium transition-colors px-1 ${
+                activeTab === tab.id && isExpanded
+                  ? 'text-[#1e2329] dark:text-white' 
+                  : 'hover:text-[#1e2329] dark:hover:text-white text-[#787b86]'
+              }`}
+            >
+              {tab.label}
+              {activeTab === tab.id && isExpanded && (
+                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#089981]" />
+              )}
+            </button>
+          ))}
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="hover:text-[#1e2329] dark:hover:text-white transition-colors border-l border-[#e6e8ea] dark:border-[#2a2e39] pl-4 py-1"
+          >
+            {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto custom-scrollbar relative">
+        {activeTab === 'positions' && (
+          positions.length > 0 ? (
+            <table className="w-full text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
+              <thead className="sticky top-0 bg-[#f8f9fa] dark:bg-[#0b0e11] text-[#787b86] font-normal text-[11px] border-b border-[#e6e8ea] dark:border-transparent z-10">
+                <tr>
+                  <th className="px-4 py-2">Symbol</th>
+                  <th className="px-4 py-2">Size</th>
+                  <th className="px-4 py-2">Entry Price</th>
+                  <th className="px-4 py-2">Mark Price</th>
+                  <th className="px-4 py-2">Margin</th>
+                  <th className="px-4 py-2">Side</th>
+                  <th className="px-4 py-2 text-right">PNL (ROE%)</th>
+                  <th className="px-4 py-2 text-center">TP / SL</th>
+                  <th className="px-4 py-2 text-center">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#e6e8ea] dark:divide-[#2a2e39]/50">
+                {positions.map(p => {
+                  const pnlInfo = calculatePositionPnL(p);
+                  const pnlColor = pnlInfo.netPnl >= 0 ? 'text-[#089981]' : 'text-[#f23645]';
+                  return (
+                    <tr key={p.id} className="hover:bg-[#f5f5f5] dark:hover:bg-[#1e222d] transition-colors">
+                      <td className="px-4 py-2 font-bold">{p.symbol}</td>
+                      <td className="px-4 py-2">{pnlInfo.actualQty.toLocaleString('vi-VN')}</td>
+                      <td className="px-4 py-2">{p.entryPrice.toLocaleString('vi-VN')}</td>
+                      <td className="px-4 py-2">{pnlInfo.markPrice.toLocaleString('vi-VN')}</td>
+                      <td className="px-4 py-2">{p.margin.toLocaleString('vi-VN', { maximumFractionDigits: 0 })}</td>
+                      <td className={`px-4 py-2 font-bold ${p.side === 'LONG' ? 'text-[#089981]' : 'text-[#f23645]'}`}>{p.side} x{store.session!.config.leverage}</td>
+                      <td className={`px-4 py-2 text-right font-mono font-bold ${pnlColor}`}>
+                        {pnlInfo.netPnl >= 0 ? '+' : ''}{pnlInfo.netPnl.toLocaleString('vi-VN', { maximumFractionDigits: 0 })} 
+                        <span className="text-[10px] ml-1">({pnlInfo.netPnl >= 0 ? '+' : ''}{pnlInfo.roe.toFixed(2)}%)</span>
+                      </td>
+                      <td className="px-4 py-2 text-center text-[#787b86]">
+                        {p.tp ? p.tp.toLocaleString('vi-VN') : '-'} / {p.sl ? p.sl.toLocaleString('vi-VN') : '-'}
+                      </td>
+                      <td className="px-4 py-2 text-center">
+                        <button 
+                          onClick={() => store.closePosition(p.id)}
+                          className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-[#d1d4dc] dark:hover:text-white px-3 py-1 rounded text-[11px] font-medium transition-colors"
+                        >
+                          Đóng lệnh
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <EmptyState />
+          )
+        )}
+
+        {activeTab === 'orders' && (
+          <table className="w-full text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
+            <thead className="sticky top-0 bg-[#f8f9fa] dark:bg-[#0b0e11] text-[#787b86] font-normal text-[11px] border-b border-[#e6e8ea] dark:border-transparent z-10">
+              <tr>
+                <th className="px-4 py-2 font-medium">Mã</th>
+                <th className="px-4 py-2 font-medium">Loại lệnh</th>
+                <th className="px-4 py-2 font-medium">Giá đặt</th>
+                <th className="px-4 py-2 font-medium">Khối lượng</th>
+                <th className="px-4 py-2 font-medium text-right">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#2a2e39]/50">
+              {orders.length === 0 ? (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-[#787b86]">Không có lệnh chờ</td></tr>
+              ) : (
+                orders.map((order: any) => (
+                  <tr key={order.id} className="hover:bg-[#1e222d] transition-colors">
+                    <td className="px-4 py-2 font-bold text-white">{order.symbol}</td>
+                    <td className="px-4 py-2">
+                      <span className={`font-bold mr-1 ${order.side === 'LONG' ? 'text-[#089981]' : 'text-[#f23645]'}`}>{order.side}</span>
+                      {order.type} {store.session!.config.leverage}x
+                    </td>
+                    <td className="px-4 py-2 font-mono">{order.limitPrice.toLocaleString('vi-VN')}</td>
+                    <td className="px-4 py-2 font-mono">{(order.lot * 100000).toLocaleString('vi-VN')}</td>
+                    <td className="px-4 py-2 text-right">
+                      <button onClick={() => store.cancelOrder(order.id)} className="text-[#f23645] hover:text-red-400 font-bold px-3 py-1">Hủy</button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        )}
+
+        {activeTab === 'history' && (
+          <table className="w-full text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
+            <thead className="sticky top-0 bg-[#f8f9fa] dark:bg-[#0b0e11] text-[#787b86] font-normal text-[11px] border-b border-[#e6e8ea] dark:border-transparent z-10">
+              <tr>
+                <th className="px-4 py-2 font-medium">Thời gian mở</th>
+                <th className="px-4 py-2 font-medium">Thời gian đóng</th>
+                <th className="px-4 py-2 font-medium">Loại</th>
+                <th className="px-4 py-2 font-medium">Giá mở/đóng</th>
+                <th className="px-4 py-2 font-medium text-right">Lợi nhuận</th>
+                <th className="px-4 py-2 font-medium">Lý do đóng</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#e6e8ea] dark:divide-[#2a2e39]/50">
+              {history.length === 0 ? (
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-[#787b86]">Chưa có lịch sử giao dịch</td></tr>
+              ) : (
+                history.map((tx: any) => (
+                  <tr key={tx.id} className="hover:bg-[#f5f5f5] dark:hover:bg-[#1e222d] transition-colors">
+                    <td className="px-4 py-2 text-[#787b86]">{new Date(tx.openTime).toLocaleString('vi-VN')}</td>
+                    <td className="px-4 py-2 text-[#787b86]">{new Date(tx.closeTime).toLocaleString('vi-VN')}</td>
+                    <td className="px-4 py-2">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${tx.side === 'LONG' ? 'bg-[#089981]/20 text-[#089981]' : 'bg-[#f23645]/20 text-[#f23645]'}`}>
+                        {tx.side}
+                      </span> {tx.symbol}
+                    </td>
+                    <td className="px-4 py-2 font-mono">
+                      {tx.entryPrice.toLocaleString('vi-VN')} / {tx.exitPrice.toLocaleString('vi-VN')}
+                    </td>
+                    <td className={`px-4 py-2 text-right font-mono font-bold ${tx.netPnL >= 0 ? 'text-[#089981]' : 'text-[#f23645]'}`}>
+                      {tx.netPnL >= 0 ? '+' : ''}{tx.netPnL.toLocaleString('vi-VN', { maximumFractionDigits: 0 })}
+                    </td>
+                    <td className="px-4 py-2 text-[#787b86]">{tx.closeReason}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const EmptyState = () => (
+  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+    <div className="relative w-24 h-24 mb-4">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full opacity-80">
+        <path d="M20 50 L50 65 L80 50 L80 80 L50 95 L20 80 Z" className="fill-[#f8f9fa] dark:fill-[#1e222d] stroke-[#e6e8ea] dark:stroke-[#2a2e39]" strokeWidth="2" strokeLinejoin="round"/>
+        <path d="M20 50 L50 35 L80 50 L50 65 Z" className="fill-[#f0f3fa] dark:fill-[#2a2e39] stroke-[#e6e8ea] dark:stroke-[#363a45]" strokeWidth="2" strokeLinejoin="round"/>
+      </svg>
+    </div>
+    <div className="text-[#1e2329] dark:text-[#d1d4dc] font-semibold text-sm mb-1">Chưa có vị thế giả lập nào mở</div>
+    <div className="text-[#787b86] text-[11px] mb-6">Hãy đặt lệnh thông qua bảng điều khiển bên phải</div>
+  </div>
+);

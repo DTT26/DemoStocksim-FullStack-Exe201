@@ -1,9 +1,17 @@
 import { Request, Response } from 'express';
 import { TradingService } from '../services/tradingService';
 
+const resolveUserId = (req: any): string | null => {
+  if (req.user?._id) return req.user._id.toString();
+  if (req.params?.userId) return req.params.userId;
+  if (req.body?.userId) return req.body.userId;
+  return null;
+};
+
 export const openLong = async (req: Request, res: Response) => {
   try {
-    const { userId, symbol, margin, leverage, currentPrice, stopLoss, takeProfit } = req.body;
+    const userId = resolveUserId(req);
+    const { symbol, margin, leverage, currentPrice, stopLoss, takeProfit } = req.body;
     
     if (!userId || !symbol || !margin || !leverage || !currentPrice) {
       return res.status(400).json({ success: false, message: "Missing required fields" });
@@ -18,7 +26,8 @@ export const openLong = async (req: Request, res: Response) => {
 
 export const openShort = async (req: Request, res: Response) => {
   try {
-    const { userId, symbol, margin, leverage, currentPrice, stopLoss, takeProfit } = req.body;
+    const userId = resolveUserId(req);
+    const { symbol, margin, leverage, currentPrice, stopLoss, takeProfit } = req.body;
     
     if (!userId || !symbol || !margin || !leverage || !currentPrice) {
       return res.status(400).json({ success: false, message: "Missing required fields" });
@@ -33,7 +42,8 @@ export const openShort = async (req: Request, res: Response) => {
 
 export const closePosition = async (req: Request, res: Response) => {
   try {
-    const { userId, symbol, side, currentPrice } = req.body;
+    const userId = resolveUserId(req);
+    const { symbol, side, currentPrice } = req.body;
     
     if (!userId || !symbol || !side || !currentPrice) {
       return res.status(400).json({ success: false, message: "Missing required fields" });
@@ -48,7 +58,8 @@ export const closePosition = async (req: Request, res: Response) => {
 
 export const updateTPSL = async (req: Request, res: Response) => {
   try {
-    const { userId, symbol, side, takeProfit, stopLoss } = req.body;
+    const userId = resolveUserId(req);
+    const { symbol, side, takeProfit, stopLoss } = req.body;
     
     if (!userId || !symbol || !side) {
       return res.status(400).json({ success: false, message: "Missing required fields" });
@@ -63,7 +74,8 @@ export const updateTPSL = async (req: Request, res: Response) => {
 
 export const addMargin = async (req: Request, res: Response) => {
   try {
-    const { userId, symbol, side, amount } = req.body;
+    const userId = resolveUserId(req);
+    const { symbol, side, amount } = req.body;
     
     if (!userId || !symbol || !side || !amount) {
       return res.status(400).json({ success: false, message: "Missing required fields" });
@@ -78,7 +90,7 @@ export const addMargin = async (req: Request, res: Response) => {
 
 export const getPortfolio = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.params;
+    const userId = resolveUserId(req);
     if (!userId) {
       return res.status(400).json({ success: false, message: "Missing userId" });
     }
@@ -92,7 +104,7 @@ export const getPortfolio = async (req: Request, res: Response) => {
 
 export const getTransactions = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.params;
+    const userId = resolveUserId(req);
     if (!userId) {
       return res.status(400).json({ success: false, message: "Missing userId" });
     }
@@ -106,7 +118,8 @@ export const getTransactions = async (req: Request, res: Response) => {
 
 export const placeLimitOrder = async (req: Request, res: Response) => {
   try {
-    const { userId, symbol, side, limitPrice, margin, leverage, stopLoss, takeProfit, orderType } = req.body;
+    const userId = resolveUserId(req);
+    const { symbol, side, limitPrice, margin, leverage, stopLoss, takeProfit, orderType } = req.body;
     if (!userId || !symbol || !side || !limitPrice || !margin || !leverage) {
       return res.status(400).json({ success: false, message: 'Missing parameters' });
     }
@@ -119,7 +132,8 @@ export const placeLimitOrder = async (req: Request, res: Response) => {
 
 export const cancelLimitOrder = async (req: Request, res: Response) => {
   try {
-    const { userId, orderId } = req.body;
+    const userId = resolveUserId(req);
+    const { orderId } = req.body;
     if (!userId || !orderId) {
       return res.status(400).json({ success: false, message: "Missing required fields" });
     }
@@ -129,3 +143,4 @@ export const cancelLimitOrder = async (req: Request, res: Response) => {
     res.status(400).json({ success: false, message: error.message });
   }
 };
+

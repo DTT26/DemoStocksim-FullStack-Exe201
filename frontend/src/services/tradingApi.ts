@@ -31,6 +31,7 @@ export const tradingApi = {
   buyStock: async (symbol: string, margin: number, leverage: number, currentPrice: number, sl?: number, tp?: number, userId?: string) => {
     const actualUserId = getActiveUserId(userId);
     const res = await fetch(`${API_BASE_URL}/buy`, {
+      credentials: 'include',
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ userId: actualUserId, symbol, margin, leverage, currentPrice, stopLoss: sl, takeProfit: tp })
@@ -45,6 +46,7 @@ export const tradingApi = {
   sellStock: async (symbol: string, margin: number, leverage: number, currentPrice: number, userId?: string) => {
     const actualUserId = getActiveUserId(userId);
     const res = await fetch(`${API_BASE_URL}/sell`, {
+      credentials: 'include',
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ userId: actualUserId, symbol, margin, leverage, currentPrice })
@@ -59,6 +61,7 @@ export const tradingApi = {
   closePosition: async (symbol: string, side: 'LONG'|'SHORT', currentPrice: number, userId?: string) => {
     const actualUserId = getActiveUserId(userId);
     const res = await fetch(`${API_BASE_URL}/close`, {
+      credentials: 'include',
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ userId: actualUserId, symbol, side, currentPrice })
@@ -73,6 +76,7 @@ export const tradingApi = {
   updateTPSL: async (symbol: string, side: 'LONG'|'SHORT', takeProfit?: number, stopLoss?: number, userId?: string) => {
     const actualUserId = getActiveUserId(userId);
     const res = await fetch(`${API_BASE_URL}/tpsl`, {
+      credentials: 'include',
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ userId: actualUserId, symbol, side, takeProfit, stopLoss })
@@ -87,6 +91,7 @@ export const tradingApi = {
   addMargin: async (symbol: string, side: 'LONG'|'SHORT', amount: number, userId?: string) => {
     const actualUserId = getActiveUserId(userId);
     const res = await fetch(`${API_BASE_URL}/margin/add`, {
+      credentials: 'include',
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ userId: actualUserId, symbol, side, amount })
@@ -100,7 +105,9 @@ export const tradingApi = {
 
   getPortfolio: async (userId?: string) => {
     const actualUserId = getActiveUserId(userId);
-    const res = await fetch(`${API_BASE_URL}/portfolio/${actualUserId}`, {
+    const url = actualUserId ? `${API_BASE_URL}/portfolio/${actualUserId}` : `${API_BASE_URL}/portfolio`;
+    const res = await fetch(url, {
+      credentials: 'include',
       headers: getHeaders()
     });
     return await res.json();
@@ -108,7 +115,9 @@ export const tradingApi = {
 
   getTransactions: async (userId?: string) => {
     const actualUserId = getActiveUserId(userId);
-    const res = await fetch(`${API_BASE_URL}/transactions/${actualUserId}`, {
+    const url = actualUserId ? `${API_BASE_URL}/transactions/${actualUserId}` : `${API_BASE_URL}/transactions`;
+    const res = await fetch(url, {
+      credentials: 'include',
       headers: getHeaders()
     });
     return await res.json();
@@ -127,6 +136,7 @@ export const tradingApi = {
   ) => {
     const actualUserId = getActiveUserId(userId);
     const res = await fetch(`${API_BASE_URL}/limit`, {
+      credentials: 'include',
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ userId: actualUserId, symbol, side, limitPrice, margin, leverage, stopLoss, takeProfit, orderType })
@@ -141,6 +151,7 @@ export const tradingApi = {
   cancelLimitOrder: async (orderId: string, userId?: string) => {
     const actualUserId = getActiveUserId(userId);
     const res = await fetch(`${API_BASE_URL}/limit/cancel`, {
+      credentials: 'include',
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ userId: actualUserId, orderId })

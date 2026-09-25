@@ -5,9 +5,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useModal } from '../contexts/ModalContext';
 import { LanguageModal } from './LanguageModal';
+import { NotificationDropdown } from './NotificationDropdown';
 
 interface ToolbarNavbarProps {
   balance: number;
+  onOpenSettings?: () => void;
   onOpenChallenge?: () => void;
   onOpenAiTutor?: () => void;
   challengeLevelName?: string;
@@ -19,6 +21,7 @@ interface ToolbarNavbarProps {
 
 export const ToolbarNavbar = ({ 
   balance, 
+  onOpenSettings,
   onOpenChallenge, 
   onOpenAiTutor,
   challengeLevelName, 
@@ -37,8 +40,8 @@ export const ToolbarNavbar = ({
   return (
     <>
       <nav className="h-12 bg-white dark:bg-[#131722] border-b border-[#e6e8ea] dark:border-[#2a2e39] flex items-center px-4 justify-between text-[#1e2329] dark:text-[#d1d4dc] text-sm shrink-0 relative z-50">
-        {/* Logo AITRADEX */}
-        <div className="flex items-center gap-2.5">
+        {/* Logo AITRADEX & Prop Firm Challenge */}
+        <div className="flex items-center gap-3">
           <img src="/images/logo.jpg" alt="AITRADEX" className="h-7 object-contain rounded" />
           
           {/* Nút Thử Thách Quỹ (Prop Firm Challenge) */}
@@ -95,39 +98,33 @@ export const ToolbarNavbar = ({
           {/* Nút AI Trading Tutor */}
           <button
             onClick={onOpenAiTutor}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-blue-500/15 via-purple-500/15 to-amber-500/15 hover:from-blue-500/25 hover:to-amber-500/25 border border-blue-500/30 text-blue-600 dark:text-blue-300 font-bold text-xs transition-all shadow-xs hover:scale-[1.02]"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-blue-500/15 via-purple-500/15 to-amber-500/15 hover:from-blue-500/25 hover:to-amber-500/25 border border-blue-500/30 text-blue-600 dark:text-blue-300 font-bold text-xs transition-all shadow-xs hover:scale-[1.02] cursor-pointer"
             title="Mở Trợ lý & Gia sư AI Trading Tutor (Hỏi đáp, So sánh chiến lược, RAG)"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 animate-pulse" />
             <span>AI Tutor</span>
           </button>
 
-          {/* Nút Thông báo */}
-          <button 
-            onClick={() => showAlert({ title: 'Thông báo', message: 'Chức năng Thông báo đang được phát triển!', type: 'info' })}
-            className="hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]"
-            title="Thông báo"
-          >
-            <Bell className="w-5 h-5" />
-          </button>
+          {/* Thông báo */}
+          <NotificationDropdown />
           <button 
             onClick={toggleTheme}
-            className="hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]"
+            className="hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] cursor-pointer"
             title="Đổi giao diện (Sáng/Tối)"
           >
             {isDarkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
           </button>
           <button 
             onClick={() => setIsLanguageModalOpen(true)}
-            className="hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 flex items-center gap-1 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]"
+            className="hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 flex items-center gap-1 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] cursor-pointer"
             title="Ngôn ngữ"
           >
             <Globe className="w-5 h-5" />
             <span className="text-xs font-semibold">{language}</span>
           </button>
           <button 
-            onClick={() => showAlert({ title: 'Cài đặt', message: 'Chức năng Cài đặt đang được phát triển!', type: 'info' })}
-            className="hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]"
+            onClick={onOpenSettings}
+            className="hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] cursor-pointer"
             title="Cài đặt"
           >
             <Settings className="w-5 h-5" />

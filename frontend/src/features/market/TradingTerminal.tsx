@@ -1,18 +1,30 @@
 import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ChartArea } from './components/ChartArea';
 import { RightSidebar } from './components/RightSidebar';
+import { RightToolbar } from './components/RightToolbar';
+import { WatchlistPanel, type Watchlist } from './components/WatchlistPanel';
+import { SimulationPanel, type SimulationConfig } from './components/SimulationPanel';
+import { CalculatorPanel } from './components/CalculatorPanel';
+import { TradingJournalPanel } from './components/TradingJournalPanel';
 import { LeftToolbar } from './components/LeftToolbar';
 import { ToolbarNavbar } from '../../components/ToolbarNavbar';
+import { ChartSettingsModal } from './components/ChartSettingsModal';
+import { getWatchlists, createWatchlist as apiCreateWatchlist, updateWatchlist as apiUpdateWatchlist, deleteWatchlist as apiDeleteWatchlist } from '../../services/marketApi';
+import { useAuth } from '../../contexts/AuthContext';
+import { STOCKS, type Stock } from './data';
+import { DEFAULT_CHART_SETTINGS, type ChartSettings } from './chartSettings';
+import { SymbolSearchModal } from './components/SymbolSearchModal';
+import { IndicatorModal } from './components/IndicatorModal';
 import { BottomPanel } from './components/BottomPanel';
 import { TickerHeader } from './components/TickerHeader';
 import { CoinInfoPanel } from './components/CoinInfoPanel';
 import { ContractInfoPanel } from './components/ContractInfoPanel';
-import { SymbolSearchModal } from './components/SymbolSearchModal';
-import { IndicatorModal } from './components/IndicatorModal';
-import { STOCKS, type Stock } from './data';
 import { tradingApi } from '../../services/tradingApi';
+import { PositionsManager } from './components/PositionsManager';
+import { useSimulatorStore } from './engine/useSimulatorStore';
+import { useNotificationStore } from '../../stores/useNotificationStore';
 import { Trophy, RefreshCw, ChevronRight, Pause, Play, Square } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
 import { challengeApi } from '../../services/challengeApi';
 import type { UserChallengeState, ChallengeLevelConfig } from '../challenge/types';
 import { ChallengeModal } from '../challenge/ChallengeModal';
@@ -34,17 +46,169 @@ export interface TradeOrder {
 }
 
 export const TradingTerminal = () => {
+  const { simulationId } = useParams<{ simulationId?: string }>();
+  const navigate = useNavigate();
   const { showAlert, showConfirm } = useModal();
   const [activeTool, setActiveTool] = useState<string>('cursor');
-  const [selectedStock, setSelectedStock] = useState<Stock>(STOCKS[0]);
+  const [selectedStock, setSelectedStock] = useState<Stock>(() => {
+    if (simulationId) {
+      const match = STOCKS.find(s => s.symbol.toLowerCase() === simulationId.toLowerCase());
+      if (match) return match;
+    }
+    const saved = localStorage.getItem('lastSelectedStock');
+    if (saved) {
+      const match = STOCKS.find(s => s.symbol.toLowerCase() === saved.toLowerCase());
+      if (match) return match;
+    }
+    return STOCKS[0];
+  });
+
   const [tradeOrders, setTradeOrders] = useState<TradeOrder[]>([]);
   const [activeTimeframe, setActiveTimeframe] = useState<string>('D');
   const [balance, setBalance] = useState<number>(10_000);
   const [positions, setPositions] = useState<Record<string, { quantity: number, averagePrice: number, side: 'LONG' | 'SHORT', leverage: number, tp?: number, sl?: number }>>({});
+  const store = useSimulatorStore();
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isIndicatorModalOpen, setIsIndicatorModalOpen] = useState(false);
+  const [activeIndicators, setActiveIndicators] = useState<string[]>([]);
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   const [tradeCount, setTradeCount] = useState(0);
   const [toast, setToast] = useState<{ msg: string, type: 'info' | 'warning' } | null>(null);
   const [editingSymbol, setEditingSymbol] = useState<string | null>(null);
+
+  const [activeRightPanel, setActiveRightPanel] = useState<'watchlist' | 'order' | 'simulation' | 'calculator' | 'journal' | null>('watchlist');
+
+  const { user, login } = useAuth();
+  const { addNotification } = useNotificationStore();
+
+  const [watchlists, setWatchlists] = useState<Watchlist[]>(() => {
+    try {
+      const saved = localStorage.getItem('watchlists');
+      if (saved) return JSON.parse(saved);
+    } catch { }
+    return [{ id: '1', name: 'Danh sách của tôi', symbols: ['BTCUSDT', 'ETHUSDT', 'FPT', 'VNINDEX'] }];
+  });
+
+  // Fetch watchlists from API if user is logged in
+  useEffect(() => {
+    const fetchAPI = async () => {
+      if (user) {
+        try {
+          const data = await getWatchlists();
+          if (data && data.length > 0) {
+            // map _id to id if needed
+            const mapped = data.map((w: any) => ({ ...w, id: w._id || w.id }));
+            setWatchlists(mapped);
+          }
+        } catch (error) {
+          console.error("Failed to fetch watchlists", error);
+        }
+      }
+    };
+    fetchAPI();
+  }, [user]);
+
+  useEffect(() => {
+    // Only save to local storage if NOT logged in, otherwise let API handle it.
+    // Actually, saving to localStorage as a fallback is fine.
+    if (!user) {
+      localStorage.setItem('watchlists', JSON.stringify(watchlists));
+    }
+  }, [watchlists, user]);
+
+  const [activeWatchlistId, setActiveWatchlistId] = useState<string>(watchlists[0]?.id || '1');
+
+  const handleUpdateWatchlist = async (id: string, symbols: string[]) => {
+    setWatchlists(prev => prev.map(w => w.id === id ? { ...w, symbols } : w));
+
+    if (user) {
+      try {
+        await apiUpdateWatchlist(id, { symbols });
+      } catch (error) {
+        console.error("Failed to update watchlist on server", error);
+      }
+    }
+  };
+
+  const handleCreateWatchlist = async (name: string) => {
+    const tempId = Date.now().toString();
+    const newWatchlist = { id: tempId, name, symbols: [] };
+    setWatchlists(prev => [...prev, newWatchlist]);
+    setActiveWatchlistId(tempId);
+
+    if (user) {
+      try {
+        const created = await apiCreateWatchlist({ name, symbols: [] });
+        // Replace tempId with actual DB id
+        const realId = (created as any)._id || created.id;
+        setWatchlists(prev => prev.map(w => w.id === tempId ? { ...w, id: realId } : w));
+        setActiveWatchlistId(realId);
+      } catch (error) {
+        console.error("Failed to create watchlist on server", error);
+      }
+    }
+  };
+
+  const handleDeleteWatchlist = async (id: string) => {
+    setWatchlists(prev => prev.filter(w => w.id !== id));
+    if (activeWatchlistId === id) {
+      setActiveWatchlistId(watchlists.find(w => w.id !== id)?.id || watchlists[0]?.id || '');
+    }
+
+    if (user) {
+      try {
+        await apiDeleteWatchlist(id);
+      } catch (error) {
+        console.error("Failed to delete watchlist on server", error);
+      }
+    }
+  };
+
+  const handleRenameWatchlist = async (id: string, newName: string) => {
+    setWatchlists(prev => prev.map(w => w.id === id ? { ...w, name: newName } : w));
+
+    if (user) {
+      try {
+        await apiUpdateWatchlist(id, { name: newName });
+      } catch (error) {
+        console.error("Failed to rename watchlist on server", error);
+      }
+    }
+  };
+
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [chartSettings, setChartSettings] = useState<ChartSettings>(() => {
+    try {
+      const saved = localStorage.getItem('chartSettings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          ...DEFAULT_CHART_SETTINGS,
+          ...parsed,
+          symbol: { ...DEFAULT_CHART_SETTINGS.symbol, ...(parsed.symbol || {}) },
+          status: { ...DEFAULT_CHART_SETTINGS.status, ...(parsed.status || {}) },
+          scales: { ...DEFAULT_CHART_SETTINGS.scales, ...(parsed.scales || {}) },
+          canvas: { ...DEFAULT_CHART_SETTINGS.canvas, ...(parsed.canvas || {}) },
+          alerts: { ...DEFAULT_CHART_SETTINGS.alerts, ...(parsed.alerts || {}) },
+          events: { ...DEFAULT_CHART_SETTINGS.events, ...(parsed.events || {}) },
+          candle: { ...DEFAULT_CHART_SETTINGS.candle, ...(parsed.candle || {}) },
+        };
+      }
+      return DEFAULT_CHART_SETTINGS;
+    } catch {
+      return DEFAULT_CHART_SETTINGS;
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('chartSettings', JSON.stringify(chartSettings));
+  }, [chartSettings]);
+
+  const handleToggleIndicator = (name: string) => {
+    setActiveIndicators(prev =>
+      prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]
+    );
+  };
 
   // Toggles for lower toolbar buttons
   const [magnetMode, setMagnetMode] = useState(false);
@@ -67,11 +231,8 @@ export const TradingTerminal = () => {
 
   // Added missing states
   const [activeTab, setActiveTab] = useState<'chart' | 'coin_info' | 'info'>('chart');
-  const [activeIndicators, setActiveIndicators] = useState<string[]>([]);
-  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const [isIndicatorModalOpen, setIsIndicatorModalOpen] = useState(false);
-  const [previewTPSL, setPreviewTPSL] = useState<{ tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean } | null>(null);
-  const [draggedTPSL, setDraggedTPSL] = useState<{ tp?: number; sl?: number } | null>(null);
+  const [previewTPSL, setPreviewTPSL] = useState<{ tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean; orderPrice?: number; orderType?: 'LIMIT' | 'STOP' } | null>(null);
+  const [draggedTPSL, setDraggedTPSL] = useState<{ tp?: number; sl?: number; orderPrice?: number } | null>(null);
 
   const handleToolClick = (toolName: string) => {
     if (toolName === activeTool && toolName !== 'cursor') {
@@ -88,7 +249,6 @@ export const TradingTerminal = () => {
   const [undoRedoState, setUndoRedoState] = useState({ canUndo: false, canRedo: false });
 
   // Authentication & 6-Level Prop Trading Challenge State (100% Backend Sync)
-  const { user } = useAuth();
   const [challengeLevels, setChallengeLevels] = useState<ChallengeLevelConfig[]>([]);
   const [challengeState, setChallengeState] = useState<UserChallengeState>({
     currentLevel: 1,
@@ -160,6 +320,34 @@ export const TradingTerminal = () => {
     badge: `Cấp ${accountRankLevelId}`
   };
 
+  useEffect(() => {
+    if (simulationId) {
+      const match = STOCKS.find(s => s.symbol.toLowerCase() === simulationId.toLowerCase());
+      if (match && match.symbol !== selectedStock.symbol) {
+        setSelectedStock(match);
+      }
+    }
+  }, [simulationId]);
+
+  useEffect(() => {
+    if (selectedStock?.symbol) {
+      localStorage.setItem('lastSelectedStock', selectedStock.symbol.toLowerCase());
+    }
+  }, [selectedStock]);
+
+  const handleStockSelect = (stock: Stock) => {
+    setSelectedStock(stock);
+    setPreviewTPSL(null);
+    setDraggedTPSL(null);
+    localStorage.setItem('lastSelectedStock', stock.symbol.toLowerCase());
+    navigate(`/trade/${stock.symbol.toLowerCase()}`, { replace: true });
+    if (isReplaying || isSelectingReplayStart) {
+      setIsReplaying(false);
+      setIsSelectingReplayStart(false);
+      setReplayTime(null);
+    }
+  };
+
   const fetchPortfolio = async (targetUserId?: string) => {
     try {
       const uid = targetUserId || user?._id;
@@ -202,7 +390,13 @@ export const TradingTerminal = () => {
       }).catch(err => {
         console.warn('Backend getMyChallenge error:', err);
       });
+      fetchPortfolio(user._id);
     } else {
+      setPositions({});
+      setPendingOrders([]);
+      setTradeOrders([]);
+      setBalance(100_000_000);
+      store.reset();
       setChallengeState({
         currentLevel: 1,
         unlockedLevels: [1],
@@ -223,6 +417,15 @@ export const TradingTerminal = () => {
       fetchPortfolio();
     }
   }, [user?._id]);
+
+  // Ensure simulator store receives valid price immediately when active
+  useEffect(() => {
+    if (store.isActive && store.session && selectedStock?.price > 0) {
+      if (store.currentPrice === 0) {
+        store.tick(selectedStock.price, new Date().toISOString());
+      }
+    }
+  }, [store.isActive, store.session, selectedStock?.price, store.currentPrice]);
 
   const calculateUnrealizedPnL = () => {
     let totalPnL = 0;
@@ -372,58 +575,52 @@ export const TradingTerminal = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undoRedoState.canUndo, undoRedoState.canRedo]);
 
-  const handleTPSLDragChange = (type: 'tp' | 'sl', price: number) => {
+  const handleTPSLDragChange = (type: 'tp' | 'sl' | 'orderPrice', price: number) => {
     setPreviewTPSL(prev => prev ? { ...prev, [type]: price } : { enabled: true, [type]: price });
     setDraggedTPSL(prev => ({ ...prev, [type]: price }));
-  };
-
-  const handleStockSelect = (stock: Stock) => {
-    setSelectedStock(stock);
-    setPreviewTPSL(null);
-    setDraggedTPSL(null);
-    if (isReplaying || isSelectingReplayStart) {
-      setIsReplaying(false);
-      setIsSelectingReplayStart(false);
-      setReplayTime(null);
-    }
   };
 
   const handlePriceChange = (newPrice: number) => {
     setSelectedStock(prev => prev.price === newPrice ? prev : { ...prev, price: newPrice });
   };
 
-
-
   const handleTrade = async (type: 'buy' | 'sell' | 'close' | 'limit_buy' | 'limit_sell' | 'stop_buy' | 'stop_sell', price: number, margin: number, leverage: number, tp?: number, sl?: number) => {
+    if (!user) {
+      login();
+      return { success: false, message: 'Vui lòng đăng nhập để thực hiện giao dịch' };
+    }
     try {
       if (type === 'close') {
         const pos = positions[selectedStock.symbol];
         if (!pos) return { success: false, message: 'Không có vị thế để đóng' };
 
-        const res = await tradingApi.closePosition(selectedStock.symbol, pos.side, price);
+        const res = await tradingApi.closePosition(selectedStock.symbol, pos.side, price, user._id);
         if (res.success) {
           await fetchPortfolio();
           setTradeCount(c => c + 1);
+          addNotification({ title: 'Đóng vị thế', message: `Đã chốt vị thế ${pos.side} mã ${selectedStock.symbol} thành công.`, type: 'success' });
           return { success: true, message: `✅ Đã chốt vị thế ${pos.side} thành công` };
         }
       } else if (type === 'limit_buy' || type === 'limit_sell') {
         const side = type === 'limit_buy' ? 'LONG' : 'SHORT';
-        const res = await tradingApi.placeLimitOrder(selectedStock.symbol, side, price, margin, leverage, sl, tp, 'LIMIT');
+        const res = await tradingApi.placeLimitOrder(selectedStock.symbol, side, price, margin, leverage, sl, tp, 'LIMIT', user._id);
         if (res.success) {
           await fetchPortfolio();
           setTradeCount(c => c + 1);
+          addNotification({ title: 'Đặt lệnh Limit', message: `Lệnh ${side} Limit mã ${selectedStock.symbol} tại giá ${price.toLocaleString('vi-VN')} đã được đặt.`, type: 'info' });
           return { success: true, message: res.message };
         }
       } else if (type === 'stop_buy' || type === 'stop_sell') {
         const side = type === 'stop_buy' ? 'LONG' : 'SHORT';
-        const res = await tradingApi.placeLimitOrder(selectedStock.symbol, side, price, margin, leverage, sl, tp, 'STOP');
+        const res = await tradingApi.placeLimitOrder(selectedStock.symbol, side, price, margin, leverage, sl, tp, 'STOP', user._id);
         if (res.success) {
           await fetchPortfolio();
           setTradeCount(c => c + 1);
+          addNotification({ title: 'Đặt lệnh Stop', message: `Lệnh ${side} Stop mã ${selectedStock.symbol} tại giá ${price.toLocaleString('vi-VN')} đã được đặt.`, type: 'info' });
           return { success: true, message: res.message };
         }
       } else if (type === 'buy') {
-        const res = await tradingApi.buyStock(selectedStock.symbol, margin, leverage, price, sl, tp);
+        const res = await tradingApi.buyStock(selectedStock.symbol, margin, leverage, price, sl, tp, user._id);
         if (res.success) {
           await fetchPortfolio();
           const order: TradeOrder = {
@@ -432,10 +629,11 @@ export const TradingTerminal = () => {
           };
           setTradeOrders(prev => [...prev, order]);
           setTradeCount(c => c + 1);
+          addNotification({ title: 'Mở vị thế LONG', message: `Đã mở LONG ${selectedStock.symbol} tại giá ${price.toLocaleString('vi-VN')} đòn bẩy ${leverage}x.`, type: 'success' });
           return { success: true, message: `✅ Mở LONG ${selectedStock.symbol} thành công` };
         }
       } else if (type === 'sell') {
-        const res = await tradingApi.sellStock(selectedStock.symbol, margin, leverage, price);
+        const res = await tradingApi.sellStock(selectedStock.symbol, margin, leverage, price, user._id);
         if (res.success) {
           await fetchPortfolio();
           const order: TradeOrder = {
@@ -444,6 +642,7 @@ export const TradingTerminal = () => {
           };
           setTradeOrders(prev => [...prev, order]);
           setTradeCount(c => c + 1);
+          addNotification({ title: 'Mở vị thế SHORT', message: `Đã mở SHORT ${selectedStock.symbol} tại giá ${price.toLocaleString('vi-VN')} đòn bẩy ${leverage}x.`, type: 'success' });
           return { success: true, message: `✅ Mở SHORT ${selectedStock.symbol} thành công` };
         }
       }
@@ -464,10 +663,12 @@ export const TradingTerminal = () => {
     if (!confirmed) return;
 
     try {
-      const res = await tradingApi.cancelLimitOrder(orderId);
+      const res = await tradingApi.cancelLimitOrder(orderId, user?._id);
       if (res.success) {
         await fetchPortfolio();
         setTradeCount(c => c + 1);
+        showToast('Đã hủy lệnh chờ thành công!', 'info');
+        addNotification({ title: 'Hủy lệnh', message: `Lệnh chờ đã bị hủy.`, type: 'warning' });
         showAlert({
           title: 'Hủy lệnh',
           message: 'Đã hủy lệnh chờ thành công!',
@@ -475,6 +676,7 @@ export const TradingTerminal = () => {
         });
       }
     } catch (e: any) {
+      showToast(e.message || 'Hủy lệnh thất bại', 'warning');
       showAlert({
         title: 'Hủy lệnh thất bại',
         message: e.message || 'Hủy lệnh thất bại',
@@ -488,9 +690,10 @@ export const TradingTerminal = () => {
       const pos = positions[selectedStock.symbol];
       if (!pos) return { success: false, message: 'Không có vị thế' };
 
-      const res = await tradingApi.updateTPSL(selectedStock.symbol, pos.side, tp, sl);
+      const res = await tradingApi.updateTPSL(selectedStock.symbol, pos.side, tp, sl, user?._id);
       if (res.success) {
         await fetchPortfolio();
+        addNotification({ title: 'Cập nhật TP/SL', message: `Đã cập nhật Chốt lời/Cắt lỗ cho vị thế ${pos.side} mã ${selectedStock.symbol}.`, type: 'info' });
         return { success: true, message: `✅ Đã cập nhật TP/SL` };
       }
       return { success: false, message: 'Lỗi cập nhật' };
@@ -499,11 +702,32 @@ export const TradingTerminal = () => {
     }
   };
 
-  const handleAddMargin = async (symbol: string, side: 'LONG' | 'SHORT', amount: number) => {
+  const handleCloseSpecificPosition = async (symbolToClose: string) => {
     try {
-      const res = await tradingApi.addMargin(symbol, side, amount);
+      const pos = positions[symbolToClose];
+      if (!pos) return { success: false, message: 'Không có vị thế' };
+
+      const currentPrice = symbolToClose === selectedStock.symbol ? selectedStock.price : (STOCKS.find(s => s.symbol === symbolToClose)?.price || pos.averagePrice);
+
+      const res = await tradingApi.closePosition(symbolToClose, pos.side, currentPrice, user?._id);
       if (res.success) {
         await fetchPortfolio();
+        setTradeCount(c => c + 1);
+        addNotification({ title: 'Đóng vị thế', message: `Đã chốt vị thế ${pos.side} mã ${symbolToClose}.`, type: 'success' });
+        return { success: true, message: `✅ Đã chốt vị thế ${symbolToClose} thành công` };
+      }
+      return { success: false, message: res.message || 'Lỗi đóng lệnh' };
+    } catch (e: any) {
+      return { success: false, message: e.message || 'Lỗi hệ thống' };
+    }
+  };
+
+  const handleAddMargin = async (symbol: string, side: 'LONG' | 'SHORT', amount: number) => {
+    try {
+      const res = await tradingApi.addMargin(symbol, side, amount, user?._id);
+      if (res.success) {
+        await fetchPortfolio();
+        addNotification({ title: 'Thêm ký quỹ', message: `Đã bơm thêm ${amount.toLocaleString('vi-VN')}₫ ký quỹ cho vị thế ${side} mã ${symbol}.`, type: 'info' });
         return { success: true, message: res.message || `✅ Đã bơm thêm ký quỹ` };
       }
       return { success: false, message: res.message || 'Lỗi bơm ký quỹ' };
@@ -550,6 +774,7 @@ export const TradingTerminal = () => {
         (window as any)[`isClosing_${key}`] = false;
         if (res.success) {
           showToast(`⚠️ HỆ THỐNG TỰ ĐỘNG ĐÓNG VỊ THẾ!\nLý do: ${reason}\nGiá: $${execPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, 'warning');
+          addNotification({ title: 'Đóng lệnh tự động', message: `Vị thế ${pos.side} mã ${selectedStock.symbol} tự động đóng do: ${reason}.`, type: 'warning' });
         }
       }).catch(() => {
         (window as any)[`isClosing_${key}`] = false;
@@ -584,10 +809,10 @@ export const TradingTerminal = () => {
       if (shouldExecute) {
         (window as any)[key] = true;
         // Khớp lệnh: 1. Hủy lệnh chờ, 2. Mở lệnh thật
-        tradingApi.cancelLimitOrder(order._id)
+        tradingApi.cancelLimitOrder(order._id, user?._id)
           .then(() => {
             if (order.side === 'LONG') {
-              return tradingApi.buyStock(order.symbol, order.margin, order.leverage, order.price, order.stopLoss, order.takeProfit);
+              return tradingApi.buyStock(order.symbol, order.margin, order.leverage, order.price, order.stopLoss, order.takeProfit, user?._id);
             } else {
               return handleTrade(order.side === 'LONG' ? 'buy' : 'sell', order.price, order.margin, order.leverage, order.takeProfit, order.stopLoss);
             }
@@ -595,6 +820,7 @@ export const TradingTerminal = () => {
           .then(() => {
             fetchPortfolio();
             showToast(`✅ Lệnh chờ ${order.side} Limit tại ${order.price.toLocaleString()}đ đã khớp!`, 'info');
+            addNotification({ title: 'Khớp lệnh chờ', message: `Lệnh ${order.type} ${order.side} mã ${order.symbol} đã khớp tại giá ${order.price.toLocaleString('vi-VN')}₫.`, type: 'success' });
           })
           .finally(() => {
             (window as any)[key] = false;
@@ -632,6 +858,14 @@ export const TradingTerminal = () => {
     setReplayStepTrigger(t => t + 1);
   };
 
+  const handleStartSimulation = (config: SimulationConfig) => {
+    console.log("Start simulation with config:", config);
+    // Only enter replay selection mode if replay is not already active
+    if (!isReplaying) {
+      setIsSelectingReplayStart(true);
+    }
+  };
+
   const handleStopReplay = () => {
     setIsReplaying(false);
     setIsSelectingReplayStart(false);
@@ -667,9 +901,10 @@ export const TradingTerminal = () => {
   };
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden">
+    <div className="flex flex-col flex-1 overflow-hidden bg-white dark:bg-[#131722] text-[#1e2329] dark:text-[#d1d4dc]">
       <ToolbarNavbar 
         balance={balance} 
+        onOpenSettings={() => setIsSettingsModalOpen(true)}
         onOpenChallenge={() => setIsChallengeModalOpen(true)}
         onOpenAiTutor={() => setIsAiTutorOpen(true)}
         challengeLevelName={currentChallengeLevel.badge}
@@ -845,15 +1080,28 @@ export const TradingTerminal = () => {
                   goToRealtimeTrigger={goToRealtimeTrigger}
                   onDataLoaded={setTotalBars}
                   tradeOrders={tradeOrders.filter(o => o.symbol === selectedStock.symbol)}
-                  pendingOrders={pendingOrders}
+                  pendingOrders={store.isActive ? store.orders.map(o => ({ ...o, price: o.limitPrice, quantity: o.lot })) : pendingOrders}
                   activeIndicators={activeIndicators}
-                  activePosition={positions[selectedStock.symbol] as any}
+                  activePosition={
+                    store.isActive 
+                      ? (store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase()) ? {
+                          quantity: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.lot,
+                          averagePrice: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.entryPrice,
+                          side: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.side,
+                          leverage: store.session!.config.leverage,
+                          tp: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.tp,
+                          sl: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.sl
+                        } : undefined)
+                      : (positions[selectedStock.symbol] as any)
+                  }
+                  simulatorPositions={store.isActive ? store.positions : undefined}
                   previewTPSL={previewTPSL}
                   onTPSLChange={handleTPSLDragChange}
                   undoTrigger={undoTrigger}
                   redoTrigger={redoTrigger}
                   onUndoRedoChange={setUndoRedoState}
-                  onPriceUpdate={(price) => {
+                  chartSettings={chartSettings}
+                  onPriceUpdate={(price, timestamp) => {
                     setSelectedStock(prev => {
                       if (prev.price === price) return prev;
                       const basePrice = STOCKS.find(s => s.symbol === prev.symbol)?.price || prev.price;
@@ -862,62 +1110,66 @@ export const TradingTerminal = () => {
                       return { ...prev, price, change, percent, type: change >= 0 ? 'up' : 'down' };
                     });
                     handlePriceChange(price);
+                    
+                    if (store.isActive && store.session) {
+                      store.tick(price, timestamp ? new Date(timestamp).toISOString() : new Date().toISOString());
+                    }
                   }}
                 />
               </div>
-              <BottomPanel
-                positions={positions as any}
-                pendingOrders={pendingOrders}
-                selectedSymbol={selectedStock.symbol}
-                currentPrice={selectedStock.price}
-                onClosePosition={async (symbol, side, price) => {
-                  try {
-                    const res = await tradingApi.closePosition(symbol, side, price);
-                    if (res.success) {
-                      await fetchPortfolio();
-                      setTradeCount(c => c + 1);
-                      return { success: true, message: `✅ Đã chốt vị thế ${side} ${symbol}` };
+              
+              {store.isActive && store.session ? (
+                <PositionsManager currentPrice={selectedStock.price} />
+              ) : (
+                <BottomPanel
+                  positions={positions as any}
+                  pendingOrders={pendingOrders}
+                  selectedSymbol={selectedStock.symbol}
+                  currentPrice={selectedStock.price}
+                  onClosePosition={async (symbol, side, price) => {
+                    try {
+                      const res = await tradingApi.closePosition(symbol, side, price, user?._id);
+                      if (res.success) {
+                        await fetchPortfolio();
+                        setTradeCount(c => c + 1);
+                        addNotification({
+                          title: 'Đóng vị thế',
+                          message: `Đã chốt vị thế ${side} mã ${symbol} thành công ở giá ${price.toLocaleString('vi-VN')}đ.`,
+                          type: 'success'
+                        });
+                        return { success: true, message: `✅ Đã chốt vị thế ${side} ${symbol}` };
+                      }
+                      return { success: false, message: 'Lỗi khi đóng vị thế' };
+                    } catch (e: any) {
+                      return { success: false, message: e.message };
                     }
-                    return { success: false, message: 'Lỗi khi đóng vị thế' };
-                  } catch (e: any) {
-                    return { success: false, message: e.message };
-                  }
-                }}
-                onCancelOrder={handleCancelOrder}
-                onUpdateTPSL={async (symbol, side, tp, sl) => {
-                  try {
-                    const res = await tradingApi.updateTPSL(symbol, side, tp, sl);
-                    if (res.success) {
-                      await fetchPortfolio();
-                      return { success: true, message: '✅ Đã cập nhật TP/SL' };
+                  }}
+                  onCancelOrder={handleCancelOrder}
+                  onUpdateTPSL={async (symbol, side, tp, sl) => {
+                    try {
+                      const res = await tradingApi.updateTPSL(symbol, side, tp, sl, user?._id);
+                      if (res.success) {
+                        await fetchPortfolio();
+                        return { success: true, message: '✅ Đã cập nhật TP/SL' };
+                      }
+                      return { success: false, message: 'Lỗi cập nhật' };
+                    } catch (e: any) {
+                      return { success: false, message: e.message };
                     }
-                    return { success: false, message: 'Lỗi cập nhật' };
-                  } catch (e: any) {
-                    return { success: false, message: e.message };
-                  }
-                }}
-                onAddMargin={async (symbol, side, amount) => {
-                  try {
-                    const res = await tradingApi.addMargin(symbol, side, amount);
-                    if (res.success) {
-                      await fetchPortfolio();
-                      return { success: true, message: res.message || '✅ Đã bơm thêm ký quỹ' };
-                    }
-                    return { success: false, message: res.message || 'Lỗi bơm ký quỹ' };
-                  } catch (e: any) {
-                    return { success: false, message: e.message };
-                  }
-                }}
-                onEditPosition={(symbol) => {
-                  const stock = STOCKS.find(s => s.symbol === symbol);
-                  if (stock) handleStockSelect(stock);
-                  setEditingSymbol(symbol);
-                }}
-                refreshTrigger={tradeCount}
-              />
+                  }}
+                  onAddMargin={handleAddMargin}
+                  onEditPosition={(symbol) => {
+                    const stock = STOCKS.find(s => s.symbol === symbol);
+                    if (stock) handleStockSelect(stock);
+                    setEditingSymbol(symbol);
+                    setActiveRightPanel('order');
+                  }}
+                  refreshTrigger={tradeCount}
+                />
+              )}
             </div>
           )}
-          
+
           {activeTab === 'coin_info' && (
             <CoinInfoPanel stock={selectedStock} />
           )}
@@ -925,28 +1177,74 @@ export const TradingTerminal = () => {
             <ContractInfoPanel stock={selectedStock} />
           )}
         </div>
-        <div className="flex flex-col bg-[#131722] shrink-0 border-l border-[#2a2e39] overflow-hidden">
-          <RightSidebar
-            selectedStock={selectedStock}
-            positions={positions as any}
-            balance={balance}
-            maxAllowedLeverage={isChallengeActive ? (currentChallengeLevel.id === 6 ? undefined : currentChallengeLevel.maxLeverage) : undefined}
-            challengeBadge={isChallengeActive ? (currentChallengeLevel.id === 6 ? `${currentChallengeLevel.badge} (${currentChallengeLevel.levelName}) · Tối đa theo sàn` : `${currentChallengeLevel.badge} (${currentChallengeLevel.levelName})`) : undefined}
-            onStockSelect={(stock) => {
-              handleStockSelect(stock);
-              setEditingSymbol(null);
-            }}
-            onTrade={handleTrade}
-            onUpdateTPSL={async (symbol, side, tp, sl) => {
-              const res = await handleUpdateTPSL(tp, sl);
-              if (res.success) setEditingSymbol(null);
-              return res;
-            }}
-            onAddMargin={handleAddMargin}
-            isEditing={editingSymbol === selectedStock.symbol}
-            onCancelEdit={() => setEditingSymbol(null)}
-            onPreviewTPSLChange={setPreviewTPSL}
-            draggedTPSL={draggedTPSL}
+        <div className="flex shrink-0">
+          {activeRightPanel === 'watchlist' && (
+            <WatchlistPanel
+              watchlists={watchlists}
+              activeWatchlistId={activeWatchlistId}
+              onWatchlistChange={setActiveWatchlistId}
+              onUpdateWatchlist={handleUpdateWatchlist}
+              onCreateWatchlist={handleCreateWatchlist}
+              onDeleteWatchlist={handleDeleteWatchlist}
+              onRenameWatchlist={handleRenameWatchlist}
+              onSelectStock={handleStockSelect}
+              currentSymbol={selectedStock.symbol}
+            />
+          )}
+
+          {activeRightPanel === 'order' && (
+            <RightSidebar
+              selectedStock={selectedStock}
+              positions={positions as any}
+              balance={balance}
+              maxAllowedLeverage={isChallengeActive ? (currentChallengeLevel.id === 6 ? undefined : currentChallengeLevel.maxLeverage) : undefined}
+              challengeBadge={isChallengeActive ? (currentChallengeLevel.id === 6 ? `${currentChallengeLevel.badge} (${currentChallengeLevel.levelName}) · Tối đa theo sàn` : `${currentChallengeLevel.badge} (${currentChallengeLevel.levelName})`) : undefined}
+              onStockSelect={(stock) => {
+                handleStockSelect(stock);
+                setEditingSymbol(null);
+              }}
+              onTrade={handleTrade}
+              onUpdateTPSL={async (symbol, side, tp, sl) => {
+                const res = await handleUpdateTPSL(tp, sl);
+                if (res.success) setEditingSymbol(null);
+                return res;
+              }}
+              onAddMargin={handleAddMargin}
+              isEditing={editingSymbol === selectedStock.symbol}
+              onCancelEdit={() => setEditingSymbol(null)}
+              onPreviewTPSLChange={setPreviewTPSL}
+              draggedTPSL={draggedTPSL}
+            />
+          )}
+
+          {activeRightPanel === 'simulation' && (
+            <SimulationPanel
+              currentSymbol={selectedStock.symbol}
+              selectedStock={selectedStock}
+              currentPrice={selectedStock.price}
+              isReplaying={isReplaying}
+              onStartSimulation={handleStartSimulation}
+              onStartReplay={handleStartReplaySelection}
+              onSelectStock={handleStockSelect}
+              onPreviewTPSLChange={setPreviewTPSL}
+              draggedTPSL={draggedTPSL}
+            />
+          )}
+
+          {activeRightPanel === 'calculator' && (
+            <CalculatorPanel
+              initialBalance={balance}
+              currentStock={selectedStock}
+            />
+          )}
+
+          {activeRightPanel === 'journal' && (
+            <TradingJournalPanel />
+          )}
+
+          <RightToolbar
+            activePanel={activeRightPanel}
+            onChangePanel={setActiveRightPanel}
           />
         </div>
       </div>
@@ -990,6 +1288,14 @@ export const TradingTerminal = () => {
           );
         }}
       />
+      {isSettingsModalOpen && (
+        <ChartSettingsModal
+          onClose={() => setIsSettingsModalOpen(false)}
+          chartSettings={chartSettings}
+          onSettingsChange={setChartSettings}
+        />
+      )}
+
       <ChallengeModal
         isOpen={isChallengeModalOpen}
         onClose={() => setIsChallengeModalOpen(false)}
