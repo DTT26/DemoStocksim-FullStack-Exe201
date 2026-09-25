@@ -1,28 +1,70 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Wallet, ChevronRight, ChevronLeft, Settings2 } from 'lucide-react';
 import { STOCKS, type Stock, generateOHLCV, getPricePrecision } from '../data';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useModal } from '../../../contexts/ModalContext';
+import { useI18n } from '../../../contexts/I18nContext';
 import { OrderBook } from './OrderBook';
+
+export const getLotMultiplier = (stock: Stock): number => {
+  if (stock.market === 'Ngoại hối (Forex)') return 100000;
+  if (stock.symbol === 'XAUUSD') return 100;
+  if (stock.symbol === 'XAGUSD') return 5000;
+  if (stock.symbol === 'USOIL') return 1000;
+  // Crypto, Stocks, Indices: 1 unit per lot/contract
+  return 1;
+};
+
+export const getAssetUnit = (stock: Stock): string => {
+  if (stock.market === 'Tiền điện tử (Crypto)') {
+    return stock.symbol.replace('.SWAP', '').replace('.P', '').replace('USDT', '').replace('USD', '');
+  }
+  if (stock.market === 'Cổ phiếu') return 'CP';
+  if (stock.market === 'Chỉ số') return 'HĐ';
+  if (stock.market === 'Ngoại hối (Forex)') return 'Lot';
+  if (stock.symbol === 'XAUUSD' || stock.symbol === 'XAGUSD') return 'oz';
+  if (stock.symbol === 'USOIL') return 'thùng';
+  return 'Đơn vị';
+};
+
+export const getLotInputLabel = (stock: Stock, t: any): string => {
+  if (stock.market === 'Ngoại hối (Forex)' || stock.market === 'Hàng hóa') {
+    return `${t('order.qty', 'Khối lượng')} (Lot)`;
+  }
+  if (stock.market === 'Tiền điện tử (Crypto)') {
+    const base = stock.symbol.replace('.SWAP', '').replace('.P', '').replace('USDT', '').replace('USD', '');
+    return `${t('order.qty', 'Khối lượng')} (${base})`;
+  }
+  if (stock.market === 'Cổ phiếu') {
+    return `${t('order.qty', 'Số lượng')} (${t('order.stock', 'Cổ phiếu')})`;
+  }
+  if (stock.market === 'Chỉ số') {
+    return `${t('order.qty', 'Số lượng')} (${t('order.contract', 'Hợp đồng')})`;
+  }
+  return t('order.qty', 'Khối lượng');
+};
 
 interface RightSidebarProps {
   selectedStock: Stock;
   positions: Record<string, { quantity: number, averagePrice: number, side: 'LONG' | 'SHORT', leverage: number, tp?: number, sl?: number }>;
   balance: number;
+  maxAllowedLeverage?: number;
+  challengeBadge?: string;
   onStockSelect: (stock: Stock) => void;
   onTrade: (type: 'buy' | 'sell' | 'close' | 'limit_buy' | 'limit_sell' | 'stop_buy' | 'stop_sell', price: number, margin: number, leverage: number, tp?: number, sl?: number) => Promise<{ success: boolean; message: string }>;
   onUpdateTPSL: (symbol: string, side: 'LONG' | 'SHORT', tp?: number, sl?: number) => Promise<{ success: boolean; message: string }>;
   onAddMargin?: (symbol: string, side: 'LONG' | 'SHORT', amount: number) => Promise<{ success: boolean; message: string }>;
   isEditing?: boolean;
   onCancelEdit?: () => void;
-  onPreviewTPSLChange?: (tpsl: { tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean } | null) => void;
-  draggedTPSL?: { tp?: number; sl?: number } | null;
+  onPreviewTPSLChange?: (tpsl: { tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean; orderPrice?: number; orderType?: 'LIMIT' | 'STOP' } | null) => void;
+  draggedTPSL?: { tp?: number; sl?: number; orderPrice?: number } | null;
   onResetWallet?: () => void;
 }
 
-export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect, onTrade, onUpdateTPSL, onAddMargin, isEditing, onCancelEdit, onPreviewTPSLChange, draggedTPSL, onResetWallet }: RightSidebarProps) => {
+export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeverage, challengeBadge, onStockSelect, onTrade, onUpdateTPSL, onAddMargin, isEditing, onCancelEdit, onPreviewTPSLChange, draggedTPSL, onResetWallet }: RightSidebarProps) => {
   const { user, login } = useAuth();
   const { showAlert } = useModal();
+  const { t } = useI18n();
   const [activeSidebarTab, setActiveSidebarTab] = useState<'orderbook' | 'trade'>('trade');
   const [orderType, setOrderType] = useState<'market' | 'limit' | 'stop'>('market');
   const [isExpanded, setIsExpanded] = useState(true);
@@ -69,8 +111,11 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
       if (draggedTPSL.sl !== undefined) {
         setSl(draggedTPSL.sl.toString());
       }
+      if (draggedTPSL.orderPrice !== undefined && (orderType === 'limit' || orderType === 'stop')) {
+        setLimitPriceStr(draggedTPSL.orderPrice.toString());
+      }
     }
-  }, [draggedTPSL]);
+  }, [draggedTPSL, orderType]);
 
   const showToast = (msg: string, ok: boolean) => {
     setToast({ msg, ok });
@@ -88,6 +133,34 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
     setIsSubmitting(false);
     if (res.success && onCancelEdit) onCancelEdit();
   };
+
+  const lotMultiplier = getLotMultiplier(selectedStock);
+  const assetUnit = getAssetUnit(selectedStock);
+  const lotInputLabel = getLotInputLabel(selectedStock, t);
+
+  const effectiveLeverageInfo = useMemo(() => {
+    const stockInfo = selectedStock.leverageInfo || { max: 20, marks: [5, 10, 15, 20] };
+    const max = maxAllowedLeverage ? Math.min(stockInfo.max, maxAllowedLeverage) : stockInfo.max;
+    if (max === stockInfo.max) return stockInfo;
+
+    let marks: number[] = [];
+    if (max <= 5) marks = [2, 3, 4, 5];
+    else if (max <= 10) marks = [2, 5, 8, 10];
+    else if (max <= 20) marks = [5, 10, 15, 20];
+    else if (max <= 30) marks = [5, 10, 20, 30];
+    else if (max <= 50) marks = [10, 25, 50];
+    else if (max <= 100) marks = [25, 50, 75, 100];
+    else marks = [Math.round(max * 0.25), Math.round(max * 0.5), Math.round(max * 0.75), max];
+
+    return { max, marks };
+  }, [selectedStock.leverageInfo, maxAllowedLeverage]);
+
+  // Clamp leverage when effectiveLeverageInfo.max changes or exceeds limit
+  useEffect(() => {
+    if (leverage > effectiveLeverageInfo.max) {
+      setLev(effectiveLeverageInfo.max);
+    }
+  }, [effectiveLeverageInfo.max, leverage]);
 
   const handleTrade = async (type: 'buy' | 'sell' | 'close') => {
     // Nếu là Market order thì dùng selectedStock.price, Limit thì dùng limitPriceStr
@@ -136,7 +209,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
     }
 
     if (m <= 0) {
-      showAlert({ title: 'Khối lượng không hợp lệ', message: 'Khối lượng Lot phải lớn hơn 0!', type: 'warning' });
+      showAlert({ title: 'Khối lượng không hợp lệ', message: `${lotInputLabel} phải lớn hơn 0!`, type: 'warning' });
       return;
     }
 
@@ -163,7 +236,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
   const posTp = positions[selectedStock.symbol]?.tp;
   const posSl = positions[selectedStock.symbol]?.sl;
 
-  const leverageInfo = selectedStock.leverageInfo || { max: 20, marks: [5, 10, 15, 20] }; // Fallback
+  const leverageInfo = effectiveLeverageInfo;
 
   let pnl = 0;
   let pnlPercent = 0;
@@ -179,12 +252,24 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
   const pnlColor = pnl >= 0 ? 'text-[#089981]' : 'text-[#f23645]';
   const pnlSign = pnl >= 0 ? '+' : '';
 
-  // Synchronize preview TP/SL with parent chart
+  // Synchronize preview TP/SL and limit/stop line with parent chart
   useEffect(() => {
-    if (showTPSL) {
-      const currentSide = held > 0 && side ? side : 'LONG';
-      const tpNum = tp ? parseFloat(tp) : undefined;
-      const slNum = sl ? parseFloat(sl) : undefined;
+    const isLimitOrStop = orderType === 'limit' || orderType === 'stop';
+    const limitPriceNum = parseFloat(limitPriceStr) || selectedStock.price;
+    const currentSide = held > 0 && side ? side : 'LONG';
+    const tpNum = tp ? parseFloat(tp) : undefined;
+    const slNum = sl ? parseFloat(sl) : undefined;
+
+    if (isLimitOrStop) {
+      onPreviewTPSLChange?.({
+        enabled: true,
+        orderPrice: limitPriceNum,
+        orderType: orderType === 'limit' ? 'LIMIT' : 'STOP',
+        tp: showTPSL && tpNum !== undefined && !isNaN(tpNum) ? tpNum : undefined,
+        sl: showTPSL && slNum !== undefined && !isNaN(slNum) ? slNum : undefined,
+        side: currentSide
+      });
+    } else if (showTPSL) {
       onPreviewTPSLChange?.({
         enabled: true,
         tp: (tpNum !== undefined && !isNaN(tpNum)) ? tpNum : undefined,
@@ -194,19 +279,19 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
     } else {
       onPreviewTPSLChange?.(null);
     }
-  }, [showTPSL, tp, sl, side, held, onPreviewTPSLChange]);
+  }, [showTPSL, tp, sl, side, held, orderType, limitPriceStr, selectedStock.price, onPreviewTPSLChange]);
 
   if (!isExpanded) {
     return (
-      <div className="w-10 flex flex-col bg-[#131722] flex-1 min-h-0 overflow-hidden items-center">
+      <div className="w-10 flex flex-col bg-white dark:bg-[#131722] border-l border-[#e6e8ea] dark:border-[#2a2e39] flex-1 min-h-0 overflow-hidden items-center">
         <button
           onClick={() => setIsExpanded(true)}
-          className="w-full py-4 flex items-center justify-center text-[#787b86] hover:text-[#d1d4dc] hover:bg-[#1e222d] transition-colors"
+          className="w-full py-4 flex items-center justify-center text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] hover:bg-[#f0f3fa] dark:hover:bg-[#1e222d] transition-colors"
           title="Mở bảng đặt lệnh"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
-        <div className="flex-1 border-r border-[#2a2e39] w-0"></div>
+        <div className="flex-1 border-r border-[#e6e8ea] dark:border-[#2a2e39] w-0"></div>
       </div>
     );
   }
@@ -285,19 +370,10 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-1 text-[#787b86]">
               <Wallet className="w-3 h-3" />
-              <span>Balance</span>
+              <span>{t('order.balance', 'Số dư')}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="font-mono text-green-600 dark:text-green-400 font-semibold">${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              {onResetWallet && (
-                <button
-                  onClick={onResetWallet}
-                  className="px-1.5 py-0.5 text-[10px] font-bold bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 rounded transition-colors"
-                  title="Reset / Nạp số dư $100,000 USD"
-                >
-                  +100K
-                </button>
-              )}
             </div>
           </div>
 
@@ -310,7 +386,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                   : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]')
                 }`}
             >
-              Thị trường
+              {t('order.market', 'Thị trường')}
             </button>
             <button
               onClick={() => {
@@ -326,7 +402,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                   : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]')
                 }`}
             >
-              Limit
+              {t('order.limit', 'Limit')}
             </button>
             <button
               onClick={() => {
@@ -342,7 +418,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                   : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]')
                 }`}
             >
-              Stop
+              {t('order.stop', 'Stop')}
             </button>
           </div>
 
@@ -350,22 +426,22 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
           <div className="flex gap-2">
             <div className="flex flex-col gap-1 flex-1">
               <label className="text-[10px] text-[#787b86] uppercase tracking-wider">
-                {isEditing ? 'Giá vào lệnh' : `Giá ${orderType === 'market' ? '(Thị trường)' : '(VND)'}`}
+                {isEditing ? t('order.entryPrice', 'Giá vào lệnh') : `${t('order.price', 'Giá')} ${orderType === 'market' ? `(${t('order.market', 'Thị trường')})` : '(USD)'}`}
               </label>
               {isEditing ? (
                 <div className="bg-[#f0f3fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
-                  {avgPrice >= 100 ? avgPrice.toLocaleString('vi-VN') : avgPrice.toFixed(getPricePrecision(avgPrice))}
+                  {avgPrice >= 100 ? avgPrice.toLocaleString('en-US') : avgPrice.toFixed(getPricePrecision(avgPrice))}
                 </div>
               ) : orderType === 'market' ? (
                 <div className="bg-[#f0f3fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
-                  {selectedStock.price >= 100 ? selectedStock.price.toLocaleString('vi-VN') : selectedStock.price.toFixed(getPricePrecision(selectedStock.price))}
+                  {selectedStock.price >= 100 ? selectedStock.price.toLocaleString('en-US') : selectedStock.price.toFixed(getPricePrecision(selectedStock.price))}
                 </div>
               ) : (
                 <input
                   type="number"
                   disabled={isEditing}
                   value={limitPriceStr}
-                  placeholder="VD: 112000"
+                  placeholder="VD: 64500"
                   onChange={e => setLimitPriceStr(e.target.value)}
                   className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full disabled:opacity-50"
                 />
@@ -373,7 +449,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
             </div>
 
             <div className="flex flex-col gap-1 flex-1">
-              <label className="text-[10px] text-[#787b86] uppercase tracking-wider">Khối lượng (Lot)</label>
+              <label className="text-[10px] text-[#787b86] uppercase tracking-wider">{lotInputLabel}</label>
               {isEditing ? (
                 <div className="bg-[#f0f3fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
                   {held.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
@@ -381,7 +457,8 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
               ) : (
                 <input
                   type="number"
-                  step="0.01"
+                  step={selectedStock.market === 'Tiền điện tử (Crypto)' ? "0.01" : selectedStock.market === 'Cổ phiếu' ? "1" : "0.01"}
+                  min="0.0001"
                   value={lotStr}
                   onChange={e => setLotStr(e.target.value)}
                   className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full"
@@ -393,7 +470,14 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
           {/* Custom Leverage Slider Inline */}
           <div className={`flex flex-col gap-1 mt-1 ${isEditing ? 'opacity-50' : ''}`}>
             <div className="flex justify-between items-center px-1">
-              <label className="text-[10px] text-[#787b86] uppercase tracking-wider">Đòn bẩy</label>
+              <div className="flex items-center gap-1.5">
+                <label className="text-[10px] text-[#787b86] uppercase tracking-wider">{t('order.leverage', 'Đòn bẩy')}</label>
+                {challengeBadge && (
+                  <span className="text-[9px] bg-amber-500/10 text-amber-500 border border-amber-500/30 px-1 py-0.2 rounded font-medium">
+                    {challengeBadge.includes('Tối đa theo sàn') ? `${challengeBadge} (${leverageInfo.max}X)` : `${challengeBadge} · Tối đa ${leverageInfo.max}X`}
+                  </span>
+                )}
+              </div>
               <span className="text-xs font-mono font-bold text-[#1e2329] dark:text-white">{isEditing ? ((posLeverage % 1 !== 0) ? posLeverage.toFixed(2) : posLeverage) : leverage}X</span>
             </div>
 
@@ -407,7 +491,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                 onChange={e => setLev(parseInt(e.target.value))}
                 className="w-full h-[3px] appearance-none cursor-pointer relative z-10 bg-transparent custom-leverage-slider m-0 p-0 block disabled:cursor-not-allowed"
                 style={{
-                  background: `linear-gradient(to right, var(--lev-fill) ${(((isEditing ? posLeverage : leverage) - 1) / (leverageInfo.max - 1)) * 100}%, var(--lev-bg) ${(((isEditing ? posLeverage : leverage) - 1) / (leverageInfo.max - 1)) * 100}%)`
+                  background: `linear-gradient(to right, var(--lev-fill) ${(((isEditing ? posLeverage : leverage) - 1) / (leverageInfo.max - 1 || 1)) * 100}%, var(--lev-bg) ${(((isEditing ? posLeverage : leverage) - 1) / (leverageInfo.max - 1 || 1)) * 100}%)`
                 }}
               />
 
@@ -424,8 +508,8 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                 </div>
 
                 {leverageInfo.marks.map(m => {
-                  const percent = ((m - 1) / (leverageInfo.max - 1)) * 100;
-                  const isActive = leverage >= m;
+                  const percent = ((m - 1) / (leverageInfo.max - 1 || 1)) * 100;
+                  const isActive = (isEditing ? posLeverage : leverage) >= m;
                   return (
                     <div
                       key={m}
@@ -481,7 +565,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
               className="w-3.5 h-3.5 accent-blue-600 cursor-pointer"
             />
             <label htmlFor="toggle-tpsl" className="text-xs text-[#787b86] cursor-pointer hover:text-[#1e2329] dark:hover:text-[#d1d4dc] transition-colors">
-              Thiết lập Chốt lời / Cắt lỗ (TP/SL)
+              {t('order.setupTPSL', 'Thiết lập Chốt lời / Cắt lỗ (TP/SL)')}
             </label>
           </div>
 
@@ -523,7 +607,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                 <div className="flex gap-2">
                   <div className="flex flex-col gap-1 flex-1">
                     <div className="flex justify-between items-center">
-                      <label className="text-[10px] text-[#089981] uppercase tracking-wider font-semibold">Chốt lời (TP)</label>
+                      <label className="text-[10px] text-[#089981] uppercase tracking-wider font-semibold">{t('order.takeProfit', 'Chốt lời')} (TP)</label>
                     </div>
                     <input
                       type="number"
@@ -557,7 +641,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
 
                   <div className="flex flex-col gap-1 flex-1">
                     <div className="flex justify-between items-center">
-                      <label className="text-[10px] text-[#f23645] uppercase tracking-wider font-semibold">Cắt lỗ (SL)</label>
+                      <label className="text-[10px] text-[#f23645] uppercase tracking-wider font-semibold">{t('order.stopLoss', 'Cắt lỗ')} (SL)</label>
                     </div>
                     <input
                       type="number"
@@ -592,7 +676,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
 
                 {tpNum !== null && slNum !== null && (
                   <div className="flex items-center justify-between bg-[#1e222d]/50 px-2 py-1 rounded text-[10px] border border-[#2a2e39]">
-                    <span className="text-[#787b86]">Tỷ lệ R:R (Lợi nhuận/Rủi ro)</span>
+                    <span className="text-[#787b86]">{t('order.ratioRR', 'Tỷ lệ R:R (Lợi nhuận/Rủi ro)')}</span>
                     <span className="font-mono font-bold text-amber-400">{rrRatioStr}</span>
                   </div>
                 )}
@@ -603,15 +687,15 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
           {/* Total info */}
           <div className="flex flex-col gap-1 border-t border-[#e6e8ea] dark:border-[#2a2e39]/50 pt-2 text-xs">
             <div className="flex items-center justify-between">
-              <span className="text-[#787b86]">Giá trị vị thế</span>
+              <span className="text-[#787b86]">{t('order.positionValue', 'Giá trị vị thế')}</span>
               <span className="font-mono text-[#1e2329] dark:text-[#d1d4dc] font-medium">${(actualQty * pTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             <div className="flex items-center justify-between font-bold">
-              <span className="text-[#787b86]">Ký quỹ yêu cầu</span>
+              <span className="text-[#787b86]">{t('order.requiredMargin', 'Ký quỹ yêu cầu')}</span>
               <span className="font-mono text-blue-500">${requiredMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             <div className="flex items-center justify-between text-[10px] pb-1">
-              <span className="text-[#787b86]">Khối lượng thực tế</span>
+              <span className="text-[#787b86]">{t('order.actualQty', 'Khối lượng thực tế')}</span>
               <span className="font-mono text-[#787b86]">{actualQty.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} Lot</span>
             </div>
           </div>
@@ -641,14 +725,14 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
                 disabled={isSubmitting}
                 className="flex-1 bg-[#089981] hover:bg-[#089981]/80 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded text-sm transition-all"
               >
-                LONG
+                {t('order.btnBuy', 'LONG')}
               </button>
               <button
                 onClick={() => handleTrade('sell')}
                 disabled={isSubmitting}
                 className="flex-1 bg-[#f23645] hover:bg-[#f23645]/80 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded text-sm transition-all"
               >
-                SHORT
+                {t('order.btnSell', 'SHORT')}
               </button>
             </div>
           )}
@@ -662,12 +746,12 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
           )}
         </div>
       ) : (
-        <div className="border-t border-[#2a2e39] p-6 flex flex-col items-center justify-center text-center gap-4 shrink-0 bg-[#131722]">
-          <Wallet className="w-8 h-8 text-[#434651]" />
+        <div className="border-t border-[#e6e8ea] dark:border-[#2a2e39] p-6 flex flex-col items-center justify-center text-center gap-4 shrink-0 bg-white dark:bg-[#131722]">
+          <Wallet className="w-8 h-8 text-[#787b86] dark:text-[#434651]" />
           <p className="text-[#787b86] text-xs">Vui lòng đăng nhập để xem số dư và thực hiện giao dịch.</p>
           <button
             onClick={() => login()}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2.5 rounded transition-colors"
+            className="w-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm font-semibold py-2.5 rounded transition-all shadow-sm"
           >
             Đăng nhập
           </button>

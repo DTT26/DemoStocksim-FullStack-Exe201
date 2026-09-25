@@ -5,8 +5,13 @@ import Order, { OrderSide, OrderType, OrderStatus } from '../models/Order';
 import Transaction, { TransactionType } from '../models/Transaction';
 import Challenge from '../models/Challenge';
 import { WalletService } from './walletService';
+import { CHALLENGE_LEVELS } from './challengeService';
 
 export class TradingService {
+  static async getOrCreateWallet(userId: string) {
+    return WalletService.getOrCreateWallet(userId);
+  }
+
   /**
    * Xác định ngữ cảnh tài khoản đang giao dịch:
    * - Nếu User đang có bài thi Cấp Vốn 'ACTIVE' hoặc 'PAUSED' -> Dùng Tài khoản Bài Thi (CHALLENGE)
@@ -62,7 +67,7 @@ export class TradingService {
    */
   static async openLong(userId: string, symbol: string, margin: number, leverage: number, currentPrice: number, stopLoss?: number, takeProfit?: number) {
     if (margin <= 0) throw new Error("Ký quỹ (Margin) phải lớn hơn 0");
-    if (leverage < 1 || leverage > 125) throw new Error("Đòn bẩy không hợp lệ");
+    if (leverage < 1 || leverage > 500) throw new Error("Đòn bẩy không hợp lệ");
 
     const ctx = await this.getActiveContext(userId);
     if (ctx.isChallenge && ctx.challenge) {
@@ -74,6 +79,10 @@ export class TradingService {
       }
       if (ctx.challenge.status === 'PASSED') {
         throw new Error('Bài thi đã hoàn thành xuất sắc! Vui lòng nâng cấp độ tiếp theo.');
+      }
+      const levelConfig = CHALLENGE_LEVELS.find(l => l.id === ctx.challenge?.currentLevel) || CHALLENGE_LEVELS[0];
+      if (leverage > levelConfig.maxLeverage) {
+        throw new Error(`Đòn bẩy tối đa cho bài thi Cấp ${levelConfig.id} (${levelConfig.levelName}) là ${levelConfig.maxLeverage}X`);
       }
     }
 
@@ -114,12 +123,39 @@ export class TradingService {
       });
     }
 
+    const order = await Order.create({
+      userId,
+      symbol,
+      side: OrderSide.LONG,
+      type: OrderType.MARKET,
+      quantity,
+      price: currentPrice,
+      margin: marginRequired,
+      leverage,
+      stopLoss,
+      takeProfit,
+      status: OrderStatus.FILLED,
+      accountType: ctx.accountType
+    });
+
     await Transaction.create({
       userId,
+      orderId: order._id,
       type: TransactionType.BUY_STOCK,
       amount: -marginRequired,
       accountType: ctx.accountType,
-      description: `Mở LONG ${symbol} ở giá ${currentPrice >= 100 ? currentPrice.toLocaleString('vi-VN') : currentPrice.toFixed(2)} | Margin: ${marginRequired >= 100 ? marginRequired.toLocaleString('vi-VN') : marginRequired.toFixed(2)} | x${leverage} | Qty: ${quantity.toFixed(4)}`
+      description: `Mở LONG ${symbol} ở giá ${currentPrice >= 100 ? currentPrice.toLocaleString('vi-VN') : currentPrice.toFixed(2)} | Margin: ${marginRequired >= 100 ? marginRequired.toLocaleString('vi-VN') : marginRequired.toFixed(2)} | x${leverage} | Qty: ${quantity.toFixed(4)}`,
+      metadata: {
+        symbol,
+        side: 'LONG',
+        entryPrice: currentPrice,
+        quantity,
+        leverage,
+        margin: marginRequired,
+        stopLoss,
+        takeProfit,
+        isOpen: true
+      }
     });
 
     return {
@@ -133,7 +169,7 @@ export class TradingService {
    */
   static async openShort(userId: string, symbol: string, margin: number, leverage: number, currentPrice: number, stopLoss?: number, takeProfit?: number) {
     if (margin <= 0) throw new Error("Ký quỹ (Margin) phải lớn hơn 0");
-    if (leverage < 1 || leverage > 125) throw new Error("Đòn bẩy không hợp lệ");
+    if (leverage < 1 || leverage > 500) throw new Error("Đòn bẩy không hợp lệ");
 
     const marginRequired = margin;
     const quantity = (margin * leverage) / currentPrice;
@@ -148,6 +184,10 @@ export class TradingService {
       }
       if (ctx.challenge.status === 'PASSED') {
         throw new Error('Bài thi đã hoàn thành xuất sắc! Vui lòng nâng cấp độ tiếp theo.');
+      }
+      const levelConfig = CHALLENGE_LEVELS.find(l => l.id === ctx.challenge?.currentLevel) || CHALLENGE_LEVELS[0];
+      if (leverage > levelConfig.maxLeverage) {
+        throw new Error(`Đòn bẩy tối đa cho bài thi Cấp ${levelConfig.id} (${levelConfig.levelName}) là ${levelConfig.maxLeverage}X`);
       }
     }
 
@@ -184,12 +224,38 @@ export class TradingService {
       });
     }
 
+    const order = await Order.create({
+      userId,
+      symbol,
+      side: OrderSide.SHORT,
+      type: OrderType.MARKET,
+      quantity,
+      price: currentPrice,
+      margin: marginRequired,
+      leverage,
+      stopLoss,
+      takeProfit,
+      status: OrderStatus.FILLED,
+      accountType: ctx.accountType
+    });
+
     await Transaction.create({
       userId,
       type: TransactionType.SELL_STOCK,
       amount: -marginRequired,
       accountType: ctx.accountType,
-      description: `Mở SHORT ${symbol} ở giá ${currentPrice >= 100 ? currentPrice.toLocaleString('vi-VN') : currentPrice.toFixed(2)} | Margin: ${marginRequired >= 100 ? marginRequired.toLocaleString('vi-VN') : marginRequired.toFixed(2)} | x${leverage} | Qty: ${quantity.toFixed(4)}`
+      description: `Mở SHORT ${symbol} ở giá ${currentPrice >= 100 ? currentPrice.toLocaleString('vi-VN') : currentPrice.toFixed(2)} | Margin: ${marginRequired >= 100 ? marginRequired.toLocaleString('vi-VN') : marginRequired.toFixed(2)} | x${leverage} | Qty: ${quantity.toFixed(4)}`,
+      metadata: {
+        symbol,
+        side: 'SHORT',
+        entryPrice: currentPrice,
+        quantity,
+        leverage,
+        margin: marginRequired,
+        stopLoss,
+        takeProfit,
+        isOpen: true
+      }
     });
 
     return {
@@ -237,12 +303,37 @@ export class TradingService {
       await Holding.deleteOne({ _id: holding._id });
     }
 
+    const order = await Order.create({
+      userId,
+      symbol,
+      side: side === 'LONG' ? OrderSide.SHORT : OrderSide.LONG,
+      type: OrderType.MARKET,
+      quantity: actualCloseQty,
+      price: currentPrice,
+      margin: marginReturned,
+      leverage: holding.leverage || 1,
+      status: OrderStatus.FILLED,
+      accountType: ctx.accountType
+    });
+
     await Transaction.create({
       userId,
       type: TransactionType.CLOSE_POSITION,
       amount: pnl,
       accountType: ctx.accountType,
-      description: `Đóng ${isPartial ? 'một phần' : 'vị thế'} ${side} ${symbol} ở giá ${currentPrice >= 100 ? currentPrice.toLocaleString('vi-VN') : currentPrice.toFixed(2)} | Qty: ${actualCloseQty.toFixed(4)} | Lợi nhuận: ${pnl >= 0 ? '+' : '-'}${Math.abs(pnl) >= 100 ? Math.abs(pnl).toLocaleString('vi-VN') : Math.abs(pnl).toFixed(2)} | Vốn về: ${totalReturn >= 100 ? totalReturn.toLocaleString('vi-VN') : totalReturn.toFixed(2)}`
+      description: `Đóng ${isPartial ? 'một phần' : 'vị thế'} ${side} ${symbol} ở giá ${currentPrice >= 100 ? currentPrice.toLocaleString('vi-VN') : currentPrice.toFixed(2)} | Qty: ${actualCloseQty.toFixed(4)} | Lợi nhuận: ${pnl >= 0 ? '+' : '-'}${Math.abs(pnl) >= 100 ? Math.abs(pnl).toLocaleString('vi-VN') : Math.abs(pnl).toFixed(2)} | Vốn về: ${totalReturn >= 100 ? totalReturn.toLocaleString('vi-VN') : totalReturn.toFixed(2)}`,
+      metadata: {
+        symbol,
+        side,
+        entryPrice,
+        exitPrice: currentPrice,
+        quantity: actualCloseQty,
+        leverage: holding.leverage || 1,
+        pnl,
+        stopLoss: holding.sl,
+        takeProfit: holding.tp,
+        isOpen: false
+      }
     });
 
     return {
@@ -291,8 +382,8 @@ export class TradingService {
 
     await Transaction.create({
       userId,
-      type: TransactionType.DEPOSIT,
-      amount: -amount,
+      type: TransactionType.BUY_STOCK,
+      amount,
       accountType: ctx.accountType,
       description: `Bơm ${amount >= 100 ? amount.toLocaleString('vi-VN') : amount.toFixed(2)} ký quỹ vào lệnh ${side} ${symbol}`
     });
@@ -301,7 +392,7 @@ export class TradingService {
   }
 
   /**
-   * ĐẶT LỆNH CHỜ (LIMIT / STOP ORDER)
+   * ĐẶT LỆNH CHỜ (Limit / Stop Order)
    */
   static async placeLimitOrder(userId: string, symbol: string, side: 'LONG'|'SHORT', price: number, margin: number, leverage: number, stopLoss?: number, takeProfit?: number, orderType: 'LIMIT' | 'STOP' = 'LIMIT') {
     if (margin <= 0) throw new Error("Ký quỹ (Margin) phải lớn hơn 0");
@@ -318,6 +409,10 @@ export class TradingService {
       }
       if (ctx.challenge.status === 'PASSED') {
         throw new Error('Bài thi đã hoàn thành xuất sắc! Vui lòng nâng cấp độ tiếp theo.');
+      }
+      const levelConfig = CHALLENGE_LEVELS.find(l => l.id === ctx.challenge?.currentLevel) || CHALLENGE_LEVELS[0];
+      if (leverage > levelConfig.maxLeverage) {
+        throw new Error(`Đòn bẩy tối đa cho bài thi Cấp ${levelConfig.id} (${levelConfig.levelName}) là ${levelConfig.maxLeverage}X`);
       }
     }
 
@@ -508,6 +603,8 @@ export class TradingService {
     const holdings = await Holding.find({ userId, accountType: ctx.accountType });
     const pendingOrders = await Order.find({ userId, status: OrderStatus.PENDING, accountType: ctx.accountType });
 
+    // Note: To calculate accurate Real-time PnL, the controller should fetch current prices from API
+    // and map them into the holdings array before returning to frontend.
     return {
       wallet: {
         balance: ctx.balance,

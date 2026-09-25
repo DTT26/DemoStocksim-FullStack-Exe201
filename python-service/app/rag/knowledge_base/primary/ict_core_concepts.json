@@ -1,0 +1,72 @@
+[
+  {
+    "id": "ict_001",
+    "title": "Fair Value Gap (FVG) and Market Inefficiency",
+    "concept": "Fair Value Gap",
+    "framework": "ICT",
+    "content": "Fair Value Gap (FVG) là mô hình 3 nến thể hiện sự mất cân bằng cung cầu (imbalance) mạnh mẽ do một bên kiểm soát hoàn toàn và giá dịch chuyển quá nhanh (Displacement). Trong FVG tăng (Bullish FVG), bóng nến cao nhất (High) của Nến 1 không chạm tới bóng nến thấp nhất (Low) của Nến 3, để lại khoảng trống ở thân Nến 2. Khoảng trống này được xem là vùng giá thị trường chưa khớp lệnh công bằng và thuật toán giao dịch (IPDA) có xu hướng kéo giá quay trở về retest (rebalance) trước khi tiếp tục xu hướng. FVG có xác suất cao nhất khi xuất hiện sau khi giá quét thanh khoản (Liquidity Sweep) và tạo Market Structure Shift (MSS).",
+    "source": "ICT 2022 Mentorship Episode 3: Fair Value Gap & Market Structure",
+    "sourceUrl": "https://www.youtube.com/watch?v=nQfHZ2DEJ8c",
+    "author": "Michael J. Huddleston",
+    "publishedDate": "2022-01-18",
+    "sourceType": "PRIMARY",
+    "tags": ["ICT", "FVG", "Imbalance", "Displacement", "Entry Setup"],
+    "language": "vi"
+  },
+  {
+    "id": "ict_002",
+    "title": "Buy-side and Sell-side Liquidity (BSL & SSL)",
+    "concept": "Liquidity",
+    "framework": "ICT",
+    "content": "Trong ICT, thanh khoản (Liquidity) là trọng tâm vận hành của thị trường. Buy-side Liquidity (BSL) là tập hợp các lệnh Buy Stop (dừng lỗ của phe Short hoặc lệnh breakout mua) nằm phía trên các đỉnh cũ (Old Highs, Equal Highs - EQH). Sell-side Liquidity (SSL) là tập hợp các lệnh Sell Stop (dừng lỗ của phe Long hoặc lệnh breakout bán) nằm phía dưới các đáy cũ (Old Lows, Equal Lows - EQL). Các định chế tài chính lớn (Smart Money) cần thanh khoản lớn để khớp lệnh vào/ra, do đó họ thường đẩy giá quét qua các vùng này (Liquidity Sweep/Raid) trước khi đảo chiều. Người học cần tránh mua ngay đỉnh vừa breakout vì nguy cơ cao là vùng BSL bị quét.",
+    "source": "ICT 2022 Mentorship Episode 2: Elements of a Trade Setup & Liquidity Pools",
+    "sourceUrl": "https://www.youtube.com/watch?v=tmeCWULSTHc",
+    "author": "Michael J. Huddleston",
+    "publishedDate": "2017-04-12",
+    "sourceType": "PRIMARY",
+    "tags": ["ICT", "Liquidity", "BSL", "SSL", "EQH", "EQL"],
+    "language": "vi"
+  },
+  {
+    "id": "ict_003",
+    "title": "Order Block (OB) and Breaker Block",
+    "concept": "Order Block",
+    "framework": "ICT",
+    "content": "Bullish Order Block là cây nến giảm cuối cùng (down-close candle) trước khi xuất hiện chuỗi nến tăng mạnh phá vỡ cấu trúc thị trường (MSS). Bearish Order Block là cây nến tăng cuối cùng trước chuỗi nến giảm mạnh. Điểm mấu chốt để xác thực một Order Block hợp lệ là phải có sự dịch chuyển mạnh (Displacement) kèm theo Fair Value Gap (FVG) hợp lệ. Breaker Block là một Order Block thất bại: khi giá phá qua Order Block cũ rồi sau đó đảo chiều test lại mặt đối diện của nó, biến vùng hỗ trợ cũ thành kháng cự mới (hoặc ngược lại).",
+    "source": "ICT 2022 Mentorship Episode 4: Order Blocks & Displacement",
+    "sourceUrl": "https://www.youtube.com/watch?v=L-ReMHiavPM",
+    "author": "Michael J. Huddleston",
+    "publishedDate": "2017-02-20",
+    "sourceType": "PRIMARY",
+    "tags": ["ICT", "Order Block", "Breaker Block", "Mitigation"],
+    "language": "vi"
+  },
+  {
+    "id": "ict_004",
+    "title": "Market Structure Shift (MSS) vs Break of Structure (BOS)",
+    "concept": "Market Structure Shift",
+    "framework": "ICT",
+    "content": "Market Structure Shift (MSS) trong ICT là tín hiệu đảo chiều sớm khi giá phá vỡ một đỉnh tạo đáy (Swing High) trong xu hướng giảm, hoặc phá vỡ một đáy tạo đỉnh (Swing Low) trong xu hướng tăng. Điểm đặc biệt của MSS trong ICT là cây nến phá vỡ phải đóng cửa dứt khoát bằng thân nến (Body candle close), có động lượng lớn (Displacement) và tạo ra FVG. Nếu chỉ quét qua bằng râu nến (Wick), đó chỉ là Liquidity Sweep chứ không phải MSS. Ngược lại, BOS (Break of Structure) là sự tiếp diễn của xu hướng hiện hữu khi giá phá đỉnh/đáy thuận xu hướng.",
+    "source": "ICT 2022 Mentorship Episode 1: Introduction & Algorithmic Framework",
+    "sourceUrl": "https://www.youtube.com/watch?v=kt6V4ai60fI",
+    "author": "Michael J. Huddleston",
+    "publishedDate": "2022-01-25",
+    "sourceType": "PRIMARY",
+    "tags": ["ICT", "MSS", "BOS", "Displacement", "Trend Reversal"],
+    "language": "vi"
+  },
+  {
+    "id": "ict_005",
+    "title": "Optimal Trade Entry (OTE) & Premium / Discount Pricing",
+    "concept": "Optimal Trade Entry",
+    "framework": "ICT",
+    "content": "Khái niệm OTE dựa trên tỉ lệ thoái lui Fibonacci (Fibonacci Retracement) áp dụng trên một đợt dịch chuyển Displacement. Phạm vi OTE nằm trong khoảng thoái lui 61.8% - 70.5% - 79%, với 70.5% là điểm tối ưu ngọt ngào (Sweet Spot). Đồng thời, thị trường luôn chia làm 2 nửa so với mức cân bằng 50% (Equilibrium): nửa trên là Premium (đắt - chỉ nên cân nhắc Sell), nửa dưới là Discount (rẻ - chỉ nên cân nhắc Buy). Một lệnh Buy chuẩn theo ICT luôn cần tìm kiếm điểm entry tại vùng Discount, kết hợp OTE và FVG/Order Block.",
+    "source": "ICT 2022 Mentorship Episode 5: OTE Framework & Discount/Premium Pricing",
+    "sourceUrl": "https://www.youtube.com/watch?v=N29ZJ-o31xs",
+    "author": "Michael J. Huddleston",
+    "publishedDate": "2017-07-15",
+    "sourceType": "PRIMARY",
+    "tags": ["ICT", "OTE", "Fibonacci", "Premium", "Discount", "Equilibrium"],
+    "language": "vi"
+  }
+]

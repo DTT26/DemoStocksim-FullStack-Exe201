@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { tradingApi } from '../../../services/tradingApi';
+import { useAuth } from '../../../contexts/AuthContext';
 
 interface Transaction {
   _id: string;
@@ -10,12 +11,13 @@ interface Transaction {
 }
 
 export const TransactionHistory = ({ refreshTrigger }: { refreshTrigger: number }) => {
+  const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const res = await tradingApi.getTransactions();
+        const res = await tradingApi.getTransactions(user?._id);
         if (res.success && res.data) {
           setTransactions(res.data);
         }
@@ -24,7 +26,7 @@ export const TransactionHistory = ({ refreshTrigger }: { refreshTrigger: number 
       }
     };
     fetchHistory();
-  }, [refreshTrigger]);
+  }, [refreshTrigger, user]);
 
   return (
     <div className="h-64 border-t border-[#2a2e39] bg-[#131722] flex flex-col shrink-0 overflow-hidden">
@@ -38,7 +40,7 @@ export const TransactionHistory = ({ refreshTrigger }: { refreshTrigger: number 
               <th className="px-4 py-2 font-medium">Thời gian</th>
               <th className="px-4 py-2 font-medium">Loại</th>
               <th className="px-4 py-2 font-medium">Chi tiết</th>
-              <th className="px-4 py-2 font-medium text-right">Biến động (VND)</th>
+              <th className="px-4 py-2 font-medium text-right">Biến động ($)</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#2a2e39]/50">

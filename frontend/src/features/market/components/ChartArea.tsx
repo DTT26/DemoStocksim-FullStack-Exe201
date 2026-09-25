@@ -4,8 +4,8 @@ import type { Chart, KLineData, DataLoaderGetBarsParams, DataLoaderSubscribeBarP
 import { Settings2, Trash2, Edit2, Type, Minus, MoreHorizontal, Lock, Unlock, GripVertical, LayoutGrid, Pencil, Plus, ChevronRight, Copy, Settings, X, Layers } from 'lucide-react';
 import { generateOHLCV, getPricePrecision, timeframeToMs, type Stock } from '../data';
 import { fetchBinanceKlines, mapTimeframeToBinance, subscribeBinanceKline } from '../../../services/binanceApi';
-import { fetchVnStockKlines } from '../../../services/vnStockApi';
 import type { TradeOrder } from '../TradingTerminal';
+import type { ChartSettings } from '../chartSettings';
 import { INDICATOR_LIST } from './IndicatorModal';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { OverlaySettingsModal, type OverlaySettings } from './OverlaySettingsModal';
@@ -1630,6 +1630,7 @@ registerOverlay({
   }
 });
 registerOverlay({
+
   name: 'tpslZone',
   totalStep: 2,
   needDefaultPointFigure: false,
@@ -3639,11 +3640,12 @@ interface ChartAreaProps {
   replayStepTrigger?: number;
   onReplayTimeChange?: (time: number) => void;
   tradeOrders: TradeOrder[];
+  chartSettings: ChartSettings;
   pendingOrders?: any[];
   activeIndicators?: string[];
   activePosition?: { quantity: number; averagePrice: number; side: 'LONG' | 'SHORT'; leverage: number; tp?: number; sl?: number };
   onPriceChange?: (price: number) => void;
-  onPriceUpdate?: (price: number) => void;
+  onPriceUpdate?: (price: number, timestamp?: number) => void;
   isSelectingReplayStart?: boolean;
   onSelectReplayStart?: (timestamp: number) => void;
   goToRealtimeTrigger?: number;
@@ -3653,8 +3655,9 @@ interface ChartAreaProps {
   stayInDrawingMode?: boolean;
   lockDrawing?: boolean;
   hideDrawing?: boolean;
-  previewTPSL?: { tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean } | null;
-  onTPSLChange?: (type: 'tp' | 'sl', price: number) => void;
+  previewTPSL?: { tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean; orderPrice?: number; orderType?: 'LIMIT' | 'STOP' } | null;
+  onTPSLChange?: (type: 'tp' | 'sl' | 'orderPrice', price: number) => void;
+  simulatorPositions?: any[];
   undoTrigger?: number;
   redoTrigger?: number;
   onUndoRedoChange?: (state: { canUndo: boolean; canRedo: boolean }) => void;
@@ -3684,9 +3687,11 @@ export const ChartArea = ({
   replayStepTrigger,
   onReplayTimeChange,
   tradeOrders,
+  chartSettings,
   pendingOrders,
   activeIndicators = [],
   activePosition,
+  simulatorPositions,
   onPriceUpdate,
   onPriceChange,
   isSelectingReplayStart,
@@ -3704,9 +3709,13 @@ export const ChartArea = ({
   const activeToolRef = useRef<string>('cursor');
   const activeTimeframeRef = useRef<string>(activeTimeframe);
   const isSelectingReplayStartRef = useRef(isSelectingReplayStart);
+  isSelectingReplayStartRef.current = isSelectingReplayStart;
   const onSelectReplayStartRef = useRef(onSelectReplayStart);
+  onSelectReplayStartRef.current = onSelectReplayStart;
   const replayTimeRef = useRef<number | null | undefined>(replayTime);
+  replayTimeRef.current = replayTime;
   const onReplayTimeChangeRef = useRef(onReplayTimeChange);
+  onReplayTimeChangeRef.current = onReplayTimeChange;
   const crosshairIndexRef = useRef<number | null>(null);
   const subscriberCallbackRef = useRef<((data: KLineData) => void) | null>(null);
 
@@ -3901,6 +3910,11 @@ export const ChartArea = ({
     }
   }, [goToRealtimeTrigger]);
 
+  const chartSettingsRef = useRef(chartSettings);
+  useEffect(() => {
+    chartSettingsRef.current = chartSettings;
+  }, [chartSettings]);
+
   const updateCrosshairStyles = (chart: Chart | null, tool: string) => {
     if (!chart) return;
     const isHide = tool === 'cursor_arrow' || tool === 'cursor_dot' || tool === 'eraser';
@@ -3921,53 +3935,175 @@ export const ChartArea = ({
     });
   };
 
-  // Apply theme dynamically to klinecharts
+  // Apply theme and chart settings dynamically to klinecharts
   useEffect(() => {
-    if (chartRef.current) {
-      chartRef.current.setStyles(theme === 'dark' ? 'dark' : 'light');
-      // Override grid and candle styles
-      chartRef.current.setStyles({
-        grid: {
-          horizontal: { color: theme === 'dark' ? '#2a2e39' : '#e6e8ea', size: 1, style: 'dashed' },
-          vertical: { color: theme === 'dark' ? '#2a2e39' : '#e6e8ea', size: 1, style: 'dashed' },
+    const chart = chartRef.current;
+    if (!chart || !chartSettings) return;
+
+    const isDark = theme === 'dark';
+    chart.setStyles(isDark ? 'dark' : 'light');
+
+    // Resolve dynamic colors for light vs dark mode if using default dark palette
+    const defaultGridDark = '#2a2e39';
+    const hGridColor = (!isDark && chartSettings.canvas.hGridColor === defaultGridDark)
+      ? '#f0f3f6'
+      : chartSettings.canvas.hGridColor;
+    const vGridColor = (!isDark && chartSettings.canvas.vGridColor === defaultGridDark)
+      ? '#f0f3f6'
+      : chartSettings.canvas.vGridColor;
+    const textColor = (!isDark && chartSettings.scales.textColor === '#d1d4dc')
+      ? '#50535e'
+      : chartSettings.scales.textColor;
+    const lineColor = (!isDark && chartSettings.scales.lineColor === defaultGridDark)
+      ? '#e0e3eb'
+      : chartSettings.scales.lineColor;
+
+    chart.setStyles({
+      grid: {
+        horizontal: {
+          show: chartSettings.canvas.hGridShow,
+          size: 1,
+          color: chartSettings.canvas.hGridShow ? hGridColor : 'transparent',
+          style: chartSettings.canvas.hGridStyle === '—' ? 'solid' : 'dashed',
         },
-        candle: {
-          tooltip: {
-            showRule: 'always',
-            showType: 'standard',
-            legend: {
-              template: (data: any) => {
-                const d = data.current;
-                if (!d) return [];
-                const time = new Date(d.timestamp).toLocaleString('vi-VN', {
-                  hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
-                });
-                const precision = getPricePrecision(d.close || selectedStock.price || 1);
-                return [
-                  {
-                    title: '',
-                    value: {
-                      text: `Time: ${time}   Open: ${Number(d.open).toFixed(precision)}   High: ${Number(d.high).toFixed(precision)}   Low: ${Number(d.low).toFixed(precision)}   Close: ${Number(d.close).toFixed(precision)}   Volume: ${(d.volume / 1000).toFixed(2)}K`,
-                      color: theme === 'dark' ? '#c4c6cb' : '#131722'
-                    }
-                  }
-                ];
+        vertical: {
+          show: chartSettings.canvas.vGridShow,
+          size: 1,
+          color: chartSettings.canvas.vGridShow ? vGridColor : 'transparent',
+          style: chartSettings.canvas.vGridStyle === '—' ? 'solid' : 'dashed',
+        }
+      },
+      candle: {
+        type: 'candle_solid',
+        tooltip: {
+          showRule: 'always',
+          showType: 'standard',
+          legend: {
+            template: (data: any) => {
+              const d = data.current;
+              if (!d) return [];
+              const time = new Date(d.timestamp).toLocaleString('vi-VN', {
+                hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
+              });
+              let precision = getPricePrecision(d.close || selectedStock.price || 1);
+              const customPrecision = chartSettingsRef.current?.symbol?.precision;
+              if (customPrecision && customPrecision !== 'Default') {
+                if (customPrecision === '1') precision = 0;
+                else if (customPrecision === '1/10') precision = 1;
+                else if (customPrecision === '1/100') precision = 2;
+                else if (customPrecision === '1/1000') precision = 3;
               }
+              return [
+                {
+                  title: '',
+                  value: {
+                    text: `Time: ${time}   Open: ${Number(d.open).toFixed(precision)}   High: ${Number(d.high).toFixed(precision)}   Low: ${Number(d.low).toFixed(precision)}   Close: ${Number(d.close).toFixed(precision)}   Volume: ${(d.volume / 1000).toFixed(2)}K`,
+                    color: isDark ? '#c4c6cb' : '#131722'
+                  }
+                }
+              ];
             }
+          }
+        },
+        bar: {
+          upColor: chartSettings.candle.bodyUp,
+          downColor: chartSettings.candle.bodyDown,
+          noChangeColor: chartSettings.candle.bodyDown,
+          upBorderColor: chartSettings.candle.borderUp,
+          downBorderColor: chartSettings.candle.borderDown,
+          noChangeBorderColor: chartSettings.candle.borderDown,
+          upWickColor: chartSettings.candle.wickUp,
+          downWickColor: chartSettings.candle.wickDown,
+          noChangeWickColor: chartSettings.candle.wickDown,
+        },
+        priceMark: {
+          show: true,
+          high: {
+            show: chartSettings.scales.hlVal.includes('Labels') || chartSettings.scales.hlVal.includes('Lines'),
+            color: chartSettings.scales.hlColor,
+            textOffset: 5,
+            textSize: chartSettings.scales.textSize
           },
-          bar: {
-            upColor: '#089981',
-            downColor: '#f23645',
-            upBorderColor: '#089981',
-            downBorderColor: '#f23645',
-            upWickColor: '#089981',
-            downWickColor: '#f23645',
+          low: {
+            show: chartSettings.scales.hlVal.includes('Labels') || chartSettings.scales.hlVal.includes('Lines'),
+            color: chartSettings.scales.hlColor,
+            textOffset: 5,
+            textSize: chartSettings.scales.textSize
+          },
+          last: {
+            show: chartSettings.scales.symbolVal !== 'Hidden',
+            upColor: chartSettings.scales.symbolLabelColor1,
+            downColor: chartSettings.scales.symbolLabelColor2,
+            noChangeColor: chartSettings.scales.symbolLabelColor2,
+            text: {
+              show: chartSettings.scales.symbolVal.includes('Value'),
+              size: chartSettings.scales.textSize,
+              family: 'Inter',
+              weight: 'normal'
+            }
           }
         }
-      });
-      updateCrosshairStyles(chartRef.current, activeToolRef.current);
+      },
+      indicator: {
+        tooltip: {
+          showRule: 'always'
+        }
+      },
+      crosshair: {
+        show: true,
+        horizontal: {
+          show: true,
+          line: {
+            show: true,
+            style: chartSettings.canvas.crosshairStyle === '—' ? 'solid' : 'dashed',
+            color: chartSettings.canvas.crosshairColor,
+            size: 1,
+          },
+        },
+        vertical: {
+          show: true,
+          line: {
+            show: true,
+            style: chartSettings.canvas.crosshairStyle === '—' ? 'solid' : 'dashed',
+            color: chartSettings.canvas.crosshairColor,
+            size: 1,
+          }
+        }
+      },
+      xAxis: {
+        axisLine: { color: lineColor },
+        tickText: { color: textColor, size: chartSettings.scales.textSize, family: 'Inter' },
+      },
+      yAxis: {
+        axisLine: { color: lineColor },
+        tickText: { color: textColor, size: chartSettings.scales.textSize, family: 'Inter' },
+      }
+    });
+
+    updateCrosshairStyles(chart, activeToolRef.current);
+
+    try {
+      const anyChart = chart as any;
+      if (typeof anyChart.setTimezone === 'function') {
+        anyChart.setTimezone(chartSettings.symbol.timezone);
+      }
+      if (typeof anyChart.setOffsetRightDistance === 'function') {
+        anyChart.setOffsetRightDistance(chartSettings.canvas.marginRight);
+      }
+      if (typeof anyChart.setPriceVolumePrecision === 'function') {
+        let pricePrecision = 2;
+        switch (chartSettings.symbol.precision) {
+          case '1': pricePrecision = 0; break;
+          case '1/10': pricePrecision = 1; break;
+          case '1/100': pricePrecision = 2; break;
+          case '1/1000': pricePrecision = 3; break;
+        }
+        anyChart.setPriceVolumePrecision(pricePrecision, 0);
+      }
+    } catch (e) {
+      // Ignored if API is not available in this version
     }
-  }, [theme]);
+  }, [theme, chartSettings]);
 
   // Init chart ONCE
   useEffect(() => {
@@ -3981,23 +4117,56 @@ export const ChartArea = ({
     const chart = init(chartContainerRef.current, {
       formatter: {
         formatDate: (params: any) => {
+          const settings = chartSettingsRef.current;
+          const tz = settings?.symbol?.timezone === 'Asia/Ho_Chi_Minh' ? 'Asia/Ho_Chi_Minh' : 'UTC';
           const d = new Date(params.timestamp);
-          const hh = d.getHours().toString().padStart(2, '0');
-          const mm = d.getMinutes().toString().padStart(2, '0');
-          const dd = d.getDate().toString().padStart(2, '0');
-          const mo = (d.getMonth() + 1).toString().padStart(2, '0');
-          const yyyy = d.getFullYear();
-          const tf = activeTimeframeRef.current || 'D';
-          const isIntraday = tf.endsWith('m') || tf.endsWith('h');
-          if (params.type === 'crosshair' || params.type === 'tooltip') {
-            return isIntraday ? `${dd}/${mo}/${yyyy} ${hh}:${mm}` : `${dd}/${mo}/${yyyy}`;
+          if (tz === 'Asia/Ho_Chi_Minh') {
+            d.setHours(d.getHours() + 7);
           }
 
-          // xAxis tick
+          let h = d.getHours();
+          const mm = d.getMinutes().toString().padStart(2, '0');
+          let suffix = '';
+          if (settings?.scales?.timeFormat === '12-hours') {
+            suffix = h >= 12 ? ' PM' : ' AM';
+            h = h % 12 || 12;
+          }
+          const hhStr = h.toString().padStart(2, '0');
+          const timeStr = `${hhStr}:${mm}${suffix}`;
+
+          const dd = d.getDate().toString().padStart(2, '0');
+          const moNum = (d.getMonth() + 1).toString().padStart(2, '0');
+          const yyyy = d.getFullYear();
+          const shortYear = yyyy.toString().slice(2);
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+          const moName = monthNames[d.getMonth()];
+          const dayName = dayNames[d.getDay()];
+
+          let dateStr = `${dd}/${moNum}/${yyyy}`; // default
+          const dFmt = settings?.scales?.dateFormat;
+          if (dFmt === "Mon 29 Sep '97") dateStr = `${dayName} ${dd} ${moName} '${shortYear}`;
+          else if (dFmt === "29 Sep '97") dateStr = `${dd} ${moName} '${shortYear}`;
+          else if (dFmt === "Sep '97") dateStr = `${moName} '${shortYear}`;
+          else if (dFmt === "09/29/1997") dateStr = `${moNum}/${dd}/${yyyy}`;
+          else if (dFmt === "29/09/1997") dateStr = `${dd}/${moNum}/${yyyy}`;
+          else if (dFmt === "1997-09-29") dateStr = `${yyyy}-${moNum}-${dd}`;
+
+          if (settings?.scales?.dayOfWeek === false && dateStr.includes(dayName)) {
+            dateStr = dateStr.replace(`${dayName} `, '');
+          }
+
+          const tf = activeTimeframeRef.current || 'D';
+          const isIntraday = tf.endsWith('m') || tf.endsWith('h');
+
+          if (params.type === 'crosshair' || params.type === 'tooltip') {
+            return isIntraday ? `${dateStr} ${timeStr}` : dateStr;
+          }
+
           if (isIntraday) {
-            return `${dd}/${mo} ${hh}:${mm}`;
+            return `${dd}/${moNum} ${timeStr}`;
           } else {
-            return `${dd}/${mo}/${yyyy}`;
+            return dateStr;
           }
         }
       }
@@ -4465,7 +4634,7 @@ export const ChartArea = ({
       if (subscriberCallbackRef.current) {
         subscriberCallbackRef.current(nextBar);
       }
-      if (onPriceUpdate) onPriceUpdate(nextBar.close);
+      if (onPriceUpdate) onPriceUpdate(nextBar.close, nextBar.timestamp);
       replayTimeRef.current = nextBar.timestamp;
       onReplayTimeChangeRef.current?.(nextBar.timestamp);
     }
@@ -4530,29 +4699,9 @@ export const ChartArea = ({
         } catch (error) {
           allData = [];
         }
-      } else if (selectedStock.market === 'Cổ phiếu' || selectedStock.market === 'Chỉ số') {
-        // Lấy dữ liệu thật từ VNDirect qua Backend API
-        try {
-          const fromSec = (isReplaying && currentReplayTime)
-            ? Math.floor((currentReplayTime - 365 * 24 * 3600 * 1000) / 1000)
-            : undefined;
-          const toSec = (isReplaying && currentReplayTime)
-            ? Math.floor((currentReplayTime + 300 * intervalMs) / 1000)
-            : undefined;
-
-          allData = await fetchVnStockKlines({
-            symbol: selectedStock.symbol,
-            timeframe: activeTimeframe,
-            from: fromSec,
-            to: toSec
-          });
-        } catch (error) {
-          console.warn(`Failed to fetch VN klines for ${selectedStock.symbol}:`, error);
-          allData = [];
-        }
       }
 
-      // NẾU allData rỗng (hoặc thị trường không phải Crypto/VN Stock, hoặc API lỗi)
+      // NẾU allData rỗng (hoặc thị trường không phải Crypto, hoặc API lỗi)
       if (!allData || allData.length === 0) {
         const targetEndTime = (isReplaying && currentReplayTime)
           ? Math.min(Date.now(), currentReplayTime + 500 * intervalMs)
@@ -4679,6 +4828,10 @@ export const ChartArea = ({
               !!selectedStock.isFutures,
               (newCandle) => {
                 params.callback(newCandle);
+                const chart = chartRef.current;
+                if (chart && typeof (chart as any).updateData === 'function') {
+                  (chart as any).updateData(newCandle);
+                }
                 if (onPriceUpdate) onPriceUpdate(newCandle.close);
               }
             );
@@ -4700,6 +4853,10 @@ export const ChartArea = ({
 
               allData[allData.length - 1] = newCandle;
               params.callback(newCandle);
+              const chart = chartRef.current;
+              if (chart && typeof (chart as any).updateData === 'function') {
+                (chart as any).updateData(newCandle);
+              }
               if (onPriceUpdate) onPriceUpdate(newCandle.close);
             }, 1000);
           }
@@ -4804,15 +4961,32 @@ export const ChartArea = ({
       });
     }
 
-    if (activePosition && activePosition.quantity > 0) {
-      const isBuy = activePosition.side === 'LONG';
-      const color = '#ffffff'; // White for entry line
+    // 1. Draw main entry price lines
+    const positionsToDraw: Array<{ quantity: number; averagePrice: number; side: 'LONG' | 'SHORT'; leverage?: number }> = [];
+    if (simulatorPositions && simulatorPositions.length > 0) {
+      simulatorPositions
+        .filter((p: any) => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())
+        .forEach((p: any) => {
+          positionsToDraw.push({
+            quantity: p.lot || p.quantity || 0,
+            averagePrice: p.entryPrice || p.averagePrice || 0,
+            side: p.side || 'LONG',
+            leverage: p.leverage
+          });
+        });
+    } else if (activePosition && activePosition.quantity > 0) {
+      positionsToDraw.push(activePosition);
+    }
 
-      // 1. Draw main entry price line
+    positionsToDraw.forEach(pos => {
+      if (pos.quantity <= 0 || pos.averagePrice <= 0) return;
+      const isBuy = pos.side === 'LONG';
+      const color = '#ffffff';
+
       chart.createOverlay({
         name: 'horizontalStraightLine',
         lock: true,
-        points: [{ timestamp: allData[lastDataIndex].timestamp, value: activePosition.averagePrice }],
+        points: [{ timestamp: allData[lastDataIndex].timestamp, value: pos.averagePrice }],
         styles: {
           line: { color: '#ffffff', size: 2, style: 'dashed', dashedValue: [5, 5] },
           text: {
@@ -4828,7 +5002,71 @@ export const ChartArea = ({
             weight: 'bold',
           },
         },
-        extendData: `${isBuy ? '▲ LONG' : '▼ SHORT'} ${activePosition.quantity.toFixed(2)} @ ${activePosition.averagePrice >= 100 ? activePosition.averagePrice.toLocaleString('vi-VN') : activePosition.averagePrice.toFixed(2)}`,
+        extendData: `${isBuy ? '▲ LONG' : '▼ SHORT'} ${pos.quantity.toFixed(2)} @ $${pos.averagePrice.toLocaleString('en-US')}`,
+      });
+    });
+
+    // 1.5 Draw Preview Limit / Stop order line
+    if (previewTPSL?.enabled && previewTPSL.orderPrice && previewTPSL.orderPrice > 0 && previewTPSL.orderType) {
+      const isLimit = previewTPSL.orderType === 'LIMIT';
+      const color = isLimit ? '#2962ff' : '#e65100'; // Blue for limit, Orange for stop
+      const currentSide = previewTPSL.side || 'LONG';
+
+      chart.createOverlay({
+        id: 'preview_order_line',
+        name: 'horizontalStraightLine',
+        lock: false,
+        points: [{ timestamp: allData[lastDataIndex].timestamp, value: previewTPSL.orderPrice }],
+        styles: {
+          line: { color, size: 2, style: 'dashed', dashedValue: [5, 5] },
+          point: {
+            color,
+            borderColor: '#ffffff',
+            borderSize: 2,
+            radius: 5,
+            activeColor: '#ffffff',
+            activeBorderColor: color,
+            activeBorderSize: 3,
+            activeRadius: 7
+          },
+          text: {
+            color: '#ffffff',
+            backgroundColor: color,
+            paddingLeft: 6,
+            paddingRight: 6,
+            paddingTop: 3,
+            paddingBottom: 3,
+            borderRadius: 4,
+            size: 10,
+            family: 'Inter',
+            weight: 'bold',
+          },
+        },
+        extendData: `${previewTPSL.orderType} ${currentSide} (Xem trước) @ $${previewTPSL.orderPrice.toLocaleString('en-US')} ↕ Kéo`,
+        onPressedMoveStart: () => {
+          isDraggingRef.current = true;
+        },
+        onPressedMoving: (event: any) => {
+          const newPrice = event.overlay?.points?.[0]?.value;
+          if (typeof newPrice === 'number' && !isNaN(newPrice)) {
+            const precision = getPricePrecision(newPrice);
+            const cleanPrice = Number(newPrice.toFixed(precision));
+            chart.overrideOverlay({
+              id: 'preview_order_line',
+              extendData: `${previewTPSL.orderType} ${currentSide} (Xem trước) @ $${cleanPrice.toLocaleString('en-US')} ↕ Kéo`
+            });
+            onTPSLChangeRef.current?.('orderPrice', cleanPrice);
+          }
+        },
+        onPressedMoveEnd: (event: any) => {
+          isDraggingRef.current = false;
+          const newPrice = event.overlay?.points?.[0]?.value;
+          if (typeof newPrice === 'number' && !isNaN(newPrice)) {
+            const precision = getPricePrecision(newPrice);
+            const cleanPrice = Number(newPrice.toFixed(precision));
+            onTPSLChangeRef.current?.('orderPrice', cleanPrice);
+          }
+        }
       });
     }
 
@@ -4865,7 +5103,7 @@ export const ChartArea = ({
             weight: 'bold',
           },
         },
-        extendData: `TP (Chốt lời) @ ${tpToDraw >= 100 ? tpToDraw.toLocaleString('vi-VN') : tpToDraw.toFixed(2)} ↕ Kéo`,
+        extendData: `TP (Chốt lời) @ $${tpToDraw.toLocaleString('en-US')} ↕ Kéo`,
         onPressedMoveStart: () => {
           isDraggingRef.current = true;
         },
@@ -4886,7 +5124,7 @@ export const ChartArea = ({
             }
             chart.overrideOverlay({
               id: 'preview_tp_line',
-              extendData: `TP (Chốt lời) @ ${cleanPrice >= 100 ? cleanPrice.toLocaleString('vi-VN') : cleanPrice.toFixed(2)} ↕ Kéo`
+              extendData: `TP (Chốt lời) @ $${cleanPrice.toLocaleString('en-US')} ↕ Kéo`
             });
             onTPSLChangeRef.current?.('tp', cleanPrice);
           }
@@ -4936,7 +5174,7 @@ export const ChartArea = ({
             weight: 'bold',
           },
         },
-        extendData: `SL (Cắt lỗ) @ ${slToDraw >= 100 ? slToDraw.toLocaleString('vi-VN') : slToDraw.toFixed(2)} ↕ Kéo`,
+        extendData: `SL (Cắt lỗ) @ $${slToDraw.toLocaleString('en-US')} ↕ Kéo`,
         onPressedMoveStart: () => {
           isDraggingRef.current = true;
         },
@@ -4957,7 +5195,7 @@ export const ChartArea = ({
             }
             chart.overrideOverlay({
               id: 'preview_sl_line',
-              extendData: `SL (Cắt lỗ) @ ${cleanPrice >= 100 ? cleanPrice.toLocaleString('vi-VN') : cleanPrice.toFixed(2)} ↕ Kéo`
+              extendData: `SL (Cắt lỗ) @ $${cleanPrice.toLocaleString('en-US')} ↕ Kéo`
             });
             onTPSLChangeRef.current?.('sl', cleanPrice);
           }
@@ -4974,20 +5212,26 @@ export const ChartArea = ({
       });
     }
 
-    // Draw Pending Orders
+    // 4. Draw Pending Orders (Lệnh mở)
     if (pendingOrders && pendingOrders.length > 0) {
-      const stockPending = pendingOrders.filter(o => o.symbol === selectedStock.symbol);
+      const stockPending = pendingOrders.filter(o =>
+        o.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase()
+      );
       stockPending.forEach(order => {
-        const isBuy = order.side === 'LONG';
-        const isLimit = order.type === 'LIMIT';
+        const isBuy = (order.side || '').toUpperCase() === 'LONG';
+        const isLimit = (order.type || '').toUpperCase() === 'LIMIT';
         const color = isLimit ? '#2962ff' : '#e65100'; // Blue for limit, Orange for stop
+        const orderPrice = Number(order.price || order.limitPrice || 0);
+        const orderQty = order.quantity !== undefined ? order.quantity : (order.lot !== undefined ? order.lot : 0);
+
+        if (orderPrice <= 0) return;
 
         chart.createOverlay({
           name: 'horizontalStraightLine',
           lock: true,
-          points: [{ timestamp: allData[lastDataIndex].timestamp, value: order.price }],
+          points: [{ timestamp: allData[lastDataIndex].timestamp, value: orderPrice }],
           styles: {
-            line: { color, size: 1, style: 'dashed', dashedValue: [2, 2] },
+            line: { color, size: 1, style: 'dashed', dashedValue: [3, 3] },
             text: {
               color: '#ffffff',
               backgroundColor: color,
@@ -4995,55 +5239,72 @@ export const ChartArea = ({
               borderRadius: 2, size: 10, family: 'Inter', weight: 'bold',
             },
           },
-          extendData: `${order.type} ${order.side} ${order.quantity?.toFixed(2) || ''} @ ${order.price >= 100 ? order.price.toLocaleString('vi-VN') : order.price.toFixed(2)}`,
+          extendData: `${order.type || 'LIMIT'} ${order.side || ''} ${orderQty ? Number(orderQty).toFixed(2) : ''} @ $${orderPrice.toLocaleString('en-US')}`,
         });
-
-        if (order.takeProfit) {
-          chart.createOverlay({
-            name: 'horizontalStraightLine',
-            lock: true,
-            points: [{ timestamp: allData[lastDataIndex].timestamp, value: order.takeProfit }],
-            styles: {
-              line: { color: '#089981', size: 1, style: 'dashed', dashedValue: [2, 2] },
-              text: {
-                color: '#ffffff',
-                backgroundColor: '#089981',
-                paddingLeft: 4, paddingRight: 4, paddingTop: 2, paddingBottom: 2,
-                borderRadius: 2, size: 9, family: 'Inter', weight: 'normal',
-              },
-            },
-            extendData: `TP (${order.type}) @ ${order.takeProfit >= 100 ? order.takeProfit.toLocaleString('vi-VN') : order.takeProfit.toFixed(2)}`,
-          });
-        }
-
-        if (order.stopLoss) {
-          chart.createOverlay({
-            name: 'horizontalStraightLine',
-            lock: true,
-            points: [{ timestamp: allData[lastDataIndex].timestamp, value: order.stopLoss }],
-            styles: {
-              line: { color: '#f23645', size: 1, style: 'dashed', dashedValue: [2, 2] },
-              text: {
-                color: '#ffffff',
-                backgroundColor: '#f23645',
-                paddingLeft: 4, paddingRight: 4, paddingTop: 2, paddingBottom: 2,
-                borderRadius: 2, size: 9, family: 'Inter', weight: 'normal',
-              },
-            },
-            extendData: `SL (${order.type}) @ ${order.stopLoss >= 100 ? order.stopLoss.toLocaleString('vi-VN') : order.stopLoss.toFixed(2)}`,
-          });
-        }
       });
     }
-  }, [activePosition, pendingOrders, isReplaying, replayTime, selectedStock, previewTPSL]);
+  }, [activePosition, simulatorPositions, pendingOrders, isReplaying, replayTime, selectedStock, previewTPSL]);
 
-  const priceColor = selectedStock.type === 'up' ? 'text-[#089981]' : 'text-[#f23645]';
+  const priceColor = selectedStock.percent > 0 ? 'text-[#089981]' : selectedStock.percent < 0 ? 'text-[#f23645]' : 'text-[#787b86]';
+  const isDark = theme === 'dark';
+  const isDefaultDarkBg = chartSettings.canvas.bgSolid === '#131722' ||
+    (chartSettings.canvas.bgGradientTop === '#131722' && chartSettings.canvas.bgGradientBottom === '#1e222d');
+
+  let bgStyle: React.CSSProperties = {};
+  if (!isDark && isDefaultDarkBg) {
+    bgStyle = { backgroundColor: '#ffffff' };
+  } else if (chartSettings.canvas.bgType === 'Solid') {
+    bgStyle = { backgroundColor: chartSettings.canvas.bgSolid };
+  } else {
+    bgStyle = { background: `linear-gradient(to bottom, ${chartSettings.canvas.bgGradientTop}, ${chartSettings.canvas.bgGradientBottom})` };
+  }
 
   return (
     <div
-      className="flex-1 flex flex-col min-h-0 bg-white dark:bg-[#131722] relative transition-colors"
+      className="flex-1 flex flex-col min-h-0 relative transition-colors"
+      style={bgStyle}
       onMouseMove={(e) => { mousePosRef.current = { x: e.clientX, y: e.clientY }; }}
     >
+      {/* Symbol header */}
+      <div className="absolute top-2 left-4 z-10 pointer-events-none flex items-baseline gap-2 flex-wrap">
+        {['Ticker', 'Ticker and description', 'Name'].includes(chartSettings.status.title) && (
+          <span className="text-[#131722] dark:text-white font-bold text-sm">{selectedStock.symbol}</span>
+        )}
+        {['Description', 'Ticker and description'].includes(chartSettings.status.title) && (
+          <span className="text-gray-500 dark:text-[#787b86] text-xs">{selectedStock.name}</span>
+        )}
+
+        {chartSettings.status.openMarketStatus && (
+          <span className="w-2 h-2 rounded-full bg-[#089981] ml-1 self-center" title="Market Open"></span>
+        )}
+
+        {chartSettings.status.chartValues && (
+          <span className={`text-sm font-bold font-mono ml-2 ${priceColor}`}>
+            {selectedStock.price.toLocaleString('vi-VN')}
+          </span>
+        )}
+        {chartSettings.status.barChangeValues && (
+          <span className={`text-xs ${priceColor}`}>
+            {selectedStock.percent > 0 ? '+' : ''}{selectedStock.percent.toFixed(2)}%
+          </span>
+        )}
+        {chartSettings.status.volume && (
+          <span className="text-gray-500 dark:text-[#787b86] text-xs ml-2">Vol: {(dataCache.get(`${selectedStock.symbol}-${activeTimeframe}`)?.slice(-1)[0]?.volume || 0).toFixed(0)}</span>
+        )}
+      </div>
+
+      {/* Watermark overlay */}
+      {chartSettings.canvas.watermarkVal !== 'Hidden' && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[1] overflow-hidden opacity-[0.03]">
+          <span className="text-[120px] font-bold text-gray-900 dark:text-white select-none whitespace-nowrap">
+            {chartSettings.canvas.watermarkVal === 'Ticker' ? selectedStock.symbol
+              : chartSettings.canvas.watermarkVal === 'Description' ? selectedStock.name
+                : chartSettings.canvas.watermarkVal === 'Interval' ? activeTimeframe
+                  : chartSettings.canvas.watermarkVal === 'Replay mode' && isReplaying ? 'Replay Mode'
+                    : selectedStock.symbol}
+          </span>
+        </div>
+      )}
 
       {/* Replay Instructions / Banner */}
       {isLoading && (
@@ -5195,7 +5456,7 @@ export const ChartArea = ({
           activeTool === 'cursor_dot' ? 'cursor-mode-dot' :
             activeTool === 'eraser' ? 'cursor-mode-eraser' : 'cursor-mode-crosshair'
           }`}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+        style={{ position: 'absolute', top: `${chartSettings.canvas.marginTop}%`, left: 0, right: 0, bottom: `${chartSettings.canvas.marginBottom}%` }}
       />
 
       {/* Selection Mode Overlay / Indicator */}

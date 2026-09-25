@@ -1,0 +1,44 @@
+[
+  {
+    "id": "rm_001",
+    "title": "The 1%-2% Rule and Mathematical Position Sizing",
+    "concept": "Position Size",
+    "framework": "RISK_MANAGEMENT",
+    "content": "Quy tắc vàng trong quản trị rủi ro chuyên nghiệp là không bao giờ mạo hiểm quá 1% đến 2% tổng tài khoản cho bất kỳ một lệnh giao dịch đơn lẻ nào (Risk per Trade <= 2%). Công thức tính khối lượng vị thế (Position Size) chính xác là: Khối lượng = (Tổng vốn * % Rủi ro chấp nhận) / Khoảng cách từ Giá vào (Entry) đến Giá dừng lỗ (Stop Loss). Người học tuyệt đối không tính khối lượng theo cảm tính hoặc dựa vào số tiền còn lại trong ví. Điểm dừng lỗ phải được xác định dựa trên cấu trúc kỹ thuật (Invalidation Point) trước, sau đó mới tính ra số cổ phiếu/hợp đồng được phép mua.",
+    "source": "Trade Your Way to Financial Freedom",
+    "sourceUrl": "https://www.vantharp.com",
+    "author": "Dr. Van K. Tharp",
+    "publishedDate": "1998-12-01",
+    "sourceType": "PRIMARY",
+    "tags": ["RISK_MANAGEMENT", "Position Size", "1% Rule", "Capital Preservation"],
+    "language": "vi"
+  },
+  {
+    "id": "rm_002",
+    "title": "Risk/Reward Ratio (R:R), Win Rate and Mathematical Expectancy",
+    "concept": "Risk/Reward Ratio",
+    "framework": "RISK_MANAGEMENT",
+    "content": "Kỳ vọng toán học (Mathematical Expectancy) của một chiến lược quyết định sự sống còn của tài khoản trong dài hạn. Expectancy = (Win Rate * Trung bình lãi) - (Loss Rate * Trung bình lỗ). Một chiến lược có tỷ lệ thắng (Win Rate) chỉ 40% nhưng duy trì tỷ lệ Risk/Reward tối thiểu 1:2 hoặc 1:3 vẫn mang lại lợi nhuận vượt trội và bền vững. Do đó, các setup có R:R dưới 1:1.5 không nên được xem là lệnh đạt chuẩn vì chi phí cơ hội và rủi ro trượt giá (Slippage) sẽ bào mòn tài khoản theo thời gian.",
+    "source": "The Definitive Guide to Position Sizing: How to Evaluate Your System and Use Position Sizing to Meet Your Objectives",
+    "sourceUrl": "https://www.vantharp.com",
+    "author": "Dr. Van K. Tharp",
+    "publishedDate": "2008-05-15",
+    "sourceType": "PRIMARY",
+    "tags": ["RISK_MANAGEMENT", "Risk/Reward", "Win Rate", "Expectancy"],
+    "language": "vi"
+  },
+  {
+    "id": "rm_003",
+    "title": "Maximum Adverse Excursion (MAE) and Maximum Favorable Excursion (MFE)",
+    "concept": "Maximum Adverse Excursion",
+    "framework": "RISK_MANAGEMENT",
+    "content": "MAE (Maximum Adverse Excursion) đo lường mức giảm giá sâu nhất (drawdown) mà một vị thế phải chịu đựng kể từ điểm vào lệnh trước khi lệnh kết thúc. Nếu các lệnh thắng của bạn thường xuyên chịu MAE rất lớn (gần chạm Stop Loss rồi mới quay đầu tăng), điều đó chứng minh điểm Entry quá sớm hoặc điểm đặt Stop Loss quá nhạy cảm. Ngược lại, MFE (Maximum Favorable Excursion) đo lường mức lợi nhuận tiềm năng cao nhất mà giá đạt tới trong thời gian giữ lệnh. Nếu MFE đạt 5R nhưng bạn chỉ chốt ở 1R, bạn đang chốt lời non và thiếu kiên nhẫn.",
+    "source": "The New Trading for a Living: Psychology, Discipline, Trading Tools and Systems",
+    "sourceUrl": "https://www.wiley.com/en-us/The+New+Trading+for+a+Living-p-9781118443927",
+    "author": "Dr. Alexander Elder",
+    "publishedDate": "2014-09-29",
+    "sourceType": "PRIMARY",
+    "tags": ["RISK_MANAGEMENT", "MAE", "MFE", "Excursion", "Execution Quality"],
+    "language": "vi"
+  }
+]

@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
-import { LogOut, Sun, Globe, Keyboard, LayoutDashboard, Trophy } from 'lucide-react';
+import { LogOut, Keyboard, LayoutDashboard, Trophy } from 'lucide-react';
 import { googleLogout } from '@react-oauth/google';
 import { Link } from 'react-router-dom';
+import { UserAvatar } from './UserAvatar';
 
 interface User {
   name: string;
   email: string;
-  picture: string;
+  picture?: string;
   balance?: number;
   role?: string;
 }
@@ -52,46 +53,41 @@ export const UserDropdown = ({
     <div className="relative shrink-0" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-8 h-8 rounded-full overflow-hidden hover:ring-2 hover:ring-[#2a2e39] transition-all focus:outline-none"
+        className="w-8 h-8 rounded-full overflow-hidden hover:ring-2 hover:ring-gray-300 dark:hover:ring-[#2a2e39] transition-all focus:outline-none cursor-pointer"
+        title={user.name}
       >
-        {user.picture ? (
-          <img src={user.picture} alt={user.name} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full bg-slate-600 flex items-center justify-center text-white font-bold">
-            {user.name.charAt(0)}
-          </div>
-        )}
+        <UserAvatar src={user.picture} name={user.name} size="w-full h-full" />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-72 bg-[#1e222d] border border-[#2a2e39] rounded shadow-xl z-50 text-sm text-[#d1d4dc] font-sans flex flex-col py-1">
+        <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-[#1e222d] border border-gray-200 dark:border-[#2a2e39] rounded-lg shadow-xl z-50 text-sm text-gray-800 dark:text-[#d1d4dc] font-sans flex flex-col py-1">
           {/* User Info */}
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-[#2a2e39]">
-            <img src={user.picture || ''} alt="avatar" className="w-10 h-10 rounded-full object-cover bg-slate-600" />
-            <div className="flex flex-col">
-              <span className="text-white font-bold text-base">{user.name} <span className="text-xs text-blue-400 cursor-pointer ml-1">📝</span></span>
-              <span className="text-xs text-[#787b86]">{user.email}</span>
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-[#2a2e39]">
+            <UserAvatar src={user.picture} name={user.name} size="w-10 h-10" textClassName="text-base" />
+            <div className="flex flex-col min-w-0">
+              <span className="text-gray-900 dark:text-white font-bold text-base truncate">{user.name}</span>
+              <span className="text-xs text-gray-500 dark:text-[#787b86] truncate">{user.email}</span>
             </div>
           </div>
 
           {/* Balance (Phân định rõ Tài khoản Thi vs Tài khoản Thường) */}
           {user.balance !== undefined && (
-            <div className="px-4 py-2.5 border-b border-[#2a2e39] hover:bg-[#2a2e39]/50 flex items-center justify-between">
+            <div className="px-4 py-2.5 border-b border-gray-100 dark:border-[#2a2e39] hover:bg-gray-50 dark:hover:bg-[#2a2e39]/50 flex items-center justify-between transition-colors">
               <div className="flex items-center gap-2.5">
-                <span className="w-4 h-4 rounded-full border border-gray-400 flex items-center justify-center text-[10px]">C</span>
+                <span className="w-4 h-4 rounded-full border border-gray-400 dark:border-gray-500 flex items-center justify-center text-[10px] text-gray-600 dark:text-gray-300">C</span>
                 <div>
-                  <span className="font-semibold text-white block text-sm">${(user.balance || 0).toLocaleString('en-US')}</span>
-                  <span className="text-[10px] text-[#787b86]">
+                  <span className="font-semibold text-gray-900 dark:text-white block text-sm">${(user.balance || 0).toLocaleString('en-US')}</span>
+                  <span className="text-[10px] text-gray-500 dark:text-[#787b86]">
                     {isChallenge ? `Tài khoản thi (${challengeLevelName || 'Cấp Vốn'})` : 'Tài khoản thường (Standard)'}
                   </span>
                 </div>
               </div>
               {isChallenge ? (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-300 font-bold border border-amber-500/20 dark:border-amber-500/30">
                   THI
                 </span>
               ) : (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 font-bold border border-blue-500/30">
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 font-bold border border-blue-500/20 dark:border-blue-500/30">
                   DEMO
                 </span>
               )}
@@ -99,44 +95,33 @@ export const UserDropdown = ({
           )}
 
           {/* Account Rank Info (Cho user biết tài khoản đang đạt tới cấp độ nào) */}
-          <div className="px-4 py-2.5 border-b border-[#2a2e39] bg-white/[0.02] flex items-center justify-between">
+          <div className="px-4 py-2.5 border-b border-gray-100 dark:border-[#2a2e39] bg-amber-500/5 dark:bg-white/[0.02] flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+              <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 dark:border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
                 <Trophy className="w-3.5 h-3.5" />
               </div>
               <div>
-                <span className="text-[10px] text-[#787b86] block font-medium">Hạng tài khoản đạt được</span>
-                <span className="font-bold text-xs text-amber-300">
+                <span className="text-[10px] text-gray-500 dark:text-[#787b86] block font-medium">Hạng tài khoản đạt được</span>
+                <span className="font-bold text-xs text-amber-600 dark:text-amber-300">
                   {accountRankName || 'Cấp 1 - Tập Sự'}
                 </span>
               </div>
             </div>
             {certCount !== undefined && certCount > 0 && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 font-bold">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/20 dark:border-amber-500/30 text-amber-700 dark:text-amber-300 font-bold">
                 {certCount}/6 Bằng
               </span>
             )}
           </div>
 
           {/* Menu Items */}
-          <div className="py-1 border-b border-[#2a2e39]">
-            <Link to={dashboardRoute} className="w-full text-left px-4 py-2 hover:bg-[#2a2e39] flex items-center gap-3 transition-colors text-blue-400 font-medium">
+          <div className="py-1 border-b border-gray-100 dark:border-[#2a2e39]">
+            <Link to={dashboardRoute} className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-[#2a2e39] flex items-center gap-3 transition-colors text-blue-600 dark:text-blue-400 font-medium">
               <LayoutDashboard className="w-4 h-4" />
               <span>My Dashboard</span>
             </Link>
-            <button className="w-full text-left px-4 py-2 hover:bg-[#2a2e39] flex items-center justify-between transition-colors">
-              <div className="flex items-center gap-3">
-                <Globe className="w-4 h-4 text-[#787b86]" />
-                <span>Ngôn ngữ</span>
-              </div>
-              <span className="text-xs text-[#787b86]">{'>'}</span>
-            </button>
-            <button className="w-full text-left px-4 py-2 hover:bg-[#2a2e39] flex items-center gap-3 transition-colors">
-              <Sun className="w-4 h-4 text-[#787b86]" />
-              <span>Giao diện sáng</span>
-            </button>
-            <button className="w-full text-left px-4 py-2 hover:bg-[#2a2e39] flex items-center gap-3 transition-colors">
-              <Keyboard className="w-4 h-4 text-[#787b86]" />
+            <button className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-[#2a2e39] flex items-center gap-3 transition-colors text-gray-700 dark:text-[#d1d4dc]">
+              <Keyboard className="w-4 h-4 text-gray-400 dark:text-[#787b86]" />
               <span>Phím tắt</span>
             </button>
           </div>
@@ -144,7 +129,7 @@ export const UserDropdown = ({
           <div className="py-1">
             <button 
               onClick={handleLogout}
-              className="w-full text-left px-4 py-2 hover:bg-[#2a2e39] flex items-center gap-3 transition-colors text-red-400"
+              className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-[#2a2e39] flex items-center gap-3 transition-colors text-red-600 dark:text-red-400"
             >
               <LogOut className="w-4 h-4" />
               <span>Đăng xuất</span>

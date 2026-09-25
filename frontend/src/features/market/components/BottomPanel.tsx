@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
-import { X, CheckSquare, Square, Settings2, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, CheckSquare, Square, Settings2, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { STOCKS } from '../data';
 import { tradingApi } from '../../../services/tradingApi';
+import { useAuth } from '../../../contexts/AuthContext';
 import { useModal } from '../../../contexts/ModalContext';
+import { useI18n } from '../../../contexts/I18nContext';
+import { TradeReviewModal } from '../../ai/TradeReviewModal';
 
 interface Transaction {
   _id: string;
@@ -37,7 +40,9 @@ export const BottomPanel = ({
   onEditPosition,
   refreshTrigger
 }: BottomPanelProps) => {
+  const { user } = useAuth();
   const { showAlert } = useModal();
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<'positions' | 'orders' | 'order_history' | 'trade_history' | 'position_history' | 'cashflow_history'>('positions');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   
@@ -45,12 +50,23 @@ export const BottomPanel = ({
   const [closingPos, setClosingPos] = useState<{symbol: string, side: 'LONG'|'SHORT', price: number, maxQty: number, closeQty: string} | null>(null);
   const [currentPairOnly, setCurrentPairOnly] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
+  const [reviewTradeData, setReviewTradeData] = useState<any | null>(null);
+  const [priceMap, setPriceMap] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (selectedSymbol && currentPrice) {
+      setPriceMap(prev => {
+        if (prev[selectedSymbol] === currentPrice) return prev;
+        return { ...prev, [selectedSymbol]: currentPrice };
+      });
+    }
+  }, [selectedSymbol, currentPrice]);
 
   useEffect(() => {
     if (['order_history', 'trade_history', 'position_history', 'cashflow_history'].includes(activeTab)) {
       const fetchHistory = async () => {
         try {
-          const res = await tradingApi.getTransactions();
+          const res = await tradingApi.getTransactions(user?._id);
           if (res.success && res.data) {
             setTransactions(res.data);
           }
@@ -60,7 +76,7 @@ export const BottomPanel = ({
       };
       fetchHistory();
     }
-  }, [activeTab, refreshTrigger]);
+  }, [activeTab, refreshTrigger, user]);
 
   const posList = Object.entries(positions).map(([symbol, p]) => ({ symbol, ...p }));
   const displayPositions = currentPairOnly 
@@ -83,7 +99,7 @@ export const BottomPanel = ({
       return tx.type === 'BUY_STOCK' || tx.type === 'SELL_STOCK' || tx.type === 'CLOSE_POSITION';
     }
     if (activeTab === 'position_history') {
-      return tx.type === 'CLOSE_POSITION';
+      return tx.type === 'CLOSE_POSITION' || (tx.description || '').includes('Đóng') || (tx.description || '').includes('Chốt lời');
     }
     if (activeTab === 'cashflow_history') {
       return true; // Hiển thị tất cả giao dịch vì đều liên quan tới biến động số dư / ký quỹ
@@ -91,13 +107,18 @@ export const BottomPanel = ({
     return true;
   });
 
+  const closedTransactions = transactions.filter(tx => {
+    const desc = tx.description || '';
+    return desc.includes('Đóng') || desc.includes('Chốt lời') || desc.includes('Cắt lỗ') || (tx.type === 'DEPOSIT' && desc.includes('Lợi nhuận'));
+  });
+
   const tabs = [
-    { id: 'positions', label: `Vị thế (${posList.length})` },
-    { id: 'orders', label: `Lệnh mở (${pendingOrders.length})` },
-    { id: 'order_history', label: 'Lịch sử đặt lệnh' },
-    { id: 'trade_history', label: 'Lịch sử giao dịch' },
-    { id: 'position_history', label: 'Lịch sử vị thế' },
-    { id: 'cashflow_history', label: 'Biến động số dư' }
+    { id: 'positions', label: `${t('panel.positions', 'Vị thế')} (${posList.length})` },
+    { id: 'orders', label: `${t('panel.orders', 'Lệnh mở')} (${pendingOrders.length})` },
+    { id: 'order_history', label: t('panel.orderHistory', 'Lịch sử đặt lệnh') },
+    { id: 'trade_history', label: t('panel.tradeHistory', 'Lịch sử giao dịch') },
+    { id: 'position_history', label: t('panel.positionHistory', 'Lịch sử vị thế') },
+    { id: 'cashflow_history', label: t('panel.cashflowHistory', 'Biến động số dư') }
   ];
 
   return (
@@ -152,8 +173,8 @@ export const BottomPanel = ({
             onClick={async () => {
               if (displayPositions.length === 0) return;
               for (const p of displayPositions) {
-                const markPx = p.symbol === selectedSymbol ? currentPrice : (STOCKS.find(s => s.symbol === p.symbol)?.price || p.averagePrice);
-                await onClosePosition(p.symbol, p.side, markPx);
+                const markPrice = p.symbol === selectedSymbol ? currentPrice : ((window as any).cachedBinancePrices?.[p.symbol] || priceMap[p.symbol] || p.averagePrice);
+                await onClosePosition(p.symbol, p.side, markPrice);
               }
             }}
             className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-white px-3 py-1 rounded text-[11px] font-medium transition-colors"
@@ -188,7 +209,7 @@ export const BottomPanel = ({
               </thead>
               <tbody className="divide-y divide-[#e6e8ea] dark:divide-[#2a2e39]/50">
                 {displayPositions.map(p => {
-                  const markPrice = p.symbol === selectedSymbol ? currentPrice : (STOCKS.find(s => s.symbol === p.symbol)?.price || p.averagePrice);
+                  const markPrice = p.symbol === selectedSymbol ? currentPrice : ((window as any).cachedBinancePrices?.[p.symbol] || priceMap[p.symbol] || p.averagePrice);
                   const margin = (p.averagePrice * p.quantity) / p.leverage;
                   const pnl = p.side === 'LONG' ? (markPrice - p.averagePrice) * p.quantity : (p.averagePrice - markPrice) * p.quantity;
                   const roe = margin > 0 ? (pnl / margin) * 100 : 0;
@@ -197,8 +218,8 @@ export const BottomPanel = ({
                     <tr key={p.symbol} className="hover:bg-[#f5f5f5] dark:hover:bg-[#1e222d] transition-colors">
                       <td className="px-4 py-2 font-bold">{p.symbol}</td>
                       <td className="px-4 py-2 font-mono">{p.quantity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} Lot</td>
-                      <td className="px-4 py-2 font-mono">{p.averagePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
-                      <td className="px-4 py-2 font-mono">{markPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
+                      <td className="px-4 py-2 font-mono">${p.averagePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
+                      <td className="px-4 py-2 font-mono">${markPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
                       <td className="px-4 py-2 font-mono">
                         {addingMargin?.symbol === p.symbol ? (
                           <div className="flex items-center gap-1">
@@ -221,23 +242,47 @@ export const BottomPanel = ({
                           </div>
                         ) : (
                           <>
-                            {margin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            ${margin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             <button onClick={() => setAddingMargin({ symbol: p.symbol, side: p.side, amount: '' })} className="ml-2 text-blue-500 hover:text-blue-400 font-bold" title="Bơm thêm ký quỹ">+</button>
                           </>
                         )}
                       </td>
                       <td className={`px-4 py-2 font-bold ${p.side === 'LONG' ? 'text-[#089981]' : 'text-[#f23645]'}`}>{p.side} x{(p.leverage % 1 !== 0) ? p.leverage.toFixed(2) : p.leverage}</td>
                       <td className={`px-4 py-2 text-right font-mono font-bold ${pnl >= 0 ? 'text-[#089981]' : 'text-[#f23645]'}`}>
-                        {pnl >= 0 ? '+' : ''}{Math.abs(pnl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
+                        {pnl >= 0 ? '+' : '-'}${Math.abs(pnl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
                         <span className="text-[10px] ml-1">({pnl >= 0 ? '+' : ''}{roe.toFixed(2)}%)</span>
                       </td>
                       <td className="px-4 py-2 text-center text-[#787b86]">
                         {p.tp ? p.tp.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'} / {p.sl ? p.sl.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
                         <button onClick={() => onEditPosition(p.symbol)} className="ml-2 text-blue-500 hover:text-blue-400 font-medium">Sửa</button>
                       </td>
-                      <td className="px-4 py-2 text-center">
+                      <td className="px-4 py-2 text-center flex items-center justify-center gap-1.5">
                         <button 
-                          onClick={() => setClosingPos({ symbol: p.symbol, side: p.side, price: markPrice, maxQty: p.quantity, closeQty: p.quantity.toString() })}
+                          onClick={() => setReviewTradeData({
+                            symbol: p.symbol,
+                            side: p.side === 'LONG' ? 'BUY' : 'SELL',
+                            entryPrice: p.averagePrice,
+                            currentPrice: markPrice,
+                            stopLoss: p.sl,
+                            takeProfit: p.tp,
+                            quantity: p.quantity,
+                            isOpen: true,
+                            timeframe: '15m'
+                          })}
+                          className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 px-2 py-1 rounded text-[11px] font-semibold transition-colors flex items-center gap-1"
+                          title="Đánh giá quy trình lệnh bằng AI"
+                        >
+                          <Sparkles className="w-3 h-3" /> AI
+                        </button>
+                        <button 
+                          onClick={async () => {
+                            const res = await onClosePosition(p.symbol, p.side, markPrice, p.quantity);
+                            showAlert({
+                              title: res.success ? 'Đóng vị thế thành công' : 'Đóng vị thế thất bại',
+                              message: res.message,
+                              type: res.success ? 'success' : 'error'
+                            });
+                          }}
                           className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-[#d1d4dc] dark:hover:text-white px-3 py-1 rounded text-[11px] font-medium transition-colors"
                         >
                           Đóng lệnh
@@ -255,7 +300,7 @@ export const BottomPanel = ({
 
         {activeTab === 'orders' && (
           <table className="w-full text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
-            <thead className="sticky top-0 bg-[#f8f9fa] dark:bg-[#0b0e11] text-[#787b86] font-normal text-[11px] border-b border-[#e6e8ea] dark:border-transparent">
+            <thead className="sticky top-0 bg-[#f8f9fa] dark:bg-[#0b0e11] text-[#787b86] font-normal text-[11px] border-b border-[#e6e8ea] dark:border-[#2a2e39] transition-colors">
               <tr>
                 <th className="px-4 py-2 font-medium">Mã</th>
                 <th className="px-4 py-2 font-medium">Loại lệnh</th>
@@ -264,13 +309,13 @@ export const BottomPanel = ({
                 <th className="px-4 py-2 font-medium text-right">Thao tác</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#2a2e39]/50">
+            <tbody className="divide-y divide-[#e6e8ea] dark:divide-[#2a2e39]/50">
               {displayPendingOrders.length === 0 ? (
                 <tr><td colSpan={5} className="px-4 py-8 text-center text-[#787b86]">Không có lệnh chờ nào</td></tr>
               ) : (
                 displayPendingOrders.map(order => (
-                  <tr key={order._id} className="hover:bg-[#1e222d] transition-colors">
-                    <td className="px-4 py-2 font-bold text-white">{order.symbol}</td>
+                  <tr key={order._id} className="hover:bg-[#f5f5f5] dark:hover:bg-[#1e222d] transition-colors">
+                    <td className="px-4 py-2 font-bold text-[#1e2329] dark:text-white">{order.symbol}</td>
                     <td className="px-4 py-2">
                       <span className={`font-bold mr-1 ${order.side === 'LONG' ? 'text-green-500' : 'text-red-500'}`}>{order.side}</span>
                       {order.type} {order.leverage}x
@@ -278,7 +323,7 @@ export const BottomPanel = ({
                     <td className="px-4 py-2 font-mono">{order.price >= 100 ? order.price.toLocaleString('vi-VN') : order.price?.toFixed(2)}</td>
                     <td className="px-4 py-2 font-mono">{order.quantity?.toFixed(4)} Lot</td>
                     <td className="px-4 py-2 text-right">
-                      <button onClick={() => onCancelOrder(order._id)} className="text-red-500 hover:text-red-400 font-bold px-3 py-1">Hủy</button>
+                      <button onClick={() => onCancelOrder(order._id)} className="text-red-500 hover:text-red-400 font-bold px-3 py-1 cursor-pointer">Hủy</button>
                     </td>
                   </tr>
                 ))
@@ -287,82 +332,328 @@ export const BottomPanel = ({
           </table>
         )}
 
-        {['order_history', 'trade_history', 'position_history', 'cashflow_history'].includes(activeTab) && (
-          <table className="w-full text-left">
-            <thead className="sticky top-0 bg-[#131722] text-[#787b86] font-medium border-b border-[#2a2e39]">
-              <tr>
-                <th className="px-4 py-2 font-medium">Thời gian</th>
-                <th className="px-4 py-2 font-medium">Loại</th>
-                <th className="px-4 py-2 font-medium">Chi tiết lệnh</th>
-                <th className="px-4 py-2 font-medium text-right">Biến động số dư</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#e6e8ea] dark:divide-[#2a2e39]/50">
-              {filteredTransactions.length === 0 ? (
-                <tr><td colSpan={4} className="px-4 py-8 text-center text-[#787b86]">Không có dữ liệu trong mục này</td></tr>
-              ) : (
-                filteredTransactions.map(tx => {
-                  const isPositive = tx.amount >= 0;
+        {['order_history', 'trade_history', 'position_history', 'cashflow_history'].includes(activeTab) && (() => {
+          return (
+            <table className="w-full text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
+              <thead className="sticky top-0 bg-[#f8f9fa] dark:bg-[#131722] text-[#787b86] font-medium border-b border-[#e6e8ea] dark:border-[#2a2e39] transition-colors">
+                <tr>
+                  <th className="px-4 py-2 font-medium">{t('table.time', 'Thời gian')}</th>
+                  <th className="px-4 py-2 font-medium">{t('table.type', 'Loại')}</th>
+                  <th className="px-4 py-2 font-medium">{t('table.detail', 'Chi tiết')}</th>
+                  <th className="px-4 py-2 font-medium text-center whitespace-nowrap">{t('table.status', 'Trạng thái')}</th>
+                  <th className="px-4 py-2 font-medium text-right whitespace-nowrap">
+                    {activeTab === 'position_history' ? t('table.pnlOnly', 'Lợi nhuận PnL ($)') : t('table.cashflow', 'Biến động ($)')}
+                  </th>
+                  <th className="px-4 py-2 font-medium text-right whitespace-nowrap">{t('table.aiAnalysis', 'AI Phân Tích')}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#e6e8ea] dark:divide-[#2a2e39]/50">
+                {filteredTransactions.length === 0 ? (
+                  <tr><td colSpan={6} className="px-4 py-8 text-center text-[#787b86]">
+                    {activeTab === 'position_history' ? t('table.noClosedPos', 'Chưa có vị thế nào được đóng') : t('table.noTx', 'Không có giao dịch nào')}
+                  </td></tr>
+                ) : (
+                  filteredTransactions.map(tx => {
+                  let displayAmount = Math.abs(tx.amount);
+                  let isPositive = tx.type === 'SELL_STOCK' || tx.type === 'DEPOSIT';
+                  let walletReturnNote = '';
+
+                  // Extract profit from description if available (e.g., "Lợi nhuận: +$1,310" or "Lợi nhuận: $-1,350.37")
+                  const profitMatch = (tx.description || '').match(/Lợi nhuận:\s*([^\n\r|]+)/i);
+                  if (profitMatch) {
+                    const raw = profitMatch[1].trim();
+                    const isNeg = raw.includes('-');
+                    const cleaned = raw.replace(/[^0-9.]/g, '');
+                    const profitNumber = parseFloat(cleaned);
+                    if (!isNaN(profitNumber)) {
+                      displayAmount = profitNumber;
+                      isPositive = !isNeg;
+                      if (tx.amount > 0 && Math.abs(tx.amount - profitNumber) > 1) {
+                        walletReturnNote = `Hoàn gốc+lãi: $${tx.amount.toLocaleString('vi-VN')}`;
+                      }
+                    }
+                  }
                   const colorClass = isPositive ? 'text-[#089981]' : 'text-[#f23645]';
 
                   // Format badges for transaction types
                   const renderTypeBadge = (type: string) => {
                     if (type === 'BUY_STOCK') {
-                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#089981]/20 text-[#089981]">MỞ LONG</span>;
+                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#089981]/20 text-[#089981] whitespace-nowrap">MỞ LONG</span>;
                     } else if (type === 'SELL_STOCK') {
-                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#f23645]/20 text-[#f23645]">MỞ SHORT</span>;
+                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#f23645]/20 text-[#f23645] whitespace-nowrap">MỞ SHORT</span>;
                     } else if (type === 'CLOSE_POSITION') {
-                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-400">ĐÓNG VỊ THẾ</span>;
+                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-400 whitespace-nowrap">ĐÓNG VỊ THẾ</span>;
                     } else if (type === 'DEPOSIT') {
-                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400">NẠP / HOÀN TIỀN</span>;
+                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400 whitespace-nowrap">NẠP / HOÀN TIỀN</span>;
                     } else if (type === 'WITHDRAWAL') {
-                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400">RÚT TIỀN</span>;
+                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 whitespace-nowrap">RÚT TIỀN</span>;
                     }
-                    return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-500/20 text-gray-400">{type}</span>;
+                    return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-500/20 text-gray-400 whitespace-nowrap">{type}</span>;
                   };
 
                   // Format description cleanly
                   const formatDescription = (desc: string) => {
+                    // 2. Pattern with pipes: "Mở LONG BTCUSDT ở giá $84,244.01 | Margin: ... | x1 | Qty: 0.10"
+                    // or "Đóng LONG 0.1000 BTCUSDT ở giá $84,699.82 | Giá vào: $84,244.01. Lợi nhuận: +$45.58"
                     if (desc.includes('|')) {
                       const parts = desc.split('|').map(p => p.trim());
                       return (
-                        <div className="flex items-center gap-2 flex-wrap text-xs">
-                          {parts.map((p, idx) => {
-                            if (idx === 0) {
-                              const match = p.match(/(.*ở giá )([\d.,]+)(.*)/);
-                              if (match) {
-                                return (
-                                  <span key={idx} className="font-bold text-[#1e2329] dark:text-[#d1d4dc]">
-                                    {match[1]}<span className="text-[#fcd535]">{match[2]}</span>{match[3]}
-                                  </span>
-                                );
-                              }
-                              return <span key={idx} className="font-bold text-[#1e2329] dark:text-[#d1d4dc]">{p}</span>;
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-[#1e2329] dark:text-white">{parts[0]}</span>
+                          {parts.slice(1).map((part, idx) => {
+                            let displayText = part;
+                            if (/^qty/i.test(displayText)) {
+                              displayText = displayText.replace(/^qty/i, 'KL');
+                            } else if (/^margin/i.test(displayText)) {
+                              displayText = displayText.replace(/^margin/i, 'Ký quỹ');
                             }
-                            const lowerP = p.toLowerCase();
-                            if (lowerP.startsWith('x')) {
-                              return <span key={idx} className="text-[#fcd535] bg-[#fcd535]/10 px-1.5 py-0.5 rounded text-[10px] font-bold">{p}</span>;
-                            } else if (lowerP.startsWith('lợi nhuận:')) {
-                              const isWin = p.includes('+');
-                              let displayText = p;
-                              // Retroactive fix for old transactions in DB that missed the '-' sign
-                              if (!isWin && !p.includes('-')) {
-                                displayText = p.replace(/Lợi nhuận:\s*/i, 'Lợi nhuận: -');
-                              }
-                              return <span key={idx} className={`px-1.5 py-0.5 rounded text-[11px] font-bold border ${isWin ? 'text-[#089981] bg-[#089981]/10 border-[#089981]/20' : 'text-[#f23645] bg-[#f23645]/10 border-[#f23645]/20'}`}>{displayText}</span>;
-                            } else if (lowerP.startsWith('vốn về:')) {
-                              return <span key={idx} className="text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded text-[11px] font-bold border border-blue-500/20">{p}</span>;
-                            } else if (lowerP.startsWith('margin:')) {
-                              return <span key={idx} className="text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded text-[11px] font-bold border border-purple-500/20">{p}</span>;
-                            } else if (lowerP.startsWith('qty:')) {
-                              return <span key={idx} className="text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded text-[11px] font-bold border border-amber-500/20">{p}</span>;
+
+                            if (/^x\d+$/i.test(displayText)) {
+                              return <span key={idx} className="text-[#fcd535] bg-[#fcd535]/10 px-1.5 py-0.5 rounded text-[10px] font-bold">{displayText}</span>;
                             }
-                            return <span key={idx} className="text-[#787b86] text-[11px] bg-[#1e222d] px-1.5 py-0.5 rounded border border-[#2a2e39] font-medium">{p}</span>;
+                            if (displayText === 'LONG') {
+                              return <span key={idx} className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#089981]/20 text-[#089981]">{displayText}</span>;
+                            }
+                            if (displayText === 'SHORT') {
+                              return <span key={idx} className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#f23645]/20 text-[#f23645]">{displayText}</span>;
+                            }
+                            
+                            let bgClass = "bg-[#f0f3fa] dark:bg-[#2a2e39]";
+                            let textClass = "text-[#1e2329] dark:text-[#b7bdc6]";
+                            let borderClass = "border-[#e0e3eb] dark:border-[#363a45]";
+
+                            if (displayText.includes('+')) {
+                              textClass = "text-[#089981]";
+                              bgClass = "bg-[#089981]/10";
+                              borderClass = "border-[#089981]/20";
+                            } else if (displayText.includes('-')) {
+                              textClass = "text-[#f23645]";
+                              bgClass = "bg-[#f23645]/10";
+                              borderClass = "border-[#f23645]/20";
+                            }
+
+                            return (
+                              <span key={idx} className={`px-2 py-0.5 rounded text-[11px] font-medium border whitespace-nowrap ${bgClass} ${textClass} ${borderClass}`}>
+                                {displayText}
+                              </span>
+                            );
                           })}
                         </div>
                       );
                     }
+                    
+                    // 3. Pattern without pipes: "Đóng LONG 10000.00 FPT ở giá $120.00. Lợi nhuận: -2.700đ"
+                    const actionMatch = desc.match(/^(Đóng|Mở|Chốt lời|Cắt lỗ)\s+(LONG|SHORT)\s+([\d.,]+)\s+([A-Z0-9]+)/i);
+                    if (actionMatch) {
+                      const action = actionMatch[1];
+                      const side = actionMatch[2].toUpperCase();
+                      const qty = actionMatch[3];
+                      const symbol = actionMatch[4];
+                      const pm = desc.match(/[\$]([\d,.]+)/) || desc.match(/giá\s*[\$:]?\s*([\d,.]+)/i);
+                      const price = pm ? pm[1] : '';
+                      return (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-[#1e2329] dark:text-white">{action} {symbol}</span>
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${side === 'LONG' ? 'bg-[#089981]/20 text-[#089981]' : 'bg-[#f23645]/20 text-[#f23645]'}`}>{side}</span>
+                          <span className="text-[#787b86]">KL: <span className="text-[#1e2329] dark:text-[#d1d4dc]">{parseFloat(qty).toLocaleString('vi-VN')}</span></span>
+                          {price && <span className="text-[#787b86]">Giá: <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono">${price}</span></span>}
+                        </div>
+                      );
+                    }
                     return <span className="text-[#d1d4dc] text-xs">{desc}</span>;
+                  };
+
+                  const getTradeReviewPayload = () => {
+                    const desc = tx.description || '';
+                    
+                    // 1. If structured metadata exists
+                    if ((tx as any).metadata && (tx as any).metadata.entryPrice) {
+                      const meta = (tx as any).metadata;
+                      const isOpen = positions[meta.symbol || ''] && positions[meta.symbol || ''].side === meta.side;
+                      return {
+                        orderId: tx._id,
+                        symbol: meta.symbol || selectedSymbol,
+                        side: meta.side === 'SHORT' ? 'SELL' : 'BUY',
+                        entryPrice: meta.entryPrice,
+                        exitPrice: meta.exitPrice,
+                        currentPrice: isOpen ? currentPrice : undefined,
+                        stopLoss: meta.stopLoss,
+                        takeProfit: meta.takeProfit,
+                        quantity: meta.quantity || 1,
+                        realPnL: meta.pnl,
+                        isOpen: isOpen || meta.isOpen === true,
+                        timeframe: '15m'
+                      };
+                    }
+
+                    // 2. Open pattern: "Mở LONG BTCUSDT ở giá $84,244.01..."
+                    let openMatch = desc.match(/(?:Mở)\s+(LONG|SHORT)\s+([A-Z0-9]+)(?:\s+ở\s+giá\s+\$?([\d,.]+))?/i);
+                    if (!openMatch) {
+                      const m2 = desc.match(/(?:Mở)\s+([A-Z0-9]+)\s+(LONG|SHORT)(?:\s+ở\s+giá\s+\$?([\d,.]+))?/i);
+                      if (m2) openMatch = [m2[0], m2[2], m2[1], m2[3]];
+                    }
+
+                    // 3. Close pattern: "Đóng LONG 2.00 BTCUSDT ở giá $64,200.5. Lợi nhuận: $-1,350.37"
+                    const closeMatch = desc.match(/(?:Đóng|Chốt lời|Cắt lỗ)\s+(LONG|SHORT)\s+([\d.,]+)\s+([A-Z0-9]+)\s+ở\s+giá\s+\$?([\d,.]+).*?Lợi\s*nhuận:\s*([+-]?\$?[\d,.-]+)/i);
+
+                    const qtyMatch = desc.match(/Qty:\s*([\d,.]+)/i) || desc.match(/KL:\s*([\d,.]+)/i);
+                    const levMatch = desc.match(/x(\d+)/i);
+                    const marginMatch = desc.match(/Margin:\s*\$?([\d,.]+)/i);
+
+                    // Case A: This transaction is a CLOSE transaction
+                    if (closeMatch) {
+                      const sideStr = closeMatch[1].toUpperCase();
+                      const qty = parseFloat(closeMatch[2].replace(/,/g, ''));
+                      const sym = closeMatch[3].toUpperCase();
+                      const exitP = parseFloat(closeMatch[4].replace(/,/g, ''));
+                      const pnl = parseFloat(closeMatch[5].replace(/[$,]/g, ''));
+
+                      let entryP = exitP;
+                      const prevOpen = transactions.find(t => {
+                        if (t._id === tx._id) return false;
+                        const tDesc = t.description || '';
+                        return tDesc.includes(`Mở ${sideStr} ${sym}`) || (tDesc.includes(sym) && tDesc.includes(sideStr) && tDesc.includes('Mở'));
+                      });
+
+                      if (prevOpen) {
+                        const pMatch = prevOpen.description.match(/ở\s+giá\s+\$?([\d,.]+)/i);
+                        if (pMatch) entryP = parseFloat(pMatch[1].replace(/,/g, ''));
+                      } else {
+                        entryP = sideStr === 'LONG' ? (exitP - (pnl / qty)) : (exitP + (pnl / qty));
+                      }
+
+                      const entryDate = prevOpen ? new Date(prevOpen.createdAt) : new Date(tx.createdAt);
+                      const exitDate = new Date(tx.createdAt);
+                      const diffMinutes = Math.max(1, Math.round((exitDate.getTime() - entryDate.getTime()) / 60000));
+                      const durationStr = diffMinutes >= 60 ? `${Math.floor(diffMinutes / 60)}h ${diffMinutes % 60}m` : `${diffMinutes} phút`;
+
+                      return {
+                        orderId: tx._id,
+                        symbol: sym,
+                        side: sideStr === 'LONG' ? 'BUY' : 'SELL',
+                        entryPrice: entryP,
+                        exitPrice: exitP,
+                        quantity: qty,
+                        realPnL: pnl,
+                        isOpen: false,
+                        timeframe: '15m',
+                        strategy: 'ICT — Liquidity Sweep + FVG',
+                        setupName: 'Liquidity sweep + FVG',
+                        reason: 'Giao dịch theo tín hiệu quét thanh khoản phiên và kiểm định cấu trúc',
+                        entryTime: entryDate.toLocaleString('vi-VN'),
+                        exitTime: exitDate.toLocaleString('vi-VN'),
+                        duration: durationStr
+                      };
+                    }
+
+                    // Case B: This transaction is an OPEN transaction
+                    if (openMatch) {
+                      const sideStr = openMatch[1].toUpperCase();
+                      const sym = openMatch[2].toUpperCase();
+                      const entryP = openMatch[3] ? parseFloat(openMatch[3].replace(/,/g, '')) : currentPrice;
+                      const qty = qtyMatch ? parseFloat(qtyMatch[1].replace(/,/g, '.')) : 0.1;
+                      const lev = levMatch ? parseInt(levMatch[1]) : 1;
+                      const margin = marginMatch ? parseFloat(marginMatch[1].replace(/,/g, '')) : (entryP * qty) / lev;
+
+                      const openPos = positions[sym] && positions[sym].side === sideStr ? positions[sym] : null;
+                      if (openPos) {
+                        const entryDate = new Date(tx.createdAt);
+                        const now = new Date();
+                        const diffMinutes = Math.max(1, Math.round((now.getTime() - entryDate.getTime()) / 60000));
+                        const durationStr = diffMinutes >= 60 ? `${Math.floor(diffMinutes / 60)}h ${diffMinutes % 60}m` : `${diffMinutes} phút`;
+
+                        return {
+                          orderId: tx._id,
+                          symbol: sym,
+                          side: sideStr === 'LONG' ? 'BUY' : 'SELL',
+                          entryPrice: entryP,
+                          currentPrice: currentPrice,
+                          stopLoss: openPos.sl,
+                          takeProfit: openPos.tp,
+                          quantity: qty,
+                          isOpen: true,
+                          timeframe: '15m',
+                          strategy: 'ICT — Liquidity Sweep + FVG',
+                          setupName: 'Liquidity sweep + FVG',
+                          reason: 'Vào lệnh đón nhịp đảo chiều sau khi quét thanh khoản',
+                          entryTime: entryDate.toLocaleString('vi-VN'),
+                          duration: durationStr
+                        };
+                      }
+
+                      // Position is closed! Look for matching close transaction
+                      const matchingClose = transactions.find(t => {
+                        if (t._id === tx._id) return false;
+                        const tDesc = t.description || '';
+                        return (tDesc.includes('Đóng') || tDesc.includes('Chốt') || tDesc.includes('Cắt')) && tDesc.includes(sym) && tDesc.includes(sideStr);
+                      });
+
+                      if (matchingClose) {
+                        const cMatch = matchingClose.description.match(/ở\s+giá\s+\$?([\d,.]+).*?Lợi\s*nhuận:\s*([+-]?\$?[\d,.-]+)/i);
+                        const exitP = cMatch ? parseFloat(cMatch[1].replace(/,/g, '')) : currentPrice;
+                        const pnl = cMatch ? parseFloat(cMatch[2].replace(/[$,]/g, '')) : (sideStr === 'LONG' ? (exitP - entryP) * qty : (entryP - exitP) * qty);
+                        const entryDate = new Date(tx.createdAt);
+                        const exitDate = new Date(matchingClose.createdAt);
+                        const diffMinutes = Math.max(1, Math.round((exitDate.getTime() - entryDate.getTime()) / 60000));
+                        const durationStr = diffMinutes >= 60 ? `${Math.floor(diffMinutes / 60)}h ${diffMinutes % 60}m` : `${diffMinutes} phút`;
+
+                        return {
+                          orderId: tx._id,
+                          symbol: sym,
+                          side: sideStr === 'LONG' ? 'BUY' : 'SELL',
+                          entryPrice: entryP,
+                          exitPrice: exitP,
+                          quantity: qty,
+                          realPnL: pnl,
+                          isOpen: false,
+                          timeframe: '15m',
+                          strategy: 'ICT — Liquidity Sweep + FVG',
+                          setupName: 'Liquidity sweep + FVG',
+                          reason: 'Quét thanh khoản cản cũ và kích hoạt đảo chiều',
+                          entryTime: entryDate.toLocaleString('vi-VN'),
+                          exitTime: exitDate.toLocaleString('vi-VN'),
+                          duration: durationStr
+                        };
+                      }
+
+                      // If closed without explicit close transaction (liquidated or full margin lost)
+                      const lossPnl = -Math.abs(tx.amount || margin);
+                      const exitP = sideStr === 'LONG' ? Math.max(0, entryP + (lossPnl / qty)) : (entryP - (lossPnl / qty));
+                      const entryDate = new Date(tx.createdAt);
+
+                      return {
+                        orderId: tx._id,
+                        symbol: sym,
+                        side: sideStr === 'LONG' ? 'BUY' : 'SELL',
+                        entryPrice: entryP,
+                        exitPrice: exitP,
+                        quantity: qty,
+                        realPnL: lossPnl,
+                        isOpen: false,
+                        timeframe: '15m',
+                        strategy: 'ICT — Liquidity Sweep + FVG',
+                        setupName: 'Liquidity sweep + FVG',
+                        reason: 'Chạm điểm thanh lý/kết thúc vị thế',
+                        entryTime: entryDate.toLocaleString('vi-VN'),
+                        duration: 'Khoảng 15 phút'
+                      };
+                    }
+
+                    // Fallback
+                    const isBuy = tx.type.includes('BUY') || desc.toLowerCase().includes('mua') || desc.includes('LONG');
+                    const qty = qtyMatch ? parseFloat(qtyMatch[1].replace(/,/g, '.')) : 0.1;
+                    const pnl = tx.type === 'BUY_STOCK' ? -Math.abs(tx.amount) : tx.amount;
+                    return {
+                      orderId: tx._id,
+                      symbol: selectedSymbol,
+                      side: isBuy ? 'BUY' : 'SELL',
+                      entryPrice: currentPrice,
+                      exitPrice: currentPrice,
+                      quantity: qty,
+                      realPnL: pnl,
+                      isOpen: false,
+                      timeframe: '15m'
+                    };
                   };
 
                   return (
@@ -374,8 +665,43 @@ export const BottomPanel = ({
                         {renderTypeBadge(tx.type)}
                       </td>
                       <td className="px-4 py-2">{formatDescription(tx.description)}</td>
-                      <td className={`px-4 py-2 text-right font-mono font-bold ${colorClass}`}>
-                        {isPositive ? '+' : '-'}{Math.abs(tx.amount) >= 100 ? Math.abs(tx.amount).toLocaleString('vi-VN') : Math.abs(tx.amount).toFixed(2)}
+                      <td className="px-4 py-2 text-center">
+                        {(() => {
+                          const desc = tx.description || '';
+                          const isCloseTx = desc.includes('Đóng') || desc.includes('Chốt lời') || desc.includes('Cắt lỗ');
+                          const symMatch = desc.match(/(?:LONG|SHORT)\s+([A-Z0-9]+)|([A-Z0-9]+)\s+(?:LONG|SHORT)/i);
+                          const sym = symMatch ? (symMatch[1] || symMatch[2]).toUpperCase() : selectedSymbol;
+                          const isOpenPos = !isCloseTx && Boolean(positions[sym]);
+
+                          if (isOpenPos) {
+                            return (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 inline-flex items-center gap-1 whitespace-nowrap">
+                                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
+                                Đang mở
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-700/30 text-slate-400 border border-slate-600/30 inline-block whitespace-nowrap">
+                              Đã đóng
+                            </span>
+                          );
+                        })()}
+                      </td>
+
+                      <td className={`px-4 py-2 text-right font-mono font-semibold ${colorClass}`}>
+                        {isPositive ? '+' : '-'}${displayAmount.toLocaleString('vi-VN', { maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-4 py-2 text-right">
+                        <button
+                          onClick={() => {
+                            const payload = getTradeReviewPayload();
+                            setReviewTradeData(payload);
+                          }}
+                          className="px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-[10px] font-semibold inline-flex items-center gap-1 transition-colors"
+                        >
+                          <Sparkles className="w-2.5 h-2.5" /> Review
+                        </button>
                       </td>
                     </tr>
                   );
@@ -383,7 +709,8 @@ export const BottomPanel = ({
               )}
             </tbody>
           </table>
-        )}
+          );
+        })()}
       </div>
 
       {/* Partial Close Modal */}
@@ -469,6 +796,15 @@ export const BottomPanel = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Trade Review Modal */}
+      {reviewTradeData && (
+        <TradeReviewModal
+          isOpen={true}
+          onClose={() => setReviewTradeData(null)}
+          tradeData={reviewTradeData}
+        />
       )}
     </div>
   );

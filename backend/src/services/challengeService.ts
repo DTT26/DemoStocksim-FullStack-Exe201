@@ -7,7 +7,6 @@ export interface ChallengeLevelConfig {
   levelName: string;
   badge: string;
   capitalUSD: number;
-  capitalVND: number;
   profitTargetPercent: number;
   dailyLossLimitPercent: number;
   maxDrawdownPercent: number;
@@ -21,7 +20,6 @@ export const CHALLENGE_LEVELS: ChallengeLevelConfig[] = [
     levelName: 'Tập Sự',
     badge: 'Cấp 1',
     capitalUSD: 10_000,
-    capitalVND: 250_000_000,
     profitTargetPercent: 8,
     dailyLossLimitPercent: 4,
     maxDrawdownPercent: 8,
@@ -33,7 +31,6 @@ export const CHALLENGE_LEVELS: ChallengeLevelConfig[] = [
     levelName: 'Tiềm Năng',
     badge: 'Cấp 2',
     capitalUSD: 25_000,
-    capitalVND: 625_000_000,
     profitTargetPercent: 8,
     dailyLossLimitPercent: 4.5,
     maxDrawdownPercent: 8,
@@ -45,7 +42,6 @@ export const CHALLENGE_LEVELS: ChallengeLevelConfig[] = [
     levelName: 'Chuyên Nghiệp',
     badge: 'Cấp 3',
     capitalUSD: 50_000,
-    capitalVND: 1_250_000_000,
     profitTargetPercent: 10,
     dailyLossLimitPercent: 5,
     maxDrawdownPercent: 10,
@@ -57,7 +53,6 @@ export const CHALLENGE_LEVELS: ChallengeLevelConfig[] = [
     levelName: 'Tinh Anh',
     badge: 'Cấp 4',
     capitalUSD: 100_000,
-    capitalVND: 2_500_000_000,
     profitTargetPercent: 10,
     dailyLossLimitPercent: 5,
     maxDrawdownPercent: 10,
@@ -69,7 +64,6 @@ export const CHALLENGE_LEVELS: ChallengeLevelConfig[] = [
     levelName: 'Bậc Thầy',
     badge: 'Cấp 5',
     capitalUSD: 200_000,
-    capitalVND: 5_000_000_000,
     profitTargetPercent: 10,
     dailyLossLimitPercent: 5,
     maxDrawdownPercent: 10,
@@ -81,12 +75,11 @@ export const CHALLENGE_LEVELS: ChallengeLevelConfig[] = [
     levelName: 'Huyền Thoại',
     badge: 'Cấp 6',
     capitalUSD: 500_000,
-    capitalVND: 12_500_000_000,
     profitTargetPercent: 12,
     dailyLossLimitPercent: 4,
     maxDrawdownPercent: 8,
     minTradingDays: 5,
-    maxLeverage: 100,
+    maxLeverage: 500, // Không giới hạn bởi bài thi (Tối đa theo sàn lên đến 500X)
   },
 ];
 

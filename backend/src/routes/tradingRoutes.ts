@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import { openLong, openShort, closePosition, updateTPSL, getPortfolio, getTransactions, addMargin, placeLimitOrder, cancelLimitOrder, checkTriggers } from '../controllers/tradingController';
+import { optionalProtect } from '../middleware/authMiddleware';
 
 const router = Router();
+
+router.use(optionalProtect);
 
 router.post('/buy', openLong);
 router.post('/sell', openShort);
@@ -12,6 +15,8 @@ router.post('/limit', placeLimitOrder);
 router.post('/limit/cancel', cancelLimitOrder);
 router.post('/check-triggers', checkTriggers);
 router.get('/portfolio/:userId', getPortfolio);
+router.get('/portfolio', getPortfolio);
 router.get('/transactions/:userId', getTransactions);
+router.get('/transactions', getTransactions);
 
 export default router;

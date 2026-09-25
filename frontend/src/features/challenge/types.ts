@@ -3,7 +3,6 @@ export interface ChallengeLevelConfig {
   levelName: string;
   badge: string;
   capitalUSD: number;
-  capitalVND: number;
   profitTargetPercent: number;
   dailyLossLimitPercent: number;
   maxDrawdownPercent: number;

@@ -15,6 +15,19 @@ export interface ITransaction extends Document {
   amount: number;
   description: string;
   accountType: 'STANDARD' | 'CHALLENGE';
+  metadata?: {
+    symbol?: string;
+    side?: string;
+    entryPrice?: number;
+    exitPrice?: number;
+    quantity?: number;
+    leverage?: number;
+    pnl?: number;
+    margin?: number;
+    stopLoss?: number;
+    takeProfit?: number;
+    isOpen?: boolean;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -25,7 +38,8 @@ const TransactionSchema: Schema = new Schema({
   type: { type: String, enum: Object.values(TransactionType), required: true },
   amount: { type: Number, required: true },
   description: { type: String },
-  accountType: { type: String, enum: ['STANDARD', 'CHALLENGE'], default: 'STANDARD' }
+  accountType: { type: String, enum: ['STANDARD', 'CHALLENGE'], default: 'STANDARD' },
+  metadata: { type: Schema.Types.Mixed }
 }, { timestamps: true });
 
 export default mongoose.model<ITransaction>('Transaction', TransactionSchema);

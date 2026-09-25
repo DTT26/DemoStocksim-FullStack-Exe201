@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Crosshair, TrendingUp, AlignLeft, Brush, Type, Waypoints, SlidersHorizontal, Smile, Ruler, ZoomIn, Magnet, PenTool, Lock, Eye, Trash2, ChevronRight, Share, GitCommit, Play, FastForward, SkipForward, TrendingDown, BarChart2, Activity, AlignRight, MoveVertical, MoveHorizontal, Maximize, Square, Circle, MessageSquare, Bug, Coffee, Rocket, Lightbulb, Heart, Flag, MousePointer2, Dot, Eraser, Highlighter, ArrowUpRight, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, CircleDot, Triangle, Spline, Box, Milestone, Anchor, FileText, DollarSign, MapPin, Table, MessageCircle, Tag, Compass, User } from 'lucide-react';
+import { useI18n } from '../../../contexts/I18nContext';
 
 const EMOJI_CATEGORIES = [
   {
@@ -138,6 +139,26 @@ const TOOLS = [
     ]
   },
   { 
+    id: 'longPosition',             
+    icon: Crosshair,         
+    label: 'Công cụ Dự đoán và Đo lường',  
+    separator: false, 
+    hasDropdown: true,
+    subItems: [
+      {
+        category: 'DỰ ĐOÁN VÀ ĐO LƯỜNG',
+        items: [
+          { id: 'longPosition', label: 'Thế giá lên', icon: TrendingUp },
+          { id: 'shortPosition', label: 'Thế giá xuống', icon: TrendingDown },
+          { id: 'priceRange', label: 'Khoảng giá', icon: MoveVertical },
+          { id: 'timeRange', label: 'Khoảng thời gian', icon: MoveHorizontal },
+          { id: 'timePriceRange', label: 'Khoảng thời gian & Giá', icon: Maximize },
+          { id: 'ghostFeed', label: 'Mô hình Ghost Feed', icon: Activity }
+        ]
+      }
+    ]
+  },
+  { 
     id: 'simpleAnnotation',         
     icon: Type,              
     label: 'Công cụ Chú thích',            
@@ -162,77 +183,7 @@ const TOOLS = [
       }
     ]
   },
-  { 
-    id: 'xabcd',                    
-    icon: Waypoints,         
-    label: 'Các Mô hình (XABCD, Elliott...)',
-    separator: false, 
-    hasDropdown: true,
-    subItems: [
-      {
-        category: 'CÁC MẪU',
-        items: [
-          { id: 'xabcd', label: 'Mẫu hình XABCD', icon: Waypoints },
-          { id: 'cypher', label: 'Mẫu cypher', icon: Waypoints },
-          { id: 'abcd', label: 'Mẫu hình ABCD', icon: GitCommit },
-          { id: 'triangle', label: 'Mẫu hình Tam giác', icon: Play },
-          { id: 'threeDrives', label: 'Mô hình Three Drives', icon: FastForward },
-          { id: 'headAndShoulders', label: 'Mẫu vai đầu vai', icon: User }
-        ]
-      },
-      {
-        category: 'SÓNG ELLIOTT',
-        items: [
-          { id: 'elliottImpulse', label: 'Sóng đẩy Elliott (12345)', icon: TrendingUp },
-          { id: 'elliottTriangle', label: 'Sóng điều chỉnh Elliott (ABC)', icon: SkipForward },
-          { id: 'elliottABCDE', label: 'Sóng Elliott Tam giác (ABCDE)', icon: GitCommit },
-          { id: 'elliottWXY', label: 'Sóng đôi kết hợp Elliott (WXY)', icon: Waypoints },
-          { id: 'elliottTriple', label: 'Sóng Elliott kết hợp ba (WXYXZ)', icon: Waypoints }
-        ]
-      },
-      {
-        category: 'CHU KỲ',
-        items: [
-          { id: 'cycleLines', label: 'Các đường chu kỳ', icon: AlignRight },
-          { id: 'timeCycles', label: 'Vòng thời gian', icon: Circle },
-          { id: 'sineLine', label: 'Đường Sine', icon: Spline }
-        ]
-      }
-    ]
-  },
-  { 
-    id: 'priceChannelLine',         
-    icon: SlidersHorizontal, 
-    label: 'Công cụ Dự đoán và Đo lường',  
-    separator: false, 
-    hasDropdown: true,
-    subItems: [
-      {
-        category: 'PHÉP CHIẾU',
-        items: [
-          { id: 'longPosition', label: 'Thế giá lên', icon: TrendingUp },
-          { id: 'shortPosition', label: 'Thế giá xuống', icon: TrendingDown },
-          { id: 'ghostFeed', label: 'Mô hình Ghost Feed', icon: Activity },
-          { id: 'projection', label: 'Phép chiếu', icon: Waypoints }
-        ]
-      },
-      {
-        category: 'DỰA TRÊN KHỐI LƯỢNG',
-        items: [
-          { id: 'anchoredVWAP', label: 'Anchored VWAP', icon: Activity },
-          { id: 'fixedRangeVolumeProfile', label: 'Khối lượng Giao dịch Phạm vi Cố định', icon: AlignRight }
-        ]
-      },
-      {
-        category: 'CÔNG CỤ ĐO LƯỜNG',
-        items: [
-          { id: 'priceRange', label: 'Khoảng Giá', icon: MoveVertical },
-          { id: 'dateRange', label: 'Phạm vi Ngày', icon: MoveHorizontal },
-          { id: 'dateAndPriceRange', label: 'Phạm vi Ngày và Giá', icon: Maximize }
-        ]
-      }
-    ]
-  },
+
   { 
     id: 'simpleTag',                
     icon: Smile,             
@@ -263,6 +214,23 @@ interface LeftToolbarProps {
   onToggleHide?: () => void;
 }
 
+const dict: Record<string, Record<string, string>> = {
+  en: {
+    'Con trỏ': 'Cursor', 'CON TRỎ': 'CURSOR', 'Đường chéo': 'Crosshair', 'Dấu chấm': 'Dot', 'Mũi tên': 'Arrow', 'Tẩy': 'Eraser',
+    'Các công cụ Đường xu hướng': 'Trend Line Tools', 'ĐƯỜNG': 'LINES', 'Đường Xu hướng': 'Trend Line', 'Tia': 'Ray', 'Đường Thông tin': 'Info Line', 'Đường Mở rộng': 'Extended Line', 'Góc Xu hướng': 'Trend Angle', 'Đường nằm ngang': 'Horizontal Line', 'Tia nằm ngang': 'Horizontal Ray', 'Đường thẳng đứng': 'Vertical Line', 'Đường giao nhau': 'Cross Line',
+    'KÊNH': 'CHANNELS', 'Kênh Song song': 'Parallel Channel', 'Xu hướng hồi quy': 'Regression Trend', 'Mặt phẳng đỉnh/đáy': 'Flat Top/Bottom', 'Không kết nối Kênh': 'Disjoint Channel',
+    'PITCHFORKS': 'PITCHFORKS', 'Mô hình Pitchfork': 'Pitchfork', 'Mô hình Schiff Pitchfork': 'Schiff Pitchfork', 'Mô hình Schiff Pitchfork Biến đổi': 'Modified Schiff Pitchfork', 'Mô hình Pitchfork mặt trong': 'Inside Pitchfork',
+    'Các công cụ Gann và Fibonacci': 'Gann and Fibonacci Tools', 'Các Hình dạng Hình học & Cọ vẽ': 'Geometric Shapes & Brushes',
+    'CỌ': 'BRUSHES', 'Cọ vẽ': 'Brush', 'Bút đánh dấu': 'Highlighter',
+    'MŨI TÊN': 'ARROWS', 'Mũi tên đánh dấu': 'Arrow Marker', 'Mũi tên chỉ lên': 'Arrow Up', 'Mũi tên chỉ xuống': 'Arrow Down', 'Mũi tên chỉ sang trái': 'Arrow Left', 'Mũi tên chỉ sang phải': 'Arrow Right',
+    'HÌNH DẠNG': 'SHAPES', 'Hình chữ nhật': 'Rectangle', 'Hình chữ nhật xoay': 'Rotated Rectangle', 'Đường dẫn': 'Path', 'Vòng tròn': 'Circle', 'Hình elip': 'Ellipse', 'Hình Polyline': 'Polyline', 'Hình tam giác': 'Triangle', 'Hình vòng cung': 'Arc', 'Đường cong': 'Curve', 'Đường cong đôi': 'Double Curve',
+    'Công cụ Dự đoán và Đo lường': 'Prediction and Measurement', 'DỰ ĐOÁN VÀ ĐO LƯỜNG': 'PREDICTION & MEASUREMENT', 'Thế giá lên': 'Long Position', 'Thế giá xuống': 'Short Position', 'Khoảng giá': 'Price Range', 'Khoảng thời gian': 'Date Range', 'Khoảng thời gian & Giá': 'Date and Price Range', 'Mô hình Ghost Feed': 'Ghost Feed',
+    'Công cụ Chú thích': 'Annotation Tools', 'VĂN BẢN & CHÚ THÍCH': 'TEXT & ANNOTATIONS', 'Văn bản': 'Text', 'Đoạn văn bản được ghim': 'Anchored Text', 'Ghi chú': 'Note', 'Ghi chú Giá': 'Price Note', 'Mã Pin': 'Pin Mark', 'Bảng': 'Table', 'Chú thích': 'Callout', 'Bình luận': 'Comment', 'Nhãn Giá': 'Price Label', 'Biển chỉ dẫn': 'Signpost', 'Cờ đánh dấu': 'Flag Mark',
+    'Biểu tượng': 'Icons', 'Đo lường': 'Measure', 'Phóng to': 'Zoom In', 'Chế độ Magnet': 'Magnet Mode', 'Giữ ở Chế độ Vẽ': 'Stay in Drawing Mode', 'Khóa tất cả công cụ vẽ': 'Lock All Drawing Tools', 'Ẩn tất cả công cụ vẽ': 'Hide All Drawing Tools', 'Xóa công cụ vẽ': 'Remove Drawing Tools',
+    'NỤ CƯỜI VÀ MỌI NGƯỜI': 'SMILEYS & PEOPLE', 'ĐỘNG VẬT VÀ THIÊN NHIÊN': 'ANIMALS & NATURE', 'THỨC ĂN VÀ ĐỒ UỐNG': 'FOOD & DRINK', 'DU LỊCH VÀ ĐỊA ĐIỂM': 'TRAVEL & PLACES', 'ĐỒ VẬT': 'OBJECTS'
+  }
+};
+
 export const LeftToolbar = ({ 
   activeTool, 
   onToolSelect,
@@ -275,6 +243,9 @@ export const LeftToolbar = ({
   hideDrawing,
   onToggleHide
 }: LeftToolbarProps) => {
+  const { lang } = useI18n();
+  const tr = (text: string) => dict[lang]?.[text] || text;
+  
   const [activeDropdown, setActiveDropdown] = useState<{ id: string, top: number, items?: any[], isEmoji?: boolean } | null>(null);
   const [activeEmojiTab, setActiveEmojiTab] = useState<string>(EMOJI_CATEGORIES[0].id);
   const [lastSelectedSubItems, setLastSelectedSubItems] = useState<Record<string, string>>({
@@ -403,7 +374,7 @@ export const LeftToolbar = ({
                       onToolSelect(targetTool);
                     }
                   }}
-                  title={activeSubItem ? activeSubItem.label : tool.label}
+                  title={activeSubItem ? tr(activeSubItem.label) : tr(tool.label)}
                   className={`w-full h-full flex items-center justify-center rounded-lg transition-colors relative ${
                     isActive 
                       ? 'bg-[#f0f3fa] dark:bg-[#2a2e39] text-blue-500' 
@@ -454,7 +425,7 @@ export const LeftToolbar = ({
                     <button
                       key={cat.id}
                       onClick={() => setActiveEmojiTab(cat.id)}
-                      title={cat.title}
+                      title={tr(cat.title)}
                       className={`p-1.5 rounded transition-colors relative ${isActiveCat ? 'text-blue-500' : 'text-[#787b86] hover:text-[#131722] dark:hover:text-[#d1d4dc] hover:bg-black/5 dark:hover:bg-white/5'}`}
                     >
                       <CatIcon strokeWidth={isActiveCat ? 2 : 1.5} className="w-4 h-4" />
@@ -469,7 +440,7 @@ export const LeftToolbar = ({
                 {EMOJI_CATEGORIES.map(cat => (
                   <div key={cat.id} className={`${activeEmojiTab === cat.id ? 'flex' : 'hidden'} flex-col h-full`}>
                     <span className="text-[11px] font-semibold text-[#787b86] px-4 py-1.5 uppercase tracking-wider shrink-0">
-                      {cat.title}
+                      {tr(cat.title)}
                     </span>
                     <div className="flex flex-wrap gap-1 p-2 justify-start overflow-y-auto hide-scrollbar flex-1">
                       {cat.emojis.map((emoji, idx) => (
@@ -493,7 +464,7 @@ export const LeftToolbar = ({
             activeDropdown.items?.map((category, idx) => (
               <div key={idx} className="flex flex-col">
                 <span className="text-[11px] font-semibold text-[#787b86] px-4 py-1.5 uppercase tracking-wider">
-                  {category.category}
+                  {tr(category.category)}
                 </span>
                 {category.items.map((item: any) => {
                   const ItemIcon = item.icon;
@@ -512,7 +483,7 @@ export const LeftToolbar = ({
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <ItemIcon strokeWidth={1.5} className={`w-5 h-5 shrink-0 ${isSelected ? 'text-blue-500' : 'text-[#787b86]'}`} />
-                        <span className="text-[13px] truncate">{item.label}</span>
+                        <span className="text-[13px] truncate">{tr(item.label)}</span>
                       </div>
                       {item.shortcut && (
                         <span className="text-[11px] text-[#787b86] font-mono ml-3 shrink-0">{item.shortcut}</span>

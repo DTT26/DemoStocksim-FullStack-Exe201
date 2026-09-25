@@ -1,14 +1,18 @@
 import { useState } from 'react';
-import { Settings, User, Bell, Moon, Sun, Globe, Trophy } from 'lucide-react';
+import { useI18n } from '../contexts/I18nContext';
+import { Settings, User, Bell, Moon, Sun, Globe, Trophy, Sparkles } from 'lucide-react';
 import { UserDropdown } from './UserDropdown';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useModal } from '../contexts/ModalContext';
 import { LanguageModal } from './LanguageModal';
+import { NotificationDropdown } from './NotificationDropdown';
 
 interface ToolbarNavbarProps {
   balance: number;
+  onOpenSettings?: () => void;
   onOpenChallenge?: () => void;
+  onOpenAiTutor?: () => void;
   challengeLevelName?: string;
   challengeStatus?: string;
   accountRankBadge?: string;
@@ -18,7 +22,9 @@ interface ToolbarNavbarProps {
 
 export const ToolbarNavbar = ({ 
   balance, 
+  onOpenSettings,
   onOpenChallenge, 
+  onOpenAiTutor,
   challengeLevelName, 
   challengeStatus,
   accountRankBadge,
@@ -29,13 +35,13 @@ export const ToolbarNavbar = ({
   const { theme, toggleTheme } = useTheme();
   const { showAlert } = useModal();
   const isDarkMode = theme === 'dark';
-  const [language, setLanguage] = useState('VI');
+  const { lang: language, setLang: setLanguage } = useI18n();
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
 
   return (
     <>
       <nav className="h-12 bg-white dark:bg-[#131722] border-b border-[#e6e8ea] dark:border-[#2a2e39] flex items-center px-4 justify-between text-[#1e2329] dark:text-[#d1d4dc] text-sm shrink-0 relative z-50">
-        {/* Logo AITRADEX */}
+        {/* Logo AITRADEX & Prop Firm Challenge */}
         <div className="flex items-center gap-3">
           <img src="/images/logo.jpg" alt="AITRADEX" className="h-7 object-contain rounded" />
           
@@ -89,32 +95,37 @@ export const ToolbarNavbar = ({
         </div>
 
         {/* Right side controls */}
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => showAlert({ title: 'Thông báo', message: 'Chức năng Thông báo đang được phát triển!', type: 'info' })}
-            className="hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]"
-            title="Thông báo"
+        <div className="flex items-center gap-2.5">
+          {/* Nút AI Trading Tutor */}
+          <button
+            onClick={onOpenAiTutor}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-blue-500/15 via-purple-500/15 to-amber-500/15 hover:from-blue-500/25 hover:to-amber-500/25 border border-blue-500/30 text-blue-600 dark:text-blue-300 font-bold text-xs transition-all shadow-xs hover:scale-[1.02] cursor-pointer"
+            title="Mở Trợ lý & Gia sư AI Trading Tutor (Hỏi đáp, So sánh chiến lược, RAG)"
           >
-            <Bell className="w-5 h-5" />
+            <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 animate-pulse" />
+            <span>AI Tutor</span>
           </button>
+
+          {/* Thông báo */}
+          <NotificationDropdown />
           <button 
             onClick={toggleTheme}
-            className="hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]"
+            className="hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] cursor-pointer"
             title="Đổi giao diện (Sáng/Tối)"
           >
             {isDarkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
           </button>
           <button 
             onClick={() => setIsLanguageModalOpen(true)}
-            className="hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 flex items-center gap-1 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]"
+            className="hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 flex items-center gap-1 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] cursor-pointer"
             title="Ngôn ngữ"
           >
             <Globe className="w-5 h-5" />
-            <span className="text-xs font-semibold">{language}</span>
+            <span className="text-xs font-semibold">{language.toUpperCase()}</span>
           </button>
           <button 
-            onClick={() => showAlert({ title: 'Cài đặt', message: 'Chức năng Cài đặt đang được phát triển!', type: 'info' })}
-            className="hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]"
+            onClick={onOpenSettings}
+            className="hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] cursor-pointer"
             title="Cài đặt"
           >
             <Settings className="w-5 h-5" />
@@ -145,8 +156,8 @@ export const ToolbarNavbar = ({
       <LanguageModal 
         isOpen={isLanguageModalOpen}
         onClose={() => setIsLanguageModalOpen(false)}
-        currentLanguage={language}
-        onSelectLanguage={setLanguage}
+        currentLanguage={language.toUpperCase()}
+        onSelectLanguage={(val: string) => setLanguage(val.toLowerCase() as any)}
       />
     </>
   );

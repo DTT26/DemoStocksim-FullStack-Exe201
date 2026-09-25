@@ -11,7 +11,7 @@ export const LandingPage = () => {
       </div>
       
       <h1 className="text-5xl font-extrabold text-white tracking-tight mb-6">
-        Welcome to StockSim Edu
+        Welcome to StockSim
       </h1>
       
       <p className="text-xl text-[#787b86] max-w-2xl mb-12 leading-relaxed">
@@ -22,7 +22,7 @@ export const LandingPage = () => {
         <div className="bg-[#1e222d] border border-[#2a2e39] p-6 rounded-2xl flex flex-col items-center text-center">
           <BarChart2 className="w-8 h-8 text-emerald-500 mb-4" />
           <h3 className="text-lg font-bold text-white mb-2">Real Market Data</h3>
-          <p className="text-sm text-[#787b86]">Experience live trading with real stock prices from Vietnam (HOSE, HNX) and US Markets.</p>
+          <p className="text-sm text-[#787b86]">Experience live trading with real prices from Global Crypto, US Stocks, and Forex Markets.</p>
         </div>
         
         <div className="bg-[#1e222d] border border-[#2a2e39] p-6 rounded-2xl flex flex-col items-center text-center">
