@@ -6,9 +6,11 @@ import {
 } from 'lucide-react';
 import { useSimulatorStore } from '../engine/useSimulatorStore';
 import { formatMoneyVND, formatPercent } from '../../../utils/tradingAnalytics';
+import { useI18n } from '../../../contexts/I18nContext';
 
 export const TradingJournalPanel: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const session = useSimulatorStore((s) => s.session);
   const history = useSimulatorStore((s) => s.history) || [];
 
@@ -28,10 +30,10 @@ export const TradingJournalPanel: React.FC = () => {
           </div>
           <div>
             <h2 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
-              Nhật ký Giao dịch
+              {t('journal.title', 'Nhật ký Giao dịch')}
             </h2>
             <span className="text-[11px] text-slate-500 dark:text-slate-400">
-              Session Journal & Notes
+              {t('journal.subtitle', 'Session Journal & Notes')}
             </span>
           </div>
         </div>
@@ -59,10 +61,10 @@ export const TradingJournalPanel: React.FC = () => {
               </div>
               <div>
                 <h4 className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                  Phân tích Hiệu suất Chi tiết
+                  {t('journal.perfAnalysis', 'Phân tích Hiệu suất Chi tiết')}
                 </h4>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Xem 4 Tab: Overview, Charts, Breakdown, Trades
+                  {t('journal.perfDesc', 'Xem 4 Tab: Overview, Charts, Breakdown, Trades')}
                 </p>
               </div>
             </div>
@@ -73,7 +75,7 @@ export const TradingJournalPanel: React.FC = () => {
         {/* Quick Session Stats */}
         <div className="bg-slate-50 dark:bg-[#172033] border border-slate-200 dark:border-[#253047] rounded-xl p-3.5 space-y-2.5">
           <div className="flex justify-between items-center text-xs">
-            <span className="text-slate-500 dark:text-slate-400 font-medium">Phiên hiện tại:</span>
+            <span className="text-slate-500 dark:text-slate-400 font-medium">{t('journal.currentSession', 'Phiên hiện tại:')}</span>
             <span className="font-bold text-slate-900 dark:text-white">
               {session?.name || `${session?.symbol || 'STOCK'} Session`}
             </span>
@@ -108,13 +110,13 @@ export const TradingJournalPanel: React.FC = () => {
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Lệnh gần đây ({history.length})
+              {t('journal.recentTrades', 'Lệnh gần đây')} ({history.length})
             </span>
             <button
               onClick={() => navigate('/student/journal')}
               className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline font-semibold"
             >
-              Xem tất cả
+              {t('journal.viewAll', 'Xem tất cả')}
             </button>
           </div>
 
@@ -122,10 +124,10 @@ export const TradingJournalPanel: React.FC = () => {
             <div className="py-8 text-center bg-slate-50/50 dark:bg-[#172033]/50 rounded-xl border border-dashed border-slate-200 dark:border-[#253047]">
               <Clock className="w-6 h-6 text-slate-400 mx-auto mb-1.5" />
               <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
-                Chưa có lệnh nào đóng
+                {t('journal.noTrades', 'Chưa có lệnh nào đóng')}
               </p>
               <p className="text-[10px] text-slate-400 mt-0.5">
-                Các lệnh chốt lời/cắt lỗ sẽ hiện ở đây
+                {t('journal.noTradesDesc', 'Các lệnh chốt lời/cắt lỗ sẽ hiện ở đây')}
               </p>
             </div>
           ) : (
@@ -187,7 +189,7 @@ export const TradingJournalPanel: React.FC = () => {
           onClick={() => navigate('/student/journal')}
           className="w-full py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors shadow-sm"
         >
-          <span>Mở Trading Journal Đầy Đủ</span>
+          <span>{t('journal.fullJournalBtn', 'Mở Trading Journal Đầy Đủ')}</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>

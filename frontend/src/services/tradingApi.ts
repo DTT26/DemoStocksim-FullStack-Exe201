@@ -58,13 +58,13 @@ export const tradingApi = {
     return await res.json();
   },
 
-  closePosition: async (symbol: string, side: 'LONG'|'SHORT', currentPrice: number, userId?: string) => {
+  closePosition: async (symbol: string, side: 'LONG'|'SHORT', currentPrice: number, closeQty?: number, userId?: string) => {
     const actualUserId = getActiveUserId(userId);
     const res = await fetch(`${API_BASE_URL}/close`, {
       credentials: 'include',
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ userId: actualUserId, symbol, side, currentPrice })
+      body: JSON.stringify({ userId: actualUserId, symbol, side, currentPrice, closeQty })
     });
     if (!res.ok) {
       const error = await res.json();
@@ -160,6 +160,32 @@ export const tradingApi = {
       const error = await res.json();
       throw new Error(error.message || 'Lỗi hệ thống');
     }
+    return await res.json();
+  },
+
+  resetWallet: async (targetBalance: number = 100000, userId?: string) => {
+    const actualUserId = getActiveUserId(userId);
+    const rootUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+    const res = await fetch(`${rootUrl}/wallet/reset`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ userId: actualUserId, targetBalance })
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.message || 'Lỗi reset tài khoản');
+    }
+    return await res.json();
+  },
+
+  checkTriggers: async (prices: Record<string, number>, userId?: string) => {
+    const actualUserId = getActiveUserId(userId);
+    const res = await fetch(`${API_BASE_URL}/check-triggers`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ userId: actualUserId, prices })
+    });
+    if (!res.ok) return { processed: 0 };
     return await res.json();
   }
 };

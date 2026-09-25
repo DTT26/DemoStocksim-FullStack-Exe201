@@ -40,7 +40,7 @@ const OrderSchema: Schema = new Schema({
   symbol: { type: String, required: true },
   side: { type: String, enum: Object.values(OrderSide), required: true },
   type: { type: String, enum: Object.values(OrderType), required: true },
-  quantity: { type: Number, required: true, min: [1, 'Quantity must be at least 1'] },
+  quantity: { type: Number, required: true, min: [0, 'Quantity must be positive'] },
   price: { type: Number, required: true, min: [0, 'Price cannot be negative'] },
   margin: { type: Number, required: true, default: 0 },
   leverage: { type: Number, required: true, default: 1 },

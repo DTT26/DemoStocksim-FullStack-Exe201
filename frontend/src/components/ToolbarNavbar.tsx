@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useI18n } from '../contexts/I18nContext';
 import { Settings, User, Bell, Moon, Sun, Globe, Trophy, Sparkles } from 'lucide-react';
 import { UserDropdown } from './UserDropdown';
 import { useAuth } from '../contexts/AuthContext';
@@ -34,7 +35,7 @@ export const ToolbarNavbar = ({
   const { theme, toggleTheme } = useTheme();
   const { showAlert } = useModal();
   const isDarkMode = theme === 'dark';
-  const [language, setLanguage] = useState('VI');
+  const { lang: language, setLang: setLanguage } = useI18n();
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
 
   return (
@@ -120,7 +121,7 @@ export const ToolbarNavbar = ({
             title="Ngôn ngữ"
           >
             <Globe className="w-5 h-5" />
-            <span className="text-xs font-semibold">{language}</span>
+            <span className="text-xs font-semibold">{language.toUpperCase()}</span>
           </button>
           <button 
             onClick={onOpenSettings}
@@ -155,8 +156,8 @@ export const ToolbarNavbar = ({
       <LanguageModal 
         isOpen={isLanguageModalOpen}
         onClose={() => setIsLanguageModalOpen(false)}
-        currentLanguage={language}
-        onSelectLanguage={setLanguage}
+        currentLanguage={language.toUpperCase()}
+        onSelectLanguage={(val: string) => setLanguage(val.toLowerCase() as any)}
       />
     </>
   );

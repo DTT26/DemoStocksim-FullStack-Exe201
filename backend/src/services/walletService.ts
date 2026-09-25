@@ -4,8 +4,8 @@ import Holding from '../models/Holding';
 import Order, { OrderStatus } from '../models/Order';
 import Transaction, { TransactionType } from '../models/Transaction';
 
-export const MAX_NORMAL_RESETS_PER_WEEK = 5;
-export const DEFAULT_NORMAL_BALANCE = 10_000; // $10,000 USD chuẩn mực trading simulator
+export const MAX_NORMAL_RESETS_PER_WEEK = 100;
+export const DEFAULT_NORMAL_BALANCE = 100_000; // $100,000 USD chuẩn mực trading simulator
 
 export class WalletService {
   /**

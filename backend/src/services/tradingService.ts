@@ -142,16 +142,16 @@ export class TradingService {
       userId,
       orderId: order._id,
       type: TransactionType.BUY_STOCK,
-      amount: marginRequired,
+      amount: -marginRequired,
       accountType: ctx.accountType,
-      description: `Mở LONG ${symbol} ở giá $${currentPrice.toLocaleString('en-US', {maximumFractionDigits:2})} | Margin: $${margin} | x${leverage} | Qty: ${quantity.toFixed(4)} [${ctx.isChallenge ? 'Cấp Vốn' : 'Tài khoản thường'}]`,
+      description: `Mở LONG ${symbol} ở giá ${currentPrice >= 100 ? currentPrice.toLocaleString('vi-VN') : currentPrice.toFixed(2)} | Margin: ${marginRequired >= 100 ? marginRequired.toLocaleString('vi-VN') : marginRequired.toFixed(2)} | x${leverage} | Qty: ${quantity.toFixed(4)}`,
       metadata: {
         symbol,
         side: 'LONG',
         entryPrice: currentPrice,
         quantity,
         leverage,
-        margin,
+        margin: marginRequired,
         stopLoss,
         takeProfit,
         isOpen: true
@@ -241,18 +241,17 @@ export class TradingService {
 
     await Transaction.create({
       userId,
-      orderId: order._id,
-      type: TransactionType.BUY_STOCK,
-      amount: marginRequired,
+      type: TransactionType.SELL_STOCK,
+      amount: -marginRequired,
       accountType: ctx.accountType,
-      description: `Mở SHORT ${symbol} ở giá $${currentPrice.toLocaleString('en-US', {maximumFractionDigits:2})} | Margin: $${margin} | x${leverage} | Qty: ${quantity.toFixed(4)} [${ctx.isChallenge ? 'Cấp Vốn' : 'Tài khoản thường'}]`,
+      description: `Mở SHORT ${symbol} ở giá ${currentPrice >= 100 ? currentPrice.toLocaleString('vi-VN') : currentPrice.toFixed(2)} | Margin: ${marginRequired >= 100 ? marginRequired.toLocaleString('vi-VN') : marginRequired.toFixed(2)} | x${leverage} | Qty: ${quantity.toFixed(4)}`,
       metadata: {
         symbol,
         side: 'SHORT',
         entryPrice: currentPrice,
         quantity,
         leverage,
-        margin,
+        margin: marginRequired,
         stopLoss,
         takeProfit,
         isOpen: true
@@ -266,25 +265,27 @@ export class TradingService {
   }
 
   /**
-   * ĐÓNG VỊ THẾ (Close Position) - Chốt lời/Cắt lỗ theo giá thị trường
+   * 3. ĐÓNG VỊ THẾ (Chốt lời/Lỗ) - Hỗ trợ Đóng toàn bộ hoặc Đóng một phần (Partial Close)
    */
-  static async closePosition(userId: string, symbol: string, side: 'LONG'|'SHORT', currentPrice: number) {
+  static async closePosition(userId: string, symbol: string, side: 'LONG'|'SHORT', currentPrice: number, closeQty?: number) {
     const ctx = await this.getActiveContext(userId);
     const holding = await Holding.findOne({ userId, symbol, side, accountType: ctx.accountType });
     if (!holding) throw new Error(`Không tìm thấy vị thế ${side} nào của ${symbol}`);
 
-    const qty = holding.quantity;
+    const totalQty = holding.quantity;
+    const actualCloseQty = (closeQty && closeQty > 0 && closeQty < totalQty) ? closeQty : totalQty;
+    const isPartial = actualCloseQty < totalQty;
     const entryPrice = holding.averagePrice;
     
-    // Tính PnL
+    // Tính PnL cho lượng đóng
     let pnl = 0;
     if (side === 'LONG') {
-      pnl = (currentPrice - entryPrice) * qty;
+      pnl = (currentPrice - entryPrice) * actualCloseQty;
     } else {
-      pnl = (entryPrice - currentPrice) * qty;
+      pnl = (entryPrice - currentPrice) * actualCloseQty;
     }
 
-    const marginReturned = (entryPrice * qty) / (holding.leverage || 1);
+    const marginReturned = (entryPrice * actualCloseQty) / (holding.leverage || 1);
     let totalReturn = marginReturned + pnl;
     
     if (totalReturn < 0) {
@@ -295,15 +296,19 @@ export class TradingService {
     // Trả tiền về đúng loại tài khoản đang hoạt động
     await ctx.addBalance(totalReturn);
 
-    // Xóa vị thế
-    await Holding.deleteOne({ _id: holding._id });
+    if (isPartial) {
+      holding.quantity -= actualCloseQty;
+      await holding.save();
+    } else {
+      await Holding.deleteOne({ _id: holding._id });
+    }
 
     const order = await Order.create({
       userId,
       symbol,
       side: side === 'LONG' ? OrderSide.SHORT : OrderSide.LONG,
       type: OrderType.MARKET,
-      quantity: qty,
+      quantity: actualCloseQty,
       price: currentPrice,
       margin: marginReturned,
       leverage: holding.leverage || 1,
@@ -313,17 +318,16 @@ export class TradingService {
 
     await Transaction.create({
       userId,
-      orderId: order._id,
-      type: TransactionType.DEPOSIT,
-      amount: totalReturn,
+      type: TransactionType.CLOSE_POSITION,
+      amount: pnl,
       accountType: ctx.accountType,
-      description: `Đóng ${side} ${qty.toFixed(4)} ${symbol} ở giá $${currentPrice.toLocaleString('en-US', {maximumFractionDigits:2})} | Giá vào: $${entryPrice.toLocaleString('en-US', {maximumFractionDigits:2})}. Lợi nhuận: ${pnl >= 0 ? '+' : ''}$${pnl.toLocaleString('en-US', {maximumFractionDigits:2})}`,
+      description: `Đóng ${isPartial ? 'một phần' : 'vị thế'} ${side} ${symbol} ở giá ${currentPrice >= 100 ? currentPrice.toLocaleString('vi-VN') : currentPrice.toFixed(2)} | Qty: ${actualCloseQty.toFixed(4)} | Lợi nhuận: ${pnl >= 0 ? '+' : '-'}${Math.abs(pnl) >= 100 ? Math.abs(pnl).toLocaleString('vi-VN') : Math.abs(pnl).toFixed(2)} | Vốn về: ${totalReturn >= 100 ? totalReturn.toLocaleString('vi-VN') : totalReturn.toFixed(2)}`,
       metadata: {
         symbol,
         side,
         entryPrice,
         exitPrice: currentPrice,
-        quantity: qty,
+        quantity: actualCloseQty,
         leverage: holding.leverage || 1,
         pnl,
         stopLoss: holding.sl,
@@ -334,7 +338,7 @@ export class TradingService {
 
     return {
       success: true,
-      message: `Đã đóng vị thế ${side}. Lợi nhuận: ${pnl >= 0 ? '+' : ''}$${pnl.toLocaleString('en-US', {maximumFractionDigits:2})}`
+      message: `Đã đóng ${isPartial ? `${actualCloseQty.toFixed(4)} Lot` : 'toàn bộ'} vị thế ${side}. Lợi nhuận: ${pnl >= 0 ? '+' : '-'}${Math.abs(pnl) >= 100 ? Math.abs(pnl).toLocaleString('vi-VN') : Math.abs(pnl).toFixed(2)}`
     };
   }
 
@@ -381,13 +385,10 @@ export class TradingService {
       type: TransactionType.BUY_STOCK,
       amount,
       accountType: ctx.accountType,
-      description: `Bơm thêm $${amount.toLocaleString('en-US')} ký quỹ vào vị thế ${side} ${symbol}. Đòn bẩy mới: x${newLeverage.toFixed(1)}`
+      description: `Bơm ${amount >= 100 ? amount.toLocaleString('vi-VN') : amount.toFixed(2)} ký quỹ vào lệnh ${side} ${symbol}`
     });
 
-    return {
-      success: true,
-      message: `Bơm thêm $${amount.toLocaleString('en-US')} thành công! Đòn bẩy mới: x${newLeverage.toFixed(1)}`
-    };
+    return { success: true, message: `Bơm ${amount >= 100 ? amount.toLocaleString('vi-VN') : amount.toFixed(2)} ký quỹ thành công!` };
   }
 
   /**
@@ -416,7 +417,14 @@ export class TradingService {
     }
 
     if (ctx.availableBalance < margin) {
-      throw new Error(`Ký quỹ không đủ. Cần $${margin.toLocaleString('en-US')}`);
+      throw new Error(`Ký quỹ không đủ. Cần ${margin >= 100 ? margin.toLocaleString('vi-VN') : margin.toFixed(2)}`);
+    }
+
+    // Kiểm tra không cho đặt lệnh chờ nếu đang có vị thế ngược chiều
+    const oppositeSide = side === 'LONG' ? 'SHORT' : 'LONG';
+    const existingOpposite = await Holding.findOne({ userId, symbol, side: oppositeSide, accountType: ctx.accountType });
+    if (existingOpposite) {
+      throw new Error(`Vui lòng đóng vị thế ${oppositeSide} hiện tại của ${symbol} trước khi đặt lệnh chờ ${side}`);
     }
 
     // Tạm trừ tiền ký quỹ để giữ chỗ lệnh chờ
@@ -441,13 +449,13 @@ export class TradingService {
 
     await Transaction.create({
       userId,
-      type: TransactionType.BUY_STOCK,
-      amount: margin,
+      type: side === OrderSide.LONG ? TransactionType.BUY_STOCK : TransactionType.SELL_STOCK,
+      amount: -margin,
       accountType: ctx.accountType,
-      description: `Đặt lệnh chờ ${side} Limit ${symbol} tại $${price.toLocaleString('en-US')} | Margin: $${margin}`
+      description: `Đặt lệnh chờ ${side} ${orderType} ${symbol} tại ${price >= 100 ? price.toLocaleString('vi-VN') : price.toFixed(2)} | Margin: ${margin >= 100 ? margin.toLocaleString('vi-VN') : margin.toFixed(2)}`
     });
 
-    return { success: true, message: `Đặt lệnh chờ ${side} Limit thành công tại $${price.toLocaleString('en-US')}!` };
+    return { success: true, message: `Đặt lệnh chờ ${side} ${orderType} thành công tại ${price >= 100 ? price.toLocaleString('vi-VN') : price.toFixed(2)}!` };
   }
 
   /**
@@ -468,10 +476,123 @@ export class TradingService {
       type: TransactionType.DEPOSIT,
       amount: order.margin,
       accountType: order.accountType || ctx.accountType,
-      description: `Hủy lệnh chờ ${order.side} Limit ${order.symbol}. Hoàn ký quỹ $${order.margin.toLocaleString('en-US')}`
+      description: `Hủy lệnh chờ ${order.side} ${order.type} ${order.symbol}. Hoàn ký quỹ ${order.margin >= 100 ? order.margin.toLocaleString('vi-VN') : order.margin.toFixed(2)}`
     });
 
     return { success: true, message: `Hủy lệnh chờ thành công!` };
+  }
+
+  /**
+   * KIỂM TRA & TỰ ĐỘNG KHỚP LỆNH CHỜ (LIMIT/STOP) VÀ TP/SL TRONG REALTIME
+   */
+  static async checkPriceTriggers(userId: string, currentPrices: Record<string, number>) {
+    if (!userId || !currentPrices || Object.keys(currentPrices).length === 0) return { processed: 0, messages: [] };
+    const ctx = await this.getActiveContext(userId);
+
+    let processedCount = 0;
+    const messages: string[] = [];
+
+    // 1. Kiểm tra TP / SL cho các vị thế đang mở
+    const holdings = await Holding.find({ userId, accountType: ctx.accountType });
+    for (const h of holdings) {
+      const px = currentPrices[h.symbol];
+      if (!px) continue;
+
+      let triggered = false;
+
+      if (h.side === 'LONG') {
+        if (h.tp && px >= h.tp) { triggered = true; }
+        else if (h.sl && px <= h.sl) { triggered = true; }
+      } else if (h.side === 'SHORT') {
+        if (h.tp && px <= h.tp) { triggered = true; }
+        else if (h.sl && px >= h.sl) { triggered = true; }
+      }
+
+      if (triggered) {
+        processedCount++;
+        const closeRes = await this.closePosition(userId, h.symbol, h.side, px);
+        messages.push(`Vị thế ${h.side} ${h.symbol} đã tự động đóng do chạm ${h.tp && px >= h.tp ? 'Chốt lời (TP)' : 'Cắt lỗ (SL)'} tại giá ${px}`);
+      }
+    }
+
+    // 2. Kiểm tra các LỆNH CHỜ (PENDING)
+    const pendingOrders = await Order.find({ userId, status: OrderStatus.PENDING, accountType: ctx.accountType });
+    for (const ord of pendingOrders) {
+      const px = currentPrices[ord.symbol];
+      if (!px) continue;
+
+      let shouldFill = false;
+
+      if (ord.type === OrderType.LIMIT) {
+        if (ord.side === OrderSide.LONG && px <= ord.price) shouldFill = true;
+        if (ord.side === OrderSide.SHORT && px >= ord.price) shouldFill = true;
+      } else if (ord.type === OrderType.STOP) {
+        if (ord.side === OrderSide.LONG && px >= ord.price) shouldFill = true;
+        if (ord.side === OrderSide.SHORT && px <= ord.price) shouldFill = true;
+      }
+
+      if (shouldFill) {
+        // Kiểm tra vị thế ngược chiều trước khi khớp lệnh
+        const oppositeSide = ord.side === OrderSide.LONG ? 'SHORT' : 'LONG';
+        const oppositeHolding = await Holding.findOne({ userId, symbol: ord.symbol, side: oppositeSide, accountType: ctx.accountType });
+        if (oppositeHolding) {
+          // Hủy lệnh chờ và hoàn ký quỹ vì có vị thế ngược chiều
+          ord.status = OrderStatus.CANCELLED;
+          await ord.save();
+          await ctx.addBalance(ord.margin);
+          await Transaction.create({
+            userId,
+            type: TransactionType.DEPOSIT,
+            amount: ord.margin,
+            accountType: ctx.accountType,
+            description: `Hủy lệnh chờ ${ord.side} ${ord.type} ${ord.symbol} do có vị thế ${oppositeSide} ngược chiều. Hoàn ký quỹ ${ord.margin >= 100 ? ord.margin.toLocaleString('vi-VN') : ord.margin.toFixed(2)}`
+          });
+          continue;
+        }
+
+        processedCount++;
+        ord.status = OrderStatus.FILLED;
+        await ord.save();
+
+        const fillPrice = ord.type === OrderType.LIMIT ? ord.price : px;
+
+        // Mở vị thế (tiền ký quỹ đã trừ khi đặt lệnh)
+        const existingHolding = await Holding.findOne({ userId, symbol: ord.symbol, side: ord.side, accountType: ctx.accountType });
+        if (existingHolding) {
+          const oldVal = existingHolding.quantity * existingHolding.averagePrice;
+          const newVal = ord.quantity * fillPrice;
+          existingHolding.quantity += ord.quantity;
+          existingHolding.averagePrice = (oldVal + newVal) / existingHolding.quantity;
+          existingHolding.leverage = ord.leverage;
+          if (ord.takeProfit) existingHolding.tp = ord.takeProfit;
+          if (ord.stopLoss) existingHolding.sl = ord.stopLoss;
+          await existingHolding.save();
+        } else {
+          await Holding.create({
+            userId,
+            symbol: ord.symbol,
+            side: ord.side,
+            quantity: ord.quantity,
+            averagePrice: fillPrice,
+            leverage: ord.leverage,
+            tp: ord.takeProfit,
+            sl: ord.stopLoss,
+            accountType: ctx.accountType
+          });
+        }
+
+        await Transaction.create({
+          userId,
+          type: ord.side === OrderSide.LONG ? TransactionType.BUY_STOCK : TransactionType.SELL_STOCK,
+          amount: 0,
+          accountType: ctx.accountType,
+          description: `Khớp lệnh chờ ${ord.type} ${ord.side} ${ord.symbol} ở giá ${fillPrice >= 100 ? fillPrice.toLocaleString('vi-VN') : fillPrice.toFixed(2)} | Qty: ${ord.quantity.toFixed(4)}`
+        });
+        messages.push(`Lệnh chờ ${ord.type} ${ord.side} ${ord.symbol} đã khớp tại giá ${fillPrice}`);
+      }
+    }
+
+    return { processed: processedCount, messages };
   }
 
   /**

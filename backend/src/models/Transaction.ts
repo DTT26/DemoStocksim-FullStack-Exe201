@@ -4,7 +4,8 @@ export enum TransactionType {
   DEPOSIT = 'DEPOSIT',
   WITHDRAWAL = 'WITHDRAWAL',
   BUY_STOCK = 'BUY_STOCK',
-  SELL_STOCK = 'SELL_STOCK'
+  SELL_STOCK = 'SELL_STOCK',
+  CLOSE_POSITION = 'CLOSE_POSITION'
 }
 
 export interface ITransaction extends Document {

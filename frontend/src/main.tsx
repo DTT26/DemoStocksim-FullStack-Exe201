@@ -6,6 +6,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AlertProvider } from "./contexts/AlertContext";
 import { ModalProvider } from "./contexts/ModalContext";
+import { I18nProvider } from "./contexts/I18nContext";
 import App from "./App.tsx";
 import "./index.css";
 
@@ -19,7 +20,9 @@ createRoot(document.getElementById("root")!).render(
           <AuthProvider>
             <AlertProvider>
               <ModalProvider>
-                <App />
+                <I18nProvider>
+                  <App />
+                </I18nProvider>
               </ModalProvider>
             </AlertProvider>
           </AuthProvider>

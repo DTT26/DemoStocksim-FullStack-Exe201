@@ -73,7 +73,7 @@ export const TradingTerminal = () => {
   const [activeIndicators, setActiveIndicators] = useState<string[]>([]);
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   const [tradeCount, setTradeCount] = useState(0);
-  const [toast, setToast] = useState<{ msg: string, type: 'info' | 'warning' } | null>(null);
+  const [toast, setToast] = useState<{ msg: string, type: 'info' | 'warning' | 'success' | 'error' } | null>(null);
   const [editingSymbol, setEditingSymbol] = useState<string | null>(null);
 
   const [activeRightPanel, setActiveRightPanel] = useState<'watchlist' | 'order' | 'simulation' | 'calculator' | 'journal' | null>('watchlist');
@@ -216,7 +216,7 @@ export const TradingTerminal = () => {
   const [lockDrawing, setLockDrawing] = useState(false);
   const [hideDrawing, setHideDrawing] = useState(false);
 
-  const showToast = (msg: string, type: 'info' | 'warning' = 'info') => {
+  const showToast = (msg: string, type: 'info' | 'warning' | 'success' | 'error' = 'info') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4000);
   };
@@ -458,6 +458,68 @@ export const TradingTerminal = () => {
     }
   }, [selectedStock.price, positions, user?._id]);
 
+  // Kiểm tra Real-time TP/SL/Lệnh chờ mỗi khi giá thay đổi (~1s)
+  useEffect(() => {
+    if (!user?._id) return;
+
+    const checkTriggers = async () => {
+      const priceMap: Record<string, number> = {};
+      STOCKS.forEach(s => {
+        priceMap[s.symbol] = s.symbol === selectedStock.symbol ? selectedStock.price : s.price;
+      });
+
+      try {
+        if (Date.now() - (window as any).lastBinanceFetchTime > 3000 || !(window as any).lastBinanceFetchTime) {
+          (window as any).lastBinanceFetchTime = Date.now();
+          const [spotRes, futRes] = await Promise.all([
+            fetch('https://api.binance.com/api/v3/ticker/price').catch(() => null),
+            fetch('https://fapi.binance.com/fapi/v1/ticker/price').catch(() => null)
+          ]);
+          if (!(window as any).cachedBinancePrices) (window as any).cachedBinancePrices = {};
+          
+          if (spotRes) {
+            const spotData = await spotRes.json();
+            spotData.forEach((item: any) => (window as any).cachedBinancePrices[item.symbol] = parseFloat(item.price));
+          }
+          if (futRes) {
+            const futData = await futRes.json();
+            futData.forEach((item: any) => (window as any).cachedBinancePrices[item.symbol + '.P'] = parseFloat(item.price));
+          }
+        }
+      } catch (err) {}
+
+      // Ghi đè giá Live từ Binance cho các vị thế & lệnh chờ không nằm trên chart hiện tại
+      if ((window as any).cachedBinancePrices) {
+        Object.keys(positions).forEach(sym => {
+          if ((window as any).cachedBinancePrices[sym]) priceMap[sym] = (window as any).cachedBinancePrices[sym];
+        });
+        pendingOrders.forEach(o => {
+          if ((window as any).cachedBinancePrices[o.symbol]) priceMap[o.symbol] = (window as any).cachedBinancePrices[o.symbol];
+        });
+      }
+
+      // Đảm bảo giá của mã đang xem luôn chính xác nhất từng tick
+      priceMap[selectedStock.symbol] = selectedStock.price;
+
+      tradingApi.checkTriggers(priceMap, user._id)
+      .then(res => {
+        if (res && res.processed > 0) {
+          fetchPortfolio(user._id);
+          setTradeCount(c => c + 1);
+          if (res.messages && Array.isArray(res.messages)) {
+            res.messages.forEach((msg: string, i: number) => {
+              setTimeout(() => showToast(msg, 'success'), i * 800);
+            });
+          }
+        }
+      })
+      .catch(() => {
+        // silent catch
+      });
+    };
+    checkTriggers();
+  }, [user?._id, selectedStock.price, selectedStock.symbol, positions, pendingOrders]);
+
   const handleChallengeStateUpdate = async (newState: UserChallengeState) => {
     setChallengeState(newState);
     if (newState.status === 'ACTIVE' || newState.status === 'PAUSED') {
@@ -594,7 +656,7 @@ export const TradingTerminal = () => {
         const pos = positions[selectedStock.symbol];
         if (!pos) return { success: false, message: 'Không có vị thế để đóng' };
 
-        const res = await tradingApi.closePosition(selectedStock.symbol, pos.side, price, user._id);
+        const res = await tradingApi.closePosition(selectedStock.symbol, pos.side, price, undefined, user._id);
         if (res.success) {
           await fetchPortfolio();
           setTradeCount(c => c + 1);
@@ -709,7 +771,7 @@ export const TradingTerminal = () => {
 
       const currentPrice = symbolToClose === selectedStock.symbol ? selectedStock.price : (STOCKS.find(s => s.symbol === symbolToClose)?.price || pos.averagePrice);
 
-      const res = await tradingApi.closePosition(symbolToClose, pos.side, currentPrice, user?._id);
+      const res = await tradingApi.closePosition(symbolToClose, pos.side, currentPrice, undefined, user?._id);
       if (res.success) {
         await fetchPortfolio();
         setTradeCount(c => c + 1);
@@ -736,98 +798,23 @@ export const TradingTerminal = () => {
     }
   };
 
-  // Auto Close on TP / SL / LIQUIDATION
-  useEffect(() => {
-    const pos = positions[selectedStock.symbol];
-    if (!pos) return;
-
-    const currentPrice = selectedStock.price;
-    const actualMargin = (pos.averagePrice * pos.quantity) / pos.leverage;
-    let pnl = 0;
-    let shouldClose = false;
-    let reason = '';
-    let execPrice = currentPrice;
-
-    if (pos.side === 'LONG') {
-      pnl = (currentPrice - pos.averagePrice) * pos.quantity;
-      if (pos.sl && currentPrice <= pos.sl) { shouldClose = true; reason = 'Chạm Cắt Lỗ (SL)'; execPrice = pos.sl; }
-      if (pos.tp && currentPrice >= pos.tp) { shouldClose = true; reason = 'Chạm Chốt Lời (TP)'; execPrice = pos.tp; }
-    } else if (pos.side === 'SHORT') {
-      pnl = (pos.averagePrice - currentPrice) * pos.quantity;
-      if (pos.sl && currentPrice >= pos.sl) { shouldClose = true; reason = 'Chạm Cắt Lỗ (SL)'; execPrice = pos.sl; }
-      if (pos.tp && currentPrice <= pos.tp) { shouldClose = true; reason = 'Chạm Chốt Lời (TP)'; execPrice = pos.tp; }
-    }
-
-    // Liquidation Check
-    if (pnl <= -actualMargin) {
-      shouldClose = true;
-      reason = 'Thanh lý (Cháy tài khoản)';
-      execPrice = currentPrice; // Liquidate at market
-    }
-
-    if (shouldClose) {
-      const key = `${selectedStock.symbol}_${pos.side}`;
-      if ((window as any)[`isClosing_${key}`]) return;
-      (window as any)[`isClosing_${key}`] = true;
-
-      handleTrade('close', execPrice, 0, 0).then(res => {
-        (window as any)[`isClosing_${key}`] = false;
-        if (res.success) {
-          showToast(`⚠️ HỆ THỐNG TỰ ĐỘNG ĐÓNG VỊ THẾ!\nLý do: ${reason}\nGiá: $${execPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, 'warning');
-          addNotification({ title: 'Đóng lệnh tự động', message: `Vị thế ${pos.side} mã ${selectedStock.symbol} tự động đóng do: ${reason}.`, type: 'warning' });
-        }
-      }).catch(() => {
-        (window as any)[`isClosing_${key}`] = false;
-      });
-    }
-  }, [selectedStock.price, positions, selectedStock.symbol]);
-
-  // Auto Execute Limit & Stop Orders
-  useEffect(() => {
-    const currentPrice = selectedStock.price;
-    const symbolOrders = pendingOrders.filter(o => o.symbol === selectedStock.symbol);
-
-    symbolOrders.forEach(order => {
-      const key = `executing_order_${order._id}`;
-      if ((window as any)[key]) return;
-
-      let shouldExecute = false;
-      if (order.type === 'LIMIT') {
-        if (order.side === 'LONG' && currentPrice <= order.price) {
-          shouldExecute = true;
-        } else if (order.side === 'SHORT' && currentPrice >= order.price) {
-          shouldExecute = true;
-        }
-      } else if (order.type === 'STOP') {
-        if (order.side === 'LONG' && currentPrice >= order.price) {
-          shouldExecute = true;
-        } else if (order.side === 'SHORT' && currentPrice <= order.price) {
-          shouldExecute = true;
-        }
+  const handleResetWallet = async () => {
+    try {
+      const res = await tradingApi.resetWallet(100000);
+      if (res.success) {
+        await fetchPortfolio();
+        showToast('✅ Đã nạp / reset số dư về $100,000 USD thành công!', 'info');
       }
+    } catch (e: any) {
+      showToast(`❌ ${e.message}`, 'warning');
+    }
+  };
 
-      if (shouldExecute) {
-        (window as any)[key] = true;
-        // Khớp lệnh: 1. Hủy lệnh chờ, 2. Mở lệnh thật
-        tradingApi.cancelLimitOrder(order._id, user?._id)
-          .then(() => {
-            if (order.side === 'LONG') {
-              return tradingApi.buyStock(order.symbol, order.margin, order.leverage, order.price, order.stopLoss, order.takeProfit, user?._id);
-            } else {
-              return handleTrade(order.side === 'LONG' ? 'buy' : 'sell', order.price, order.margin, order.leverage, order.takeProfit, order.stopLoss);
-            }
-          })
-          .then(() => {
-            fetchPortfolio();
-            showToast(`✅ Lệnh chờ ${order.side} Limit tại ${order.price.toLocaleString()}đ đã khớp!`, 'info');
-            addNotification({ title: 'Khớp lệnh chờ', message: `Lệnh ${order.type} ${order.side} mã ${order.symbol} đã khớp tại giá ${order.price.toLocaleString('vi-VN')}₫.`, type: 'success' });
-          })
-          .finally(() => {
-            (window as any)[key] = false;
-          });
-      }
-    });
-  }, [selectedStock.price, pendingOrders, selectedStock.symbol]);
+  // Auto Close on TP / SL / LIQUIDATION (Đã được chuyển sang xử lý Realtime ở Backend bằng checkPriceTriggers)
+  // useEffect(() => { ... }, [selectedStock.price, positions, selectedStock.symbol]);
+
+  // Auto Execute Limit & Stop Orders (Đã được chuyển sang Backend)
+  // useEffect(() => { ... }, [selectedStock.price, pendingOrders, selectedStock.symbol]);
 
   const handleStartReplaySelection = () => {
     setIsSelectingReplayStart(true);
@@ -1117,7 +1104,6 @@ export const TradingTerminal = () => {
                   }}
                 />
               </div>
-              
               {store.isActive && store.session ? (
                 <PositionsManager currentPrice={selectedStock.price} />
               ) : (
@@ -1126,18 +1112,18 @@ export const TradingTerminal = () => {
                   pendingOrders={pendingOrders}
                   selectedSymbol={selectedStock.symbol}
                   currentPrice={selectedStock.price}
-                  onClosePosition={async (symbol, side, price) => {
+                  onClosePosition={async (symbol, side, price, closeQty) => {
                     try {
-                      const res = await tradingApi.closePosition(symbol, side, price, user?._id);
+                      const res = await tradingApi.closePosition(symbol, side, price, closeQty);
                       if (res.success) {
                         await fetchPortfolio();
                         setTradeCount(c => c + 1);
-                        addNotification({
+                        addNotification?.({
                           title: 'Đóng vị thế',
                           message: `Đã chốt vị thế ${side} mã ${symbol} thành công ở giá ${price.toLocaleString('vi-VN')}đ.`,
                           type: 'success'
                         });
-                        return { success: true, message: `✅ Đã chốt vị thế ${side} ${symbol}` };
+                        return { success: true, message: res.message || `✅ Đã chốt vị thế ${side} ${symbol}` };
                       }
                       return { success: false, message: 'Lỗi khi đóng vị thế' };
                     } catch (e: any) {
@@ -1159,8 +1145,10 @@ export const TradingTerminal = () => {
                   }}
                   onAddMargin={handleAddMargin}
                   onEditPosition={(symbol) => {
-                    const stock = STOCKS.find(s => s.symbol === symbol);
-                    if (stock) handleStockSelect(stock);
+                    if (symbol !== selectedStock.symbol) {
+                      const stock = STOCKS.find(s => s.symbol === symbol);
+                      if (stock) handleStockSelect(stock);
+                    }
                     setEditingSymbol(symbol);
                     setActiveRightPanel('order');
                   }}
@@ -1214,6 +1202,7 @@ export const TradingTerminal = () => {
               onCancelEdit={() => setEditingSymbol(null)}
               onPreviewTPSLChange={setPreviewTPSL}
               draggedTPSL={draggedTPSL}
+              onResetWallet={handleResetWallet}
             />
           )}
 
@@ -1251,7 +1240,7 @@ export const TradingTerminal = () => {
 
       {toast && (
         <div className="fixed top-4 right-1/2 translate-x-1/2 z-50 animate-bounce">
-          <div className={`px-4 py-3 rounded-lg shadow-xl border flex items-center gap-3 ${toast.type === 'warning'
+          <div className={`px-4 py-3 rounded-lg shadow-xl border flex items-center gap-3 ${(toast.type === 'warning' || toast.type === 'error')
               ? 'bg-red-900/90 border-red-500 text-red-100'
               : 'bg-green-900/90 border-green-500 text-green-100'
             }`}>
