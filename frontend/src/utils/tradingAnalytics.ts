@@ -511,3 +511,120 @@ export const calculatePnLDistribution = (trades: TradeLike[]): { label: string; 
 
   return buckets;
 };
+
+export interface RiskDistributionBucket {
+  label: string;
+  count: number;
+  pnlRiskSum: number;
+  color: string;
+}
+
+export interface RiskAnalysisSummary {
+  buckets: RiskDistributionBucket[];
+  tradesWithSLCount: number;
+  tradesWithSLPercent: number;
+  avgRiskAmount: number;
+  avgRiskPercent: number;
+  maxRiskAmount: number;
+  maxRiskPercent: number;
+  disciplineRating: 'Excellent' | 'Good' | 'Moderate' | 'Unprotected';
+  hasPlannedSL: boolean;
+}
+
+export const calculateRiskDistribution = (
+  trades: TradeLike[],
+  initialCapital = 100000000
+): RiskAnalysisSummary => {
+  const buckets: RiskDistributionBucket[] = [
+    { label: '< 0.5%', count: 0, pnlRiskSum: 0, color: '#38bdf8' },
+    { label: '0.5% - 1%', count: 0, pnlRiskSum: 0, color: '#818cf8' },
+    { label: '1% - 2%', count: 0, pnlRiskSum: 0, color: '#a78bfa' },
+    { label: '2% - 3%', count: 0, pnlRiskSum: 0, color: '#fb923c' },
+    { label: '> 3%', count: 0, pnlRiskSum: 0, color: '#f87171' }
+  ];
+
+  if (!trades.length) {
+    return {
+      buckets,
+      tradesWithSLCount: 0,
+      tradesWithSLPercent: 0,
+      avgRiskAmount: 0,
+      avgRiskPercent: 0,
+      maxRiskAmount: 0,
+      maxRiskPercent: 0,
+      disciplineRating: 'Unprotected',
+      hasPlannedSL: false
+    };
+  }
+
+  const tradesWithSL = trades.filter(t => t.sl !== undefined && t.sl > 0);
+  const hasPlannedSL = tradesWithSL.length > 0;
+
+  let totalRiskAmount = 0;
+  let maxRiskAmount = 0;
+  let evaluatedTrades = 0;
+
+  trades.forEach(t => {
+    let tradeRisk = 0;
+    if (t.sl !== undefined && t.sl > 0 && t.entryPrice > 0) {
+      // Planned risk from Stop Loss distance
+      const qty = t.quantity || t.lot || 1;
+      tradeRisk = Math.abs(t.entryPrice - t.sl) * qty;
+    } else if (t.pnl < 0) {
+      // Realized risk from losing trades
+      tradeRisk = Math.abs(t.pnl);
+    } else {
+      // For winning/breakeven trades without explicit SL, calculate risk exposure
+      const qty = t.quantity || t.lot || 1;
+      tradeRisk = t.entryPrice > 0 ? t.entryPrice * qty * 0.01 : Math.max(1, (t.pnl || 0) * 0.5);
+    }
+
+    if (tradeRisk > maxRiskAmount) {
+      maxRiskAmount = tradeRisk;
+    }
+    totalRiskAmount += tradeRisk;
+    evaluatedTrades++;
+
+    const riskPct = initialCapital > 0 ? (tradeRisk / initialCapital) * 100 : 0;
+    if (riskPct < 0.5) {
+      buckets[0].count++;
+      buckets[0].pnlRiskSum += tradeRisk;
+    } else if (riskPct < 1.0) {
+      buckets[1].count++;
+      buckets[1].pnlRiskSum += tradeRisk;
+    } else if (riskPct < 2.0) {
+      buckets[2].count++;
+      buckets[2].pnlRiskSum += tradeRisk;
+    } else if (riskPct < 3.0) {
+      buckets[3].count++;
+      buckets[3].pnlRiskSum += tradeRisk;
+    } else {
+      buckets[4].count++;
+      buckets[4].pnlRiskSum += tradeRisk;
+    }
+  });
+
+  const avgRiskAmount = evaluatedTrades > 0 ? Math.round(totalRiskAmount / evaluatedTrades) : 0;
+  const avgRiskPercent = initialCapital > 0 ? parseFloat(((avgRiskAmount / initialCapital) * 100).toFixed(2)) : 0;
+  const maxRiskPercent = initialCapital > 0 ? parseFloat(((maxRiskAmount / initialCapital) * 100).toFixed(2)) : 0;
+  const tradesWithSLCount = tradesWithSL.length;
+  const tradesWithSLPercent = Math.round((tradesWithSLCount / trades.length) * 100);
+
+  let disciplineRating: 'Excellent' | 'Good' | 'Moderate' | 'Unprotected' = 'Unprotected';
+  if (tradesWithSLPercent >= 80) disciplineRating = 'Excellent';
+  else if (tradesWithSLPercent >= 50) disciplineRating = 'Good';
+  else if (tradesWithSLPercent > 0) disciplineRating = 'Moderate';
+  else disciplineRating = 'Unprotected';
+
+  return {
+    buckets,
+    tradesWithSLCount,
+    tradesWithSLPercent,
+    avgRiskAmount,
+    avgRiskPercent,
+    maxRiskAmount,
+    maxRiskPercent,
+    disciplineRating,
+    hasPlannedSL
+  };
+};

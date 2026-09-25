@@ -4,6 +4,7 @@ import {
   calculateEquityCurve,
   calculateDrawdownCurve,
   calculatePnLDistribution,
+  calculateRiskDistribution,
   calculateTradingHeatmap,
   formatMoneyVND,
   formatPercent
@@ -44,9 +45,8 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({ session }) => {
   const pnlDistribution = calculatePnLDistribution(trades);
   const heatmapData = calculateTradingHeatmap(trades);
 
-  // Risk data check
-  const tradesWithSL = trades.filter(t => t.sl !== undefined && t.sl > 0);
-  const hasSLData = tradesWithSL.length > 0;
+  // Risk data & distribution
+  const riskAnalysis = calculateRiskDistribution(trades, initialBalance);
 
   // Rolling trend data
   let runningWins = 0;
@@ -300,11 +300,13 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({ session }) => {
         {/* Risk Distribution */}
         <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-[#253047] rounded-xl p-5 shadow-sm flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-3">
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">Risk Distribution</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Stop Loss distance & capital at risk per trade
+                  {riskAnalysis.hasPlannedSL
+                    ? 'Capital at risk based on Stop Loss distance per trade'
+                    : 'Realized capital at risk per trade (% of portfolio equity)'}
                 </p>
               </div>
               <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
@@ -312,49 +314,103 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({ session }) => {
               </span>
             </div>
 
-            {hasSLData ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3 text-center">
-                  <div className="p-3 bg-slate-50 dark:bg-[#161f31] rounded-lg border border-slate-200/60 dark:border-[#253047]/60">
-                    <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-                      Trades with SL
-                    </span>
-                    <span className="text-lg font-bold text-emerald-500">
-                      {tradesWithSL.length} / {trades.length} ({Math.round((tradesWithSL.length / trades.length) * 100)}%)
-                    </span>
-                  </div>
-                  <div className="p-3 bg-slate-50 dark:bg-[#161f31] rounded-lg border border-slate-200/60 dark:border-[#253047]/60">
-                    <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-                      Risk Discipline
-                    </span>
-                    <span className="text-lg font-bold text-blue-500">Good</span>
-                  </div>
-                </div>
+            {/* Risk Histogram Chart */}
+            <div className="h-[140px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={riskAnalysis.buckets} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />
+                  <XAxis dataKey="label" stroke={textFill} fontSize={10} tickLine={false} axisLine={false} />
+                  <YAxis stroke={textFill} fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-slate-900 dark:bg-[#1c2230] border border-slate-700 dark:border-[#32394d] text-xs p-3 rounded-lg shadow-xl text-white">
+                            <div className="font-bold text-slate-300">Risk Range: {data.label}</div>
+                            <div className="mt-1 flex items-center justify-between gap-4">
+                              <span className="text-slate-400">Trades:</span>
+                              <span className="font-bold text-white">{data.count}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-4 mt-0.5">
+                              <span className="text-slate-400">Estimated Risk Capital:</span>
+                              <span className="font-bold text-amber-400">{formatMoneyVND(data.pnlRiskSum)}</span>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                    {riskAnalysis.buckets.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
 
-                <div className="p-3.5 bg-slate-50/50 dark:bg-[#161f31]/50 rounded-lg text-xs space-y-2 border border-slate-100 dark:border-[#253047]/50">
-                  <div className="flex justify-between text-slate-600 dark:text-slate-300">
-                    <span>Average Risk Amount:</span>
-                    <span className="font-semibold text-slate-900 dark:text-white">~1,500,000 ₫ (1.5%)</span>
-                  </div>
-                  <div className="flex justify-between text-slate-600 dark:text-slate-300">
-                    <span>Risk Consistency:</span>
-                    <span className="font-semibold text-emerald-500">92%</span>
-                  </div>
-                  <div className="flex justify-between text-slate-600 dark:text-slate-300">
-                    <span>Max Account Risk per Trade:</span>
-                    <span className="font-semibold text-slate-900 dark:text-white">2.0%</span>
-                  </div>
-                </div>
+            {/* Risk Metrics Cards */}
+            <div className="grid grid-cols-2 gap-2.5 mt-3 text-center">
+              <div className="p-2.5 bg-slate-50 dark:bg-[#161f31] rounded-lg border border-slate-200/60 dark:border-[#253047]/60">
+                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
+                  Trades with SL
+                </span>
+                <span className={`text-base font-bold ${
+                  riskAnalysis.tradesWithSLPercent >= 50
+                    ? 'text-emerald-500'
+                    : riskAnalysis.tradesWithSLPercent > 0
+                    ? 'text-amber-500'
+                    : 'text-rose-500 dark:text-rose-400'
+                }`}>
+                  {riskAnalysis.tradesWithSLCount} / {trades.length} ({riskAnalysis.tradesWithSLPercent}%)
+                </span>
               </div>
-            ) : (
-              <div className="h-[220px] flex flex-col items-center justify-center text-center p-6 bg-slate-50/50 dark:bg-[#161f31]/50 rounded-xl border border-dashed border-slate-200 dark:border-[#253047]">
-                <AlertCircle className="w-8 h-8 text-amber-500/70 mb-2" />
-                <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                  Stop Loss data is required to calculate risk distribution
-                </h4>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-xs">
-                  Attach a Stop Loss price when entering orders to calculate capital risk variance and compliance.
-                </p>
+              <div className="p-2.5 bg-slate-50 dark:bg-[#161f31] rounded-lg border border-slate-200/60 dark:border-[#253047]/60">
+                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
+                  Risk Discipline
+                </span>
+                <span className={`text-base font-bold ${
+                  riskAnalysis.disciplineRating === 'Excellent'
+                    ? 'text-emerald-500'
+                    : riskAnalysis.disciplineRating === 'Good'
+                    ? 'text-blue-500'
+                    : riskAnalysis.disciplineRating === 'Moderate'
+                    ? 'text-amber-500'
+                    : 'text-amber-500'
+                }`}>
+                  {riskAnalysis.disciplineRating === 'Excellent' && 'Xuất sắc'}
+                  {riskAnalysis.disciplineRating === 'Good' && 'Tốt'}
+                  {riskAnalysis.disciplineRating === 'Moderate' && 'Trung bình'}
+                  {riskAnalysis.disciplineRating === 'Unprotected' && 'Chưa đặt SL'}
+                </span>
+              </div>
+            </div>
+
+            {/* Risk Stats Summary Row */}
+            <div className="mt-2.5 p-2.5 bg-slate-50/50 dark:bg-[#161f31]/50 rounded-lg text-xs space-y-1.5 border border-slate-100 dark:border-[#253047]/50">
+              <div className="flex justify-between text-slate-600 dark:text-slate-300">
+                <span>Avg. Risk Exposure:</span>
+                <span className="font-semibold text-slate-900 dark:text-white">
+                  ~{formatMoneyVND(riskAnalysis.avgRiskAmount)} ({riskAnalysis.avgRiskPercent}%)
+                </span>
+              </div>
+              <div className="flex justify-between text-slate-600 dark:text-slate-300">
+                <span>Max Single Trade Risk:</span>
+                <span className="font-semibold text-slate-900 dark:text-white">
+                  ~{formatMoneyVND(riskAnalysis.maxRiskAmount)} ({riskAnalysis.maxRiskPercent}%)
+                </span>
+              </div>
+            </div>
+
+            {/* Notice if no SL attached */}
+            {!riskAnalysis.hasPlannedSL && (
+              <div className="mt-2 px-2.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                <span>
+                  Các lệnh chưa đặt Stop Loss. Phân bổ rủi ro đang tính theo mức sụt vốn thực tế (Realized Risk).
+                </span>
               </div>
             )}
           </div>
