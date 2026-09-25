@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
   ArrowLeft, Calendar, CheckCircle2, User, PlayCircle, 
-  Send, Award, AlertCircle, FileText, Check, Clock, TrendingUp
+  Send, Award, AlertCircle, FileText, Check, Clock, TrendingUp,
+  ShieldCheck, AlertTriangle, ExternalLink
 } from 'lucide-react';
 import { MOCK_ASSIGNMENTS } from '../../data/mockStudentData';
 
@@ -338,6 +339,163 @@ export const StudentAssignmentDetail = () => {
                 );
               })}
             </div>
+          </div>
+
+          {/* Bằng chứng giao dịch xác thực bởi hệ thống */}
+          <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] p-6 shadow-sm dark:shadow-lg space-y-4 transition-colors">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200 dark:border-[#253047]">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-cyan-500" />
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                  Bằng chứng giao dịch xác thực (System-Verified)
+                </h2>
+              </div>
+              <Link
+                to={`/trade/${targetSymbol}`}
+                className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 font-semibold"
+              >
+                <span>Mở Trading Terminal ({assignment.symbol || 'FPT'})</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            {submission?.tradingEvidence?.isVerified ? (
+              <div className="space-y-3">
+                {(() => {
+                  const ev = submission.tradingEvidence;
+                  const currSymbol = ev.currencySymbol || '₫';
+                  const totalFilled = ev.totalFilledOrders !== undefined ? ev.totalFilledOrders : ev.totalOrders;
+                  const totalCancelled = ev.totalCancelledOrders || 0;
+
+                  return (
+                    <>
+                      {ev.timeWindow && (
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 font-mono">
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>Khung giờ tính lệnh:</span>
+                          <span className="text-slate-700 dark:text-slate-300">
+                            {new Date(ev.timeWindow.from).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
+                          </span>
+                          <span>→</span>
+                          <span className="text-indigo-600 dark:text-cyan-400 font-semibold">
+                            {new Date(ev.timeWindow.to).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                        <div className="bg-slate-50 dark:bg-[#172033] p-3 rounded-xl border border-slate-200 dark:border-white/5">
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-bold uppercase">Lệnh khớp (Filled)</span>
+                          <span className="text-slate-900 dark:text-white font-mono font-bold text-base mt-0.5 block">
+                            {totalFilled} lệnh
+                          </span>
+                          {totalCancelled > 0 && (
+                            <span className="text-[10px] text-slate-400 font-mono block mt-0.5">({totalCancelled} lệnh hủy)</span>
+                          )}
+                        </div>
+                        <div className="bg-slate-50 dark:bg-[#172033] p-3 rounded-xl border border-slate-200 dark:border-white/5">
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-bold uppercase">Mã cổ phiếu</span>
+                          <span className="text-cyan-600 dark:text-cyan-400 font-mono font-bold text-base mt-0.5 block">
+                            {ev.targetSymbol || assignment.symbol}
+                          </span>
+                        </div>
+                        <div className="bg-slate-50 dark:bg-[#172033] p-3 rounded-xl border border-slate-200 dark:border-white/5">
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-bold uppercase">Kỷ luật Stop Loss</span>
+                          <span className={`font-bold text-sm mt-0.5 block ${ev.hasStopLoss ? 'text-emerald-500' : 'text-amber-500'}`}>
+                            {ev.hasStopLoss ? '✓ Có cài SL' : '⚠️ Chưa cài SL'}
+                          </span>
+                        </div>
+                        <div className="bg-slate-50 dark:bg-[#172033] p-3 rounded-xl border border-slate-200 dark:border-white/5">
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-bold uppercase">P&L thực tế</span>
+                          <span className={`font-mono font-bold text-base mt-0.5 block ${ev.totalPnL >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                            {ev.totalPnL >= 0 ? '+' : ''}{Number(ev.totalPnL || 0).toLocaleString('vi-VN')} {currSymbol}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-white/5">
+                        <table className="w-full text-left text-xs font-mono">
+                          <thead className="bg-slate-100 dark:bg-[#172033] text-slate-600 dark:text-slate-400 uppercase text-[10px]">
+                            <tr>
+                              <th className="py-2 px-3">Lệnh</th>
+                              <th className="py-2 px-3">Mã</th>
+                              <th className="py-2 px-3">Khối lượng</th>
+                              <th className="py-2 px-3">Giá khớp</th>
+                              <th className="py-2 px-3">SL / TP</th>
+                              <th className="py-2 px-3">P&L</th>
+                              <th className="py-2 px-3">Thời gian</th>
+                              <th className="py-2 px-3 text-right">Trạng thái</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-200 dark:divide-white/5 text-slate-700 dark:text-slate-300">
+                            {ev.orders.slice(0, 10).map((ord: any, idx: number) => {
+                              const isBuy = ord.side === 'BUY' || ord.side === 'LONG';
+                              const isCancelled = ord.status === 'CANCELLED' || ord.status === 'REJECTED';
+                              return (
+                                <tr key={ord.id || idx} className={isCancelled ? 'opacity-60' : ''}>
+                                  <td className="py-2 px-3">
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                      isCancelled 
+                                        ? 'bg-slate-500/15 text-slate-500 border border-slate-400/30'
+                                        : isBuy 
+                                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' 
+                                        : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                                    }`}>
+                                      {isBuy ? 'BUY' : 'SELL'}
+                                    </span>
+                                  </td>
+                                  <td className="py-2 px-3 font-bold">{ord.symbol}</td>
+                                  <td className="py-2 px-3">{Number(ord.quantity).toLocaleString('vi-VN')}</td>
+                                  <td className="py-2 px-3">{Number(ord.price).toLocaleString('vi-VN')} {currSymbol}</td>
+                                  <td className="py-2 px-3 text-slate-500 dark:text-slate-400">
+                                    {ord.stopLoss || ord.takeProfit ? (
+                                      <span>
+                                        SL: {ord.stopLoss ? `${Number(ord.stopLoss).toLocaleString('vi-VN')} ${currSymbol}` : '-'} | TP: {ord.takeProfit ? `${Number(ord.takeProfit).toLocaleString('vi-VN')} ${currSymbol}` : '-'}
+                                      </span>
+                                    ) : '-'}
+                                  </td>
+                                  <td className="py-2 px-3">
+                                    {ord.pnl !== undefined && !isCancelled ? (
+                                      <span className={ord.pnl >= 0 ? 'text-emerald-500 font-bold' : 'text-rose-500 font-bold'}>
+                                        {ord.pnl >= 0 ? '+' : ''}{Number(ord.pnl).toLocaleString('vi-VN')} {currSymbol}
+                                      </span>
+                                    ) : '-'}
+                                  </td>
+                                  <td className="py-2 px-3 text-slate-400 text-[11px]">
+                                    {new Date(ord.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                  </td>
+                                  <td className="py-2 px-3 text-right">
+                                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
+                                      ord.status === 'FILLED' 
+                                        ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                                        : ord.status === 'CANCELLED'
+                                        ? 'bg-slate-500/10 text-slate-500 border border-slate-500/20'
+                                        : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                                    }`}>
+                                      {ord.status === 'FILLED' ? 'KHỚP' : ord.status === 'CANCELLED' ? 'ĐÃ HỦY' : ord.status}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            ) : (
+              <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-sm">Chưa có lệnh giao dịch nào khớp với mã {assignment.symbol || 'FPT'}</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400/80 mt-1 leading-relaxed">
+                    Giảng viên sẽ kiểm tra trực tiếp bằng chứng giao dịch thực tế trên sàn khi chấm bài. Hãy mở Trading Terminal để đặt lệnh thực hành trước khi nộp bài.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Form nộp bài tập */}

@@ -3,6 +3,10 @@ import { AuthRequest } from '../middleware/authMiddleware';
 import Assignment from '../models/Assignment';
 import Submission from '../models/Submission';
 import SimulationParticipant from '../models/SimulationParticipant';
+import Order from '../models/Order';
+import PaperTradingSession from '../models/PaperTradingSession';
+import PaperTradingHistory from '../models/PaperTradingHistory';
+import PaperTradingPosition from '../models/PaperTradingPosition';
 
 // POST /api/assignments (Lecturer/Admin only)
 export const createAssignment = async (req: AuthRequest, res: Response) => {
@@ -278,10 +282,15 @@ export const submitAssignment = async (req: AuthRequest, res: Response) => {
       { new: true, upsert: true }
     );
 
+    const tradingEvidence = await fetchStudentTradingEvidence(req.user._id.toString(), assignment, submission.submittedAt);
+
     res.json({
       success: true,
       message: 'Nộp bài tập thành công!',
-      submission,
+      submission: {
+        ...submission.toObject(),
+        tradingEvidence
+      },
     });
   } catch (error: any) {
     console.error('submitAssignment error:', error);
@@ -289,32 +298,243 @@ export const submitAssignment = async (req: AuthRequest, res: Response) => {
   }
 };
 
+/**
+ * Helper to fetch verified trading activity for a student on an assignment
+ */
+/**
+ * Helper to fetch verified trading activity for a student on an assignment
+ * Filters strictly by:
+ * - Student ID
+ * - Target Symbol
+ * - Time window: assignment.createdAt <= executedAt <= submission.submittedAt
+ * - Distinguishes FILLED vs CANCELLED orders
+ * - Determines currency (VND for VN stocks / HOSE, USD for crypto)
+ */
+export async function fetchStudentTradingEvidence(studentId: string, assignment: any, submissionDate?: Date) {
+  try {
+    const symbol = (assignment.symbol || 'FPT').toUpperCase();
+    const symbolRegex = new RegExp(`^${symbol}$`, 'i');
+
+    // Time window filter: FROM assignment created TO student submission
+    const startTime = new Date(assignment.createdAt);
+    const endTime = submissionDate ? new Date(submissionDate) : (assignment.deadline ? new Date(assignment.deadline) : new Date());
+
+    // Strict upper limit: No orders executed AFTER student submitted the assignment
+    // (with a small 5-second buffer for network sync)
+    const upperLimitTime = new Date(endTime.getTime() + 5000);
+    
+    // For lower limit: if assignment was created after submission in test data, handle safely:
+    const lowerLimitTime = startTime.getTime() <= endTime.getTime() 
+      ? startTime 
+      : new Date(endTime.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // 1. Fetch from Order model (Real-time / Terminal orders) within time window
+    const orders = await Order.find({
+      userId: studentId,
+      symbol: symbolRegex,
+      createdAt: { $gte: lowerLimitTime, $lte: upperLimitTime }
+    }).sort({ createdAt: -1 });
+
+    // 2. Fetch from PaperTrading sessions for this student within time window
+    const paperSessions = await PaperTradingSession.find({
+      user: studentId,
+      symbol: symbolRegex,
+    }).select('_id');
+
+    const sessionIds = paperSessions.map(s => s._id);
+    let paperTrades: any[] = [];
+    let openPositions: any[] = [];
+
+    if (sessionIds.length > 0) {
+      paperTrades = await PaperTradingHistory.find({
+        session: { $in: sessionIds },
+        $or: [
+          { closeTime: { $gte: lowerLimitTime, $lte: upperLimitTime } },
+          { openTime: { $gte: lowerLimitTime, $lte: upperLimitTime } },
+          { createdAt: { $gte: lowerLimitTime, $lte: upperLimitTime } }
+        ]
+      }).sort({ closeTime: -1 });
+
+      openPositions = await PaperTradingPosition.find({
+        session: { $in: sessionIds },
+        createdAt: { $gte: lowerLimitTime, $lte: upperLimitTime }
+      }).sort({ createdAt: -1 });
+    }
+
+    // Transform orders into normalized evidence items
+    const normalizedItems: any[] = [];
+
+    orders.forEach((o: any) => {
+      const isFilled = o.status === 'FILLED' || o.status === 'EXECUTED';
+      const isCancelled = o.status === 'CANCELLED' || o.status === 'REJECTED';
+      normalizedItems.push({
+        id: o._id.toString(),
+        side: o.side === 'LONG' ? 'BUY' : o.side === 'SHORT' ? 'SELL' : o.side,
+        type: o.type || 'MARKET',
+        symbol: o.symbol,
+        quantity: o.quantity,
+        price: o.price,
+        stopLoss: o.stopLoss || null,
+        takeProfit: o.takeProfit || null,
+        status: o.status || 'FILLED',
+        isFilled,
+        isCancelled,
+        time: o.createdAt,
+        source: 'TERMINAL_ORDER'
+      });
+    });
+
+    paperTrades.forEach((pt: any) => {
+      normalizedItems.push({
+        id: pt._id.toString(),
+        side: pt.side === 'LONG' ? 'BUY' : 'SELL',
+        type: 'MARKET',
+        symbol: pt.symbol,
+        quantity: pt.lot ? pt.lot * 100000 : 100,
+        price: pt.entryPrice,
+        exitPrice: pt.exitPrice,
+        pnl: pt.netPnL,
+        stopLoss: null,
+        takeProfit: null,
+        status: 'FILLED',
+        isFilled: true,
+        isCancelled: false,
+        closeReason: pt.closeReason,
+        time: pt.closeTime || pt.openTime || pt.createdAt,
+        source: 'PAPER_TRADE'
+      });
+    });
+
+    openPositions.forEach((pos: any) => {
+      normalizedItems.push({
+        id: pos._id.toString(),
+        side: pos.side === 'LONG' ? 'BUY' : 'SELL',
+        type: 'POSITION',
+        symbol: pos.symbol,
+        quantity: pos.lot ? pos.lot * 100000 : 100,
+        price: pos.entryPrice,
+        stopLoss: pos.sl || null,
+        takeProfit: pos.tp || null,
+        status: 'OPEN',
+        isFilled: true,
+        isCancelled: false,
+        time: pos.createdAt,
+        source: 'PAPER_POSITION'
+      });
+    });
+
+    // Sort by timestamp descending
+    normalizedItems.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+
+    // Separate Filled orders and Cancelled orders
+    const filledOrders = normalizedItems.filter(item => item.isFilled);
+    const cancelledOrders = normalizedItems.filter(item => item.isCancelled);
+
+    const totalFilledOrders = filledOrders.length;
+    const totalCancelledOrders = cancelledOrders.length;
+
+    let totalPnL = 0;
+    let hasStopLoss = false;
+    let hasTakeProfit = false;
+
+    // Only calculate P&L and Stop Loss on FILLED / EXECUTED orders
+    filledOrders.forEach(item => {
+      if (typeof item.pnl === 'number') totalPnL += item.pnl;
+      if (item.stopLoss) hasStopLoss = true;
+      if (item.takeProfit) hasTakeProfit = true;
+    });
+
+    const isCrypto = symbol.endsWith('USDT') || symbol.endsWith('USD');
+    const currency = isCrypto ? 'USD' : 'VND';
+    const currencySymbol = isCrypto ? '$' : '₫';
+
+    return {
+      isVerified: totalFilledOrders > 0,
+      totalOrders: totalFilledOrders,
+      totalFilledOrders,
+      totalCancelledOrders,
+      totalPnL,
+      hasStopLoss,
+      hasTakeProfit,
+      targetSymbol: symbol,
+      currency,
+      currencySymbol,
+      timeWindow: {
+        from: lowerLimitTime,
+        to: endTime
+      },
+      orders: normalizedItems,
+    };
+  } catch (err) {
+    console.error('Error fetching trading evidence:', err);
+    return {
+      isVerified: false,
+      totalOrders: 0,
+      totalFilledOrders: 0,
+      totalCancelledOrders: 0,
+      totalPnL: 0,
+      currency: 'VND',
+      currencySymbol: '₫',
+      orders: [],
+      error: 'Could not load trading evidence'
+    };
+  }
+}
+
 // GET /api/assignments/:id/submission (Student xem bài nộp của chính mình)
 export const getMySubmission = async (req: AuthRequest, res: Response) => {
   try {
     const assignmentId = req.params.id;
+    const assignment = await Assignment.findById(assignmentId);
     const submission = await Submission.findOne({
       assignmentId,
       studentId: req.user._id,
     }).populate('gradedBy', 'name email');
 
-    res.json(submission || null);
+    if (!submission) {
+      return res.json(null);
+    }
+
+    const tradingEvidence = assignment 
+      ? await fetchStudentTradingEvidence(req.user._id.toString(), assignment, submission.submittedAt)
+      : null;
+
+    res.json({
+      ...submission.toObject(),
+      tradingEvidence
+    });
   } catch (error) {
     console.error('getMySubmission error:', error);
     res.status(500).json({ message: 'Server Error' });
   }
 };
 
-// GET /api/assignments/:id/submissions (Lecturer xem toàn bộ bài nộp của 1 bài tập)
+// GET /api/assignments/:id/submissions (Lecturer xem toàn bộ bài nộp của 1 bài tập kèm bằng chứng giao dịch)
 export const getAssignmentSubmissions = async (req: AuthRequest, res: Response) => {
   try {
     const assignmentId = req.params.id;
+    const assignment = await Assignment.findById(assignmentId);
+    if (!assignment) {
+      return res.status(404).json({ message: 'Assignment not found' });
+    }
+
     const submissions = await Submission.find({ assignmentId })
       .populate('studentId', 'name email picture')
       .populate('gradedBy', 'name email')
       .sort({ submittedAt: -1 });
 
-    res.json(submissions);
+    const submissionsWithEvidence = await Promise.all(
+      submissions.map(async (sub) => {
+        const studentId = sub.studentId?._id?.toString() || (sub.studentId as any)?.toString();
+        const tradingEvidence = await fetchStudentTradingEvidence(studentId, assignment, sub.submittedAt);
+        return {
+          ...sub.toObject(),
+          tradingEvidence,
+        };
+      })
+    );
+
+    res.json(submissionsWithEvidence);
   } catch (error) {
     console.error('getAssignmentSubmissions error:', error);
     res.status(500).json({ message: 'Server Error' });
@@ -344,10 +564,22 @@ export const gradeSubmission = async (req: AuthRequest, res: Response) => {
 
     const updated = await submission.save();
 
+    const populated = await Submission.findById(updated._id)
+      .populate('studentId', 'name email picture')
+      .populate('gradedBy', 'name email');
+
+    const assignment = await Assignment.findById(submission.assignmentId);
+    const tradingEvidence = assignment 
+      ? await fetchStudentTradingEvidence(submission.studentId.toString(), assignment, submission.submittedAt)
+      : null;
+
     res.json({
       success: true,
       message: 'Chấm điểm bài tập thành công!',
-      submission: updated,
+      submission: {
+        ...populated?.toObject(),
+        tradingEvidence
+      },
     });
   } catch (error: any) {
     console.error('gradeSubmission error:', error);

@@ -32,7 +32,7 @@ export const AppNavbar = () => {
       { label: 'Simulations', path: '/simulations' },
       { label: 'Assignments', path: '/student/assignments' },
       { label: 'Leaderboard', path: '/leaderboard' },
-      { label: 'Performance', path: '/student/performance' },
+      { label: 'Trading Journal', path: '/student/journal' },
     ];
   };
 

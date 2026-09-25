@@ -80,8 +80,8 @@ export const StudentDashboard = () => {
           <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] shadow-sm dark:shadow-lg p-6 transition-colors">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">Portfolio Performance</h2>
-              <Link to="/student/performance" className="text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center gap-1 transition-colors">
-                Full Report <ArrowRight className="w-4 h-4" />
+              <Link to="/student/journal" className="text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center gap-1 transition-colors">
+                Trading Journal <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
             <div className="h-[300px] w-full">

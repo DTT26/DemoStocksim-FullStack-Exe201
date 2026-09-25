@@ -3,6 +3,7 @@ import { Search, Bell, Menu, X, ChevronDown, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Link } from 'react-router-dom';
+import { UserAvatar } from '../UserAvatar';
 
 interface LecturerTopbarProps {
   mobileOpen: boolean;
@@ -123,13 +124,12 @@ export const LecturerTopbar = ({ mobileOpen, setMobileOpen }: LecturerTopbarProp
             onClick={() => { setShowProfileMenu(!showProfileMenu); setShowNotifications(false); }}
             className="flex items-center gap-3 p-1 pl-2 pr-3 hover:bg-slate-100 dark:hover:bg-[#172033] rounded-lg transition-colors border border-transparent hover:border-slate-200 dark:hover:border-[#253047] cursor-pointer"
           >
-            {user?.picture ? (
-              <img src={user.picture} alt="Avatar" className="w-8 h-8 rounded-full border border-slate-200 dark:border-[#253047]" />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-sm font-bold text-white border border-slate-200 dark:border-[#253047]">
-                {user?.name?.charAt(0) || 'L'}
-              </div>
-            )}
+            <UserAvatar 
+              src={user?.picture} 
+              name={user?.name || 'Lecturer'} 
+              size="w-8 h-8" 
+              className="border border-slate-200 dark:border-[#253047]" 
+            />
             <div className="hidden sm:block text-left">
               <p className="text-sm font-medium text-slate-900 dark:text-white line-clamp-1">{user?.name || 'Lecturer'}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">Lecturer</p>

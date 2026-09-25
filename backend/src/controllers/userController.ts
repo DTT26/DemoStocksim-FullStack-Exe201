@@ -59,7 +59,10 @@ export const updateMyProfile = async (req: AuthRequest, res: Response) => {
     else if (className !== undefined) user.class = className;
     if (department !== undefined) user.department = department;
     if (title !== undefined) user.title = title;
-    if (picture !== undefined) user.picture = picture;
+    if (picture !== undefined) {
+      user.picture = picture;
+      user.customAvatar = true;
+    }
 
     const updatedUser = await user.save();
     res.json(updatedUser);

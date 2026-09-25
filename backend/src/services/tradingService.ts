@@ -118,8 +118,24 @@ export class TradingService {
       });
     }
 
+    const order = await Order.create({
+      userId,
+      symbol,
+      side: OrderSide.LONG,
+      type: OrderType.MARKET,
+      quantity,
+      price: currentPrice,
+      margin: marginRequired,
+      leverage,
+      stopLoss,
+      takeProfit,
+      status: OrderStatus.FILLED,
+      accountType: ctx.accountType
+    });
+
     await Transaction.create({
       userId,
+      orderId: order._id,
       type: TransactionType.BUY_STOCK,
       amount: marginRequired,
       accountType: ctx.accountType,
@@ -188,8 +204,24 @@ export class TradingService {
       });
     }
 
+    const order = await Order.create({
+      userId,
+      symbol,
+      side: OrderSide.SHORT,
+      type: OrderType.MARKET,
+      quantity,
+      price: currentPrice,
+      margin: marginRequired,
+      leverage,
+      stopLoss,
+      takeProfit,
+      status: OrderStatus.FILLED,
+      accountType: ctx.accountType
+    });
+
     await Transaction.create({
       userId,
+      orderId: order._id,
       type: TransactionType.BUY_STOCK,
       amount: marginRequired,
       accountType: ctx.accountType,
@@ -235,8 +267,22 @@ export class TradingService {
     // Xóa vị thế
     await Holding.deleteOne({ _id: holding._id });
 
+    const order = await Order.create({
+      userId,
+      symbol,
+      side: side === 'LONG' ? OrderSide.SHORT : OrderSide.LONG,
+      type: OrderType.MARKET,
+      quantity: qty,
+      price: currentPrice,
+      margin: marginReturned,
+      leverage: holding.leverage || 1,
+      status: OrderStatus.FILLED,
+      accountType: ctx.accountType
+    });
+
     await Transaction.create({
       userId,
+      orderId: order._id,
       type: TransactionType.DEPOSIT,
       amount: totalReturn,
       accountType: ctx.accountType,

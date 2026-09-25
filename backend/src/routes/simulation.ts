@@ -18,7 +18,9 @@ import {
   removeStudentFromSimulation,
   approveParticipant,
   rejectParticipant,
-  getLecturerDashboardStats
+  getLecturerDashboardStats,
+  getLecturerStudentsOverview,
+  getStudentSimulationPerformance
 } from '../controllers/simulationController';
 import { protect, lecturer } from '../middleware/authMiddleware';
 
@@ -29,6 +31,7 @@ router.route('/')
   .post(protect, lecturer, createSimulation as any);
 
 router.get('/dashboard/stats', protect, lecturer, getLecturerDashboardStats as any);
+router.get('/students/overview', protect, lecturer, getLecturerStudentsOverview as any);
 router.get('/participations/me', protect, getMyParticipationsList as any);
 
 router.route('/:id')
@@ -47,6 +50,7 @@ router.patch('/:id/participants/:participantId/reject', protect, lecturer, rejec
 router.delete('/:id/leave', protect, leaveSimulation as any);
 
 router.get('/:id/participants', protect, getSimulationParticipants as any);
+router.get('/:id/participants/:participantId/performance', protect, lecturer, getStudentSimulationPerformance as any);
 router.get('/:id/participants/me', protect, getMyParticipation as any);
 
 router.get('/:id/leaderboard', protect, getLeaderboard as any);

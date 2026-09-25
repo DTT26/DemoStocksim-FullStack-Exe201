@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Mail, CheckCircle2, Save, X, Edit3, User, Phone, BookOpen, GraduationCap, FileText, Loader2 } from 'lucide-react';
+import { Mail, CheckCircle2, Save, X, Edit3, User, Phone, BookOpen, GraduationCap, FileText, Loader2, Camera } from 'lucide-react';
 import { MOCK_STUDENT_PORTFOLIO } from '../../data/mockStudentData';
 import { ChangePasswordCard } from '../../components/ChangePasswordCard';
+import { AvatarChangeModal } from '../../components/AvatarChangeModal';
+import { UserAvatar } from '../../components/UserAvatar';
 
 export const StudentProfile = () => {
   const { user, refreshUser } = useAuth();
   
   const [isEditing, setIsEditing] = useState(false);
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [toastMsg, setToastMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -104,7 +107,7 @@ export const StudentProfile = () => {
               : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
           }`}>
             <span>{toastMsg.text}</span>
-            <button onClick={() => setToastMsg(null)} className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white ml-2">✕</button>
+            <button onClick={() => setToastMsg(null)} className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white ml-2 cursor-pointer">✕</button>
           </div>
         )}
       </div>
@@ -116,13 +119,32 @@ export const StudentProfile = () => {
           <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] p-8 text-center relative overflow-hidden shadow-sm dark:shadow-xl transition-colors">
             <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-blue-500/20 dark:from-indigo-900/60 dark:via-purple-900/40 dark:to-blue-900/50"></div>
             <div className="relative z-10 flex flex-col items-center">
-              {user?.picture ? (
-                <img src={user.picture} alt="Avatar" className="w-24 h-24 rounded-full border-4 border-white dark:border-[#111827] bg-slate-100 dark:bg-[#172033] shadow-xl mb-4 object-cover" />
-              ) : (
-                <div className="w-24 h-24 rounded-full border-4 border-white dark:border-[#111827] bg-indigo-600 shadow-xl mb-4 flex items-center justify-center text-3xl font-bold text-white">
-                  {user?.name?.charAt(0) || 'S'}
+              {/* Avatar with click & hover to edit */}
+              <div 
+                onClick={() => setIsAvatarModalOpen(true)}
+                className="relative mb-4 group cursor-pointer"
+                title="Bấm để đổi ảnh đại diện"
+              >
+                <UserAvatar
+                  src={user?.picture}
+                  name={user?.name || 'Student'}
+                  size="w-24 h-24"
+                  textClassName="text-3xl"
+                  className="border-4 border-white dark:border-[#111827] shadow-xl transition-transform group-hover:scale-105"
+                />
+                
+                {/* Hover overlay */}
+                <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity text-white text-[10px] font-bold gap-0.5">
+                  <Camera className="w-5 h-5" />
+                  <span>Đổi ảnh</span>
                 </div>
-              )}
+                
+                {/* Badge button */}
+                <div className="absolute bottom-0 right-0 p-1.5 bg-indigo-600 text-white rounded-full shadow-lg border-2 border-white dark:border-[#111827] group-hover:scale-110 transition-transform">
+                  <Camera className="w-3.5 h-3.5" />
+                </div>
+              </div>
+
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">{user?.name || 'Học viên'}</h2>
               <span className="mt-1 px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
                 Sinh viên (Student)
@@ -332,6 +354,18 @@ export const StudentProfile = () => {
         </div>
 
       </div>
+
+      {/* Avatar Change Modal */}
+      <AvatarChangeModal
+        isOpen={isAvatarModalOpen}
+        onClose={() => setIsAvatarModalOpen(false)}
+        currentPicture={user?.picture}
+        userName={user?.name || 'Học viên'}
+        onSuccess={() => {
+          setToastMsg({ text: '✅ Đổi ảnh đại diện thành công!', type: 'success' });
+          setTimeout(() => setToastMsg(null), 4000);
+        }}
+      />
     </div>
   );
 };

@@ -9,7 +9,6 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { StudentDashboard } from './pages/student/StudentDashboard';
 import { StudentAssignments } from './pages/student/Assignments';
 import { StudentAssignmentDetail } from './pages/student/AssignmentDetail';
-import { StudentPerformance } from './pages/student/Performance';
 import { SimulationsList } from './pages/shared/Simulations';
 import { SimulationDetail } from './pages/shared/SimulationDetail';
 import { Leaderboard } from './pages/shared/Leaderboard';
@@ -17,6 +16,7 @@ import { LecturerDashboard } from './pages/lecturer/LecturerDashboard';
 import { LecturerSimulations } from './pages/lecturer/LecturerSimulations';
 import { LecturerAssignments } from './pages/lecturer/LecturerAssignments';
 import { LecturerStudents } from './pages/lecturer/LecturerStudents';
+import { LecturerSimulationStudents } from './pages/lecturer/LecturerSimulationStudents';
 import { LecturerStudentDetail } from './pages/lecturer/LecturerStudentDetail';
 import { LecturerPerformance } from './pages/lecturer/LecturerPerformance';
 import { LecturerProfile } from './pages/lecturer/LecturerProfile';
@@ -61,7 +61,7 @@ function App() {
             <Route path="simulations/:id" element={<SimulationDetail />} />
             <Route path="assignments" element={<StudentAssignments />} />
             <Route path="assignments/:id" element={<StudentAssignmentDetail />} />
-            <Route path="performance" element={<StudentPerformance />} />
+            <Route path="performance" element={<Navigate to="/student/journal" replace />} />
             <Route path="journal" element={<StudentJournal />} />
             <Route path="journal/:sessionId" element={<SessionDetailPage />} />
             <Route path="journal/trade/:tradeId" element={<StudentTradeDetail />} />
@@ -77,6 +77,7 @@ function App() {
           <Route path="/lecturer">
             <Route index element={<LecturerDashboard />} />
             <Route path="simulations" element={<LecturerSimulations />} />
+            <Route path="simulations/:simulationId/students" element={<LecturerSimulationStudents />} />
             <Route path="simulations/:id/results" element={<LecturerSimulationResults />} />
             <Route path="assignments" element={<LecturerAssignments />} />
             <Route path="students" element={<LecturerStudents />} />

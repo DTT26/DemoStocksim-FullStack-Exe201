@@ -26,7 +26,6 @@ export const StudentSidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileO
     { name: 'Simulations', path: '/student/simulations', icon: <Target className="w-5 h-5" /> },
     { name: 'Assignments', path: '/student/assignments', icon: <BookOpen className="w-5 h-5" /> },
     { name: 'Trading Journal', path: '/student/journal', icon: <Activity className="w-5 h-5" /> },
-    { name: 'Performance', path: '/student/performance', icon: <TrendingUp className="w-5 h-5" /> },
   ];
 
   const lastSelectedStock = localStorage.getItem('lastSelectedStock') || 'fpt';

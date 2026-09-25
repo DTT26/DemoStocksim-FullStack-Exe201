@@ -4,6 +4,11 @@ import Simulation from '../models/Simulation';
 import SimulationParticipant from '../models/SimulationParticipant';
 import Assignment from '../models/Assignment';
 import User from '../models/User';
+import Submission from '../models/Submission';
+import Order from '../models/Order';
+import PaperTradingSession from '../models/PaperTradingSession';
+import PaperTradingHistory from '../models/PaperTradingHistory';
+
 
 // POST /api/simulations (Lecturer/Admin only)
 export const createSimulation = async (req: AuthRequest, res: Response) => {
@@ -340,10 +345,88 @@ export const leaveSimulation = async (req: AuthRequest, res: Response) => {
 // GET /api/simulations/:id/participants
 export const getSimulationParticipants = async (req: AuthRequest, res: Response) => {
   try {
-    const participants = await SimulationParticipant.find({ simulationId: req.params.id })
-      .populate('userId', 'name email picture status');
-    res.json(participants);
+    const simulationId = req.params.id;
+    const simulation = await Simulation.findById(simulationId);
+    if (!simulation) {
+      return res.status(404).json({ message: 'Simulation not found' });
+    }
+
+    const participants = await SimulationParticipant.find({ simulationId })
+      .populate('userId', 'name email picture status')
+      .sort({ createdAt: -1 });
+
+    const assignments = await Assignment.find({ simulationId });
+    const assignmentIds = assignments.map(a => a._id);
+    const totalAssignments = assignments.length;
+
+    const submissions = await Submission.find({ assignmentId: { $in: assignmentIds } });
+
+    const studentUserIds = participants.map(p => (p.userId as any)?._id).filter(Boolean);
+
+    // Count orders from Order model
+    const orderCounts = await Order.aggregate([
+      { $match: { userId: { $in: studentUserIds } } },
+      { $group: { _id: '$userId', count: { $sum: 1 }, filledCount: { $sum: { $cond: [{ $eq: ['$status', 'FILLED'] }, 1, 0] } } } }
+    ]);
+    const orderCountMap = new Map<string, number>();
+    orderCounts.forEach(oc => orderCountMap.set(oc._id.toString(), oc.count));
+
+    // Also count paper trades
+    const paperSessions = await PaperTradingSession.find({ user: { $in: studentUserIds } }).select('_id user');
+    const sessionToUserMap = new Map<string, string>();
+    paperSessions.forEach(s => sessionToUserMap.set(s._id.toString(), s.user.toString()));
+    const paperSessionIds = paperSessions.map(s => s._id);
+
+    if (paperSessionIds.length > 0) {
+      const paperTrades = await PaperTradingHistory.aggregate([
+        { $match: { session: { $in: paperSessionIds } } },
+        { $group: { _id: '$session', count: { $sum: 1 } } }
+      ]);
+      paperTrades.forEach(pt => {
+        const uId = sessionToUserMap.get(pt._id.toString());
+        if (uId) {
+          orderCountMap.set(uId, (orderCountMap.get(uId) || 0) + pt.count);
+        }
+      });
+    }
+
+    const initialSimBalance = simulation.initialBalance || 100000000;
+
+    const enrichedParticipants = participants.map(p => {
+      const u = p.userId as any;
+      const uIdStr = u?._id?.toString() || '';
+      const userSubmissions = submissions.filter(s => s.studentId?.toString() === uIdStr);
+      const submittedCount = userSubmissions.length;
+      const gradedCount = userSubmissions.filter(s => s.status === 'GRADED').length;
+      const pendingGradingCount = userSubmissions.filter(s => s.status === 'SUBMITTED').length;
+
+      const initBal = p.initialBalance || initialSimBalance;
+      const curBal = p.currentBalance ?? initBal;
+      const portVal = p.portfolioValue > 0 ? p.portfolioValue : curBal;
+      const totProf = p.totalProfit !== 0 ? p.totalProfit : (portVal - initBal);
+      const retRate = p.returnRate !== 0 
+        ? p.returnRate 
+        : (initBal > 0 ? parseFloat(((totProf / initBal) * 100).toFixed(2)) : 0);
+
+      const pObj = p.toObject();
+      return {
+        ...pObj,
+        ordersCount: orderCountMap.get(uIdStr) || 0,
+        portfolioValue: portVal,
+        totalProfit: totProf,
+        returnRate: retRate,
+        assignmentStats: {
+          submitted: submittedCount,
+          total: totalAssignments,
+          graded: gradedCount,
+          pending: pendingGradingCount
+        }
+      };
+    });
+
+    res.json(enrichedParticipants);
   } catch (error) {
+    console.error('Error fetching simulation participants:', error);
     res.status(500).json({ message: 'Server Error' });
   }
 };
@@ -484,3 +567,225 @@ export const getLecturerDashboardStats = async (req: AuthRequest, res: Response)
     res.status(500).json({ message: 'Server Error' });
   }
 };
+
+// GET /api/simulations/students/overview (Lecturer only)
+export const getLecturerStudentsOverview = async (req: AuthRequest, res: Response) => {
+  try {
+    const lecturerId = req.user._id;
+
+    // 1. Get simulations created by this lecturer (or all if none created yet, e.g. seeded simulations)
+    let simulations = await Simulation.find({ createdBy: lecturerId }).sort({ createdAt: -1 });
+    if (simulations.length === 0) {
+      simulations = await Simulation.find().sort({ createdAt: -1 });
+    }
+    const simulationIds = simulations.map(sim => sim._id);
+
+    // 2. Get all participants across these simulations
+    const allParticipants = await SimulationParticipant.find({
+      simulationId: { $in: simulationIds }
+    }).populate('userId', 'name email picture status');
+
+    // 3. Count unique students across lecturer's simulations
+    const uniqueStudentIds = new Set<string>();
+    allParticipants.forEach(p => {
+      const u = p.userId as any;
+      if (u && u._id) {
+        uniqueStudentIds.add(u._id.toString());
+      }
+    });
+
+    const totalStudents = uniqueStudentIds.size;
+    const activeStudents = allParticipants.filter(p => p.status === 'ACTIVE').length;
+    const pendingRequests = allParticipants.filter(p => p.status === 'PENDING').length;
+
+    // 4. Map each simulation with participant breakdown & mini participant list for search
+    const simulationCards = simulations.map(sim => {
+      const simParticipants = allParticipants.filter(
+        p => p.simulationId.toString() === sim._id.toString()
+      );
+      const totalParticipants = simParticipants.length;
+      const activeParticipants = simParticipants.filter(p => p.status === 'ACTIVE').length;
+      const pendingParticipants = simParticipants.filter(p => p.status === 'PENDING').length;
+
+      return {
+        _id: sim._id,
+        name: sim.name,
+        description: sim.description,
+        status: sim.status,
+        market: sim.market || 'VN',
+        startDate: sim.startDate,
+        endDate: sim.endDate,
+        initialBalance: sim.initialBalance,
+        totalParticipants,
+        activeParticipants,
+        pendingParticipants,
+        participants: simParticipants.map(p => ({
+          _id: p._id,
+          userId: (p.userId as any)?._id,
+          name: (p.userId as any)?.name || 'Sinh viên',
+          email: (p.userId as any)?.email || '',
+          status: p.status
+        }))
+      };
+    });
+
+    res.json({
+      summary: {
+        totalStudents,
+        activeStudents,
+        pendingRequests
+      },
+      simulations: simulationCards
+    });
+  } catch (error) {
+    console.error('Error getting lecturer students overview:', error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+// GET /api/simulations/:id/participants/:participantId/performance (Lecturer only)
+export const getStudentSimulationPerformance = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id: simulationId, participantId } = req.params;
+
+    let participant = await SimulationParticipant.findOne({
+      _id: participantId,
+      simulationId
+    }).populate('userId', 'name email picture status');
+
+    if (!participant) {
+      participant = await SimulationParticipant.findOne({
+        userId: participantId,
+        simulationId
+      }).populate('userId', 'name email picture status');
+    }
+
+    if (!participant) {
+      return res.status(404).json({ message: 'Participant not found' });
+    }
+
+    const simulation = await Simulation.findById(simulationId);
+    if (!simulation) {
+      return res.status(404).json({ message: 'Simulation not found' });
+    }
+
+    const studentUser = participant.userId as any;
+    const studentId = studentUser._id;
+
+    // Fetch assignments for this simulation
+    const assignments = await Assignment.find({ simulationId });
+    const assignmentIds = assignments.map(a => a._id);
+
+    // Fetch submissions for this student
+    const submissions = await Submission.find({
+      assignmentId: { $in: assignmentIds },
+      studentId
+    });
+
+    const totalAssigned = assignments.length;
+    const submittedCount = submissions.length;
+    const gradedCount = submissions.filter(s => s.status === 'GRADED').length;
+    const pendingCount = submissions.filter(s => s.status === 'SUBMITTED').length;
+
+    // Fetch recent trading activity from Order and PaperTradingHistory
+    const orders = await Order.find({ userId: studentId }).sort({ createdAt: -1 }).limit(20);
+    const paperSessions = await PaperTradingSession.find({ user: studentId }).select('_id');
+    const paperSessionIds = paperSessions.map(s => s._id);
+
+    let paperTrades: any[] = [];
+    if (paperSessionIds.length > 0) {
+      paperTrades = await PaperTradingHistory.find({
+        session: { $in: paperSessionIds }
+      }).sort({ closeTime: -1 }).limit(20);
+    }
+
+    // Normalize recent trades
+    const recentTrades: any[] = [];
+    orders.forEach(o => {
+      recentTrades.push({
+        id: o._id.toString(),
+        time: o.createdAt,
+        symbol: o.symbol,
+        side: o.side === 'LONG' ? 'BUY' : o.side === 'SHORT' ? 'SELL' : o.side,
+        quantity: o.quantity,
+        price: o.price,
+        pnl: 0,
+        status: o.status
+      });
+    });
+
+    paperTrades.forEach(pt => {
+      recentTrades.push({
+        id: pt._id.toString(),
+        time: pt.closeTime || pt.createdAt,
+        symbol: pt.symbol,
+        side: pt.side === 'LONG' ? 'BUY' : 'SELL',
+        quantity: pt.lot,
+        price: pt.exitPrice || pt.entryPrice,
+        pnl: pt.netPnL || pt.grossPnL || 0,
+        status: 'FILLED'
+      });
+    });
+
+    // Sort by time descending
+    recentTrades.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+
+    const filledOrdersCount = orders.filter(o => o.status === 'FILLED').length + paperTrades.length;
+
+    const initialBalance = participant.initialBalance || simulation.initialBalance || 100000000;
+    const currentBalance = participant.currentBalance ?? initialBalance;
+    const portfolioValue = participant.portfolioValue > 0 ? participant.portfolioValue : currentBalance;
+    const totalProfit = participant.totalProfit !== 0 ? participant.totalProfit : (portfolioValue - initialBalance);
+    const returnRate = participant.returnRate !== 0 
+      ? participant.returnRate 
+      : (initialBalance > 0 ? parseFloat(((totalProfit / initialBalance) * 100).toFixed(2)) : 0);
+
+    res.json({
+      student: {
+        _id: studentUser._id,
+        name: studentUser.name || 'Sinh viên',
+        email: studentUser.email,
+        picture: studentUser.picture,
+        participantStatus: participant.status
+      },
+      simulation: {
+        _id: simulation._id,
+        name: simulation.name,
+        market: simulation.market || 'VN',
+        joinedAt: participant.joinedAt || (participant as any).createdAt,
+        status: simulation.status
+      },
+      tradingActivity: {
+        totalOrders: orders.length + paperTrades.length,
+        totalFilledOrders: filledOrdersCount,
+        currentBalance,
+        portfolioValue,
+        totalProfit,
+        returnRate
+      },
+      assignmentProgress: {
+        assigned: totalAssigned,
+        submitted: submittedCount,
+        graded: gradedCount,
+        pending: pendingCount,
+        assignments: assignments.map(a => {
+          const sub = submissions.find(s => s.assignmentId.toString() === a._id.toString());
+          return {
+            _id: a._id,
+            title: a.title,
+            symbol: a.symbol,
+            deadline: a.deadline,
+            status: sub ? sub.status : 'NOT_SUBMITTED',
+            score: sub ? sub.score : null,
+            submittedAt: sub ? sub.submittedAt : null
+          };
+        })
+      },
+      recentTrades: recentTrades.slice(0, 15)
+    });
+  } catch (error) {
+    console.error('Error fetching student simulation performance:', error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+

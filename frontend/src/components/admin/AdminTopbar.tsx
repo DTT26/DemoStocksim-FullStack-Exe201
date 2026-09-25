@@ -3,6 +3,7 @@ import { Search, Bell, Menu, X, ChevronDown, User, LogOut, UserPlus, Play, Check
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Link } from 'react-router-dom';
+import { UserAvatar } from '../UserAvatar';
 
 interface AdminTopbarProps {
   mobileOpen: boolean;
@@ -119,13 +120,12 @@ export const AdminTopbar = ({ mobileOpen, setMobileOpen }: AdminTopbarProps) => 
             onClick={() => { setShowProfileMenu(!showProfileMenu); setShowNotifications(false); }}
             className="flex items-center gap-3 p-1 pl-2 pr-3 hover:bg-slate-100 dark:hover:bg-[#172033] rounded-lg transition-colors border border-transparent hover:border-slate-200 dark:hover:border-[#1e293b] cursor-pointer"
           >
-            {user?.picture ? (
-              <img src={user.picture} alt="Avatar" className="w-8 h-8 rounded-full border border-slate-200 dark:border-[#1e293b]" />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-sm font-bold text-white border border-slate-200 dark:border-[#1e293b]">
-                {user?.name?.charAt(0) || 'A'}
-              </div>
-            )}
+            <UserAvatar 
+              src={user?.picture} 
+              name={user?.name || 'Admin'} 
+              size="w-8 h-8" 
+              className="border border-slate-200 dark:border-[#1e293b]" 
+            />
             <div className="hidden sm:block text-left">
               <p className="text-sm font-medium text-slate-900 dark:text-white line-clamp-1">{user?.name || 'Admin'}</p>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">Admin</p>

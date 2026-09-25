@@ -97,8 +97,8 @@ export const LecturerAssignments = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Assignments</h1>
-          <p className="text-slate-400 mt-2 text-lg">Create trading assignments and evaluate student submissions.</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Assignments</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-2 text-lg">Create trading assignments and evaluate student submissions.</p>
         </div>
         <button 
           onClick={handleOpenCreateModal}
@@ -110,7 +110,7 @@ export const LecturerAssignments = () => {
       </div>
 
       {/* Tabs and Filters */}
-      <div className="flex flex-col md:flex-row justify-between gap-4 border-b border-[#253047] pb-4">
+      <div className="flex flex-col md:flex-row justify-between gap-4 border-b border-slate-200 dark:border-[#253047] pb-4">
         <div className="flex overflow-x-auto scrollbar-hide gap-2">
           {['All', 'Open', 'Closed', 'Draft'].map((tab) => (
             <button
@@ -118,37 +118,37 @@ export const LecturerAssignments = () => {
               onClick={() => setActiveTab(tab)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                 activeTab === tab
-                  ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#172033] border border-transparent'
+                  ? 'bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#172033] border border-transparent'
               }`}
             >
-              {tab} <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === tab ? 'bg-indigo-600/20' : 'bg-[#253047]'}`}>{(counts as any)[tab]}</span>
+              {tab} <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === tab ? 'bg-indigo-600/20 text-indigo-600 dark:text-indigo-300' : 'bg-slate-100 dark:bg-[#253047] text-slate-600 dark:text-slate-300'}`}>{(counts as any)[tab]}</span>
             </button>
           ))}
         </div>
         
         <div className="flex gap-3">
           <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-indigo-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-500" />
             <input
               type="text"
               placeholder="Search assignments..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 bg-[#111827] border border-[#253047] rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-full md:w-64 transition-colors"
+              className="pl-9 pr-4 py-2 bg-white dark:bg-[#111827] border border-slate-200 dark:border-[#253047] rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-full md:w-64 transition-colors"
             />
           </div>
-          <button className="p-2 border border-[#253047] rounded-lg text-slate-400 hover:text-white hover:bg-[#172033] transition-colors">
+          <button className="p-2 border border-slate-200 dark:border-[#253047] rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#172033] transition-colors">
             <Filter className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {/* Data Table */}
-      <div className="bg-[#111827] rounded-2xl border border-[#253047] shadow-lg overflow-hidden">
+      <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] shadow-sm dark:shadow-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-[#172033]/50 border-b border-[#253047] text-slate-400 uppercase tracking-wider text-xs">
+            <thead className="bg-slate-50 dark:bg-[#172033]/50 border-b border-slate-200 dark:border-[#253047] text-slate-500 dark:text-slate-400 uppercase tracking-wider text-xs font-semibold">
               <tr>
                 <th className="px-6 py-4 font-semibold">Assignment Details</th>
                 <th className="px-6 py-4 font-semibold">Simulation</th>
@@ -157,7 +157,7 @@ export const LecturerAssignments = () => {
                 <th className="px-6 py-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#253047]">
+            <tbody className="divide-y divide-slate-200 dark:divide-[#253047]">
               {loading ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-16 text-center text-slate-500">
@@ -172,31 +172,31 @@ export const LecturerAssignments = () => {
                   <td colSpan={5} className="px-6 py-16 text-center text-slate-500">
                     <div className="flex flex-col items-center gap-2">
                       <BookOpen className="w-10 h-10 opacity-20 mb-2" />
-                      <p>No assignments found.</p>
-                      {searchQuery && <p className="text-sm">Try adjusting your search filters.</p>}
+                      <p className="text-slate-900 dark:text-white font-medium">No assignments found.</p>
+                      {searchQuery && <p className="text-sm text-slate-500 dark:text-slate-400">Try adjusting your search filters.</p>}
                     </div>
                   </td>
                 </tr>
               ) : (
                 filteredAssignments.map((ass) => (
-                  <tr key={ass._id} className="hover:bg-[#172033] transition-colors group">
+                  <tr key={ass._id} className="hover:bg-slate-50 dark:hover:bg-[#172033] transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-start gap-3">
-                        <div className={`p-2 rounded-lg mt-0.5 ${ass.status === 'CLOSED' ? 'bg-slate-500/10 text-slate-400' : 'bg-amber-500/10 text-amber-500'}`}>
+                        <div className={`p-2 rounded-lg mt-0.5 ${ass.status === 'CLOSED' ? 'bg-slate-100 dark:bg-slate-500/10 text-slate-500 dark:text-slate-400' : 'bg-amber-500/10 text-amber-500'}`}>
                           <BookOpen className="w-5 h-5" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <h4 className="font-bold text-white text-base group-hover:text-indigo-400 transition-colors">{ass.title}</h4>
+                            <h4 className="font-bold text-slate-900 dark:text-white text-base group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{ass.title}</h4>
                             {ass.symbol && (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
                                 {ass.symbol}
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-slate-400 mt-1 line-clamp-1 max-w-sm">{ass.description}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1 max-w-sm">{ass.description}</p>
                           {ass.requirements && ass.requirements.length > 0 && (
-                            <div className="flex items-center gap-1.5 mt-1 text-[11px] text-indigo-400">
+                            <div className="flex items-center gap-1.5 mt-1 text-[11px] text-indigo-600 dark:text-indigo-400">
                               <ListChecks className="w-3.5 h-3.5" />
                               <span>{ass.requirements.length} tiêu chí checklist</span>
                             </div>
@@ -205,25 +205,25 @@ export const LecturerAssignments = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-slate-300 font-medium">
+                      <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-medium">
                         <Target className="w-4 h-4 text-emerald-500" />
                         {ass.simulationId?.name || 'Unknown Simulation'}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase tracking-wider inline-flex items-center gap-1.5 border ${
-                        ass.status === 'OPEN' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 
-                        ass.status === 'DRAFT' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                        'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                        ass.status === 'OPEN' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 
+                        ass.status === 'DRAFT' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
+                        'bg-slate-100 dark:bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-500/20'
                       }`}>
                         {ass.status === 'OPEN' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>}
                         {ass.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <div className="text-sm font-medium text-slate-300 flex items-center justify-center gap-1.5">
-                        <Clock className={`w-4 h-4 ${new Date(ass.deadline) < new Date() ? 'text-rose-400' : 'text-slate-500'}`} />
-                        <span className={new Date(ass.deadline) < new Date() ? 'text-rose-400' : ''}>
+                      <div className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1.5">
+                        <Clock className={`w-4 h-4 ${new Date(ass.deadline) < new Date() ? 'text-rose-500' : 'text-slate-400 dark:text-slate-500'}`} />
+                        <span className={new Date(ass.deadline) < new Date() ? 'text-rose-500' : ''}>
                           {new Date(ass.deadline).toLocaleDateString(undefined, {
                             year: 'numeric',
                             month: 'short',
@@ -236,7 +236,7 @@ export const LecturerAssignments = () => {
                       <div className="flex items-center justify-end gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <button 
                           onClick={() => setAssignmentForSubmissions(ass)}
-                          className="px-2.5 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                          className="px-2.5 py-1.5 bg-indigo-50 dark:bg-indigo-600/20 hover:bg-indigo-100 dark:hover:bg-indigo-600/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
                           title="Xem bài nộp và chấm điểm"
                         >
                           <ClipboardCheck className="w-4 h-4" />
@@ -245,7 +245,7 @@ export const LecturerAssignments = () => {
 
                         <button 
                           onClick={() => handleOpenAssignModal(ass)}
-                          className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-colors"
+                          className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-indigo-500/10 rounded-lg transition-colors"
                           title="Assign to Students"
                         >
                           <Users className="w-5 h-5" />
@@ -253,7 +253,7 @@ export const LecturerAssignments = () => {
                         
                         <button 
                           onClick={() => handleOpenEditModal(ass)}
-                          className="p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+                          className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors"
                           title="Edit Assignment"
                         >
                           <Edit3 className="w-5 h-5" />
@@ -262,7 +262,7 @@ export const LecturerAssignments = () => {
                         {ass.status === 'OPEN' ? (
                           <button 
                             onClick={() => handleUpdateStatus(ass._id, 'CLOSED')}
-                            className="p-2 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg transition-colors ml-1"
+                            className="p-2 text-rose-500 dark:text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-colors ml-1"
                             title="Close Assignment"
                           >
                             <Lock className="w-5 h-5" />
@@ -270,7 +270,7 @@ export const LecturerAssignments = () => {
                         ) : (
                           <button 
                             onClick={() => handleUpdateStatus(ass._id, 'OPEN')}
-                            className="p-2 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-lg transition-colors ml-1"
+                            className="p-2 text-emerald-500 dark:text-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors ml-1"
                             title="Open Assignment"
                           >
                             <CheckCircle className="w-5 h-5" />

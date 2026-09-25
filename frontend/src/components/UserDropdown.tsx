@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { LogOut, Keyboard, LayoutDashboard, Trophy } from 'lucide-react';
 import { googleLogout } from '@react-oauth/google';
 import { Link } from 'react-router-dom';
+import { UserAvatar } from './UserAvatar';
 
 interface User {
   name: string;
@@ -53,24 +54,19 @@ export const UserDropdown = ({
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-8 h-8 rounded-full overflow-hidden hover:ring-2 hover:ring-gray-300 dark:hover:ring-[#2a2e39] transition-all focus:outline-none cursor-pointer"
+        title={user.name}
       >
-        {user.picture ? (
-          <img src={user.picture} alt={user.name} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full bg-slate-600 flex items-center justify-center text-white font-bold">
-            {user.name.charAt(0)}
-          </div>
-        )}
+        <UserAvatar src={user.picture} name={user.name} size="w-full h-full" />
       </button>
 
       {isOpen && (
         <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-[#1e222d] border border-gray-200 dark:border-[#2a2e39] rounded-lg shadow-xl z-50 text-sm text-gray-800 dark:text-[#d1d4dc] font-sans flex flex-col py-1">
           {/* User Info */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-[#2a2e39]">
-            <img src={user.picture || ''} alt="avatar" className="w-10 h-10 rounded-full object-cover bg-slate-600" />
-            <div className="flex flex-col">
-              <span className="text-gray-900 dark:text-white font-bold text-base">{user.name} <span className="text-xs text-blue-500 cursor-pointer ml-1">📝</span></span>
-              <span className="text-xs text-gray-500 dark:text-[#787b86]">{user.email}</span>
+            <UserAvatar src={user.picture} name={user.name} size="w-10 h-10" textClassName="text-base" />
+            <div className="flex flex-col min-w-0">
+              <span className="text-gray-900 dark:text-white font-bold text-base truncate">{user.name}</span>
+              <span className="text-xs text-gray-500 dark:text-[#787b86] truncate">{user.email}</span>
             </div>
           </div>
 

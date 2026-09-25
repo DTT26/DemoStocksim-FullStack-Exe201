@@ -5,6 +5,7 @@ export interface IUser extends Document {
   passwordHash?: string;
   name?: string;
   picture?: string;
+  customAvatar?: boolean;
   googleId?: string;
   role: 'student' | 'lecturer' | 'admin';
   status: 'ACTIVE' | 'DISABLED' | 'SUSPENDED';
@@ -25,6 +26,7 @@ const UserSchema: Schema = new Schema(
     passwordHash: { type: String },
     name: { type: String },
     picture: { type: String },
+    customAvatar: { type: Boolean, default: false },
     googleId: { type: String, unique: true, sparse: true },
     role: { type: String, enum: ['student', 'lecturer', 'admin'], default: 'student' },
     status: { type: String, enum: ['ACTIVE', 'DISABLED', 'SUSPENDED'], default: 'ACTIVE' },

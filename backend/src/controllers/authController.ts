@@ -408,11 +408,15 @@ export const googleLogin = async (req: Request, res: Response) => {
         availableBalance: 100000000,
       });
     } else {
-      // Cập nhật thông tin nếu cần thiết (ví dụ: avatar mới)
+      // Cập nhật thông tin nếu cần thiết
       let updated = false;
       if (!user.googleId) { user.googleId = googleId; updated = true; }
-      if (user.name !== name) { user.name = name; updated = true; }
-      if (user.picture !== picture) { user.picture = picture; updated = true; }
+      if (!user.name && name) { user.name = name; updated = true; }
+      // Chỉ cập nhật avatar từ Google nếu người dùng CHƯA đổi avatar riêng và CHƯA có avatar
+      if (!user.customAvatar && !user.picture && picture) {
+        user.picture = picture;
+        updated = true;
+      }
       if (updated) {
         await user.save();
       }

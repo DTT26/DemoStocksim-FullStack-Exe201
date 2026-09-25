@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { BarChart3, TrendingUp, Users, Target, BookOpen, ChevronRight, AlertCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export const LecturerPerformance = () => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -44,18 +47,18 @@ export const LecturerPerformance = () => {
     <div className="space-y-8 animate-in fade-in duration-500 pb-10">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-white tracking-tight">Teaching Analytics</h1>
-        <p className="text-slate-400 mt-2 text-lg">Real-time performance analytics and student engagement metrics.</p>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Teaching Analytics</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-2 text-lg">Real-time performance analytics and student engagement metrics.</p>
       </div>
 
       {/* KPI Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi, idx) => (
-          <div key={idx} className="bg-[#111827] p-5 rounded-2xl border border-[#253047] shadow-lg relative overflow-hidden group hover:border-indigo-500/50 transition-colors">
-            <p className="text-sm font-medium text-slate-400 mb-1">{kpi.label}</p>
+          <div key={idx} className="bg-white dark:bg-[#111827] p-5 rounded-2xl border border-slate-200 dark:border-[#253047] shadow-sm dark:shadow-lg relative overflow-hidden group hover:border-indigo-500/50 transition-colors">
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">{kpi.label}</p>
             <div className="flex items-end justify-between mt-2">
-              <h3 className="text-3xl font-bold text-white">{kpi.value}</h3>
-              <span className={`text-sm font-bold flex items-center gap-1 ${kpi.positive ? 'text-emerald-400' : 'text-rose-400'}`}>
+              <h3 className="text-3xl font-bold text-slate-900 dark:text-white">{kpi.value}</h3>
+              <span className={`text-sm font-bold flex items-center gap-1 ${kpi.positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                 <TrendingUp className={`w-4 h-4 ${!kpi.positive && 'rotate-180'}`} />
                 {kpi.change}
               </span>
@@ -66,32 +69,38 @@ export const LecturerPerformance = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Performance by Simulation */}
-        <div className="bg-[#111827] rounded-2xl border border-[#253047] shadow-lg flex flex-col">
-          <div className="p-5 border-b border-[#253047] bg-[#172033] flex justify-between items-center">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-indigo-400" />
+        <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] shadow-sm dark:shadow-lg flex flex-col">
+          <div className="p-5 border-b border-slate-200 dark:border-[#253047] bg-slate-50 dark:bg-[#172033] flex justify-between items-center">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
               Class Performance by Simulation
             </h2>
           </div>
           <div className="p-6 flex-1 flex flex-col justify-center items-center min-h-[320px]">
             {loading ? (
-              <div className="flex flex-col items-center gap-3 text-slate-500">
+              <div className="flex flex-col items-center gap-3 text-slate-400">
                 <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
                 <span>Loading analytics...</span>
               </div>
             ) : chartData.length === 0 ? (
-              <div className="text-slate-500 text-sm">Chưa có dữ liệu mô phỏng.</div>
+              <div className="text-slate-400 text-sm">Chưa có dữ liệu mô phỏng.</div>
             ) : (
               <div className="h-[260px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#253047" vertical={false} />
-                    <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                    <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `${val}%`} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#253047' : '#e2e8f0'} vertical={false} />
+                    <XAxis dataKey="name" stroke={isDark ? '#64748b' : '#94a3b8'} fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis stroke={isDark ? '#64748b' : '#94a3b8'} fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `${val}%`} />
                     <Tooltip 
-                      contentStyle={{ backgroundColor: '#111827', borderColor: '#253047', borderRadius: '0.5rem', color: '#fff' }}
+                      contentStyle={{ 
+                        backgroundColor: isDark ? '#111827' : '#ffffff', 
+                        borderColor: isDark ? '#253047' : '#e2e8f0', 
+                        borderRadius: '0.5rem', 
+                        color: isDark ? '#fff' : '#0f172a',
+                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                      }}
                       formatter={(value: any) => [`${value}%`, 'Avg Return Rate']}
-                      cursor={{ fill: '#172033' }}
+                      cursor={{ fill: isDark ? '#172033' : '#f1f5f9' }}
                     />
                     <Bar dataKey="avgReturn" radius={[4, 4, 0, 0]}>
                       {chartData.map((entry: any, index: number) => (
@@ -106,30 +115,30 @@ export const LecturerPerformance = () => {
         </div>
 
         {/* Needs Attention */}
-        <div className="bg-[#111827] rounded-2xl border border-[#253047] shadow-lg flex flex-col">
-          <div className="p-5 border-b border-[#253047] bg-[#172033] flex justify-between items-center">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-rose-400" />
+        <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] shadow-sm dark:shadow-lg flex flex-col">
+          <div className="p-5 border-b border-slate-200 dark:border-[#253047] bg-slate-50 dark:bg-[#172033] flex justify-between items-center">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-rose-500 dark:text-rose-400" />
               Needs Attention ({needsAttention.length})
             </h2>
           </div>
           <div className="p-0 flex-1">
             {loading ? (
-              <div className="p-12 text-center text-slate-500">Loading alerts...</div>
+              <div className="p-12 text-center text-slate-400">Loading alerts...</div>
             ) : needsAttention.length === 0 ? (
-              <div className="p-12 text-center text-slate-500 text-sm">Tất cả sinh viên đang hoạt động bình thường và có lợi nhuận dương.</div>
+              <div className="p-12 text-center text-slate-500 dark:text-slate-400 text-sm">Tất cả sinh viên đang hoạt động bình thường và có lợi nhuận dương.</div>
             ) : (
-              <ul className="divide-y divide-[#253047]">
+              <ul className="divide-y divide-slate-100 dark:divide-[#253047]">
                 {needsAttention.map((item: any) => (
-                  <li key={item.id} className="p-4 hover:bg-[#172033]/50 transition-colors flex items-center justify-between group">
+                  <li key={item.id} className="p-4 hover:bg-slate-50 dark:hover:bg-[#172033]/50 transition-colors flex items-center justify-between group">
                     <div className="flex items-start gap-3">
                       <div className={`mt-0.5 w-2 h-2 rounded-full ${item.severity === 'high' ? 'bg-rose-500' : 'bg-amber-500'} shadow-[0_0_8px_currentColor]`} />
                       <div>
-                        <h4 className="font-semibold text-white group-hover:text-indigo-400 transition-colors">{item.name}</h4>
-                        <p className="text-sm text-slate-400">{item.issue}</p>
+                        <h4 className="font-semibold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{item.name}</h4>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">{item.issue}</p>
                       </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-indigo-400" />
+                    <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400" />
                   </li>
                 ))}
               </ul>
