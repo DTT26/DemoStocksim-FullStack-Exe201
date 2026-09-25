@@ -18,8 +18,8 @@ export const Leaderboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Mock simulation data since we don't have an endpoint for it yet
-  const [simulation] = useState<SimulationInfo>({
+  // Simulation data state
+  const [simulation, setSimulation] = useState<SimulationInfo>({
     id: simId,
     name: `Trading Challenge #${simId.slice(-2).toUpperCase()}`,
     status: 'LIVE',
@@ -36,7 +36,32 @@ export const Leaderboard = () => {
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
       const token = localStorage.getItem('token');
-      const response = await fetch(`${apiUrl}/users?role=student`, { credentials: 'include', headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
+      const authHeaders: Record<string, string> = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+      // Try to fetch real simulation details if simId is provided
+      if (simId && (simId.length === 24 || simId.startsWith('sim-'))) {
+        try {
+          const simRes = await fetch(`${apiUrl}/simulations/${simId}`, { headers: authHeaders });
+          if (simRes.ok) {
+            const simData = await simRes.json();
+            setSimulation(prev => ({
+              ...prev,
+              id: simData._id || prev.id,
+              name: simData.name || prev.name,
+              status: simData.status || prev.status,
+              participants: simData.participantsCount || prev.participants,
+              market: simData.market || prev.market,
+              startDate: simData.startDate || prev.startDate,
+              endDate: simData.endDate || prev.endDate,
+              initialBalance: simData.initialBalance || prev.initialBalance,
+            }));
+          }
+        } catch (e) {
+          console.warn('Could not fetch simulation details:', e);
+        }
+      }
+
+      const response = await fetch(`${apiUrl}/users?role=student`, { credentials: 'include', headers: authHeaders });
       
       if (response.ok) {
         const data = await response.json();
@@ -49,11 +74,15 @@ export const Leaderboard = () => {
           const portfolio = basePortfolio * performanceMulti;
           const profit = portfolio - basePortfolio;
           const returnRate = (profit / basePortfolio) * 100;
+          const isMe = currentUser && (u._id === currentUser._id || u.email === currentUser.email);
+          const pic = isMe ? (currentUser.picture || (currentUser as any)?.avatar || u.picture || u.avatar) : (u.picture || u.avatar);
           
           return {
             _id: u._id,
-            name: u.name,
+            name: isMe ? (currentUser.name || u.name) : u.name,
             email: u.email,
+            picture: pic,
+            avatar: pic,
             portfolio,
             profit,
             returnRate,
@@ -80,27 +109,35 @@ export const Leaderboard = () => {
   // Update simulation participants count
   useEffect(() => {
     if (users.length > 0) {
-      simulation.participants = users.length;
+      setSimulation(prev => ({
+        ...prev,
+        participants: users.length
+      }));
     }
-  }, [users, simulation]);
+  }, [users.length]);
 
   // Find current user's rank
   const currentUserIndex = users.findIndex(u => u.email === currentUser?.email);
   const currentUserRank = currentUserIndex >= 0 ? currentUserIndex + 1 : undefined;
-  const currentUserData = currentUserIndex >= 0 ? users[currentUserIndex] : undefined;
+  const currentUserData = currentUserIndex >= 0 ? {
+    ...users[currentUserIndex],
+    name: currentUser?.name || users[currentUserIndex].name,
+    picture: currentUser?.picture || (currentUser as any)?.avatar || users[currentUserIndex].picture,
+    avatar: currentUser?.picture || (currentUser as any)?.avatar || users[currentUserIndex].avatar
+  } : undefined;
 
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] animate-in fade-in">
-        <div className="bg-[#1e222d] rounded-2xl border border-red-500/20 p-8 text-center max-w-md">
+        <div className="bg-white dark:bg-[#1e222d] rounded-2xl border border-red-500/20 p-8 text-center max-w-md shadow-sm">
           <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-red-500 text-2xl">⚠️</span>
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">Unable to load leaderboard</h2>
-          <p className="text-[#787b86] mb-6">{error}</p>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Unable to load leaderboard</h2>
+          <p className="text-slate-500 dark:text-[#787b86] mb-6">{error}</p>
           <button 
             onClick={fetchLeaderboard}
-            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-sm"
           >
             Try Again
           </button>

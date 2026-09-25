@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Search, RefreshCw, Users } from 'lucide-react';
+import { UserAvatar } from '../../../components/UserAvatar';
 import type { LeaderboardUser } from './types';
 
 interface LeaderboardTableProps {
@@ -18,10 +19,15 @@ export const LeaderboardTable = ({ users, currentUserEmail, loading, onRefresh }
   );
 
   const formatMoney = (val: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(val);
+    if (val === undefined || val === null) return '0 ₫';
+    if (Math.abs(val) >= 1000000) {
+      return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND',
+        maximumFractionDigits: 0
+      }).format(val);
+    }
+    return `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const formatReturn = (val: number) => {
@@ -111,9 +117,12 @@ export const LeaderboardTable = ({ users, currentUserEmail, loading, onRefresh }
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${isCurrentUser ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-[#2a2e39] text-slate-700 dark:text-[#787b86]'}`}>
-                          {user.name ? user.name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
-                        </div>
+                        <UserAvatar
+                          src={user.picture || user.avatar}
+                          name={user.name || user.email}
+                          size="w-8 h-8"
+                          className={isCurrentUser ? "ring-2 ring-indigo-500/30" : ""}
+                        />
                         <div className="flex items-center gap-2">
                           <span className={`font-semibold ${isCurrentUser ? 'text-indigo-600 dark:text-blue-400' : 'text-slate-800 dark:text-slate-200'}`}>
                             {user.name || user.email.split('@')[0]}
