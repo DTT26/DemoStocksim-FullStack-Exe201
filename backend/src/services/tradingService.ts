@@ -124,7 +124,18 @@ export class TradingService {
       type: TransactionType.BUY_STOCK,
       amount: marginRequired,
       accountType: ctx.accountType,
-      description: `Mở LONG ${symbol} ở giá $${currentPrice.toLocaleString('en-US', {maximumFractionDigits:2})} | Margin: $${margin} | x${leverage} | Qty: ${quantity.toFixed(2)} [${ctx.isChallenge ? 'Cấp Vốn' : 'Tài khoản thường'}]`
+      description: `Mở LONG ${symbol} ở giá $${currentPrice.toLocaleString('en-US', {maximumFractionDigits:2})} | Margin: $${margin} | x${leverage} | Qty: ${quantity.toFixed(4)} [${ctx.isChallenge ? 'Cấp Vốn' : 'Tài khoản thường'}]`,
+      metadata: {
+        symbol,
+        side: 'LONG',
+        entryPrice: currentPrice,
+        quantity,
+        leverage,
+        margin,
+        stopLoss,
+        takeProfit,
+        isOpen: true
+      }
     });
 
     return {
@@ -198,7 +209,18 @@ export class TradingService {
       type: TransactionType.SELL_STOCK,
       amount: marginRequired,
       accountType: ctx.accountType,
-      description: `Mở SHORT ${symbol} ở giá $${currentPrice.toLocaleString('en-US', {maximumFractionDigits:2})} | Margin: $${margin} | x${leverage} | Qty: ${quantity.toFixed(2)} [${ctx.isChallenge ? 'Cấp Vốn' : 'Tài khoản thường'}]`
+      description: `Mở SHORT ${symbol} ở giá $${currentPrice.toLocaleString('en-US', {maximumFractionDigits:2})} | Margin: $${margin} | x${leverage} | Qty: ${quantity.toFixed(4)} [${ctx.isChallenge ? 'Cấp Vốn' : 'Tài khoản thường'}]`,
+      metadata: {
+        symbol,
+        side: 'SHORT',
+        entryPrice: currentPrice,
+        quantity,
+        leverage,
+        margin,
+        stopLoss,
+        takeProfit,
+        isOpen: true
+      }
     });
 
     return {
@@ -245,7 +267,19 @@ export class TradingService {
       type: TransactionType.DEPOSIT,
       amount: totalReturn,
       accountType: ctx.accountType,
-      description: `Đóng ${side} ${qty.toFixed(2)} ${symbol} ở giá $${currentPrice.toLocaleString('en-US', {maximumFractionDigits:2})}. Lợi nhuận: ${pnl >= 0 ? '+' : ''}$${pnl.toLocaleString('en-US', {maximumFractionDigits:2})}`
+      description: `Đóng ${side} ${qty.toFixed(4)} ${symbol} ở giá $${currentPrice.toLocaleString('en-US', {maximumFractionDigits:2})} | Giá vào: $${entryPrice.toLocaleString('en-US', {maximumFractionDigits:2})}. Lợi nhuận: ${pnl >= 0 ? '+' : ''}$${pnl.toLocaleString('en-US', {maximumFractionDigits:2})}`,
+      metadata: {
+        symbol,
+        side,
+        entryPrice,
+        exitPrice: currentPrice,
+        quantity: qty,
+        leverage: holding.leverage || 1,
+        pnl,
+        stopLoss: holding.sl,
+        takeProfit: holding.tp,
+        isOpen: false
+      }
     });
 
     return {

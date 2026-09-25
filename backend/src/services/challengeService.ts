@@ -79,7 +79,7 @@ export const CHALLENGE_LEVELS: ChallengeLevelConfig[] = [
     dailyLossLimitPercent: 4,
     maxDrawdownPercent: 8,
     minTradingDays: 5,
-    maxLeverage: 100,
+    maxLeverage: 500, // Không giới hạn bởi bài thi (Tối đa theo sàn lên đến 500X)
   },
 ];
 

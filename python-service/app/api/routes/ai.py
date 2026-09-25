@@ -4,6 +4,7 @@ from app.rag.schema import (
     AskQuestionRequest,
     ConceptExplainRequest,
     TradeInput,
+    StudentReflectionRequest,
     StrategyComparisonRequest,
     BacktestAssistantRequest,
     TradeInsightsRequest
@@ -31,8 +32,16 @@ def analyze_trade(req: TradeInput):
 
 @router.post("/review-trade")
 def review_trade(req: TradeInput):
-    # Review trade produces the comprehensive 11-step report
+    # Review trade produces the comprehensive report
     return trade_analyzer.analyze(req)
+
+@router.post("/submit-reflection")
+def submit_reflection(req: StudentReflectionRequest):
+    return trade_analyzer.evaluate_reflection(
+        trade=req.trade,
+        question=req.question or "Nếu thực hiện lại trade này, bạn sẽ thay đổi điều gì?",
+        reflection_text=req.reflectionText
+    )
 
 @router.post("/compare-strategies")
 def compare_strategies(req: StrategyComparisonRequest):

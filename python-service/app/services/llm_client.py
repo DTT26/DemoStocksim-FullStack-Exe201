@@ -5,13 +5,14 @@ from typing import Optional, List, Dict, Any
 
 class LLMClient:
     """
-    VIP Hybrid LLM Client supporting both Google Gemini API and OpenAI API.
-    Dynamically loads .env on check so changes take effect immediately without restart.
-    Supports smart fallback and multi-model compatibility.
+    VIP Hybrid LLM Client supporting Google Gemini API and OpenAI API.
+    Dynamically loads .env so changes take effect immediately without restart.
+    Provides fast timeout and graceful fallback across active models.
     """
 
     def __init__(self):
         self.last_error: Optional[str] = None
+        self.active_provider: Optional[str] = None
         self._reload_env()
 
     def _reload_env(self):
@@ -32,14 +33,16 @@ class LLMClient:
 
     def generate_text(self, system_prompt: str, user_prompt: str, max_tokens: int = 1500) -> Optional[str]:
         self.last_error = None
+        self.active_provider = None
         if not self.is_configured():
             return None
 
-        # Priority 1: Google Gemini (Free & High Rate Limits)
+        # Priority 1: Google Gemini (Fast, active models in environment)
         if self.gemini_key:
             try:
                 res = self._call_gemini(system_prompt, user_prompt, max_tokens)
                 if res:
+                    self.active_provider = "gemini"
                     return res
             except Exception as e:
                 self.last_error = str(e)
@@ -50,6 +53,7 @@ class LLMClient:
             try:
                 res = self._call_openai(system_prompt, user_prompt, max_tokens)
                 if res:
+                    self.active_provider = "openai"
                     return res
             except Exception as e:
                 self.last_error = str(e)
@@ -57,8 +61,15 @@ class LLMClient:
 
         return None
 
-    def _call_gemini(self, system_prompt: str, user_prompt: str, max_tokens: int = 650) -> Optional[str]:
-        models = ["gemini-3.5-flash", "gemini-flash-latest", "gemini-3.6-flash", "gemini-3.7-flash"]
+    def _call_gemini(self, system_prompt: str, user_prompt: str, max_tokens: int = 1500) -> Optional[str]:
+        # Models in order of current available quota & speed
+        models = [
+            "gemini-3.5-flash-lite", 
+            "gemini-3.1-flash-lite", 
+            "gemini-3.6-flash", 
+            "gemini-3.5-flash",
+            "gemini-3-flash-preview"
+        ]
         for model in models:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={self.gemini_key}"
             payload = {
@@ -72,15 +83,12 @@ class LLMClient:
                 ],
                 "generationConfig": {
                     "temperature": 0.4,
-                    "maxOutputTokens": 1500,
-                    "topP": 0.95,
-                    "thinkingConfig": {
-                        "thinkingBudget": 0
-                    }
+                    "maxOutputTokens": max_tokens,
+                    "topP": 0.95
                 }
             }
             try:
-                with httpx.Client(timeout=12.0) as client:
+                with httpx.Client(timeout=8.0) as client:
                     resp = client.post(url, json=payload)
                     if resp.status_code == 200:
                         data = resp.json()
@@ -92,12 +100,15 @@ class LLMClient:
                             if full_text:
                                 self.last_error = None
                                 return full_text
+                    elif resp.status_code == 429:
+                        # Rate limit on this specific model, proceed to next model immediately
+                        print(f"Gemini ({model}) Rate Limited (429), trying next model...")
+                        continue
                     else:
                         err_json = resp.json() if "application/json" in resp.headers.get("content-type", "") else {}
                         err_msg = err_json.get("error", {}).get("message", resp.text)
                         self.last_error = f"Google Gemini ({resp.status_code}): {err_msg}"
-                        print(f"Gemini ({model}) HTTP {resp.status_code}: {resp.text}")
-                        # If unauthorized or permission denied, the key is invalid; no need to loop models
+                        print(f"Gemini ({model}) HTTP {resp.status_code}: {err_msg}")
                         if resp.status_code in [400, 401, 403]:
                             break
             except Exception as ex:
@@ -121,15 +132,21 @@ class LLMClient:
             "temperature": 0.4,
             "max_tokens": max_tokens
         }
-        with httpx.Client(timeout=15.0) as client:
-            resp = client.post(url, headers=headers, json=payload)
-            if resp.status_code == 200:
-                data = resp.json()
-                choices = data.get("choices", [])
-                if choices and "message" in choices[0]:
-                    return choices[0]["message"].get("content", "")
-            else:
-                print(f"OpenAI HTTP {resp.status_code}: {resp.text}")
+        try:
+            with httpx.Client(timeout=5.0) as client:
+                resp = client.post(url, headers=headers, json=payload)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    choices = data.get("choices", [])
+                    if choices and "message" in choices[0]:
+                        return choices[0]["message"].get("content", "")
+                else:
+                    print(f"OpenAI HTTP {resp.status_code}: {resp.text}")
+                    if resp.status_code in [400, 401, 403]:
+                        self.openai_key = ""
+        except Exception as ex:
+            self.last_error = str(ex)
+            print(f"Error calling OpenAI: {ex}")
         return None
 
 llm_client = LLMClient()

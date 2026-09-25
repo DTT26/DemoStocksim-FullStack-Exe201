@@ -64,16 +64,6 @@ export const ToolbarNavbar = ({
               </span>
             )}
           </button>
-
-          {/* Nút AI Trading Tutor & Trade Reviewer */}
-          <button
-            onClick={onOpenAiTutor}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-amber-500/20 hover:from-blue-500/30 hover:to-amber-500/30 border border-blue-500/40 text-blue-600 dark:text-blue-300 font-bold text-xs transition-all shadow-sm shadow-blue-500/10 hover:scale-[1.02]"
-            title="Mở Trợ lý & Gia sư AI Trading Tutor (Hỏi đáp, So sánh chiến lược, RAG)"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-            <span>AI Tutor</span>
-          </button>
         </div>
 
         {/* Simulation Info (Centered) */}
@@ -101,7 +91,18 @@ export const ToolbarNavbar = ({
         </div>
 
         {/* Right side controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          {/* Nút AI Trading Tutor */}
+          <button
+            onClick={onOpenAiTutor}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-blue-500/15 via-purple-500/15 to-amber-500/15 hover:from-blue-500/25 hover:to-amber-500/25 border border-blue-500/30 text-blue-600 dark:text-blue-300 font-bold text-xs transition-all shadow-xs hover:scale-[1.02]"
+            title="Mở Trợ lý & Gia sư AI Trading Tutor (Hỏi đáp, So sánh chiến lược, RAG)"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 animate-pulse" />
+            <span>AI Tutor</span>
+          </button>
+
+          {/* Nút Thông báo */}
           <button 
             onClick={() => showAlert({ title: 'Thông báo', message: 'Chức năng Thông báo đang được phát triển!', type: 'info' })}
             className="hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]"

@@ -91,11 +91,7 @@ class AiTutorService:
                 ),
                 "reasoning": "Quyết định vào lệnh phải do chính trader chịu trách nhiệm dựa trên kế hoạch và tỷ lệ rủi ro định trước.",
                 "sources": [],
-                "socraticQuestions": [
-                    f"Hiện tại cấu trúc khung thời gian lớn hơn (HTF) của {symbol} đang là xu hướng tăng hay giảm?",
-                    "Nếu vào lệnh tại mức giá này, điểm vi phạm cấu trúc (Invalidation Point) của bạn nằm ở đâu?",
-                    "Tỷ lệ rủi ro (Risk) trên tổng tài khoản cho lệnh này là bao nhiêu %?"
-                ],
+                "socraticQuestions": [],
                 "guardrailTriggered": "NO_BUY_SELL_SIGNAL"
             }
 
@@ -123,15 +119,98 @@ class AiTutorService:
         # 3. VIP MODE: If API Key is configured, LLM answers EVERYTHING freely & intelligently!
         if llm_client.is_configured():
             sys_prompt = (
-                "Bạn là một AI Trading Tutor cao cấp, thông thái và thân thiện của nền tảng mô phỏng chứng khoán StockSim.\n"
-                "Quy tắc phản hồi:\n"
-                "1. Tuyệt đối KHÔNG đưa ra tín hiệu Mua/Bán/Phím lệnh cụ thể (No Buy/Sell signal).\n"
-                "2. Trả lời RÕ RÀNG, ĐẦY ĐỦ, HOÀN CHỈNH từng ý. Mở đầu bằng định nghĩa trực diện, sau đó làm rõ các ý chính với các gạch đầu dòng hoặc bảng biểu nếu phù hợp.\n"
-                "3. Định dạng Markdown đẹp mắt: tiêu đề mục rõ ràng, in đậm từ khóa quan trọng, phân đoạn thoáng đãng.\n"
-                "4. Nếu có tài liệu Knowledge Base kèm theo, kết hợp phân tích đối chiếu chuẩn xác.\n"
-                "5. Giọng văn sư phạm, khuyến khích tư duy kỷ luật và quản trị rủi ro."
+                "Bạn là trợ lý AI Trading Tutor thông minh và toàn năng của nền tảng StockSim.\n"
+                "Bạn có quyền truy cập ĐẦY ĐỦ VÀO DATABASE HỆ THỐNG gồm:\n"
+                "1. Toàn bộ bảng giá thời gian thực của TẤT CẢ các mã tài sản trên hệ thống (Crypto, Cổ phiếu Mỹ, Hàng hóa Vàng/Dầu, Ngoại hối Forex, Chỉ số).\n"
+                "2. Toàn bộ dữ liệu tài khoản của học viên trong Database (Số dư ví, các vị thế/lệnh đang mở LONG/SHORT, lệnh chờ, trạng thái thi Thử Thách Quỹ Prop Firm).\n\n"
+                "Quy tắc phản hồi BẮT BUỘC:\n"
+                "1. Khi học viên hỏi về GIÁ CỦA BẤT KỲ MÃ NÀO (ví dụ: ETH, BTC, SOL, Vàng XAUUSD, Dầu USOIL, Apple AAPL, Tesla TSLA, v.v.):\n"
+                "   - Tra cứu trong [TOÀN BỘ BẢNG GIÁ THỊ TRƯỜNG CỦA HỆ THỐNG] bên dưới.\n"
+                "   - Trả lời CHÍNH XÁC mức giá hiện tại, biến động 24h và sàn giao dịch niêm yết mà hệ thống đang có.\n"
+                "   - Đưa ra nhận định kỹ thuật hoặc gợi ý ngắn gọn về vùng hỗ trợ/kháng cự hay FVG quanh mức giá đó.\n"
+                "2. Khi học viên hỏi về TÀI KHOẢN, SỐ DƯ, VỊ THẾ LỆNH, PNL, BÀI THI QUỸ của mình:\n"
+                "   - Đọc dữ liệu từ [DỮ LIỆU TÀI KHOẢN & VỊ THẾ HỌC VIÊN TRONG DATABASE] để trả lời chính xác, phân tích rủi ro và góp ý quản trị vốn.\n"
+                "3. Tuyệt đối KHÔNG đưa ra tín hiệu Mua/Bán/Phím lệnh cụ thể (No Buy/Sell signal).\n"
+                "4. TRẢ LỜI NGẮN GỌN, CÔ ĐỌNG, ĐI THẲNG VÀO TRỌNG TÂM. Tránh dài dòng, lan man, giải thích súc tích trong 2-4 đoạn hoặc gạch đầu dòng rõ ràng.\n"
+                "5. Định dạng Markdown đẹp mắt, gọn gàng, dùng in đậm từ khóa chính.\n"
+                "6. DUY TRÌ MẠCH HỘI THOẠI LIÊN TIẾP: Tham chiếu lịch sử hội thoại gần đây để hiểu rõ các câu hỏi tiếp nối và đại từ thay thế."
             )
             
+            chat_history_str = ""
+            if req.chatHistory and len(req.chatHistory) > 0:
+                history_lines = []
+                for turn in req.chatHistory[-6:]:
+                    sender = turn.get("sender") or turn.get("role")
+                    role_label = "Học viên" if sender == "user" else "AI Tutor"
+                    msg_text = str(turn.get("text", "")).strip()
+                    if msg_text:
+                        if len(msg_text) > 400:
+                            msg_text = msg_text[:400] + "..."
+                        history_lines.append(f"{role_label}: {msg_text}")
+                if history_lines:
+                    chat_history_str = "\n\n💬 [LỊCH SỬ HỘI THOẠI GẦN ĐÂY ĐỂ TRẢ LỜI LIÊN TIẾP]:\n" + "\n".join(history_lines)
+
+            # 1. Mã hiện tại đang xem trên biểu đồ
+            current_chart_str = ""
+            if req.symbol or req.currentPrice is not None:
+                market_lines = []
+                if req.symbol:
+                    market_lines.append(f"- Mã tài sản đang mở biểu đồ: {req.symbol}")
+                if req.currentPrice is not None:
+                    formatted_p = f"{req.currentPrice:,.4f}".rstrip('0').rstrip('.') if req.currentPrice < 1 else f"{req.currentPrice:,.2f}"
+                    market_lines.append(f"- Giá thị trường thực tế: ${formatted_p}")
+                if req.timeframe:
+                    market_lines.append(f"- Khung thời gian biểu đồ người dùng đang xem: {req.timeframe}")
+                if req.marketContext:
+                    mc = req.marketContext
+                    if mc.get("change24h") is not None:
+                        market_lines.append(f"- Biến động 24h: {mc.get('change24h')}%")
+                    if mc.get("exchange"):
+                        market_lines.append(f"- Sàn giao dịch: {mc.get('exchange')}")
+                current_chart_str = "\n\n📊 [BIỂU ĐỒ ĐANG XEM]:\n" + "\n".join(market_lines)
+
+            # 2. Toàn bộ bảng giá thị trường hệ thống có
+            all_stocks_str = ""
+            if req.allStocks and len(req.allStocks) > 0:
+                stock_lines = []
+                for s in req.allStocks:
+                    sym = s.get("symbol", "")
+                    name = s.get("name", sym)
+                    p = s.get("price")
+                    pct = s.get("percent")
+                    exch = s.get("exchange", "")
+                    mkt = s.get("market", "")
+                    if sym and p is not None:
+                        p_fmt = f"${p:,.4f}".rstrip('0').rstrip('.') if p < 1 else f"${p:,.2f}"
+                        pct_fmt = f" ({pct:+.2f}%)" if pct is not None else ""
+                        stock_lines.append(f"• {sym} ({name} - {exch} [{mkt}]): {p_fmt}{pct_fmt}")
+                if stock_lines:
+                    all_stocks_str = "\n\n📈 [TOÀN BỘ BẢNG GIÁ THỊ TRƯỜNG CỦA HỆ THỐNG]:\n" + "\n".join(stock_lines)
+
+            # 3. Dữ liệu tài khoản & vị thế của học viên trong Database
+            user_data_str = ""
+            if req.userData:
+                ud = req.userData
+                ud_lines = []
+                wallet = ud.get("wallet", {})
+                if wallet:
+                    ud_lines.append(f"- Ví tiền: Tổng số dư ${wallet.get('balance', 0):,.2f} | Khả dụng: ${wallet.get('availableBalance', 0):,.2f}")
+                positions = ud.get("positions", [])
+                if positions:
+                    pos_items = []
+                    for pos in positions:
+                        pos_items.append(f"{pos.get('side')} {pos.get('symbol')} (Entry: ${pos.get('entryPrice')}, x{pos.get('leverage')}, Qty: {pos.get('quantity')}, TP: {pos.get('tp') or 'Chưa đặt'}, SL: {pos.get('sl') or 'Chưa đặt'})")
+                    ud_lines.append(f"- Vị thế đang mở ({len(positions)} vị thế): " + "; ".join(pos_items))
+                else:
+                    ud_lines.append("- Vị thế đang mở: Hiện không có vị thế mở nào.")
+                
+                challenge = ud.get("challenge")
+                if challenge:
+                    ud_lines.append(f"- Thử thách Quỹ Cấp Vốn: Cấp {challenge.get('level')}, Trạng thái: {challenge.get('status')}, Vốn ban đầu: ${challenge.get('capital', 0):,.0f}, Lợi nhuận: ${challenge.get('totalProfit', 0):,.2f}, Lỗ ngày: ${challenge.get('dailyLoss', 0):,.2f}, Drawdown: ${challenge.get('maxLoss', 0):,.2f}")
+                
+                if ud_lines:
+                    user_data_str = "\n\n👤 [DỮ LIỆU TÀI KHOẢN & VỊ THẾ HỌC VIÊN TRONG DATABASE]:\n" + "\n".join(ud_lines)
+
             kb_context = ""
             if results:
                 kb_context = "\n\nTài liệu tham khảo đối chiếu từ Knowledge Base:\n" + "\n---\n".join([
@@ -139,21 +218,24 @@ class AiTutorService:
                     for r in results
                 ])
 
-            user_p = f"Câu hỏi của học viên: {query}{kb_context}\n\nHãy giải thích đầy đủ, mạch lạc và hoàn chỉnh cho học viên."
-            llm_answer = llm_client.generate_text(sys_prompt, user_p, max_tokens=1500)
+            user_p = (
+                f"{chat_history_str}\n\n"
+                f"Câu hỏi hiện tại của học viên: {query}"
+                f"{current_chart_str}"
+                f"{all_stocks_str}"
+                f"{user_data_str}"
+                f"{kb_context}\n\n"
+                "Hãy trả lời súc tích, hoàn chỉnh, chuyên nghiệp và chuẩn xác dựa trên toàn bộ dữ liệu thị trường và database học viên được cung cấp ở trên."
+            )
+            llm_answer = llm_client.generate_text(sys_prompt, user_p, max_tokens=700)
 
             if llm_answer:
-                socratic = self.get_socratic_questions(results[0].document) if results else [
-                    "Làm thế nào bạn áp dụng kiến thức này vào kế hoạch giao dịch thực tế của mình?",
-                    "Trong điều kiện thị trường nào thì phương pháp này có xác suất thành công cao nhất?",
-                    "Kế hoạch quản trị rủi ro khi setup này bị vô hiệu hóa là gì?"
-                ]
                 return {
                     "answer": llm_answer,
                     "concept": results[0].document.concept if results else "AI Trading Tutor",
                     "framework": results[0].document.framework if results else "VIP_LLM",
                     "sources": citations,
-                    "socraticQuestions": socratic,
+                    "socraticQuestions": [],
                     "guardrailTriggered": None
                 }
             elif llm_client.last_error and any(code in llm_client.last_error for code in ["401", "403"]):
@@ -202,6 +284,46 @@ class AiTutorService:
                 ],
                 "guardrailTriggered": None
             }
+
+        # 4.5 OFFLINE FALLBACK: Asking about live price / exchange data
+        lower_q = query.lower()
+        if any(w in lower_q for w in ["giá bao nhiêu", "giá hiện tại", "giá đang là", "current price", "mấy đô", "bao nhiêu đô", "giá btc", "giá eth", "giá sàn", "giá vàng"]):
+            # Check if user mentioned a specific symbol in allStocks
+            target_stock = None
+            if req.allStocks:
+                for s in req.allStocks:
+                    sym = s.get("symbol", "").lower()
+                    name = s.get("name", "").lower()
+                    clean_sym = sym.replace("usdt", "").replace(".p", "").replace("swap", "").replace(".", "")
+                    if (clean_sym and len(clean_sym) >= 3 and clean_sym in lower_q) or (name and name in lower_q):
+                        target_stock = s
+                        break
+            
+            p_val = target_stock.get("price") if target_stock else req.currentPrice
+            sym_val = target_stock.get("symbol") if target_stock else (req.symbol or "tài sản")
+            exch_val = target_stock.get("exchange") if target_stock else "Binance"
+            pct_val = target_stock.get("percent") if target_stock else None
+
+            if p_val is not None:
+                formatted_p = f"{p_val:,.4f}".rstrip('0').rstrip('.') if p_val < 1 else f"{p_val:,.2f}"
+                pct_str = f" (Biến động 24h: {pct_val:+.2f}%)" if pct_val is not None else ""
+                tf_info = f" trên khung `{req.timeframe}`" if req.timeframe and not target_stock else ""
+                return {
+                    "answer": (
+                        f"📊 **Dữ liệu thời gian thực từ sàn {exch_val}:**\n\n"
+                        f"- **Mã giao dịch**: `{sym_val}`\n"
+                        f"- **Giá thị trường hiện tại**: **`${formatted_p}`**{pct_str}{tf_info}\n\n"
+                        f"> 💡 **Phân tích kỹ thuật gợi ý**: Quanh mốc giá **`${formatted_p}`**, bạn hãy quan sát các vùng mất cân bằng cung cầu (FVG) hoặc các đỉnh/đáy cũ (Liquidity Pools) trên biểu đồ để xác định vùng phản ứng tiềm năng thay vì vào lệnh theo cảm xúc FOMO nhé!"
+                    ),
+                    "concept": "Realtime Market Price",
+                    "framework": "MARKET_DATA",
+                    "sources": citations,
+                    "socraticQuestions": [
+                        f"Mức giá ${formatted_p} hiện tại đang nằm gần vùng hỗ trợ hay kháng cự quan trọng nào?",
+                        "Nếu thị trường xuất hiện nến đảo chiều tại vùng này, tỷ lệ R:R dự kiến của bạn là bao nhiêu?"
+                    ],
+                    "guardrailTriggered": None
+                }
 
         # 5. OFFLINE FALLBACK MODE (When no API Key is provided)
         if results:

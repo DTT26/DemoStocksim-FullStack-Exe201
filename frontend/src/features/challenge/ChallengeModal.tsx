@@ -379,19 +379,21 @@ export const ChallengeModal: React.FC<ChallengeModalProps> = ({
                               </span>
                             </div>
 
-                            <div className="pt-1 border-t border-white/5 flex items-center justify-between text-[11px]">
-                              <span className="text-slate-500">Ngày tối thiểu:</span>
-                              <span className="font-semibold text-slate-200">{lvl.minTradingDays} ngày</span>
+                            <div className="pt-1 border-t border-white/5 flex items-center justify-between text-[11px] gap-2">
+                              <span className="text-slate-500 whitespace-nowrap shrink-0">Ngày tối thiểu:</span>
+                              <span className="font-semibold text-slate-200 whitespace-nowrap">{lvl.minTradingDays} ngày</span>
                             </div>
 
-                            <div className="flex items-center justify-between text-[11px]">
-                              <span className="text-slate-500">Đòn bẩy:</span>
-                              <span className="font-semibold text-cyan-400 font-mono">1:{lvl.maxLeverage}</span>
+                            <div className="flex items-center justify-between text-[11px] gap-2">
+                              <span className="text-slate-500 whitespace-nowrap shrink-0">Đòn bẩy:</span>
+                              <span className="font-semibold text-cyan-400 font-mono whitespace-nowrap">
+                                {lvl.id === 6 ? '1:500 (Max)' : `1:${lvl.maxLeverage}`}
+                              </span>
                             </div>
 
-                            <div className="flex items-center justify-between text-[11px]">
-                              <span className="text-slate-500">Thời hạn:</span>
-                              <span className="font-medium text-slate-300">Vô hạn</span>
+                            <div className="flex items-center justify-between text-[11px] gap-2">
+                              <span className="text-slate-500 whitespace-nowrap shrink-0">Thời hạn:</span>
+                              <span className="font-medium text-slate-300 whitespace-nowrap">Vô hạn</span>
                             </div>
                           </div>
 

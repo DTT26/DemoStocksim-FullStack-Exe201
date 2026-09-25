@@ -185,5 +185,5 @@ class LocalVectorStore:
         results.sort(key=lambda r: r.score, reverse=True)
         return results[:top_k]
 
-# Global singleton
+# Global singleton vector store instance (reloaded)
 vector_store = LocalVectorStore()

@@ -436,7 +436,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
                 <label className="text-[10px] text-[#787b86] uppercase tracking-wider">Đòn bẩy</label>
                 {challengeBadge && (
                   <span className="text-[9px] bg-amber-500/10 text-amber-500 border border-amber-500/30 px-1 py-0.2 rounded font-medium">
-                    {challengeBadge} · Tối đa {leverageInfo.max}X
+                    {challengeBadge.includes('Tối đa theo sàn') ? `${challengeBadge} (${leverageInfo.max}X)` : `${challengeBadge} · Tối đa ${leverageInfo.max}X`}
                   </span>
                 )}
               </div>

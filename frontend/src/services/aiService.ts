@@ -25,7 +25,9 @@ export interface TradeAnalysisSummary {
   symbol: string;
   side: string;
   entryPrice: number;
+  currentPrice?: number;
   exitPrice?: number;
+  isOpen?: boolean;
   stopLoss?: number;
   takeProfit?: number;
   quantity: number;
@@ -39,48 +41,203 @@ export interface TradeAnalysisSummary {
   processScore: number;
   tradeVerdict: string;
   verdictDescription: string;
+  coachingAdvice?: string;
+  hasStopLoss?: boolean;
+  hasTakeProfit?: boolean;
+  entryTime?: string;
+  exitTime?: string;
+  timeframe?: string;
+  strategy?: string;
+  duration?: string;
+}
+
+export interface RubricItem {
+  score: number;
+  max: number;
+  label: string;
+}
+
+export interface RubricBreakdown {
+  setupValidation: RubricItem;
+  riskManagement: RubricItem;
+  entryDiscipline: RubricItem;
+  exitPlanning: RubricItem;
+  tradeReasoning: RubricItem;
+  total: number;
+  disclaimer: string;
+}
+
+export interface SetupCondition {
+  condition: string;
+  met: boolean | null;
+  rule: string;
+}
+
+export interface ExcursionFlow {
+  entry: number;
+  maePrice: number;
+  maePts: number;
+  maeR: string;
+  currentOrExit: number;
+  mfePrice: number;
+  mfePts: number;
+  mfeR: string;
+  isLive: boolean;
 }
 
 export interface TradeReviewData {
   summary: TradeAnalysisSummary;
+  rubricScore?: RubricBreakdown;
   marketContext: {
     timeframe: string;
-    trend: string;
+    higherTimeframeTrend?: string;
+    currentTimeframeTrend?: string;
+    marketStructure?: string;
+    volatility?: string;
+    volumeContext?: string;
     supportResistance: string;
-    volumeObservation: string;
+    liquidity?: string;
+    tradingSession?: string;
+    relevantConditions?: string;
+    trend?: string;
   };
-  setupQuality: {
+  setupValidation?: {
+    strategy: string;
+    checklist: SetupCondition[];
+    completeness: string;
+    disclaimer?: string;
+  };
+  setupQuality?: {
     strategy: string;
     setupName: string;
     reasonGiven: string;
     score: number;
   };
-  entryAnalysis: {
+  beforeTrade?: {
+    entry: number;
+    plannedStopLoss: any;
+    plannedTakeProfit: any;
+    risk: string;
+    plannedRR: string;
+    userReasoning: string;
+    evaluation: string;
+  };
+  afterTrade?: {
+    actualEntry: number;
+    actualExit?: number;
+    currentPrice?: number;
+    pnl: number;
+    returnPct: number;
+    actualRR: string;
+    mfe: string;
+    mae: string;
+    holdingDuration: string;
+    maxDrawdown: string;
+    maxFavorableMove: string;
+    exitReason: string;
+  };
+  planVsExecution?: {
+    status: 'RULE_FOLLOWED' | 'PARTIALLY_FOLLOWED' | 'RULE_VIOLATED' | string;
+    description: string;
+    plan: {
+      entry: string;
+      stopLoss: string;
+      takeProfit: string;
+      risk: string;
+      rr: string;
+    };
+    actual: {
+      entry: string;
+      stopLoss: string;
+      takeProfit: string;
+      risk: string;
+      rr: string;
+      exit: string;
+    };
+    auditNote: string;
+  };
+  riskAnalysis?: {
+    hasStopLoss: boolean;
+    capitalAtRisk: number;
+    maxPotentialLoss: number | null;
+    riskWarning?: string | null;
+    riskPct: string;
+    positionSizeValue: number;
+    positionSizeRiskPct: number;
+    stopLossDistanceUsd: number;
+    stopLossDistancePct: number;
+    targetDistanceUsd: number;
+    targetDistancePct: number;
+    plannedRR: number;
+    actualRR: number;
+  };
+  excursionFlow?: ExcursionFlow;
+  entryAnalysis?: {
     entryPrice: number;
     assessment: string;
   };
-  stopLossAnalysis: {
+  stopLossAnalysis?: {
     stopLoss?: number;
     riskAmount: number;
     riskPct: string;
     comment: string;
   };
-  takeProfitAnalysis: {
+  takeProfitAnalysis?: {
     takeProfit?: number;
     plannedReward: number;
     comment: string;
   };
-  excursionAnalysis: {
+  excursionAnalysis?: {
     mfe: string;
     mae: string;
     drawdownRisk: string;
     exitEfficiency: string;
   };
   strengths: string[];
-  improvements: string[];
-  ruleViolations: string[];
-  socraticQuestions: string[];
+  improvements?: string[];
+  ruleViolations?: string[];
+  categorizedImprovements?: {
+    ruleViolations: string[];
+    executionIssues: string[];
+    riskIssues: string[];
+    strategyIssues: string[];
+  };
+  aiCoach?: {
+    explanation: string;
+    actionItem: string;
+    reflectionQuestion: string;
+  };
+  learningTakeaways?: string[];
+  studentReflection?: {
+    question: string;
+    placeholder: string;
+  };
+  socraticQuestions?: string[];
   sources: KnowledgeSource[];
+}
+
+export interface StrategySetupSimulation {
+  framework: string;
+  entry: string;
+  stopLoss: string;
+  takeProfit: string;
+  rr: string;
+  riskPct: string;
+  rewardPct: string;
+  rationale: string;
+}
+
+export interface StrategyMetricMatrixItem {
+  criterion: string;
+  priceAction: string;
+  ict: string;
+  badge: string;
+}
+
+export interface MarketRegimeAdvisory {
+  trending: string;
+  ranging: string;
+  recommendation: string;
 }
 
 export interface StrategyComparisonData {
@@ -103,6 +260,12 @@ export interface StrategyComparisonData {
     takeProfitTarget: string;
     evidenceRequired: string;
   };
+  simulatedSetups?: {
+    priceAction: StrategySetupSimulation;
+    ict: StrategySetupSimulation;
+  };
+  metricMatrix?: StrategyMetricMatrixItem[];
+  marketRegimeAdvisory?: MarketRegimeAdvisory;
   similarities: string[];
   differences: string[];
   conclusion: string;
@@ -111,12 +274,29 @@ export interface StrategyComparisonData {
 
 const API_BASE = '/api/ai';
 
+function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem('token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  };
+}
+
 export const aiService = {
-  async askQuestion(question: string, framework?: string, symbol?: string): Promise<AskResponse> {
+  async askQuestion(
+    question: string,
+    framework?: string,
+    symbol?: string,
+    currentPrice?: number,
+    timeframe?: string,
+    marketContext?: any,
+    chatHistory?: Array<{ sender: string; text: string }>,
+    allStocks?: any[]
+  ): Promise<AskResponse> {
     const res = await fetch(`${API_BASE}/ask`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, framework, symbol }),
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ question, framework, symbol, currentPrice, timeframe, marketContext, chatHistory, allStocks }),
     });
     const json = await res.json();
     if (!json.success) throw new Error(json.message || 'Lỗi kết nối AI Tutor');
@@ -126,7 +306,7 @@ export const aiService = {
   async explainConcept(concept: string, framework?: string): Promise<AskResponse> {
     const res = await fetch(`${API_BASE}/explain-concept`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ concept, framework }),
     });
     const json = await res.json();
@@ -153,6 +333,17 @@ export const aiService = {
     });
     const json = await res.json();
     if (!json.success) throw new Error(json.message || 'Lỗi xuất bản Trade Review');
+    return json.data;
+  },
+
+  async submitReflection(payload: { trade: any; question?: string; reflectionText: string }): Promise<{ feedback: string; encouragement: string; reflectionReceived: string }> {
+    const res = await fetch(`${API_BASE}/submit-reflection`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.message || 'Lỗi gửi phản hồi tự phản biện');
     return json.data;
   },
 
@@ -204,9 +395,31 @@ export const aiService = {
   },
 
   async getSavedReviews() {
-    const res = await fetch(`${API_BASE}/reviews`);
+    const res = await fetch(`${API_BASE}/reviews`, {
+      headers: getAuthHeaders()
+    });
     const json = await res.json();
     if (!json.success) throw new Error(json.message || 'Lỗi tải danh sách review');
     return json.data;
+  },
+
+  async getChatHistory(symbol?: string): Promise<Array<{ id: string; sender: 'user' | 'tutor'; text: string; data?: AskResponse }>> {
+    const query = symbol ? `?symbol=${encodeURIComponent(symbol)}` : '';
+    const res = await fetch(`${API_BASE}/chat-history${query}`, {
+      headers: getAuthHeaders()
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.message || 'Lỗi tải lịch sử chat');
+    return json.data;
+  },
+
+  async clearChatHistory(symbol?: string): Promise<void> {
+    const query = symbol ? `?symbol=${encodeURIComponent(symbol)}` : '';
+    const res = await fetch(`${API_BASE}/chat-history${query}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.message || 'Lỗi xóa lịch sử chat');
   }
 };

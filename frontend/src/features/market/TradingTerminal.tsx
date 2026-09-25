@@ -18,6 +18,7 @@ import type { UserChallengeState, ChallengeLevelConfig } from '../challenge/type
 import { ChallengeModal } from '../challenge/ChallengeModal';
 import { useModal } from '../../contexts/ModalContext';
 import { AiTutorDrawer } from '../ai/AiTutorDrawer';
+import { BacktestRuleCard } from './components/BacktestRuleCard';
 
 const MAX_RESETS_PER_WEEK = 4;
 
@@ -108,6 +109,17 @@ export const TradingTerminal = () => {
   });
   const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
   const [isAiTutorOpen, setIsAiTutorOpen] = useState(false);
+
+  // Store backtest rules when launching Bar Replay from AI Tutor
+  const [activeBacktestRules, setActiveBacktestRules] = useState<{
+    strategy: string;
+    symbol: string;
+    timeframe: string;
+    entryRule: string;
+    stopLossRule: string;
+    takeProfitRule: string;
+    invalidationRule?: string;
+  } | null>(null);
 
   // Tải cấu hình cấp độ từ Backend API
   useEffect(() => {
@@ -622,7 +634,36 @@ export const TradingTerminal = () => {
 
   const handleStopReplay = () => {
     setIsReplaying(false);
+    setIsSelectingReplayStart(false);
     setReplayTime(null);
+    setToast(null); // clear any lingering toast immediately
+  };
+
+  const handleStartBacktestReplayFromAi = (symbol: string, timeframe: string, rules?: any) => {
+    const stock = STOCKS.find(s => s.symbol.toUpperCase() === symbol.toUpperCase());
+    if (stock) {
+      setSelectedStock(stock);
+    }
+    if (timeframe) {
+      setActiveTimeframe(timeframe);
+    }
+    if (rules) {
+      setActiveBacktestRules({
+        strategy: rules.strategy || '',
+        symbol,
+        timeframe,
+        entryRule: rules.entryRule || '',
+        stopLossRule: rules.stopLossRule || '',
+        takeProfitRule: rules.takeProfitRule || '',
+        invalidationRule: rules.invalidationRule || '',
+      });
+    }
+    setIsAiTutorOpen(false);
+    handleStartReplaySelection();
+    setToast({
+      msg: `🎯 Kế hoạch Backtest đã nạp! Hãy nhấp vào 1 cây nến trên biểu đồ ${symbol} (${timeframe}) để bắt đầu Bar Replay.`,
+      type: 'info'
+    });
   };
 
   return (
@@ -782,7 +823,7 @@ export const TradingTerminal = () => {
             onUndo={handleUndo}
             onRedo={handleRedo}
           />
-          
+
           {activeTab === 'chart' && (
             <div className="flex flex-col flex-1 overflow-hidden">
               <div className="flex flex-col flex-1 min-h-[300px] overflow-hidden border-b border-[#2a2e39]">
@@ -889,8 +930,8 @@ export const TradingTerminal = () => {
             selectedStock={selectedStock}
             positions={positions as any}
             balance={balance}
-            maxAllowedLeverage={isChallengeActive ? currentChallengeLevel.maxLeverage : undefined}
-            challengeBadge={isChallengeActive ? `${currentChallengeLevel.badge} (${currentChallengeLevel.levelName})` : undefined}
+            maxAllowedLeverage={isChallengeActive ? (currentChallengeLevel.id === 6 ? undefined : currentChallengeLevel.maxLeverage) : undefined}
+            challengeBadge={isChallengeActive ? (currentChallengeLevel.id === 6 ? `${currentChallengeLevel.badge} (${currentChallengeLevel.levelName}) · Tối đa theo sàn` : `${currentChallengeLevel.badge} (${currentChallengeLevel.levelName})`) : undefined}
             onStockSelect={(stock) => {
               handleStockSelect(stock);
               setEditingSymbol(null);
@@ -919,6 +960,16 @@ export const TradingTerminal = () => {
             <span className="font-medium whitespace-pre-line text-sm">{toast.msg}</span>
           </div>
         </div>
+      )}
+
+      {/* Floating Backtest Rule Card — draggable, replaces old fixed card */}
+      {isReplaying && activeBacktestRules && (
+        <BacktestRuleCard
+          rules={activeBacktestRules}
+          replayTime={replayTime}
+          onStop={handleStopReplay}
+          onDismiss={() => setActiveBacktestRules(null)}
+        />
       )}
 
       <SymbolSearchModal
@@ -951,6 +1002,14 @@ export const TradingTerminal = () => {
         onClose={() => setIsAiTutorOpen(false)}
         currentSymbol={selectedStock.symbol}
         currentPrice={selectedStock.price}
+        timeframe={activeTimeframe}
+        topOffset={challengeState.status !== 'NOT_STARTED' ? 84 : 48}
+        marketContext={{
+          change24h: selectedStock.percent !== undefined ? Number(selectedStock.percent.toFixed(2)) : undefined,
+          exchange: selectedStock.exchange,
+          market: selectedStock.market
+        }}
+        onStartBacktestReplay={handleStartBacktestReplayFromAi}
       />
     </div>
   );

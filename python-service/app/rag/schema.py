@@ -27,6 +27,12 @@ class AskQuestionRequest(BaseModel):
     context: Optional[str] = None
     framework: Optional[str] = None # 'ICT', 'PRICE_ACTION', 'RISK_MANAGEMENT', or None
     symbol: Optional[str] = None
+    currentPrice: Optional[float] = None
+    timeframe: Optional[str] = None
+    marketContext: Optional[Dict[str, Any]] = None
+    chatHistory: Optional[List[Dict[str, Any]]] = None
+    allStocks: Optional[List[Dict[str, Any]]] = None
+    userData: Optional[Dict[str, Any]] = None
 
 class ConceptExplainRequest(BaseModel):
     concept: str
@@ -50,6 +56,15 @@ class TradeInput(BaseModel):
     exitTime: Optional[str] = None
     historicalHighSinceEntry: Optional[float] = None
     historicalLowSinceEntry: Optional[float] = None
+    currentPrice: Optional[float] = None
+    isOpen: Optional[bool] = None
+    realPnL: Optional[float] = None
+    duration: Optional[str] = None
+
+class StudentReflectionRequest(BaseModel):
+    trade: TradeInput
+    question: Optional[str] = "Nếu thực hiện lại trade này, bạn sẽ thay đổi điều gì?"
+    reflectionText: str
 
 class StrategyComparisonRequest(BaseModel):
     trade: TradeInput
