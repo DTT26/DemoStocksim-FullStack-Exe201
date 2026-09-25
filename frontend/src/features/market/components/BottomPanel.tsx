@@ -17,7 +17,7 @@ interface BottomPanelProps {
   pendingOrders: any[];
   selectedSymbol: string;
   currentPrice: number; // For the selected symbol
-  onClosePosition: (symbol: string, side: 'LONG' | 'SHORT', price: number) => Promise<{ success: boolean; message: string }>;
+  onClosePosition: (symbol: string, side: 'LONG' | 'SHORT', price: number, closeQty?: number) => Promise<{ success: boolean; message: string }>;
   onCancelOrder: (orderId: string) => Promise<void>;
   onUpdateTPSL: (symbol: string, side: 'LONG' | 'SHORT', tp?: number, sl?: number) => Promise<{ success: boolean; message: string }>;
   onAddMargin: (symbol: string, side: 'LONG' | 'SHORT', amount: number) => Promise<{ success: boolean; message: string }>;
@@ -38,15 +38,16 @@ export const BottomPanel = ({
   refreshTrigger
 }: BottomPanelProps) => {
   const { showAlert } = useModal();
-  const [activeTab, setActiveTab] = useState<'positions' | 'orders' | 'history' | 'trade_history'>('positions');
+  const [activeTab, setActiveTab] = useState<'positions' | 'orders' | 'order_history' | 'trade_history' | 'position_history' | 'cashflow_history'>('positions');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   
   const [addingMargin, setAddingMargin] = useState<{symbol: string, side: 'LONG'|'SHORT', amount: string} | null>(null);
+  const [closingPos, setClosingPos] = useState<{symbol: string, side: 'LONG'|'SHORT', price: number, maxQty: number, closeQty: string} | null>(null);
   const [currentPairOnly, setCurrentPairOnly] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
 
   useEffect(() => {
-    if (activeTab === 'trade_history') {
+    if (['order_history', 'trade_history', 'position_history', 'cashflow_history'].includes(activeTab)) {
       const fetchHistory = async () => {
         try {
           const res = await tradingApi.getTransactions();
@@ -66,13 +67,37 @@ export const BottomPanel = ({
     ? posList.filter(p => p.symbol === selectedSymbol)
     : posList;
 
+  const displayPendingOrders = currentPairOnly
+    ? pendingOrders.filter(o => o.symbol === selectedSymbol)
+    : pendingOrders;
+
+  // Filter transactions by tab and active symbol
+  const filteredTransactions = transactions.filter(tx => {
+    if (currentPairOnly && !tx.description.toLowerCase().includes(selectedSymbol.toLowerCase())) {
+      return false;
+    }
+    if (activeTab === 'order_history') {
+      return tx.type === 'BUY_STOCK' || tx.type === 'SELL_STOCK' || tx.description.includes('lệnh chờ');
+    }
+    if (activeTab === 'trade_history') {
+      return tx.type === 'BUY_STOCK' || tx.type === 'SELL_STOCK' || tx.type === 'CLOSE_POSITION';
+    }
+    if (activeTab === 'position_history') {
+      return tx.type === 'CLOSE_POSITION';
+    }
+    if (activeTab === 'cashflow_history') {
+      return true; // Hiển thị tất cả giao dịch vì đều liên quan tới biến động số dư / ký quỹ
+    }
+    return true;
+  });
+
   const tabs = [
     { id: 'positions', label: `Vị thế (${posList.length})` },
     { id: 'orders', label: `Lệnh mở (${pendingOrders.length})` },
     { id: 'order_history', label: 'Lịch sử đặt lệnh' },
     { id: 'trade_history', label: 'Lịch sử giao dịch' },
     { id: 'position_history', label: 'Lịch sử vị thế' },
-    { id: 'cashflow_history', label: 'Lịch sử dòng vốn' }
+    { id: 'cashflow_history', label: 'Biến động số dư' }
   ];
 
   return (
@@ -123,7 +148,16 @@ export const BottomPanel = ({
           <button className="hover:text-[#1e2329] dark:hover:text-white transition-colors">
             <Settings2 className="w-4 h-4" />
           </button>
-          <button className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-white px-3 py-1 rounded text-[11px] font-medium transition-colors">
+          <button
+            onClick={async () => {
+              if (displayPositions.length === 0) return;
+              for (const p of displayPositions) {
+                const markPx = p.symbol === selectedSymbol ? currentPrice : (STOCKS.find(s => s.symbol === p.symbol)?.price || p.averagePrice);
+                await onClosePosition(p.symbol, p.side, markPx);
+              }
+            }}
+            className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-white px-3 py-1 rounded text-[11px] font-medium transition-colors"
+          >
             Đóng toàn bộ
           </button>
           <button 
@@ -137,14 +171,14 @@ export const BottomPanel = ({
 
       <div className="flex-1 overflow-y-auto custom-scrollbar relative">
         {activeTab === 'positions' && (
-          posList.length > 0 ? (
+          displayPositions.length > 0 ? (
             <table className="w-full text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
               <thead className="sticky top-0 bg-[#f8f9fa] dark:bg-[#0b0e11] text-[#787b86] font-normal text-[11px] border-b border-[#e6e8ea] dark:border-transparent">
                 <tr>
                   <th className="px-4 py-2">Symbol</th>
                   <th className="px-4 py-2">Size</th>
-                  <th className="px-4 py-2">Entry Price</th>
-                  <th className="px-4 py-2">Mark Price</th>
+                  <th className="px-4 py-2">Giá mở</th>
+                  <th className="px-4 py-2">Giá hiện tại</th>
                   <th className="px-4 py-2">Margin</th>
                   <th className="px-4 py-2">Side</th>
                   <th className="px-4 py-2 text-right">PNL (ROE%)</th>
@@ -162,25 +196,48 @@ export const BottomPanel = ({
                   return (
                     <tr key={p.symbol} className="hover:bg-[#f5f5f5] dark:hover:bg-[#1e222d] transition-colors">
                       <td className="px-4 py-2 font-bold">{p.symbol}</td>
-                      <td className="px-4 py-2">{p.quantity.toLocaleString('vi-VN')}</td>
-                      <td className="px-4 py-2">{p.averagePrice.toLocaleString('vi-VN')}</td>
-                      <td className="px-4 py-2">{markPrice.toLocaleString('vi-VN')}</td>
-                      <td className="px-4 py-2">
-                        {margin.toLocaleString('vi-VN', { maximumFractionDigits: 0 })}
-                        <button onClick={() => setAddingMargin({ symbol: p.symbol, side: p.side, amount: '' })} className="ml-2 text-blue-500 hover:text-blue-400 font-bold">+</button>
+                      <td className="px-4 py-2 font-mono">{p.quantity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} Lot</td>
+                      <td className="px-4 py-2 font-mono">{p.averagePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
+                      <td className="px-4 py-2 font-mono">{markPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
+                      <td className="px-4 py-2 font-mono">
+                        {addingMargin?.symbol === p.symbol ? (
+                          <div className="flex items-center gap-1">
+                            <input 
+                              type="number" 
+                              autoFocus
+                              value={addingMargin.amount}
+                              onChange={e => setAddingMargin({...addingMargin, amount: e.target.value})}
+                              className="w-16 bg-[#1e222d] border border-[#2a2e39] rounded px-1 py-0.5 text-white focus:outline-none focus:border-[#2962ff] text-[10px]"
+                            />
+                            <button onClick={async () => {
+                              const amt = parseFloat(addingMargin.amount);
+                              if (!isNaN(amt) && amt > 0) {
+                                const res = await onAddMargin(addingMargin.symbol, addingMargin.side, amt);
+                                showAlert({ title: res.success ? 'Ký quỹ thành công' : 'Ký quỹ thất bại', message: res.message, type: res.success ? 'success' : 'error' });
+                                if (res.success) setAddingMargin(null);
+                              }
+                            }} className="text-green-500 hover:text-green-400 font-bold px-1">✓</button>
+                            <button onClick={() => setAddingMargin(null)} className="text-red-500 hover:text-red-400 font-bold px-1">✕</button>
+                          </div>
+                        ) : (
+                          <>
+                            {margin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            <button onClick={() => setAddingMargin({ symbol: p.symbol, side: p.side, amount: '' })} className="ml-2 text-blue-500 hover:text-blue-400 font-bold" title="Bơm thêm ký quỹ">+</button>
+                          </>
+                        )}
                       </td>
-                      <td className={`px-4 py-2 font-bold ${p.side === 'LONG' ? 'text-[#089981]' : 'text-[#f23645]'}`}>{p.side} x{p.leverage}</td>
+                      <td className={`px-4 py-2 font-bold ${p.side === 'LONG' ? 'text-[#089981]' : 'text-[#f23645]'}`}>{p.side} x{(p.leverage % 1 !== 0) ? p.leverage.toFixed(2) : p.leverage}</td>
                       <td className={`px-4 py-2 text-right font-mono font-bold ${pnl >= 0 ? 'text-[#089981]' : 'text-[#f23645]'}`}>
-                        {pnl >= 0 ? '+' : ''}{pnl.toLocaleString('vi-VN', { maximumFractionDigits: 0 })} 
+                        {pnl >= 0 ? '+' : ''}{Math.abs(pnl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
                         <span className="text-[10px] ml-1">({pnl >= 0 ? '+' : ''}{roe.toFixed(2)}%)</span>
                       </td>
                       <td className="px-4 py-2 text-center text-[#787b86]">
-                        {p.tp || '-'} / {p.sl || '-'}
+                        {p.tp ? p.tp.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'} / {p.sl ? p.sl.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
                         <button onClick={() => onEditPosition(p.symbol)} className="ml-2 text-blue-500 hover:text-blue-400 font-medium">Sửa</button>
                       </td>
                       <td className="px-4 py-2 text-center">
                         <button 
-                          onClick={() => onClosePosition && onClosePosition(p.symbol, p.side, markPrice)}
+                          onClick={() => setClosingPos({ symbol: p.symbol, side: p.side, price: markPrice, maxQty: p.quantity, closeQty: p.quantity.toString() })}
                           className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-[#d1d4dc] dark:hover:text-white px-3 py-1 rounded text-[11px] font-medium transition-colors"
                         >
                           Đóng lệnh
@@ -208,18 +265,18 @@ export const BottomPanel = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-[#2a2e39]/50">
-              {pendingOrders.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-[#787b86]">Không có lệnh mở nào</td></tr>
+              {displayPendingOrders.length === 0 ? (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-[#787b86]">Không có lệnh chờ nào</td></tr>
               ) : (
-                pendingOrders.map(order => (
+                displayPendingOrders.map(order => (
                   <tr key={order._id} className="hover:bg-[#1e222d] transition-colors">
                     <td className="px-4 py-2 font-bold text-white">{order.symbol}</td>
                     <td className="px-4 py-2">
                       <span className={`font-bold mr-1 ${order.side === 'LONG' ? 'text-green-500' : 'text-red-500'}`}>{order.side}</span>
                       {order.type} {order.leverage}x
                     </td>
-                    <td className="px-4 py-2 font-mono">{order.price.toLocaleString('vi-VN')}</td>
-                    <td className="px-4 py-2 font-mono">{order.quantity?.toFixed(2)}</td>
+                    <td className="px-4 py-2 font-mono">{order.price >= 100 ? order.price.toLocaleString('vi-VN') : order.price?.toFixed(2)}</td>
+                    <td className="px-4 py-2 font-mono">{order.quantity?.toFixed(4)} Lot</td>
                     <td className="px-4 py-2 text-right">
                       <button onClick={() => onCancelOrder(order._id)} className="text-red-500 hover:text-red-400 font-bold px-3 py-1">Hủy</button>
                     </td>
@@ -236,96 +293,89 @@ export const BottomPanel = ({
               <tr>
                 <th className="px-4 py-2 font-medium">Thời gian</th>
                 <th className="px-4 py-2 font-medium">Loại</th>
-                <th className="px-4 py-2 font-medium">Chi tiết</th>
-                <th className="px-4 py-2 font-medium text-right">Biến động (VND)</th>
+                <th className="px-4 py-2 font-medium">Chi tiết lệnh</th>
+                <th className="px-4 py-2 font-medium text-right">Biến động số dư</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e6e8ea] dark:divide-[#2a2e39]/50">
-              {transactions.length === 0 ? (
-                <tr><td colSpan={4} className="px-4 py-8 text-center text-[#787b86]">Không có giao dịch nào</td></tr>
+              {filteredTransactions.length === 0 ? (
+                <tr><td colSpan={4} className="px-4 py-8 text-center text-[#787b86]">Không có dữ liệu trong mục này</td></tr>
               ) : (
-                transactions.map(tx => {
-                  let displayAmount = Math.abs(tx.amount);
-                  let isPositive = tx.type === 'SELL_STOCK' || tx.type === 'DEPOSIT';
-
-                  // Extract profit from description if available (e.g., "Lợi nhuận: -2.700đ")
-                  const profitMatch = tx.description.match(/Lợi nhuận:\s*(-?[\d.,]+)đ?/);
-                  if (profitMatch) {
-                    const profitString = profitMatch[1].replace(/\./g, '').replace(/,/g, '');
-                    const profitNumber = parseInt(profitString, 10);
-                    if (!isNaN(profitNumber)) {
-                      displayAmount = Math.abs(profitNumber);
-                      isPositive = profitNumber >= 0;
-                    }
-                  }
-
+                filteredTransactions.map(tx => {
+                  const isPositive = tx.amount >= 0;
                   const colorClass = isPositive ? 'text-[#089981]' : 'text-[#f23645]';
 
-                  // Helper to format the description beautifully
+                  // Format badges for transaction types
+                  const renderTypeBadge = (type: string) => {
+                    if (type === 'BUY_STOCK') {
+                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#089981]/20 text-[#089981]">MỞ LONG</span>;
+                    } else if (type === 'SELL_STOCK') {
+                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#f23645]/20 text-[#f23645]">MỞ SHORT</span>;
+                    } else if (type === 'CLOSE_POSITION') {
+                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-400">ĐÓNG VỊ THẾ</span>;
+                    } else if (type === 'DEPOSIT') {
+                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400">NẠP / HOÀN TIỀN</span>;
+                    } else if (type === 'WITHDRAWAL') {
+                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400">RÚT TIỀN</span>;
+                    }
+                    return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-500/20 text-gray-400">{type}</span>;
+                  };
+
+                  // Format description cleanly
                   const formatDescription = (desc: string) => {
-                    // Case 1: "Mở LONG FPT ở giá 115.00 | Margin: 115670 | x10 | Qty: 10000.00"
                     if (desc.includes('|')) {
                       const parts = desc.split('|').map(p => p.trim());
-                      const actionMatch = parts[0].match(/(Mở|Đóng)\s+(LONG|SHORT)\s+([A-Z0-9]+)(?:\s+ở\s+giá\s+([\d.,]+))?/i);
-                      if (actionMatch) {
-                        const action = actionMatch[1];
-                        const side = actionMatch[2].toUpperCase();
-                        const symbol = actionMatch[3];
-                        const price = actionMatch[4];
-                        let qty = '';
-                        let lev = '';
-                        parts.forEach(p => {
-                          if (p.toLowerCase().startsWith('qty:')) qty = p.substring(4).trim();
-                          if (p.toLowerCase().startsWith('x')) lev = p;
-                        });
-                        return (
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-[#1e2329] dark:text-white">{action} {symbol}</span>
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${side === 'LONG' ? 'bg-[#089981]/20 text-[#089981]' : 'bg-[#f23645]/20 text-[#f23645]'}`}>{side}</span>
-                            {lev && <span className="text-[#fcd535] bg-[#fcd535]/10 px-1.5 py-0.5 rounded text-[10px] font-bold">{lev}</span>}
-                            {qty && <span className="text-[#787b86]">KL: <span className="text-[#1e2329] dark:text-[#d1d4dc]">{parseFloat(qty).toLocaleString('vi-VN')}</span></span>}
-                            {price && <span className="text-[#787b86]">Giá: <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono">{price}</span></span>}
-                          </div>
-                        );
-                      }
-                    }
-                    
-                    // Case 2: "Đóng LONG 10.000 FPT ở giá 120.00. Lợi nhuận: -2.700đ"
-                    const actionMatch = desc.match(/^(Đóng|Mở|Chốt lời|Cắt lỗ)\s+(LONG|SHORT)\s+([\d.,]+)\s+([A-Z0-9]+)(?:\s+ở\s+giá\s+([\d.,]+))?/i);
-                    if (actionMatch) {
-                      const action = actionMatch[1];
-                      const side = actionMatch[2].toUpperCase();
-                      const qty = actionMatch[3];
-                      const symbol = actionMatch[4];
-                      const price = actionMatch[5];
                       return (
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-[#1e2329] dark:text-white">{action} {symbol}</span>
-                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${side === 'LONG' ? 'bg-[#089981]/20 text-[#089981]' : 'bg-[#f23645]/20 text-[#f23645]'}`}>{side}</span>
-                          <span className="text-[#787b86]">KL: <span className="text-[#1e2329] dark:text-[#d1d4dc]">{qty}</span></span>
-                          {price && <span className="text-[#787b86]">Giá: <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono">{price}</span></span>}
+                        <div className="flex items-center gap-2 flex-wrap text-xs">
+                          {parts.map((p, idx) => {
+                            if (idx === 0) {
+                              const match = p.match(/(.*ở giá )([\d.,]+)(.*)/);
+                              if (match) {
+                                return (
+                                  <span key={idx} className="font-bold text-[#1e2329] dark:text-[#d1d4dc]">
+                                    {match[1]}<span className="text-[#fcd535]">{match[2]}</span>{match[3]}
+                                  </span>
+                                );
+                              }
+                              return <span key={idx} className="font-bold text-[#1e2329] dark:text-[#d1d4dc]">{p}</span>;
+                            }
+                            const lowerP = p.toLowerCase();
+                            if (lowerP.startsWith('x')) {
+                              return <span key={idx} className="text-[#fcd535] bg-[#fcd535]/10 px-1.5 py-0.5 rounded text-[10px] font-bold">{p}</span>;
+                            } else if (lowerP.startsWith('lợi nhuận:')) {
+                              const isWin = p.includes('+');
+                              let displayText = p;
+                              // Retroactive fix for old transactions in DB that missed the '-' sign
+                              if (!isWin && !p.includes('-')) {
+                                displayText = p.replace(/Lợi nhuận:\s*/i, 'Lợi nhuận: -');
+                              }
+                              return <span key={idx} className={`px-1.5 py-0.5 rounded text-[11px] font-bold border ${isWin ? 'text-[#089981] bg-[#089981]/10 border-[#089981]/20' : 'text-[#f23645] bg-[#f23645]/10 border-[#f23645]/20'}`}>{displayText}</span>;
+                            } else if (lowerP.startsWith('vốn về:')) {
+                              return <span key={idx} className="text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded text-[11px] font-bold border border-blue-500/20">{p}</span>;
+                            } else if (lowerP.startsWith('margin:')) {
+                              return <span key={idx} className="text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded text-[11px] font-bold border border-purple-500/20">{p}</span>;
+                            } else if (lowerP.startsWith('qty:')) {
+                              return <span key={idx} className="text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded text-[11px] font-bold border border-amber-500/20">{p}</span>;
+                            }
+                            return <span key={idx} className="text-[#787b86] text-[11px] bg-[#1e222d] px-1.5 py-0.5 rounded border border-[#2a2e39] font-medium">{p}</span>;
+                          })}
                         </div>
                       );
                     }
-                    return <span>{desc}</span>;
+                    return <span className="text-[#d1d4dc] text-xs">{desc}</span>;
                   };
 
                   return (
                     <tr key={tx._id} className="hover:bg-[#f5f5f5] dark:hover:bg-[#1e222d] transition-colors">
-                      <td className="px-4 py-2 text-[#787b86]">
+                      <td className="px-4 py-2 text-[#787b86] font-mono text-[11px]">
                         {new Date(tx.createdAt).toLocaleString('vi-VN')}
                       </td>
                       <td className="px-4 py-2">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${tx.type.includes('BUY') ? 'bg-[#f23645]/20 text-[#f23645]' :
-                            tx.type.includes('SELL') ? 'bg-[#089981]/20 text-[#089981]' : 'bg-blue-500/20 text-blue-400'
-                          }`}>
-                          {tx.type.replace('_STOCK', '')}
-                        </span>
+                        {renderTypeBadge(tx.type)}
                       </td>
                       <td className="px-4 py-2">{formatDescription(tx.description)}</td>
-
-                      <td className={`px-4 py-2 text-right font-mono font-semibold ${colorClass}`}>
-                        {isPositive ? '+' : '-'}{displayAmount.toLocaleString('vi-VN')}
+                      <td className={`px-4 py-2 text-right font-mono font-bold ${colorClass}`}>
+                        {isPositive ? '+' : '-'}{Math.abs(tx.amount) >= 100 ? Math.abs(tx.amount).toLocaleString('vi-VN') : Math.abs(tx.amount).toFixed(2)}
                       </td>
                     </tr>
                   );
@@ -336,53 +386,85 @@ export const BottomPanel = ({
         )}
       </div>
 
-      {/* Add Margin Modal */}
-      {addingMargin && (
+      {/* Partial Close Modal */}
+      {closingPos && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#1e222d] rounded-xl w-[320px] p-5 shadow-2xl border border-[#2a2e39]">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-white font-semibold">Thêm ký quỹ ({addingMargin.symbol})</h3>
-              <button onClick={() => setAddingMargin(null)} className="text-[#787b86] hover:text-white transition-colors">
+          <div className="bg-[#1e222d] rounded-xl w-[340px] p-5 shadow-2xl border border-[#2a2e39]">
+            <div className="flex justify-between items-center mb-4 border-b border-[#2a2e39] pb-3">
+              <div>
+                <h3 className="text-white font-bold text-sm">Đóng vị thế {closingPos.symbol}</h3>
+                <span className={`text-[11px] font-bold ${closingPos.side === 'LONG' ? 'text-[#089981]' : 'text-[#f23645]'}`}>
+                  {closingPos.side} (Đang mở: {closingPos.maxQty.toFixed(4)} Lot)
+                </span>
+              </div>
+              <button onClick={() => setClosingPos(null)} className="text-[#787b86] hover:text-white transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="space-y-4">
               <div>
-                <label className="block text-[#787b86] text-xs mb-1">Số tiền muốn bơm thêm (VNĐ)</label>
-                <input 
-                  type="number" 
-                  value={addingMargin.amount}
-                  onChange={e => setAddingMargin({...addingMargin, amount: e.target.value})}
+                <label className="block text-[#787b86] text-xs mb-1">Tỷ lệ đóng vị thế</label>
+                <div className="grid grid-cols-4 gap-1.5 mb-3">
+                  {[0.25, 0.5, 0.75, 1.0].map(pct => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => setClosingPos({ ...closingPos, closeQty: (closingPos.maxQty * pct).toFixed(4) })}
+                      className={`py-1 rounded text-xs font-mono font-bold border transition-colors ${
+                        parseFloat(closingPos.closeQty) === (closingPos.maxQty * pct)
+                          ? 'bg-blue-600 text-white border-blue-500'
+                          : 'bg-[#131722] text-[#d1d4dc] border-[#2a2e39] hover:bg-[#2a2e39]'
+                      }`}
+                    >
+                      {pct * 100}%
+                    </button>
+                  ))}
+                </div>
+
+                <label className="block text-[#787b86] text-xs mb-1">Số Lot muốn đóng</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  max={closingPos.maxQty}
+                  value={closingPos.closeQty}
+                  onChange={e => setClosingPos({ ...closingPos, closeQty: e.target.value })}
                   className="w-full bg-[#131722] border border-[#2a2e39] rounded px-3 py-2 text-white focus:outline-none focus:border-[#2962ff] font-mono text-sm"
-                  placeholder="Ví dụ: 1000000"
+                  placeholder="Nhập số lot"
                 />
               </div>
+
+              <div className="bg-[#131722] p-3 rounded border border-[#2a2e39] flex flex-col gap-1 text-xs">
+                <div className="flex justify-between text-[#787b86]">
+                  <span>Giá đóng (Mark Price):</span>
+                  <span className="font-mono text-white font-bold">${closingPos.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+              </div>
             </div>
-            
+
             <div className="flex gap-3 mt-6">
-              <button 
-                onClick={() => setAddingMargin(null)}
-                className="flex-1 py-2 rounded font-medium text-[#d1d4dc] bg-[#2a2e39] hover:bg-[#363a45] transition-colors"
+              <button
+                onClick={() => setClosingPos(null)}
+                className="flex-1 py-2 rounded font-medium text-[#d1d4dc] bg-[#2a2e39] hover:bg-[#363a45] transition-colors text-xs"
               >
                 Hủy
               </button>
-              <button 
+              <button
                 onClick={async () => {
-                  const amt = parseInt(addingMargin.amount, 10);
-                  if (!isNaN(amt) && amt > 0) {
-                    const res = await onAddMargin(addingMargin.symbol, addingMargin.side, amt);
+                  const qtyToClose = parseFloat(closingPos.closeQty);
+                  if (!isNaN(qtyToClose) && qtyToClose > 0) {
+                    const res = await onClosePosition(closingPos.symbol, closingPos.side, closingPos.price, qtyToClose);
                     showAlert({
-                      title: res.success ? 'Ký quỹ thành công' : 'Ký quỹ thất bại',
+                      title: res.success ? 'Đóng vị thế thành công' : 'Đóng vị thế thất bại',
                       message: res.message,
                       type: res.success ? 'success' : 'error'
                     });
-                    if (res.success) setAddingMargin(null);
+                    if (res.success) setClosingPos(null);
                   }
                 }}
-                className="flex-1 py-2 rounded font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                className="flex-1 py-2 rounded font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors text-xs"
               >
-                Xác nhận
+                Xác nhận đóng
               </button>
             </div>
           </div>

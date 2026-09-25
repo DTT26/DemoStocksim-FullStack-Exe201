@@ -17,9 +17,10 @@ interface RightSidebarProps {
   onCancelEdit?: () => void;
   onPreviewTPSLChange?: (tpsl: { tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean } | null) => void;
   draggedTPSL?: { tp?: number; sl?: number } | null;
+  onResetWallet?: () => void;
 }
 
-export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect, onTrade, onUpdateTPSL, onAddMargin, isEditing, onCancelEdit, onPreviewTPSLChange, draggedTPSL }: RightSidebarProps) => {
+export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect, onTrade, onUpdateTPSL, onAddMargin, isEditing, onCancelEdit, onPreviewTPSLChange, draggedTPSL, onResetWallet }: RightSidebarProps) => {
   const { user, login } = useAuth();
   const { showAlert } = useModal();
   const [activeSidebarTab, setActiveSidebarTab] = useState<'orderbook' | 'trade'>('trade');
@@ -52,6 +53,10 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
       setTp('');
       setSl('');
       setShowTPSL(false);
+    }
+    // Pre-fill limit price string if empty
+    if (!limitPriceStr || parseFloat(limitPriceStr) <= 0) {
+      setLimitPriceStr(selectedStock.price.toString());
     }
   }, [selectedStock.symbol, positions]);
 
@@ -89,7 +94,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
     const p = (orderType !== 'market' && type !== 'close') ? parseFloat(limitPriceStr) || 0 : selectedStock.price;
 
     const lot = parseFloat(lotStr) || 0;
-    const actualQty = lot * 100000;
+    const actualQty = lot;
     const requiredMargin = (actualQty * p) / leverage;
 
     const m = type === 'close' ? 1 : requiredMargin;
@@ -148,7 +153,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
 
   const pTotal = orderType === 'limit' ? (parseFloat(limitPriceStr) || 0) : selectedStock.price;
   const currentLot = parseFloat(lotStr) || 0;
-  const actualQty = currentLot * 100000;
+  const actualQty = currentLot;
   const requiredMargin = (actualQty * pTotal) / leverage;
 
   const held = positions[selectedStock.symbol]?.quantity || 0;
@@ -282,7 +287,18 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
               <Wallet className="w-3 h-3" />
               <span>Balance</span>
             </div>
-            <span className="font-mono text-green-600 dark:text-green-400 font-semibold">${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <div className="flex items-center gap-1.5">
+              <span className="font-mono text-green-600 dark:text-green-400 font-semibold">${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              {onResetWallet && (
+                <button
+                  onClick={onResetWallet}
+                  className="px-1.5 py-0.5 text-[10px] font-bold bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 rounded transition-colors"
+                  title="Reset / Nạp số dư $100,000 USD"
+                >
+                  +100K
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Order type */}
@@ -297,7 +313,14 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
               Thị trường
             </button>
             <button
-              onClick={() => { if (!isEditing) setOrderType('limit'); }}
+              onClick={() => {
+                if (!isEditing) {
+                  setOrderType('limit');
+                  if (!limitPriceStr || parseFloat(limitPriceStr) <= 0) {
+                    setLimitPriceStr(selectedStock.price.toString());
+                  }
+                }
+              }}
               className={`flex-1 py-1.5 rounded uppercase transition-colors ${orderType === 'limit'
                   ? 'bg-blue-600 text-white'
                   : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]')
@@ -306,7 +329,14 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
               Limit
             </button>
             <button
-              onClick={() => { if (!isEditing) setOrderType('stop'); }}
+              onClick={() => {
+                if (!isEditing) {
+                  setOrderType('stop');
+                  if (!limitPriceStr || parseFloat(limitPriceStr) <= 0) {
+                    setLimitPriceStr(selectedStock.price.toString());
+                  }
+                }
+              }}
               className={`flex-1 py-1.5 rounded uppercase transition-colors ${orderType === 'stop'
                   ? 'bg-blue-600 text-white'
                   : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]')
@@ -346,7 +376,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
               <label className="text-[10px] text-[#787b86] uppercase tracking-wider">Khối lượng (Lot)</label>
               {isEditing ? (
                 <div className="bg-[#f0f3fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
-                  {(held / 100000).toLocaleString('vi-VN')}
+                  {held.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
                 </div>
               ) : (
                 <input
@@ -364,7 +394,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
           <div className={`flex flex-col gap-1 mt-1 ${isEditing ? 'opacity-50' : ''}`}>
             <div className="flex justify-between items-center px-1">
               <label className="text-[10px] text-[#787b86] uppercase tracking-wider">Đòn bẩy</label>
-              <span className="text-xs font-mono font-bold text-[#1e2329] dark:text-white">{isEditing ? posLeverage : leverage}X</span>
+              <span className="text-xs font-mono font-bold text-[#1e2329] dark:text-white">{isEditing ? ((posLeverage % 1 !== 0) ? posLeverage.toFixed(2) : posLeverage) : leverage}X</span>
             </div>
 
             <div className="relative mt-2 mb-5 mx-1">
@@ -460,63 +490,130 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
             const baseRefPrice = held > 0 && avgPrice > 0 ? avgPrice : (orderType === 'limit' && parseFloat(limitPriceStr) > 0 ? parseFloat(limitPriceStr) : selectedStock.price);
             const sliderPrecision = getPricePrecision(baseRefPrice);
             const sliderStep = baseRefPrice > 1000 ? '1' : baseRefPrice > 10 ? '0.1' : Math.pow(10, -sliderPrecision).toString();
+            const calcSide = held > 0 && side ? side : 'LONG';
+            const currentQty = held > 0 ? held : actualQty;
+            const currentLeverage = isEditing ? posLeverage : leverage;
+            const initialMargin = (baseRefPrice * currentQty) / currentLeverage;
+
+            const tpNum = tp ? parseFloat(tp) : null;
+            const slNum = sl ? parseFloat(sl) : null;
+
+            let estTpPnl = 0;
+            let estTpRoe = 0;
+            if (tpNum && currentQty > 0) {
+              estTpPnl = calcSide === 'LONG' ? (tpNum - baseRefPrice) * currentQty : (baseRefPrice - tpNum) * currentQty;
+              estTpRoe = initialMargin > 0 ? (estTpPnl / initialMargin) * 100 : 0;
+            }
+
+            let estSlPnl = 0;
+            let estSlRoe = 0;
+            if (slNum && currentQty > 0) {
+              estSlPnl = calcSide === 'LONG' ? (slNum - baseRefPrice) * currentQty : (baseRefPrice - slNum) * currentQty;
+              estSlRoe = initialMargin > 0 ? (estSlPnl / initialMargin) * 100 : 0;
+            }
+
+            let rrRatioStr = '-';
+            if (tpNum && slNum && Math.abs(estSlPnl) > 0) {
+              const rr = Math.abs(estTpPnl / estSlPnl);
+              rrRatioStr = `1 : ${rr.toFixed(2)}`;
+            }
 
             return (
-              <div className="flex gap-2 border-t border-[#e6e8ea] dark:border-[#2a2e39]/50 pt-2 mt-1">
-                <div className="flex flex-col gap-1 flex-1">
-                  <div className="flex justify-between items-center">
-                    <label className="text-[10px] text-[#089981] uppercase tracking-wider font-semibold">Chốt lời (TP)</label>
+              <div className="flex flex-col gap-2 border-t border-[#e6e8ea] dark:border-[#2a2e39]/50 pt-2 mt-1">
+                <div className="flex gap-2">
+                  <div className="flex flex-col gap-1 flex-1">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] text-[#089981] uppercase tracking-wider font-semibold">Chốt lời (TP)</label>
+                    </div>
+                    <input
+                      type="number"
+                      value={tp}
+                      placeholder="Tùy chọn"
+                      onChange={e => setTp(e.target.value)}
+                      className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-2.5 py-1.5 text-xs text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-[#089981] transition-colors w-full placeholder:text-[#787b86]"
+                    />
+                    {/* Quick presets for TP */}
+                    <div className="flex gap-1 mt-0.5">
+                      {[5, 10, 25, 50].map(pct => (
+                        <button
+                          key={pct}
+                          type="button"
+                          onClick={() => {
+                            const factor = calcSide === 'LONG' ? (1 + pct / 100) : (1 - pct / 100);
+                            setTp((baseRefPrice * factor).toFixed(sliderPrecision));
+                          }}
+                          className="flex-1 text-[9px] font-mono py-0.5 bg-[#089981]/10 hover:bg-[#089981]/20 text-[#089981] rounded border border-[#089981]/20 transition-colors"
+                        >
+                          +{pct}%
+                        </button>
+                      ))}
+                    </div>
+                    {tpNum !== null && (
+                      <div className={`text-[10px] font-mono font-bold mt-0.5 ${estTpPnl >= 0 ? 'text-[#089981]' : 'text-[#f23645]'}`}>
+                        {estTpPnl >= 0 ? '+' : ''}${estTpPnl.toFixed(2)} ({estTpRoe >= 0 ? '+' : ''}{estTpRoe.toFixed(1)}%)
+                      </div>
+                    )}
                   </div>
-                  <input
-                    type="number"
-                    value={tp}
-                    placeholder="Tùy chọn"
-                    onChange={e => setTp(e.target.value)}
-                    className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-[#089981] transition-colors w-full placeholder:text-[#787b86] dark:placeholder:text-[#434651]"
-                  />
-                  <input
-                    type="range"
-                    min={(baseRefPrice * 0.5).toFixed(sliderPrecision)}
-                    max={(baseRefPrice * 1.5).toFixed(sliderPrecision)}
-                    step={sliderStep}
-                    value={tp || baseRefPrice}
-                    onChange={e => setTp(e.target.value)}
-                    className="w-full accent-[#089981] mt-1 h-1 bg-[#e6e8ea] dark:bg-[#2a2e39] rounded-lg appearance-none cursor-pointer"
-                  />
-                </div>
-                <div className="flex flex-col gap-1 flex-1">
-                  <div className="flex justify-between items-center">
-                    <label className="text-[10px] text-[#f23645] uppercase tracking-wider font-semibold">Cắt lỗ (SL)</label>
+
+                  <div className="flex flex-col gap-1 flex-1">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] text-[#f23645] uppercase tracking-wider font-semibold">Cắt lỗ (SL)</label>
+                    </div>
+                    <input
+                      type="number"
+                      value={sl}
+                      placeholder="Tùy chọn"
+                      onChange={e => setSl(e.target.value)}
+                      className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-2.5 py-1.5 text-xs text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-[#f23645] transition-colors w-full placeholder:text-[#787b86]"
+                    />
+                    {/* Quick presets for SL */}
+                    <div className="flex gap-1 mt-0.5">
+                      {[2, 5, 10, 15].map(pct => (
+                        <button
+                          key={pct}
+                          type="button"
+                          onClick={() => {
+                            const factor = calcSide === 'LONG' ? (1 - pct / 100) : (1 + pct / 100);
+                            setSl((baseRefPrice * factor).toFixed(sliderPrecision));
+                          }}
+                          className="flex-1 text-[9px] font-mono py-0.5 bg-[#f23645]/10 hover:bg-[#f23645]/20 text-[#f23645] rounded border border-[#f23645]/20 transition-colors"
+                        >
+                          -{pct}%
+                        </button>
+                      ))}
+                    </div>
+                    {slNum !== null && (
+                      <div className={`text-[10px] font-mono font-bold mt-0.5 ${estSlPnl >= 0 ? 'text-[#089981]' : 'text-[#f23645]'}`}>
+                        {estSlPnl >= 0 ? '+' : ''}${estSlPnl.toFixed(2)} ({estSlRoe >= 0 ? '+' : ''}{estSlRoe.toFixed(1)}%)
+                      </div>
+                    )}
                   </div>
-                  <input
-                    type="number"
-                    value={sl}
-                    placeholder="Tùy chọn"
-                    onChange={e => setSl(e.target.value)}
-                    className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-[#f23645] transition-colors w-full placeholder:text-[#787b86] dark:placeholder:text-[#434651]"
-                  />
-                  <input
-                    type="range"
-                    min={(baseRefPrice * 0.5).toFixed(sliderPrecision)}
-                    max={(baseRefPrice * 1.5).toFixed(sliderPrecision)}
-                    step={sliderStep}
-                    value={sl || baseRefPrice}
-                    onChange={e => setSl(e.target.value)}
-                    className="w-full accent-[#f23645] mt-1 h-1 bg-[#e6e8ea] dark:bg-[#2a2e39] rounded-lg appearance-none cursor-pointer"
-                  />
                 </div>
+
+                {tpNum !== null && slNum !== null && (
+                  <div className="flex items-center justify-between bg-[#1e222d]/50 px-2 py-1 rounded text-[10px] border border-[#2a2e39]">
+                    <span className="text-[#787b86]">Tỷ lệ R:R (Lợi nhuận/Rủi ro)</span>
+                    <span className="font-mono font-bold text-amber-400">{rrRatioStr}</span>
+                  </div>
+                )}
               </div>
             );
           })()}
 
           {/* Total info */}
-          <div className="flex items-center justify-between text-xs pt-2">
-            <span className="text-[#787b86]">Ký quỹ yêu cầu</span>
-            <span className="font-mono text-[#1e2329] dark:text-[#d1d4dc] font-bold">${requiredMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-          </div>
-          <div className="flex items-center justify-between text-[10px] pb-2">
-            <span className="text-[#787b86]">Khối lượng thực tế</span>
-            <span className="font-mono text-[#787b86]">{actualQty.toLocaleString('vi-VN')}</span>
+          <div className="flex flex-col gap-1 border-t border-[#e6e8ea] dark:border-[#2a2e39]/50 pt-2 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[#787b86]">Giá trị vị thế</span>
+              <span className="font-mono text-[#1e2329] dark:text-[#d1d4dc] font-medium">${(actualQty * pTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+            <div className="flex items-center justify-between font-bold">
+              <span className="text-[#787b86]">Ký quỹ yêu cầu</span>
+              <span className="font-mono text-blue-500">${requiredMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+            <div className="flex items-center justify-between text-[10px] pb-1">
+              <span className="text-[#787b86]">Khối lượng thực tế</span>
+              <span className="font-mono text-[#787b86]">{actualQty.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} Lot</span>
+            </div>
           </div>
 
           {/* Buttons */}

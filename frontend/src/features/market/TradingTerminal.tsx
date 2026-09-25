@@ -240,6 +240,32 @@ export const TradingTerminal = () => {
     }
   }, [selectedStock.price, positions, user?._id]);
 
+  // Kiểm tra Real-time TP/SL/Lệnh chờ mỗi khi giá thay đổi (~1s)
+  useEffect(() => {
+    if (!user?._id) return;
+
+    const priceMap: Record<string, number> = {};
+    STOCKS.forEach(s => {
+      priceMap[s.symbol] = s.symbol === selectedStock.symbol ? selectedStock.price : s.price;
+    });
+
+    tradingApi.checkTriggers(priceMap, user._id)
+      .then(res => {
+        if (res && res.processed > 0) {
+          fetchPortfolio(user._id);
+          setTradeCount(c => c + 1);
+          if (res.messages && Array.isArray(res.messages)) {
+            res.messages.forEach((msg: string, i: number) => {
+              setTimeout(() => showToast(msg, 'success'), i * 800);
+            });
+          }
+        }
+      })
+      .catch(() => {
+        // silent catch
+      });
+  }, [user?._id, selectedStock.price, selectedStock.symbol]);
+
   const handleChallengeStateUpdate = async (newState: UserChallengeState) => {
     setChallengeState(newState);
     if (newState.status === 'ACTIVE' || newState.status === 'PAUSED') {
@@ -497,96 +523,23 @@ export const TradingTerminal = () => {
     }
   };
 
-  // Auto Close on TP / SL / LIQUIDATION
-  useEffect(() => {
-    const pos = positions[selectedStock.symbol];
-    if (!pos) return;
-
-    const currentPrice = selectedStock.price;
-    const actualMargin = (pos.averagePrice * pos.quantity) / pos.leverage;
-    let pnl = 0;
-    let shouldClose = false;
-    let reason = '';
-    let execPrice = currentPrice;
-
-    if (pos.side === 'LONG') {
-      pnl = (currentPrice - pos.averagePrice) * pos.quantity;
-      if (pos.sl && currentPrice <= pos.sl) { shouldClose = true; reason = 'Chạm Cắt Lỗ (SL)'; execPrice = pos.sl; }
-      if (pos.tp && currentPrice >= pos.tp) { shouldClose = true; reason = 'Chạm Chốt Lời (TP)'; execPrice = pos.tp; }
-    } else if (pos.side === 'SHORT') {
-      pnl = (pos.averagePrice - currentPrice) * pos.quantity;
-      if (pos.sl && currentPrice >= pos.sl) { shouldClose = true; reason = 'Chạm Cắt Lỗ (SL)'; execPrice = pos.sl; }
-      if (pos.tp && currentPrice <= pos.tp) { shouldClose = true; reason = 'Chạm Chốt Lời (TP)'; execPrice = pos.tp; }
-    }
-
-    // Liquidation Check
-    if (pnl <= -actualMargin) {
-      shouldClose = true;
-      reason = 'Thanh lý (Cháy tài khoản)';
-      execPrice = currentPrice; // Liquidate at market
-    }
-
-    if (shouldClose) {
-      const key = `${selectedStock.symbol}_${pos.side}`;
-      if ((window as any)[`isClosing_${key}`]) return;
-      (window as any)[`isClosing_${key}`] = true;
-
-      handleTrade('close', execPrice, 0, 0).then(res => {
-        (window as any)[`isClosing_${key}`] = false;
-        if (res.success) {
-          showToast(`⚠️ HỆ THỐNG TỰ ĐỘNG ĐÓNG VỊ THẾ!\nLý do: ${reason}\nGiá: $${execPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, 'warning');
-        }
-      }).catch(() => {
-        (window as any)[`isClosing_${key}`] = false;
-      });
-    }
-  }, [selectedStock.price, positions, selectedStock.symbol]);
-
-  // Auto Execute Limit & Stop Orders
-  useEffect(() => {
-    const currentPrice = selectedStock.price;
-    const symbolOrders = pendingOrders.filter(o => o.symbol === selectedStock.symbol);
-
-    symbolOrders.forEach(order => {
-      const key = `executing_order_${order._id}`;
-      if ((window as any)[key]) return;
-
-      let shouldExecute = false;
-      if (order.type === 'LIMIT') {
-        if (order.side === 'LONG' && currentPrice <= order.price) {
-          shouldExecute = true;
-        } else if (order.side === 'SHORT' && currentPrice >= order.price) {
-          shouldExecute = true;
-        }
-      } else if (order.type === 'STOP') {
-        if (order.side === 'LONG' && currentPrice >= order.price) {
-          shouldExecute = true;
-        } else if (order.side === 'SHORT' && currentPrice <= order.price) {
-          shouldExecute = true;
-        }
+  const handleResetWallet = async () => {
+    try {
+      const res = await tradingApi.resetWallet(100000);
+      if (res.success) {
+        await fetchPortfolio();
+        showToast('✅ Đã nạp / reset số dư về $100,000 USD thành công!', 'info');
       }
+    } catch (e: any) {
+      showToast(`❌ ${e.message}`, 'warning');
+    }
+  };
 
-      if (shouldExecute) {
-        (window as any)[key] = true;
-        // Khớp lệnh: 1. Hủy lệnh chờ, 2. Mở lệnh thật
-        tradingApi.cancelLimitOrder(order._id)
-          .then(() => {
-            if (order.side === 'LONG') {
-              return tradingApi.buyStock(order.symbol, order.margin, order.leverage, order.price, order.stopLoss, order.takeProfit);
-            } else {
-              return handleTrade(order.side === 'LONG' ? 'buy' : 'sell', order.price, order.margin, order.leverage, order.takeProfit, order.stopLoss);
-            }
-          })
-          .then(() => {
-            fetchPortfolio();
-            showToast(`✅ Lệnh chờ ${order.side} Limit tại ${order.price.toLocaleString()}đ đã khớp!`, 'info');
-          })
-          .finally(() => {
-            (window as any)[key] = false;
-          });
-      }
-    });
-  }, [selectedStock.price, pendingOrders, selectedStock.symbol]);
+  // Auto Close on TP / SL / LIQUIDATION (Đã được chuyển sang xử lý Realtime ở Backend bằng checkPriceTriggers)
+  // useEffect(() => { ... }, [selectedStock.price, positions, selectedStock.symbol]);
+
+  // Auto Execute Limit & Stop Orders (Đã được chuyển sang Backend)
+  // useEffect(() => { ... }, [selectedStock.price, pendingOrders, selectedStock.symbol]);
 
   const handleStartReplaySelection = () => {
     setIsSelectingReplayStart(true);
@@ -825,13 +778,13 @@ export const TradingTerminal = () => {
                 pendingOrders={pendingOrders}
                 selectedSymbol={selectedStock.symbol}
                 currentPrice={selectedStock.price}
-                onClosePosition={async (symbol, side, price) => {
+                onClosePosition={async (symbol, side, price, closeQty) => {
                   try {
-                    const res = await tradingApi.closePosition(symbol, side, price);
+                    const res = await tradingApi.closePosition(symbol, side, price, closeQty);
                     if (res.success) {
                       await fetchPortfolio();
                       setTradeCount(c => c + 1);
-                      return { success: true, message: `✅ Đã chốt vị thế ${side} ${symbol}` };
+                      return { success: true, message: res.message || `✅ Đã chốt vị thế ${side} ${symbol}` };
                     }
                     return { success: false, message: 'Lỗi khi đóng vị thế' };
                   } catch (e: any) {
@@ -864,8 +817,10 @@ export const TradingTerminal = () => {
                   }
                 }}
                 onEditPosition={(symbol) => {
-                  const stock = STOCKS.find(s => s.symbol === symbol);
-                  if (stock) handleStockSelect(stock);
+                  if (symbol !== selectedStock.symbol) {
+                    const stock = STOCKS.find(s => s.symbol === symbol);
+                    if (stock) handleStockSelect(stock);
+                  }
                   setEditingSymbol(symbol);
                 }}
                 refreshTrigger={tradeCount}
@@ -900,6 +855,7 @@ export const TradingTerminal = () => {
             onCancelEdit={() => setEditingSymbol(null)}
             onPreviewTPSLChange={setPreviewTPSL}
             draggedTPSL={draggedTPSL}
+            onResetWallet={handleResetWallet}
           />
         </div>
       </div>

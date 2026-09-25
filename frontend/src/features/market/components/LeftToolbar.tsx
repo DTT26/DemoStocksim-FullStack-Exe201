@@ -212,8 +212,6 @@ const TOOLS = [
         items: [
           { id: 'longPosition', label: 'Thế giá lên', icon: TrendingUp },
           { id: 'shortPosition', label: 'Thế giá xuống', icon: TrendingDown },
-          { id: 'forecast', label: 'Dự đoán', icon: BarChart2 },
-          { id: 'barsPattern', label: 'Mẫu hình Thanh', icon: BarChart2 },
           { id: 'ghostFeed', label: 'Mô hình Ghost Feed', icon: Activity },
           { id: 'projection', label: 'Phép chiếu', icon: Waypoints }
         ]
