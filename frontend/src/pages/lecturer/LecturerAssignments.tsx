@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings, Edit3, CheckCircle, Clock, Users, Search, Filter, BookOpen, PlusCircle, Target, Lock, MoreVertical, ClipboardCheck, ListChecks } from 'lucide-react';
+import { Edit3, CheckCircle, Clock, Users, Search, Filter, BookOpen, PlusCircle, Target, Lock, MoreVertical, ClipboardCheck, ListChecks } from 'lucide-react';
 import { AssignmentModal } from './components/AssignmentModal';
 import { AssignStudentsModal } from './components/AssignStudentsModal';
 import { SubmissionListModal } from './components/SubmissionListModal';

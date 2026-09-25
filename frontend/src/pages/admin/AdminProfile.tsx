@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User, Mail, Phone, Building, FileText, Save, Edit3, X, Shield, Loader2, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { ChangePasswordCard } from '../../components/ChangePasswordCard';
 
 export const AdminProfile = () => {
   const { user, refreshUser } = useAuth();
@@ -207,6 +208,9 @@ export const AdminProfile = () => {
               )}
             </div>
           </div>
+
+          {/* Đổi mật khẩu */}
+          <ChangePasswordCard />
         </div>
       </div>
 

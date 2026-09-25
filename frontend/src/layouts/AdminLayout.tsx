@@ -8,7 +8,7 @@ export const AdminLayout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen w-full bg-[#080C14] text-slate-200 font-sans flex overflow-x-hidden">
+    <div className="min-h-screen w-full bg-[#f8f9fa] dark:bg-[#080C14] text-slate-800 dark:text-slate-200 font-sans flex overflow-x-hidden transition-colors">
       <AdminSidebar
         collapsed={collapsed}
         setCollapsed={setCollapsed}

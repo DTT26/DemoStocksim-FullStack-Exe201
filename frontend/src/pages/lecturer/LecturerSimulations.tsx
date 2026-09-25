@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Play, Square, Users, Edit3, Settings, UserPlus, Search, Filter, MoreVertical, Trash2, Copy, BarChart3, Clock, Target, PlusCircle, Activity } from 'lucide-react';
+import { Play, Square, Users, Edit3, UserPlus, Search, Filter, MoreVertical, Trash2, Copy, BarChart3, Clock, Target, PlusCircle, Activity } from 'lucide-react';
 import { SimulationModal } from './components/SimulationModal';
 import { ParticipantsModal } from './components/ParticipantsModal';
 import { ConfirmModal } from '../../components/ConfirmModal';

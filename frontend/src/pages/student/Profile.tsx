@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Mail, CheckCircle2, Save, X, Edit3, User, Phone, BookOpen, GraduationCap, FileText, Loader2 } from 'lucide-react';
 import { MOCK_STUDENT_PORTFOLIO } from '../../data/mockStudentData';
+import { ChangePasswordCard } from '../../components/ChangePasswordCard';
 
 export const StudentProfile = () => {
   const { user, refreshUser } = useAuth();
@@ -92,18 +93,18 @@ export const StudentProfile = () => {
     <div className="space-y-8 animate-in fade-in duration-500 max-w-5xl mx-auto pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Hồ sơ cá nhân (Student Profile)</h1>
-          <p className="text-slate-400 mt-2 text-base">Quản lý thông tin tài khoản học viên và theo dõi chỉ số học tập.</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Hồ sơ cá nhân (Student Profile)</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-2 text-base">Quản lý thông tin tài khoản học viên và theo dõi chỉ số học tập.</p>
         </div>
 
         {toastMsg && (
           <div className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 border ${
             toastMsg.type === 'success' 
-              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30' 
-              : 'bg-rose-500/10 text-rose-300 border-rose-500/30'
+              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' 
+              : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
           }`}>
             <span>{toastMsg.text}</span>
-            <button onClick={() => setToastMsg(null)} className="text-slate-400 hover:text-white ml-2">✕</button>
+            <button onClick={() => setToastMsg(null)} className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white ml-2">✕</button>
           </div>
         )}
       </div>
@@ -112,48 +113,48 @@ export const StudentProfile = () => {
         
         {/* Left Column: Profile Info & Stats */}
         <div className="lg:col-span-1 space-y-8">
-          <div className="bg-[#111827] rounded-2xl border border-[#253047] p-8 text-center relative overflow-hidden shadow-xl">
-            <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-indigo-900/60 via-purple-900/40 to-blue-900/50"></div>
+          <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] p-8 text-center relative overflow-hidden shadow-sm dark:shadow-xl transition-colors">
+            <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-blue-500/20 dark:from-indigo-900/60 dark:via-purple-900/40 dark:to-blue-900/50"></div>
             <div className="relative z-10 flex flex-col items-center">
               {user?.picture ? (
-                <img src={user.picture} alt="Avatar" className="w-24 h-24 rounded-full border-4 border-[#111827] bg-[#172033] shadow-xl mb-4 object-cover" />
+                <img src={user.picture} alt="Avatar" className="w-24 h-24 rounded-full border-4 border-white dark:border-[#111827] bg-slate-100 dark:bg-[#172033] shadow-xl mb-4 object-cover" />
               ) : (
-                <div className="w-24 h-24 rounded-full border-4 border-[#111827] bg-indigo-600 shadow-xl mb-4 flex items-center justify-center text-3xl font-bold text-white">
+                <div className="w-24 h-24 rounded-full border-4 border-white dark:border-[#111827] bg-indigo-600 shadow-xl mb-4 flex items-center justify-center text-3xl font-bold text-white">
                   {user?.name?.charAt(0) || 'S'}
                 </div>
               )}
-              <h2 className="text-xl font-bold text-white">{user?.name || 'Học viên'}</h2>
-              <span className="mt-1 px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">{user?.name || 'Học viên'}</h2>
+              <span className="mt-1 px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
                 Sinh viên (Student)
               </span>
               
-              <div className="flex items-center gap-2 mt-4 text-slate-400 text-xs">
-                <Mail className="w-4 h-4 text-slate-500" />
+              <div className="flex items-center gap-2 mt-4 text-slate-500 dark:text-slate-400 text-xs">
+                <Mail className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                 <span className="font-mono">{user?.email || 'student@example.com'}</span>
               </div>
             </div>
           </div>
 
-          <div className="bg-[#111827] rounded-2xl border border-[#253047] p-6 shadow-xl">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-[#253047] pb-3">
+          <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] p-6 shadow-sm dark:shadow-xl transition-colors">
+            <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-200 dark:border-[#253047] pb-3">
               Thống kê học tập & Giao dịch
             </h3>
             <div className="space-y-3.5 text-xs">
-              <div className="flex justify-between items-center pb-3 border-b border-[#253047]/50">
-                <span className="text-slate-400">Kỳ thi tham gia:</span>
-                <span className="font-bold text-white font-mono">1</span>
+              <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-[#253047]/50">
+                <span className="text-slate-500 dark:text-slate-400">Kỳ thi tham gia:</span>
+                <span className="font-bold text-slate-900 dark:text-white font-mono">1</span>
               </div>
-              <div className="flex justify-between items-center pb-3 border-b border-[#253047]/50">
-                <span className="text-slate-400">Bài tập đã nộp:</span>
-                <span className="font-bold text-indigo-400 font-mono">2</span>
+              <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-[#253047]/50">
+                <span className="text-slate-500 dark:text-slate-400">Bài tập đã nộp:</span>
+                <span className="font-bold text-indigo-600 dark:text-indigo-400 font-mono">2</span>
               </div>
-              <div className="flex justify-between items-center pb-3 border-b border-[#253047]/50">
-                <span className="text-slate-400">Tổng số lệnh trade:</span>
-                <span className="font-bold text-white font-mono">{MOCK_STUDENT_PORTFOLIO.totalTrades}</span>
+              <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-[#253047]/50">
+                <span className="text-slate-500 dark:text-slate-400">Tổng số lệnh trade:</span>
+                <span className="font-bold text-slate-900 dark:text-white font-mono">{MOCK_STUDENT_PORTFOLIO.totalTrades}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-400">Tỷ lệ thắng (Win Rate):</span>
-                <span className="font-bold text-emerald-400 font-mono">{MOCK_STUDENT_PORTFOLIO.winRate}%</span>
+                <span className="text-slate-500 dark:text-slate-400">Tỷ lệ thắng (Win Rate):</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">{MOCK_STUDENT_PORTFOLIO.winRate}%</span>
               </div>
             </div>
           </div>
@@ -162,9 +163,9 @@ export const StudentProfile = () => {
         {/* Right Column: Google Account & Editable Form */}
         <div className="lg:col-span-2 space-y-8">
           
-          <div className="bg-[#111827] rounded-2xl border border-[#253047] p-6 shadow-xl">
+          <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] p-6 shadow-sm dark:shadow-xl transition-colors">
             <div className="flex items-start gap-4">
-              <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center p-2 shrink-0 shadow">
+              <div className="w-11 h-11 rounded-full bg-slate-50 dark:bg-white flex items-center justify-center p-2 shrink-0 shadow border border-slate-200 dark:border-transparent">
                 <svg viewBox="0 0 24 24" className="w-full h-full">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -173,13 +174,13 @@ export const StudentProfile = () => {
                 </svg>
               </div>
               <div className="flex-1">
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   Tài khoản đăng nhập Google
-                  <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
                     <CheckCircle2 className="w-3 h-3" /> Đã liên kết
                   </span>
                 </h3>
-                <p className="text-slate-300 font-mono text-xs mt-1">{user?.email}</p>
+                <p className="text-slate-600 dark:text-slate-300 font-mono text-xs mt-1">{user?.email}</p>
                 <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
                   Tài khoản được bảo vệ qua Google OAuth và HttpOnly Session Cookies an toàn.
                 </p>
@@ -187,16 +188,16 @@ export const StudentProfile = () => {
             </div>
           </div>
 
-          <div className="bg-[#111827] rounded-2xl border border-[#253047] overflow-hidden shadow-xl">
-            <div className="p-5 border-b border-[#253047] flex justify-between items-center bg-[#172033]/60">
+          <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] overflow-hidden shadow-sm dark:shadow-xl transition-colors">
+            <div className="p-5 border-b border-slate-200 dark:border-[#253047] flex justify-between items-center bg-slate-50/50 dark:bg-[#172033]/60">
               <div>
-                <h2 className="text-base font-bold text-white">Thông tin cá nhân học viên</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Cập nhật họ tên, mã sinh viên, trường lớp và số điện thoại</p>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">Thông tin cá nhân học viên</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Cập nhật họ tên, mã sinh viên, trường lớp và số điện thoại</p>
               </div>
               {!isEditing ? (
                 <button 
                   onClick={() => setIsEditing(true)}
-                  className="px-3.5 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                  className="px-3.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 dark:bg-indigo-600/20 dark:hover:bg-indigo-600/30 dark:text-indigo-300 dark:border-indigo-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
                   <span>Chỉnh sửa hồ sơ</span>
@@ -206,7 +207,7 @@ export const StudentProfile = () => {
                   <button 
                     onClick={handleCancel}
                     disabled={loading}
-                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-slate-300 rounded-xl text-xs font-medium transition-colors"
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-medium transition-colors"
                   >
                     Hủy
                   </button>
@@ -227,103 +228,106 @@ export const StudentProfile = () => {
                 
                 {/* Họ và tên */}
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-slate-300 mb-1.5">Họ và tên *</label>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Họ và tên *</label>
                   {isEditing ? (
                     <input 
                       type="text" 
                       value={formData.name}
                       onChange={e => setFormData({...formData, name: e.target.value})}
                       placeholder="Nhập họ và tên đầy đủ"
-                      className="w-full bg-[#172033] border border-[#253047] text-white rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-500 font-medium"
+                      className="w-full bg-slate-50 dark:bg-[#172033] border border-slate-200 dark:border-[#253047] text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-500 font-medium"
                     />
                   ) : (
-                    <p className="text-white font-medium px-4 py-2.5 bg-[#172033]/50 rounded-xl border border-white/5">{formData.name || 'Chưa cập nhật'}</p>
+                    <p className="text-slate-900 dark:text-white font-medium px-4 py-2.5 bg-slate-50 dark:bg-[#172033]/50 rounded-xl border border-slate-200 dark:border-white/5">{formData.name || 'Chưa cập nhật'}</p>
                   )}
                 </div>
 
                 {/* Mã sinh viên */}
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1.5">Mã số sinh viên (MSSV)</label>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Mã số sinh viên (MSSV)</label>
                   {isEditing ? (
                     <input 
                       type="text" 
                       value={formData.studentId}
                       onChange={e => setFormData({...formData, studentId: e.target.value})}
                       placeholder="e.g. SE150123"
-                      className="w-full bg-[#172033] border border-[#253047] text-white rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-500 font-mono uppercase"
+                      className="w-full bg-slate-50 dark:bg-[#172033] border border-slate-200 dark:border-[#253047] text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-500 font-mono uppercase"
                     />
                   ) : (
-                    <p className="text-white font-mono px-4 py-2.5 bg-[#172033]/50 rounded-xl border border-white/5">{formData.studentId || 'Chưa cập nhật'}</p>
+                    <p className="text-slate-900 dark:text-white font-mono px-4 py-2.5 bg-slate-50 dark:bg-[#172033]/50 rounded-xl border border-slate-200 dark:border-white/5">{formData.studentId || 'Chưa cập nhật'}</p>
                   )}
                 </div>
 
                 {/* Lớp */}
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1.5">Lớp sinh hoạt / Khóa học</label>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Lớp sinh hoạt / Khóa học</label>
                   {isEditing ? (
                     <input 
                       type="text" 
                       value={formData.class}
                       onChange={e => setFormData({...formData, class: e.target.value})}
                       placeholder="e.g. SE1501, K15"
-                      className="w-full bg-[#172033] border border-[#253047] text-white rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-500"
+                      className="w-full bg-slate-50 dark:bg-[#172033] border border-slate-200 dark:border-[#253047] text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-500"
                     />
                   ) : (
-                    <p className="text-white font-medium px-4 py-2.5 bg-[#172033]/50 rounded-xl border border-white/5">{formData.class || 'Chưa cập nhật'}</p>
+                    <p className="text-slate-900 dark:text-white font-medium px-4 py-2.5 bg-slate-50 dark:bg-[#172033]/50 rounded-xl border border-slate-200 dark:border-white/5">{formData.class || 'Chưa cập nhật'}</p>
                   )}
                 </div>
 
                 {/* Trường đại học */}
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-slate-300 mb-1.5">Trường / Đơn vị đào tạo</label>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Trường / Đơn vị đào tạo</label>
                   {isEditing ? (
                     <input 
                       type="text" 
                       value={formData.university}
                       onChange={e => setFormData({...formData, university: e.target.value})}
                       placeholder="e.g. Đại học FPT"
-                      className="w-full bg-[#172033] border border-[#253047] text-white rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-500"
+                      className="w-full bg-slate-50 dark:bg-[#172033] border border-slate-200 dark:border-[#253047] text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-500"
                     />
                   ) : (
-                    <p className="text-white font-medium px-4 py-2.5 bg-[#172033]/50 rounded-xl border border-white/5">{formData.university || 'Chưa cập nhật'}</p>
+                    <p className="text-slate-900 dark:text-white font-medium px-4 py-2.5 bg-slate-50 dark:bg-[#172033]/50 rounded-xl border border-slate-200 dark:border-white/5">{formData.university || 'Chưa cập nhật'}</p>
                   )}
                 </div>
 
                 {/* Số điện thoại */}
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-slate-300 mb-1.5">Số điện thoại liên hệ</label>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Số điện thoại liên hệ</label>
                   {isEditing ? (
                     <input 
                       type="text" 
                       value={formData.phone}
                       onChange={e => setFormData({...formData, phone: e.target.value})}
                       placeholder="e.g. 0987654321"
-                      className="w-full bg-[#172033] border border-[#253047] text-white rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-500 font-mono"
+                      className="w-full bg-slate-50 dark:bg-[#172033] border border-slate-200 dark:border-[#253047] text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-500 font-mono"
                     />
                   ) : (
-                    <p className="text-white font-mono px-4 py-2.5 bg-[#172033]/50 rounded-xl border border-white/5">{formData.phone || 'Chưa cập nhật'}</p>
+                    <p className="text-slate-900 dark:text-white font-mono px-4 py-2.5 bg-slate-50 dark:bg-[#172033]/50 rounded-xl border border-slate-200 dark:border-white/5">{formData.phone || 'Chưa cập nhật'}</p>
                   )}
                 </div>
 
                 {/* Giới thiệu / Bio */}
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-slate-300 mb-1.5">Giới thiệu ngắn (Bio)</label>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Giới thiệu ngắn (Bio)</label>
                   {isEditing ? (
                     <textarea 
                       rows={3}
                       value={formData.bio}
                       onChange={e => setFormData({...formData, bio: e.target.value})}
                       placeholder="Mục tiêu học tập, phong cách đầu tư yêu thích..."
-                      className="w-full bg-[#172033] border border-[#253047] text-white rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-500 resize-none leading-relaxed"
+                      className="w-full bg-slate-50 dark:bg-[#172033] border border-slate-200 dark:border-[#253047] text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-500 resize-none leading-relaxed"
                     />
                   ) : (
-                    <p className="text-slate-200 px-4 py-3 bg-[#172033]/50 rounded-xl border border-white/5 min-h-[80px] whitespace-pre-wrap leading-relaxed">{formData.bio || 'Chưa có thông tin giới thiệu'}</p>
+                    <p className="text-slate-700 dark:text-slate-200 px-4 py-3 bg-slate-50 dark:bg-[#172033]/50 rounded-xl border border-slate-200 dark:border-white/5 min-h-[80px] whitespace-pre-wrap leading-relaxed">{formData.bio || 'Chưa có thông tin giới thiệu'}</p>
                   )}
                 </div>
 
               </div>
             </div>
           </div>
+
+          {/* Đổi mật khẩu */}
+          <ChangePasswordCard />
 
         </div>
 

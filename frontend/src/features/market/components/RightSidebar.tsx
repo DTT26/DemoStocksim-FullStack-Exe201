@@ -208,15 +208,15 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
 
   if (!isExpanded) {
     return (
-      <div className="w-10 flex flex-col bg-[#131722] flex-1 min-h-0 overflow-hidden items-center">
+      <div className="w-10 flex flex-col bg-white dark:bg-[#131722] border-l border-[#e6e8ea] dark:border-[#2a2e39] flex-1 min-h-0 overflow-hidden items-center">
         <button
           onClick={() => setIsExpanded(true)}
-          className="w-full py-4 flex items-center justify-center text-[#787b86] hover:text-[#d1d4dc] hover:bg-[#1e222d] transition-colors"
+          className="w-full py-4 flex items-center justify-center text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] hover:bg-[#f0f3fa] dark:hover:bg-[#1e222d] transition-colors"
           title="Mở bảng đặt lệnh"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
-        <div className="flex-1 border-r border-[#2a2e39] w-0"></div>
+        <div className="flex-1 border-r border-[#e6e8ea] dark:border-[#2a2e39] w-0"></div>
       </div>
     );
   }
@@ -580,12 +580,12 @@ export const RightSidebar = ({ selectedStock, positions, balance, onStockSelect,
           )}
         </div>
       ) : (
-        <div className="border-t border-[#2a2e39] p-6 flex flex-col items-center justify-center text-center gap-4 shrink-0 bg-[#131722]">
-          <Wallet className="w-8 h-8 text-[#434651]" />
+        <div className="border-t border-[#e6e8ea] dark:border-[#2a2e39] p-6 flex flex-col items-center justify-center text-center gap-4 shrink-0 bg-white dark:bg-[#131722]">
+          <Wallet className="w-8 h-8 text-[#787b86] dark:text-[#434651]" />
           <p className="text-[#787b86] text-xs">Vui lòng đăng nhập để xem số dư và thực hiện giao dịch.</p>
           <button
             onClick={() => login()}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2.5 rounded transition-colors"
+            className="w-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm font-semibold py-2.5 rounded transition-all shadow-sm"
           >
             Đăng nhập
           </button>

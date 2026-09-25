@@ -42,7 +42,7 @@ export const AuthOverlay = ({ icon, title, subtitle, features }: AuthOverlayProp
 
       <button
         onClick={() => login()}
-        className="w-full flex items-center justify-center gap-3 bg-white border border-[#e6e8ea] dark:border-transparent hover:bg-[#f8f9fa] text-[#1e2329] font-bold py-3.5 px-4 rounded-xl shadow-sm transition-all mb-4"
+        className="w-full flex items-center justify-center gap-3 bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] hover:bg-[#f8f9fa] dark:hover:bg-[#262b3d] text-[#1e2329] dark:text-white font-bold py-3.5 px-4 rounded-xl shadow-sm transition-all mb-4 cursor-pointer"
       >
         <svg viewBox="0 0 24 24" className="w-5 h-5" xmlns="http://www.w3.org/2000/svg">
           <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>

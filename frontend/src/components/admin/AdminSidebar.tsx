@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Target, Settings, User, LogOut, TrendingUp, Menu, ChevronLeft, LineChart } from 'lucide-react';
+import { LayoutDashboard, Users, Target, User, LogOut, TrendingUp, Menu, ChevronLeft, LineChart } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface AdminSidebarProps {
@@ -25,7 +25,6 @@ export const AdminSidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpe
     { name: 'Dashboard', path: '/admin', icon: <LayoutDashboard className="w-5 h-5" /> },
     { name: 'Users', path: '/admin/users', icon: <Users className="w-5 h-5" /> },
     { name: 'Simulations', path: '/admin/simulations', icon: <Target className="w-5 h-5" /> },
-    { name: 'Settings', path: '/admin/settings', icon: <Settings className="w-5 h-5" /> },
   ];
 
   const lastSelectedStock = localStorage.getItem('lastSelectedStock') || 'fpt';
@@ -40,7 +39,7 @@ export const AdminSidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpe
     return location.pathname.startsWith(path);
   };
 
-  const sidebarClasses = `fixed inset-y-0 left-0 z-50 flex flex-col bg-[#111827] border-r border-[#1e293b] transition-all duration-300
+  const sidebarClasses = `fixed inset-y-0 left-0 z-50 flex flex-col bg-white dark:bg-[#111827] border-r border-[#e2e8f0] dark:border-[#1e293b] transition-all duration-300
     ${collapsed ? 'w-[80px]' : 'w-[260px]'}
     ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
   `;
@@ -57,13 +56,13 @@ export const AdminSidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpe
 
       <aside className={sidebarClasses}>
         {/* Logo */}
-        <div className="flex items-center justify-between h-16 px-4 border-b border-[#1e293b]">
+        <div className="flex items-center justify-between h-16 px-4 border-b border-[#e2e8f0] dark:border-[#1e293b]">
           {!collapsed && (
             <Link to="/admin" className="flex items-center gap-2.5 px-2">
               <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
                 <TrendingUp className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-white tracking-tight">Stock<span className="text-blue-400">Sim</span></span>
+              <span className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Stock<span className="text-blue-600 dark:text-blue-400">Sim</span></span>
             </Link>
           )}
           {collapsed && (
@@ -73,7 +72,7 @@ export const AdminSidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpe
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="hidden md:flex p-1.5 text-slate-400 hover:text-white hover:bg-[#172033] rounded-lg transition-colors"
+            className="hidden md:flex p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#172033] rounded-lg transition-colors cursor-pointer"
           >
             {collapsed ? <Menu className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
           </button>
@@ -82,7 +81,7 @@ export const AdminSidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpe
         {/* Navigation */}
         <div className="flex-1 overflow-y-auto py-6 px-3 flex flex-col gap-1 scrollbar-hide">
           {!collapsed && (
-            <div className="mb-3 px-3 text-[11px] font-semibold text-slate-500 uppercase tracking-widest">
+            <div className="mb-3 px-3 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
               Management
             </div>
           )}
@@ -95,19 +94,19 @@ export const AdminSidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpe
                 onClick={() => setMobileOpen(false)}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group relative
                   ${active
-                    ? 'bg-blue-600/10 text-blue-400'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#172033]'
+                    ? 'bg-blue-50 dark:bg-blue-600/10 text-blue-600 dark:text-blue-400 font-semibold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#172033]'
                   }
                   ${collapsed ? 'justify-center' : ''}
                 `}
                 title={collapsed ? item.name : undefined}
               >
-                <div className={active ? 'text-blue-400' : 'text-slate-400 group-hover:text-slate-200'}>
+                <div className={active ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200'}>
                   {item.icon}
                 </div>
                 {!collapsed && <span className="font-medium text-[15px]">{item.name}</span>}
                 {active && !collapsed && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-500 rounded-r-full" />
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-600 dark:bg-blue-500 rounded-r-full" />
                 )}
               </Link>
             );
@@ -115,7 +114,7 @@ export const AdminSidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpe
         </div>
 
         {/* Bottom Section */}
-        <div className="p-3 border-t border-[#1e293b] flex flex-col gap-1">
+        <div className="p-3 border-t border-[#e2e8f0] dark:border-[#1e293b] flex flex-col gap-1">
           {bottomItems.map((item) => {
             const active = isActive(item.path);
             return (
@@ -125,14 +124,14 @@ export const AdminSidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpe
                 onClick={() => setMobileOpen(false)}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group
                   ${active
-                    ? 'bg-[#172033] text-white'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#172033]'
+                    ? 'bg-slate-100 dark:bg-[#172033] text-slate-900 dark:text-white font-semibold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#172033]'
                   }
                   ${collapsed ? 'justify-center' : ''}
                 `}
                 title={collapsed ? item.name : undefined}
               >
-                <div className={active ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}>
+                <div className={active ? 'text-slate-900 dark:text-white' : 'text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200'}>
                   {item.icon}
                 </div>
                 {!collapsed && <span className="font-medium text-[15px]">{item.name}</span>}
@@ -142,7 +141,7 @@ export const AdminSidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpe
 
           <button
             onClick={handleLogout}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-rose-500/80 hover:text-rose-400 hover:bg-rose-500/10 w-full
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-rose-600 dark:text-rose-500/80 hover:text-rose-700 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 w-full cursor-pointer
               ${collapsed ? 'justify-center' : ''}
             `}
             title={collapsed ? 'Logout' : undefined}
@@ -154,8 +153,8 @@ export const AdminSidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpe
           {/* Footer tagline */}
           {!collapsed && (
             <div className="mt-3 px-3 pb-2 text-center">
-              <p className="text-[10px] text-slate-600 font-medium uppercase tracking-wider">StockSim</p>
-              <p className="text-[10px] text-slate-500 italic">Teach Today · Trade Tomorrow</p>
+              <p className="text-[10px] text-slate-400 dark:text-slate-600 font-medium uppercase tracking-wider">StockSim</p>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 italic">Teach Today · Trade Tomorrow</p>
             </div>
           )}
         </div>

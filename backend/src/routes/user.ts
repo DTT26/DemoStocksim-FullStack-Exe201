@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { 
   getMyProfile, 
   updateMyProfile, 
+  changePassword,
   getUsers, 
   getUserById, 
   updateUserRole, 
@@ -16,6 +17,8 @@ const router = Router();
 router.route('/me')
   .get(protect, getMyProfile as any)
   .put(protect, updateMyProfile as any);
+
+router.put('/change-password', protect, changePassword as any);
 
 // Các route quản lý User (Dành cho Admin, Lecturer, và Student để xem Leaderboard)
 router.route('/')

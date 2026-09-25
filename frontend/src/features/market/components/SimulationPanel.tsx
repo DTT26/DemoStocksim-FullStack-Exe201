@@ -371,11 +371,11 @@ export const SimulationPanel = ({
 
   if (isCreating) {
     return (
-      <div className="w-[320px] border-l border-[#2a2e39] bg-[#131722] shrink-0 h-full flex flex-col text-[#d1d4dc] font-sans">
+      <div className="w-[320px] border-l border-[#e6e8ea] dark:border-[#2a2e39] bg-white dark:bg-[#131722] shrink-0 h-full flex flex-col text-[#1e2329] dark:text-[#d1d4dc] font-sans">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[#2a2e39] shrink-0">
-          <h2 className="text-lg font-bold text-white">Bắt đầu phiên giao dịch</h2>
-          <button className="w-6 h-6 rounded-full bg-[#1e222d] hover:bg-[#2a2e39] flex items-center justify-center text-[#787b86] transition-colors">
+        <div className="flex items-center justify-between p-4 border-b border-[#e6e8ea] dark:border-[#2a2e39] shrink-0">
+          <h2 className="text-lg font-bold text-[#1e2329] dark:text-white">Bắt đầu phiên giao dịch</h2>
+          <button className="w-6 h-6 rounded-full bg-[#f0f1f3] dark:bg-[#1e222d] hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39] flex items-center justify-center text-[#787b86] transition-colors">
             <HelpCircle className="w-4 h-4" />
           </button>
         </div>
@@ -384,7 +384,7 @@ export const SimulationPanel = ({
         <div className="flex-1 overflow-y-auto custom-scrollbar p-4 flex flex-col gap-5">
           {/* SỐ DƯ BAN ĐẦU */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-white tracking-wider flex items-center gap-1.5 uppercase">
+            <label className="text-[11px] font-bold text-[#1e2329] dark:text-white tracking-wider flex items-center gap-1.5 uppercase">
               Số dư ban đầu (VND)
               <HelpCircle className="w-3.5 h-3.5 text-[#787b86]" />
             </label>
@@ -392,13 +392,13 @@ export const SimulationPanel = ({
               type="number"
               value={config.balance}
               onChange={e => handleChange('balance', parseFloat(e.target.value))}
-              className="bg-[#1e222d] border border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-white font-mono outline-none transition-colors"
+              className="bg-[#f8f9fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-[#1e2329] dark:text-white font-mono outline-none transition-colors"
             />
           </div>
 
           {/* ĐÒN BẨY */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-white tracking-wider flex items-center gap-1.5 uppercase">
+            <label className="text-[11px] font-bold text-[#1e2329] dark:text-white tracking-wider flex items-center gap-1.5 uppercase">
               Đòn bẩy (1-1000)
               <HelpCircle className="w-3.5 h-3.5 text-[#787b86]" />
             </label>
@@ -406,52 +406,52 @@ export const SimulationPanel = ({
               type="number"
               value={config.leverage}
               onChange={e => handleChange('leverage', parseFloat(e.target.value))}
-              className="bg-[#1e222d] border border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-white font-mono outline-none transition-colors"
+              className="bg-[#f8f9fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-[#1e2329] dark:text-white font-mono outline-none transition-colors"
             />
           </div>
 
           {/* LOT */}
           <div className="flex gap-3">
             <div className="flex flex-col gap-1.5 flex-1">
-              <label className="text-[11px] font-bold text-white tracking-wider uppercase">Lot tối thiểu</label>
+              <label className="text-[11px] font-bold text-[#1e2329] dark:text-white tracking-wider uppercase">Lot tối thiểu</label>
               <input 
                 type="number"
                 step="0.01"
                 value={config.minLot}
                 onChange={e => handleChange('minLot', parseFloat(e.target.value))}
-                className="bg-[#1e222d] border border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-white font-mono outline-none transition-colors"
+                className="bg-[#f8f9fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-[#1e2329] dark:text-white font-mono outline-none transition-colors"
               />
             </div>
             <div className="flex flex-col gap-1.5 flex-1">
-              <label className="text-[11px] font-bold text-white tracking-wider uppercase">Bước nhảy Lot</label>
+              <label className="text-[11px] font-bold text-[#1e2329] dark:text-white tracking-wider uppercase">Bước nhảy Lot</label>
               <input 
                 type="number"
                 step="0.01"
                 value={config.lotStep}
                 onChange={e => handleChange('lotStep', parseFloat(e.target.value))}
-                className="bg-[#1e222d] border border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-white font-mono outline-none transition-colors"
+                className="bg-[#f8f9fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-[#1e2329] dark:text-white font-mono outline-none transition-colors"
               />
             </div>
           </div>
 
           {/* SỬ DỤNG KÝ QUỸ TỐI ĐA */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-white tracking-wider uppercase">
+            <label className="text-[11px] font-bold text-[#1e2329] dark:text-white tracking-wider uppercase">
               Sử dụng ký quỹ tối đa (%)
             </label>
             <input 
               type="number"
               value={config.maxMarginPercent}
               onChange={e => handleChange('maxMarginPercent', parseFloat(e.target.value))}
-              className="bg-[#1e222d] border border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-white font-mono outline-none transition-colors"
+              className="bg-[#f8f9fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-[#1e2329] dark:text-white font-mono outline-none transition-colors"
             />
             
-            <div className="mt-1 bg-[#151924] rounded-md p-3 text-xs text-[#787b86] flex items-start gap-2 border border-[#1e222d]">
+            <div className="mt-1 bg-[#f0f3fa] dark:bg-[#151924] rounded-md p-3 text-xs text-[#787b86] flex items-start gap-2 border border-[#e6e8ea] dark:border-[#1e222d]">
               <span className="text-yellow-500">💡</span>
               <p>
-                Ký quỹ {config.minLot} lot: <strong className="text-white">${
+                Ký quỹ {config.minLot} lot: <strong className="text-[#1e2329] dark:text-white">${
                   ((STOCKS.find((s: Stock) => s.symbol === currentSymbol)?.price || 1000) * config.minLot / config.leverage).toFixed(2)
-                }</strong> · Tối đa: <strong className="text-white">{
+                }</strong> · Tối đa: <strong className="text-[#1e2329] dark:text-white">{
                   (((config.balance * config.maxMarginPercent / 100) * config.leverage) / (STOCKS.find((s: Stock) => s.symbol === currentSymbol)?.price || 1000)).toFixed(2)
                 } lots</strong>
               </p>
@@ -460,21 +460,21 @@ export const SimulationPanel = ({
 
           {/* SPREAD */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-white tracking-wider uppercase">Spread (điểm)</label>
+            <label className="text-[11px] font-bold text-[#1e2329] dark:text-white tracking-wider uppercase">Spread (điểm)</label>
             <input 
               type="number"
               value={config.spread}
               onChange={e => handleChange('spread', parseFloat(e.target.value))}
-              className="bg-[#1e222d] border border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-white font-mono outline-none transition-colors"
+              className="bg-[#f8f9fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-[#1e2329] dark:text-white font-mono outline-none transition-colors"
             />
-            <div className="bg-[#151924] rounded-md p-2.5 text-xs text-[#787b86]">
+            <div className="bg-[#f0f3fa] dark:bg-[#151924] border border-[#e6e8ea] dark:border-transparent rounded-md p-2.5 text-xs text-[#787b86]">
               20 pt ≈ 0.20
             </div>
           </div>
 
           {/* PHÍ HOA HỒNG */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-white tracking-wider flex items-center gap-1.5 uppercase">
+            <label className="text-[11px] font-bold text-[#1e2329] dark:text-white tracking-wider flex items-center gap-1.5 uppercase">
               Phí hoa hồng mỗi lot ($)
               <HelpCircle className="w-3.5 h-3.5 text-[#787b86]" />
             </label>
@@ -482,13 +482,13 @@ export const SimulationPanel = ({
               type="number"
               value={config.commission}
               onChange={e => handleChange('commission', parseFloat(e.target.value))}
-              className="bg-[#1e222d] border border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-white font-mono outline-none transition-colors"
+              className="bg-[#f8f9fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-[#1e2329] dark:text-white font-mono outline-none transition-colors"
             />
           </div>
 
           {/* PHÍ QUA ĐÊM LONG */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-white tracking-wider flex items-center gap-1.5 uppercase">
+            <label className="text-[11px] font-bold text-[#1e2329] dark:text-white tracking-wider flex items-center gap-1.5 uppercase">
               Phí qua đêm Long ($/Lot/Đêm)
               <HelpCircle className="w-3.5 h-3.5 text-[#787b86]" />
             </label>
@@ -497,13 +497,13 @@ export const SimulationPanel = ({
               step="0.1"
               value={config.swapLong}
               onChange={e => handleChange('swapLong', parseFloat(e.target.value))}
-              className="bg-[#1e222d] border border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-white font-mono outline-none transition-colors"
+              className="bg-[#f8f9fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-[#1e2329] dark:text-white font-mono outline-none transition-colors"
             />
           </div>
 
           {/* PHÍ QUA ĐÊM SHORT */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-white tracking-wider flex items-center gap-1.5 uppercase">
+            <label className="text-[11px] font-bold text-[#1e2329] dark:text-white tracking-wider flex items-center gap-1.5 uppercase">
               Phí qua đêm Short ($/Lot/Đêm)
               <HelpCircle className="w-3.5 h-3.5 text-[#787b86]" />
             </label>
@@ -512,22 +512,22 @@ export const SimulationPanel = ({
               step="0.1"
               value={config.swapShort}
               onChange={e => handleChange('swapShort', parseFloat(e.target.value))}
-              className="bg-[#1e222d] border border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-white font-mono outline-none transition-colors"
+              className="bg-[#f8f9fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-[#1e2329] dark:text-white font-mono outline-none transition-colors"
             />
           </div>
         </div>
 
         {/* Footer Buttons */}
-        <div className="p-4 border-t border-[#2a2e39] flex gap-3 shrink-0">
+        <div className="p-4 border-t border-[#e6e8ea] dark:border-[#2a2e39] flex gap-3 shrink-0">
           <button 
             onClick={() => setIsCreating(false)}
-            className="flex-1 bg-transparent hover:bg-[#2a2e39] text-white font-bold py-2.5 rounded-md border border-[#2a2e39] transition-colors text-sm"
+            className="flex-1 bg-white hover:bg-[#f0f1f3] dark:bg-transparent dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-white font-bold py-2.5 rounded-md border border-[#e6e8ea] dark:border-[#2a2e39] transition-colors text-sm cursor-pointer"
           >
             HỦY
           </button>
           <button 
             onClick={handleStart}
-            className="flex-1 bg-[#089981] hover:bg-[#089981]/90 text-white font-bold py-2.5 rounded-md transition-colors text-sm"
+            className="flex-1 bg-[#089981] hover:bg-[#089981]/90 text-white font-bold py-2.5 rounded-md transition-colors text-sm cursor-pointer shadow-sm"
           >
             BẮT ĐẦU
           </button>
@@ -633,7 +633,7 @@ export const SimulationPanel = ({
                 return (
                   <div 
                     key={session._id} 
-                    className="bg-[#161a29] border border-[#2a2e39] rounded-xl p-3.5 flex flex-col gap-2 hover:border-[#3d4560] transition-colors relative"
+                    className="bg-white dark:bg-[#161a29] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-xl p-3.5 flex flex-col gap-2 hover:border-[#cbd5e1] dark:hover:border-[#3d4560] transition-colors relative shadow-sm dark:shadow-none"
                   >
                     {/* Header: Name & Edit Icon */}
                     <div className="flex items-center justify-between gap-2">
@@ -643,18 +643,18 @@ export const SimulationPanel = ({
                             type="text"
                             value={editingName}
                             onChange={(e) => setEditingName(e.target.value)}
-                            className="bg-[#1e222d] border border-[#089981] text-white text-sm rounded px-2 py-1 flex-1 outline-none font-bold"
+                            className="bg-[#f8f9fa] dark:bg-[#1e222d] border border-[#089981] text-[#1e2329] dark:text-white text-sm rounded px-2 py-1 flex-1 outline-none font-bold"
                             autoFocus
                             onBlur={() => handleRename(session._id)}
                           />
-                          <button type="submit" className="p-1 text-emerald-400 hover:text-emerald-300">
+                          <button type="submit" className="p-1 text-emerald-500 hover:text-emerald-400">
                             <Check className="w-4 h-4" />
                           </button>
                         </form>
                       ) : (
                         <>
                           <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                            <span className="font-bold text-white text-[15px] truncate">
+                            <span className="font-bold text-[#1e2329] dark:text-white text-[15px] truncate">
                               {session.name || `${session.symbol} · ${formatSessionDate(session.createdAt)}`}
                             </span>
                             {isCurrentlyActiveInStore && (
@@ -669,7 +669,7 @@ export const SimulationPanel = ({
                               setEditingSessionId(session._id);
                               setEditingName(session.name || `${session.symbol} · ${formatSessionDate(session.createdAt)}`);
                             }}
-                            className="text-[#787b86] hover:text-white transition-colors p-1 shrink-0"
+                            className="text-[#787b86] hover:text-[#1e2329] dark:hover:text-white transition-colors p-1 shrink-0 cursor-pointer"
                             title="Đổi tên phiên"
                           >
                             <Edit3 className="w-4 h-4" />
@@ -679,38 +679,38 @@ export const SimulationPanel = ({
                     </div>
 
                     {/* Subtitle: symbol · timeframe */}
-                    <div className="text-xs text-[#8c92a4] font-medium">
+                    <div className="text-xs text-[#787b86] dark:text-[#8c92a4] font-medium">
                       {session.symbol} &middot; {session.timeframe || '4h'}
                     </div>
 
                     {/* SỐ DƯ */}
-                    <div className="text-xs text-[#8c92a4] font-medium flex items-center gap-1.5">
+                    <div className="text-xs text-[#787b86] dark:text-[#8c92a4] font-medium flex items-center gap-1.5">
                       <span>SỐ DƯ:</span>
-                      <span className="text-white font-bold font-mono text-[13px]">
+                      <span className="text-[#1e2329] dark:text-white font-bold font-mono text-[13px]">
                         {formatSessionMoney(currentBalance)}
                       </span>
                     </div>
 
                     {/* Gần nhất */}
-                    <div className="text-xs text-[#8c92a4] font-medium flex items-center gap-1.5 mb-1">
+                    <div className="text-xs text-[#787b86] dark:text-[#8c92a4] font-medium flex items-center gap-1.5 mb-1">
                       <span>Gần nhất:</span>
-                      <span className="text-white font-bold font-mono text-[13px]">
+                      <span className="text-[#1e2329] dark:text-white font-bold font-mono text-[13px]">
                         {formatSessionLastTime(lastTime)}
                       </span>
                     </div>
 
                     {/* Action buttons: Tiếp tục & Hoàn thành */}
-                    <div className="flex items-center gap-2 pt-2 border-t border-[#2a2e39]/60">
+                    <div className="flex items-center gap-2 pt-2 border-t border-[#e6e8ea] dark:border-[#2a2e39]/60">
                       <button
                         onClick={() => handleContinueSession(session)}
-                        className="flex-1 py-2 px-3 rounded-lg border border-[#089981]/50 bg-[#0e2722] hover:bg-[#133730] text-[#089981] dark:text-[#26a69a] font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                        className="flex-1 py-2 px-3 rounded-lg border border-[#089981]/30 dark:border-[#089981]/50 bg-[#089981]/10 hover:bg-[#089981]/15 dark:bg-[#0e2722] dark:hover:bg-[#133730] text-[#089981] dark:text-[#26a69a] font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                       >
                         <Play className="w-3.5 h-3.5 fill-current" />
                         Tiếp tục
                       </button>
                       <button
                         onClick={(e) => handleCompleteSession(session, e)}
-                        className="flex-1 py-2 px-3 rounded-lg border border-[#f23645]/40 bg-[#2b1723] hover:bg-[#3d1e31] text-[#f23645] font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                        className="flex-1 py-2 px-3 rounded-lg border border-[#f23645]/30 dark:border-[#f23645]/40 bg-[#f23645]/10 hover:bg-[#f23645]/15 dark:bg-[#2b1723] dark:hover:bg-[#3d1e31] text-[#f23645] font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                       >
                         <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                         Hoàn thành
@@ -731,7 +731,7 @@ export const SimulationPanel = ({
                 {/* Back button */}
                 <button
                   onClick={() => { setSelectedCompletedSession(null); setSessionDetailData(null); }}
-                  className="flex items-center gap-1 text-xs text-[#818cf8] hover:text-[#a5b4fc] transition-colors py-2 font-medium self-start mb-2"
+                  className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 dark:text-[#818cf8] dark:hover:text-[#a5b4fc] transition-colors py-2 font-medium self-start mb-2 cursor-pointer"
                 >
                   <ChevronLeft className="w-4 h-4" />
                   <span>Quay lại danh sách phiên</span>
@@ -746,19 +746,19 @@ export const SimulationPanel = ({
                         value={editingName}
                         autoFocus
                         onChange={e => setEditingName(e.target.value)}
-                        className="bg-[#1e222d] border border-blue-500 rounded px-2 py-1 text-sm text-white outline-none w-full font-bold"
+                        className="bg-[#f8f9fa] dark:bg-[#1e222d] border border-blue-500 rounded px-2 py-1 text-sm text-[#1e2329] dark:text-white outline-none w-full font-bold"
                       />
-                      <button type="submit" className="text-green-400 hover:text-green-300 p-1"><Check className="w-4 h-4" /></button>
-                      <button type="button" onClick={() => setEditingSessionId(null)} className="text-red-400 hover:text-red-300 p-1"><X className="w-4 h-4" /></button>
+                      <button type="submit" className="text-green-500 hover:text-green-400 p-1"><Check className="w-4 h-4" /></button>
+                      <button type="button" onClick={() => setEditingSessionId(null)} className="text-red-500 hover:text-red-400 p-1"><X className="w-4 h-4" /></button>
                     </form>
                   ) : (
                     <div className="flex items-center gap-2 group">
-                      <h3 className="font-bold text-white text-base truncate" title={selectedCompletedSession.name}>
+                      <h3 className="font-bold text-[#1e2329] dark:text-white text-base truncate" title={selectedCompletedSession.name}>
                         {selectedCompletedSession.name || `${selectedCompletedSession.symbol} - ${selectedCompletedSession.timeframe || '4h'}`}
                       </h3>
                       <button 
                         onClick={() => { setEditingSessionId(selectedCompletedSession._id); setEditingName(selectedCompletedSession.name || ''); }}
-                        className="text-[#787b86] hover:text-white transition-colors opacity-70 group-hover:opacity-100"
+                        className="text-[#787b86] hover:text-[#1e2329] dark:hover:text-white transition-colors opacity-70 group-hover:opacity-100 cursor-pointer"
                         title="Đổi tên"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
@@ -785,40 +785,40 @@ export const SimulationPanel = ({
                     <>
                       <div className="grid grid-cols-2 gap-2.5 mb-5">
                         {/* Card 1: LỆNH */}
-                        <div className="bg-[#151924] border border-[#2a2e39] rounded-xl p-3 flex flex-col justify-between">
+                        <div className="bg-[#f8f9fa] dark:bg-[#151924] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-xl p-3 flex flex-col justify-between shadow-sm dark:shadow-none">
                           <div className="flex items-center gap-1.5 text-[#787b86] text-[11px] font-bold uppercase tracking-wider">
                             <BarChart2 className="w-3.5 h-3.5 text-[#787b86]" />
                             <span>LỆNH</span>
                           </div>
-                          <div className="font-mono text-xl font-bold text-white mt-2">
+                          <div className="font-mono text-xl font-bold text-[#1e2329] dark:text-white mt-2">
                             {totalTrades}
                           </div>
                         </div>
 
                         {/* Card 2: TỶ LỆ THẮNG */}
-                        <div className="bg-[#151924] border border-[#2a2e39] rounded-xl p-3 flex flex-col justify-between">
+                        <div className="bg-[#f8f9fa] dark:bg-[#151924] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-xl p-3 flex flex-col justify-between shadow-sm dark:shadow-none">
                           <div className="flex items-center gap-1.5 text-[#787b86] text-[11px] font-bold uppercase tracking-wider">
                             <Trophy className="w-3.5 h-3.5 text-[#787b86]" />
                             <span>TỶ LỆ THẮNG</span>
                           </div>
-                          <div className="font-mono text-xl font-bold text-white mt-2">
+                          <div className="font-mono text-xl font-bold text-[#1e2329] dark:text-white mt-2">
                             {winRate.toFixed(1)}%
                           </div>
                         </div>
 
                         {/* Card 3: SỐ DƯ */}
-                        <div className="bg-[#151924] border border-[#2a2e39] rounded-xl p-3 flex flex-col justify-between">
+                        <div className="bg-[#f8f9fa] dark:bg-[#151924] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-xl p-3 flex flex-col justify-between shadow-sm dark:shadow-none">
                           <div className="flex items-center gap-1.5 text-[#787b86] text-[11px] font-bold uppercase tracking-wider">
                             <Target className="w-3.5 h-3.5 text-[#787b86]" />
                             <span>SỐ DƯ</span>
                           </div>
-                          <div className="font-mono text-lg font-bold text-white mt-2 truncate" title={formatSessionMoney(currentBal)}>
+                          <div className="font-mono text-lg font-bold text-[#1e2329] dark:text-white mt-2 truncate" title={formatSessionMoney(currentBal)}>
                             {formatSessionMoney(currentBal)}
                           </div>
                         </div>
 
                         {/* Card 4: LỜI / LỖ (PNL) */}
-                        <div className="bg-[#151924] border border-[#2a2e39] rounded-xl p-3 flex flex-col justify-between">
+                        <div className="bg-[#f8f9fa] dark:bg-[#151924] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-xl p-3 flex flex-col justify-between shadow-sm dark:shadow-none">
                           <div className="flex items-center gap-1.5 text-[#787b86] text-[11px] font-bold uppercase tracking-wider">
                             <Activity className="w-3.5 h-3.5 text-[#787b86]" />
                             <span>LỜI / LỖ (PNL)</span>
@@ -831,7 +831,7 @@ export const SimulationPanel = ({
 
                       {/* Trades List Section */}
                       <div className="flex items-center justify-between mb-2 shrink-0">
-                        <h4 className="text-xs font-bold text-[#d1d4dc] uppercase tracking-wider">
+                        <h4 className="text-xs font-bold text-[#1e2329] dark:text-[#d1d4dc] uppercase tracking-wider">
                           Lệnh ({historyList.length})
                         </h4>
                       </div>
@@ -848,13 +848,13 @@ export const SimulationPanel = ({
                             const isLong = tx.side === 'LONG';
                             const isWin = tx.netPnL >= 0;
                             return (
-                              <div key={tx.id || idx} className="bg-[#151924] border border-[#2a2e39] rounded-lg p-2.5 text-xs flex flex-col gap-1.5 hover:border-[#3a4052] transition-colors">
+                              <div key={tx.id || idx} className="bg-[#f8f9fa] dark:bg-[#151924] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-lg p-2.5 text-xs flex flex-col gap-1.5 hover:border-[#cbd5e1] dark:hover:border-[#3a4052] transition-colors shadow-sm dark:shadow-none">
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-1.5">
                                     <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${isLong ? 'bg-[#089981]/20 text-[#089981]' : 'bg-[#f23645]/20 text-[#f23645]'}`}>
                                       {tx.side}
                                     </span>
-                                    <span className="font-bold text-white">{tx.symbol}</span>
+                                    <span className="font-bold text-[#1e2329] dark:text-white">{tx.symbol}</span>
                                     <span className="text-[#787b86] text-[10px]">
                                       {(tx.lot * 100000).toLocaleString('vi-VN')} CP ({tx.lot} Lot)
                                     </span>
@@ -868,7 +868,7 @@ export const SimulationPanel = ({
                                     {tx.entryPrice?.toLocaleString('vi-VN')} &rarr; {tx.exitPrice?.toLocaleString('vi-VN')}
                                   </div>
                                   <div className="flex items-center gap-1.5">
-                                    <span className="bg-[#1e222d] px-1.5 py-0.5 rounded text-[10px] text-[#d1d4dc]">{tx.closeReason || 'MANUAL'}</span>
+                                    <span className="bg-[#e6e8ea] dark:bg-[#1e222d] text-[#1e2329] dark:text-[#d1d4dc] px-1.5 py-0.5 rounded text-[10px]">{tx.closeReason || 'MANUAL'}</span>
                                     {tx.closeTime && <span>{new Date(tx.closeTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>}
                                   </div>
                                 </div>
@@ -886,7 +886,7 @@ export const SimulationPanel = ({
               <div className="flex flex-col px-4 flex-1 overflow-hidden">
                 <div className="flex items-center justify-between mb-3 shrink-0">
                   <h3 className="font-bold text-[#1e2329] dark:text-white text-base">Lịch sử Phiên</h3>
-                  <span className="bg-[#2a1d45] text-[#a78bfa] border border-[#6b21a8]/30 text-xs font-bold px-2 py-0.5 rounded-full">
+                  <span className="bg-purple-100 dark:bg-[#2a1d45] text-purple-700 dark:text-[#a78bfa] border border-purple-200 dark:border-[#6b21a8]/30 text-xs font-bold px-2 py-0.5 rounded-full">
                     {completedSessions.length}
                   </span>
                 </div>
@@ -896,7 +896,7 @@ export const SimulationPanel = ({
                   <div className="relative flex-1">
                     <button 
                       onClick={() => { setShowSymbolDropdown(!showSymbolDropdown); setShowDatePicker(false); }}
-                      className={`w-full bg-transparent border rounded px-3 py-1.5 text-xs flex items-center justify-between hover:border-[#787b86] transition-colors ${
+                      className={`w-full bg-white dark:bg-transparent border rounded px-3 py-1.5 text-xs flex items-center justify-between hover:border-[#787b86] transition-colors ${
                         symbolFilter ? 'border-[#2962ff] text-[#2962ff]' : 'border-[#e6e8ea] dark:border-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]'
                       }`}
                     >
@@ -904,11 +904,11 @@ export const SimulationPanel = ({
                       <ChevronDown className="w-3.5 h-3.5 text-[#787b86]" />
                     </button>
                     {showSymbolDropdown && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-[#1e222d] border border-[#2a2e39] rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
                         <button 
                           onClick={() => { setSymbolFilter(''); setShowSymbolDropdown(false); }}
-                          className={`w-full text-left px-3 py-2 text-xs hover:bg-[#2a2e39] transition-colors ${
-                            !symbolFilter ? 'text-[#2962ff] font-bold' : 'text-[#d1d4dc]'
+                          className={`w-full text-left px-3 py-2 text-xs hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] transition-colors ${
+                            !symbolFilter ? 'text-[#2962ff] font-bold' : 'text-[#1e2329] dark:text-[#d1d4dc]'
                           }`}
                         >
                           Tất cả mã
@@ -917,8 +917,8 @@ export const SimulationPanel = ({
                           <button 
                             key={sym}
                             onClick={() => { setSymbolFilter(sym); setShowSymbolDropdown(false); }}
-                            className={`w-full text-left px-3 py-2 text-xs hover:bg-[#2a2e39] transition-colors ${
-                              symbolFilter === sym ? 'text-[#2962ff] font-bold' : 'text-[#d1d4dc]'
+                            className={`w-full text-left px-3 py-2 text-xs hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] transition-colors ${
+                              symbolFilter === sym ? 'text-[#2962ff] font-bold' : 'text-[#1e2329] dark:text-[#d1d4dc]'
                             }`}
                           >
                             {sym}
@@ -935,7 +935,7 @@ export const SimulationPanel = ({
                   <div className="relative flex-1">
                     <button 
                       onClick={() => { setShowDatePicker(!showDatePicker); setShowSymbolDropdown(false); }}
-                      className={`w-full bg-transparent border rounded px-3 py-1.5 text-xs flex items-center justify-between hover:border-[#787b86] transition-colors ${
+                      className={`w-full bg-white dark:bg-transparent border rounded px-3 py-1.5 text-xs flex items-center justify-between hover:border-[#787b86] transition-colors ${
                         (dateFrom || dateTo) ? 'border-[#2962ff] text-[#2962ff]' : 'border-[#e6e8ea] dark:border-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]'
                       }`}
                     >
@@ -948,7 +948,7 @@ export const SimulationPanel = ({
                       </span>
                     </button>
                     {showDatePicker && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-[#1e222d] border border-[#2a2e39] rounded-lg shadow-xl z-50 p-3 space-y-2">
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-lg shadow-xl z-50 p-3 space-y-2">
                         <CustomDatePicker 
                           label="Từ ngày"
                           value={dateFrom} 
@@ -965,7 +965,7 @@ export const SimulationPanel = ({
                         <div className="flex gap-2 pt-1">
                           <button 
                             onClick={() => { setDateFrom(''); setDateTo(''); setShowDatePicker(false); }}
-                            className="flex-1 text-xs text-[#787b86] hover:text-[#d1d4dc] py-1.5 rounded border border-[#2a2e39] hover:border-[#787b86] transition-colors"
+                            className="flex-1 text-xs text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] py-1.5 rounded border border-[#e6e8ea] dark:border-[#2a2e39] hover:border-[#787b86] transition-colors"
                           >
                             Xóa lọc
                           </button>
@@ -983,15 +983,15 @@ export const SimulationPanel = ({
 
                 {/* Banner: Mở Nhật ký Giao dịch */}
                 <div 
-                  onClick={() => navigate('/journal')}
-                  className="bg-[#089981]/10 border border-[#089981]/25 rounded-lg p-3 cursor-pointer hover:bg-[#089981]/20 transition-all shrink-0 mb-3 group"
+                  onClick={() => navigate('/student/journal')}
+                  className="bg-[#089981]/10 border border-[#089981]/25 rounded-lg p-3 cursor-pointer hover:bg-[#089981]/15 dark:hover:bg-[#089981]/20 transition-all shrink-0 mb-3 group"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-lg bg-[#089981] flex items-center justify-center shrink-0 shadow-sm">
                       <Edit3 className="w-4 h-4 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-[#089981] text-xs mb-0.5 group-hover:text-emerald-400 transition-colors">
+                      <h4 className="font-bold text-[#089981] text-xs mb-0.5 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                         Mở Nhật ký Giao dịch
                       </h4>
                       <p className="text-[11px] text-[#787b86] truncate">
@@ -1019,7 +1019,7 @@ export const SimulationPanel = ({
                       return (
                         <div 
                           key={session._id} 
-                          className="bg-[#131722] border border-[#2a2e39] rounded-xl p-3 flex flex-col gap-2.5 hover:border-[#3a4052] transition-colors"
+                          className="bg-white dark:bg-[#131722] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-xl p-3 flex flex-col gap-2.5 hover:border-[#cbd5e1] dark:hover:border-[#3a4052] transition-colors shadow-sm dark:shadow-none"
                         >
                           {/* Card Header */}
                           <div className="flex items-start justify-between gap-2">
@@ -1031,19 +1031,19 @@ export const SimulationPanel = ({
                                     value={editingName}
                                     autoFocus
                                     onChange={e => setEditingName(e.target.value)}
-                                    className="bg-[#1e222d] border border-blue-500 rounded px-1.5 py-0.5 text-xs text-white outline-none w-full font-bold"
+                                    className="bg-[#f8f9fa] dark:bg-[#1e222d] border border-blue-500 rounded px-1.5 py-0.5 text-xs text-[#1e2329] dark:text-white outline-none w-full font-bold"
                                   />
-                                  <button type="submit" className="text-green-400 hover:text-green-300 p-0.5"><Check className="w-3.5 h-3.5" /></button>
-                                  <button type="button" onClick={() => setEditingSessionId(null)} className="text-red-400 hover:text-red-300 p-0.5"><X className="w-3.5 h-3.5" /></button>
+                                  <button type="submit" className="text-green-500 hover:text-green-400 p-0.5"><Check className="w-3.5 h-3.5" /></button>
+                                  <button type="button" onClick={() => setEditingSessionId(null)} className="text-red-500 hover:text-red-400 p-0.5"><X className="w-3.5 h-3.5" /></button>
                                 </form>
                               ) : (
                                 <div className="flex items-center gap-1.5 group">
-                                  <h4 className="font-bold text-white text-sm truncate" title={session.name || `${session.symbol} - ${session.timeframe || '4h'}`}>
+                                  <h4 className="font-bold text-[#1e2329] dark:text-white text-sm truncate" title={session.name || `${session.symbol} - ${session.timeframe || '4h'}`}>
                                     {session.name || `${session.symbol} - ${session.timeframe || '4h'}`}
                                   </h4>
                                   <button 
                                     onClick={() => { setEditingSessionId(session._id); setEditingName(session.name || `${session.symbol} - ${session.timeframe || '4h'}`); }}
-                                    className="text-[#787b86] hover:text-white transition-colors opacity-70 group-hover:opacity-100"
+                                    className="text-[#787b86] hover:text-[#1e2329] dark:hover:text-white transition-colors opacity-70 group-hover:opacity-100 cursor-pointer"
                                     title="Đổi tên phiên"
                                   >
                                     <Edit3 className="w-3.5 h-3.5" />
@@ -1059,14 +1059,14 @@ export const SimulationPanel = ({
                             <div className="flex items-center gap-1.5 shrink-0">
                               <button
                                 onClick={() => handleViewSessionDetail(session)}
-                                className="bg-[#261f3d] hover:bg-[#342756] text-[#b392f0] text-xs font-semibold px-2.5 py-1 rounded flex items-center gap-1 border border-[#6b21a8]/30 transition-all active:scale-95"
+                                className="bg-purple-50 hover:bg-purple-100 dark:bg-[#261f3d] dark:hover:bg-[#342756] text-purple-700 dark:text-[#b392f0] text-xs font-semibold px-2.5 py-1 rounded flex items-center gap-1 border border-purple-200 dark:border-[#6b21a8]/30 transition-all active:scale-95 cursor-pointer"
                               >
                                 <Eye className="w-3.5 h-3.5" />
                                 <span>Xem</span>
                               </button>
                               <button
                                 onClick={() => setDeletingSessionId(session._id)}
-                                className="text-[#787b86] hover:text-red-400 hover:bg-red-950/20 p-1 rounded transition-colors"
+                                className="text-[#787b86] hover:text-red-500 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-950/20 p-1 rounded transition-colors cursor-pointer"
                                 title="Xóa phiên"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -1078,19 +1078,19 @@ export const SimulationPanel = ({
                           <div className="grid grid-cols-2 gap-y-2 text-xs">
                             <div>
                               <div className="text-[10px] text-[#787b86] uppercase font-bold tracking-wider">SỐ DƯ</div>
-                              <div className="font-mono font-bold text-white text-xs mt-0.5 truncate" title={formatSessionMoney(finalBalance)}>
+                              <div className="font-mono font-bold text-[#1e2329] dark:text-white text-xs mt-0.5 truncate" title={formatSessionMoney(finalBalance)}>
                                 {formatSessionMoney(finalBalance)}
                               </div>
                             </div>
                             <div>
                               <div className="text-[10px] text-[#787b86] uppercase font-bold tracking-wider">LỆNH</div>
-                              <div className="font-mono font-bold text-white text-xs mt-0.5">
+                              <div className="font-mono font-bold text-[#1e2329] dark:text-white text-xs mt-0.5">
                                 {totalTrades}
                               </div>
                             </div>
                             <div>
                               <div className="text-[10px] text-[#787b86] uppercase font-bold tracking-wider">TỶ LỆ THẮNG</div>
-                              <div className="font-mono font-bold text-white text-xs mt-0.5">
+                              <div className="font-mono font-bold text-[#1e2329] dark:text-white text-xs mt-0.5">
                                 {winRate.toFixed(1)}%
                               </div>
                             </div>
@@ -1103,7 +1103,7 @@ export const SimulationPanel = ({
                           </div>
 
                           {/* Footer Date */}
-                          <div className="flex items-center gap-1 text-[11px] text-[#787b86] pt-1.5 border-t border-[#2a2e39]/50">
+                          <div className="flex items-center gap-1 text-[11px] text-[#787b86] pt-1.5 border-t border-[#e6e8ea] dark:border-[#2a2e39]/50">
                             <Clock className="w-3 h-3" />
                             <span>{formatSessionDate(session.completedAt || session.startedAt)}</span>
                           </div>
@@ -1120,26 +1120,26 @@ export const SimulationPanel = ({
 
       {/* Delete Confirmation Modal */}
       {deletingSessionId && (
-        <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-50 px-4 backdrop-blur-sm">
-          <div className="bg-[#1e222d] rounded-lg p-5 w-full border border-[#2a2e39] shadow-2xl flex flex-col items-center text-center">
+        <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-50 px-4 backdrop-blur-sm">
+          <div className="bg-white dark:bg-[#1e222d] rounded-lg p-5 w-full border border-[#e6e8ea] dark:border-[#2a2e39] shadow-2xl flex flex-col items-center text-center">
             <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center mb-3 text-red-500">
               <Trash2 className="w-5 h-5" />
             </div>
-            <h3 className="text-white font-bold mb-1">Xóa phiên giao dịch?</h3>
+            <h3 className="text-[#1e2329] dark:text-white font-bold mb-1">Xóa phiên giao dịch?</h3>
             <p className="text-xs text-[#787b86] mb-4">
               Toàn bộ lịch sử lệnh và dữ liệu của phiên này sẽ bị xóa vĩnh viễn.
             </p>
             <div className="flex gap-2 w-full">
               <button
                 onClick={() => setDeletingSessionId(null)}
-                className="flex-1 bg-[#2a2e39] hover:bg-[#363a45] text-white text-xs font-bold py-2 rounded transition-colors"
+                className="flex-1 bg-[#f0f1f3] hover:bg-[#e6e8ea] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] text-[#1e2329] dark:text-white text-xs font-bold py-2 rounded transition-colors cursor-pointer"
               >
                 Hủy
               </button>
               <button
                 onClick={() => handleDeleteSession(deletingSessionId)}
                 disabled={isDeleting}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2 rounded transition-colors disabled:opacity-50"
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2 rounded transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {isDeleting ? 'Đang xóa...' : 'Xóa phiên'}
               </button>
@@ -1151,11 +1151,11 @@ export const SimulationPanel = ({
       {/* Replay Warning Modal */}
       {showReplayWarning && (
         <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-50 px-4 backdrop-blur-sm">
-          <div className="bg-[#1e222d] rounded-lg p-5 w-full border border-[#2a2e39] shadow-2xl flex flex-col items-center text-center">
+          <div className="bg-white dark:bg-[#1e222d] rounded-lg p-5 w-full border border-[#e6e8ea] dark:border-[#2a2e39] shadow-2xl flex flex-col items-center text-center">
             <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center mb-3">
               <span className="text-yellow-500 text-2xl">⚠️</span>
             </div>
-            <h3 className="text-white font-bold mb-2">Hãy bật Chế độ Phát lại trước</h3>
+            <h3 className="text-[#1e2329] dark:text-white font-bold mb-2">Hãy bật Chế độ Phát lại trước</h3>
             <p className="text-sm text-[#787b86] mb-5">
               Trading Simulator chỉ hoạt động trong chế độ Bar Replay để tránh việc nhìn thấy dữ liệu tương lai.
               <br/><br/>
@@ -1164,7 +1164,7 @@ export const SimulationPanel = ({
             <div className="flex gap-2 w-full">
               <button 
                 onClick={() => setShowReplayWarning(false)}
-                className="flex-1 bg-[#2a2e39] hover:bg-[#363a45] text-white font-bold py-2 rounded transition-colors text-sm"
+                className="flex-1 bg-[#f0f1f3] hover:bg-[#e6e8ea] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] text-[#1e2329] dark:text-white font-bold py-2 rounded transition-colors text-sm cursor-pointer"
               >
                 Đóng
               </button>
@@ -1173,7 +1173,7 @@ export const SimulationPanel = ({
                   setShowReplayWarning(false);
                   onStartReplay?.();
                 }}
-                className="flex-1 bg-[#2962ff] hover:bg-[#2962ff]/90 text-white font-bold py-2 rounded transition-colors text-sm"
+                className="flex-1 bg-[#2962ff] hover:bg-[#2962ff]/90 text-white font-bold py-2 rounded transition-colors text-sm cursor-pointer"
               >
                 Bật Replay ngay
               </button>

@@ -128,9 +128,9 @@ export const AdminDashboard = () => {
     <div className="space-y-8 animate-in fade-in duration-500 pb-10">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-white tracking-tight">Admin Dashboard</h1>
-        <p className="text-slate-400 mt-2 text-lg">
-          Welcome back, <span className="text-blue-400 font-medium">{currentUser?.name || 'Admin'}</span>. Here's what's happening with StockSim.
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Admin Dashboard</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-2 text-lg">
+          Welcome back, <span className="text-blue-600 dark:text-blue-400 font-medium">{currentUser?.name || 'Admin'}</span>. Here's what's happening with StockSim.
         </p>
       </div>
 
@@ -142,19 +142,19 @@ export const AdminDashboard = () => {
           { label: 'Lecturers', value: lecturersCount, icon: <Shield className="w-6 h-6" />, color: 'purple', sub: null },
           { label: 'Simulations', value: simulations.length, icon: <Target className="w-6 h-6" />, color: 'emerald', sub: liveCount > 0 ? `${liveCount} Live` : null },
         ].map((card, idx) => (
-          <div key={idx} className="bg-[#111827] p-5 rounded-xl border border-[#1e293b] shadow-lg hover:border-blue-500/30 transition-colors group relative overflow-hidden">
+          <div key={idx} className="bg-white dark:bg-[#111827] p-5 rounded-xl border border-slate-200 dark:border-[#1e293b] shadow-sm dark:shadow-lg hover:border-blue-500/30 transition-colors group relative overflow-hidden">
             <div className={`absolute top-0 right-0 w-20 h-20 bg-${card.color}-500/5 rounded-bl-full group-hover:bg-${card.color}-500/10 transition-colors`}></div>
             <div className="flex items-start justify-between relative z-10">
               <div>
-                <p className="text-sm font-medium text-slate-400">{card.label}</p>
-                <h3 className="text-3xl font-bold text-white mt-1">
-                  {loading ? <span className="inline-block w-10 h-8 bg-[#1e293b] rounded animate-pulse"></span> : card.value}
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{card.label}</p>
+                <h3 className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
+                  {loading ? <span className="inline-block w-10 h-8 bg-slate-200 dark:bg-[#1e293b] rounded animate-pulse"></span> : card.value}
                 </h3>
                 {card.sub && !loading && (
-                  <p className="text-xs text-slate-500 mt-1 font-medium">{card.sub}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 font-medium">{card.sub}</p>
                 )}
               </div>
-              <div className={`p-2.5 bg-${card.color}-500/10 text-${card.color}-400 rounded-lg`}>
+              <div className={`p-2.5 bg-${card.color}-500/10 text-${card.color}-500 dark:text-${card.color}-400 rounded-lg`}>
                 {card.icon}
               </div>
             </div>
@@ -165,14 +165,14 @@ export const AdminDashboard = () => {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Users by Role Donut */}
-        <div className="bg-[#111827] rounded-xl border border-[#1e293b] shadow-lg p-6">
-          <h2 className="text-lg font-bold text-white mb-6">Users by Role</h2>
+        <div className="bg-white dark:bg-[#111827] rounded-xl border border-slate-200 dark:border-[#1e293b] shadow-sm dark:shadow-lg p-6 transition-colors">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Users by Role</h2>
           {loading ? (
             <div className="flex items-center justify-center h-48">
               <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
             </div>
           ) : totalUsers === 0 ? (
-            <div className="flex flex-col items-center justify-center h-48 text-slate-500">
+            <div className="flex flex-col items-center justify-center h-48 text-slate-400 dark:text-slate-500">
               <Users className="w-10 h-10 opacity-20 mb-2" />
               <p className="text-sm">No users yet</p>
             </div>
@@ -190,7 +190,7 @@ export const AdminDashboard = () => {
                   })}
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-2xl font-bold text-white">{totalUsers}</span>
+                  <span className="text-2xl font-bold text-slate-900 dark:text-white">{totalUsers}</span>
                   <span className="text-[10px] text-slate-400 uppercase font-medium">Total</span>
                 </div>
               </div>
@@ -199,11 +199,11 @@ export const AdminDashboard = () => {
                   <div key={i} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: seg.color }}></div>
-                      <span className="text-sm text-slate-300">{seg.label}</span>
+                      <span className="text-sm text-slate-700 dark:text-slate-300 font-medium">{seg.label}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-white">{seg.count}</span>
-                      <span className="text-xs text-slate-500">({seg.pct.toFixed(0)}%)</span>
+                      <span className="text-sm font-bold text-slate-900 dark:text-white">{seg.count}</span>
+                      <span className="text-xs text-slate-400 dark:text-slate-500">({seg.pct.toFixed(0)}%)</span>
                     </div>
                   </div>
                 ))}
@@ -213,14 +213,14 @@ export const AdminDashboard = () => {
         </div>
 
         {/* Simulation Status Bar Chart */}
-        <div className="bg-[#111827] rounded-xl border border-[#1e293b] shadow-lg p-6">
-          <h2 className="text-lg font-bold text-white mb-6">Simulation Status</h2>
+        <div className="bg-white dark:bg-[#111827] rounded-xl border border-slate-200 dark:border-[#1e293b] shadow-sm dark:shadow-lg p-6 transition-colors">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Simulation Status</h2>
           {loading ? (
             <div className="flex items-center justify-center h-48">
               <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
             </div>
           ) : simulations.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-48 text-slate-500">
+            <div className="flex flex-col items-center justify-center h-48 text-slate-400 dark:text-slate-500">
               <Target className="w-10 h-10 opacity-20 mb-2" />
               <p className="text-sm">No simulations yet</p>
             </div>
@@ -233,11 +233,11 @@ export const AdminDashboard = () => {
                     <div className="flex justify-between items-center mb-2">
                       <div className="flex items-center gap-2">
                         <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }}></div>
-                        <span className="text-sm text-slate-300 font-medium">{item.label}</span>
+                        <span className="text-sm text-slate-700 dark:text-slate-300 font-medium">{item.label}</span>
                       </div>
-                      <span className="text-sm font-bold text-white">{item.count}</span>
+                      <span className="text-sm font-bold text-slate-900 dark:text-white">{item.count}</span>
                     </div>
-                    <div className="w-full h-2.5 bg-[#1e293b] rounded-full overflow-hidden">
+                    <div className="w-full h-2.5 bg-slate-100 dark:bg-[#1e293b] rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-700"
                         style={{ width: `${pct}%`, backgroundColor: item.color }}
@@ -246,9 +246,9 @@ export const AdminDashboard = () => {
                   </div>
                 );
               })}
-              <div className="pt-3 border-t border-[#1e293b] flex justify-between items-center">
-                <span className="text-sm text-slate-400">Total Simulations</span>
-                <span className="text-lg font-bold text-white">{simulations.length}</span>
+              <div className="pt-3 border-t border-slate-200 dark:border-[#1e293b] flex justify-between items-center">
+                <span className="text-sm text-slate-500 dark:text-slate-400">Total Simulations</span>
+                <span className="text-lg font-bold text-slate-900 dark:text-white">{simulations.length}</span>
               </div>
             </div>
           )}
@@ -258,16 +258,16 @@ export const AdminDashboard = () => {
       {/* Bottom Row: Recent Users + Activities */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Users */}
-        <div className="lg:col-span-2 bg-[#111827] rounded-xl border border-[#1e293b] shadow-lg overflow-hidden">
-          <div className="p-5 border-b border-[#1e293b] flex justify-between items-center bg-[#172033]">
-            <h2 className="text-lg font-bold text-white">Recent Users</h2>
-            <Link to="/admin/users" className="text-sm font-medium text-blue-400 hover:text-blue-300 flex items-center gap-1 transition-colors">
+        <div className="lg:col-span-2 bg-white dark:bg-[#111827] rounded-xl border border-slate-200 dark:border-[#1e293b] shadow-sm dark:shadow-lg overflow-hidden transition-colors">
+          <div className="p-5 border-b border-slate-200 dark:border-[#1e293b] flex justify-between items-center bg-slate-50 dark:bg-[#172033]">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Recent Users</h2>
+            <Link to="/admin/users" className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1 transition-colors">
               View All Users <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-[#172033]/50 border-b border-[#1e293b] text-slate-400 uppercase tracking-wider text-xs">
+              <thead className="bg-slate-50/80 dark:bg-[#172033]/50 border-b border-slate-200 dark:border-[#1e293b] text-slate-500 dark:text-slate-400 uppercase tracking-wider text-xs">
                 <tr>
                   <th className="px-5 py-3 font-semibold">User</th>
                   <th className="px-5 py-3 font-semibold">Role</th>
@@ -275,34 +275,34 @@ export const AdminDashboard = () => {
                   <th className="px-5 py-3 font-semibold text-right">Joined</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#1e293b]">
+              <tbody className="divide-y divide-slate-100 dark:divide-[#1e293b]">
                 {loading ? (
                   Array.from({ length: 3 }).map((_, i) => (
                     <tr key={i}>
                       <td className="px-5 py-4" colSpan={4}>
-                        <div className="h-6 bg-[#1e293b] rounded animate-pulse"></div>
+                        <div className="h-6 bg-slate-100 dark:bg-[#1e293b] rounded animate-pulse"></div>
                       </td>
                     </tr>
                   ))
                 ) : recentUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-5 py-10 text-center text-slate-500">No users found.</td>
+                    <td colSpan={4} className="px-5 py-10 text-center text-slate-400 dark:text-slate-500">No users found.</td>
                   </tr>
                 ) : (
                   recentUsers.map(u => (
-                    <tr key={u._id} className="hover:bg-[#172033]/50 transition-colors">
+                    <tr key={u._id} className="hover:bg-slate-50/60 dark:hover:bg-[#172033]/50 transition-colors">
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
                           {u.picture ? (
-                            <img src={u.picture} alt="" className="w-8 h-8 rounded-full border border-[#1e293b]" />
+                            <img src={u.picture} alt="" className="w-8 h-8 rounded-full border border-slate-200 dark:border-[#1e293b]" />
                           ) : (
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-blue-500/30 text-blue-400 flex items-center justify-center text-xs font-bold">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-blue-500/30 text-blue-500 dark:text-blue-400 flex items-center justify-center text-xs font-bold">
                               {u.name ? u.name.charAt(0).toUpperCase() : u.email.charAt(0).toUpperCase()}
                             </div>
                           )}
                           <div>
-                            <p className="font-medium text-white text-sm">{u.name || 'Unknown'}</p>
-                            <p className="text-xs text-slate-500">{u.email}</p>
+                            <p className="font-medium text-slate-900 dark:text-white text-sm">{u.name || 'Unknown'}</p>
+                            <p className="text-xs text-slate-400 dark:text-slate-500">{u.email}</p>
                           </div>
                         </div>
                       </td>
@@ -314,14 +314,14 @@ export const AdminDashboard = () => {
                       <td className="px-5 py-3.5">
                         <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider inline-flex items-center gap-1 border ${
                           (u.status === 'active' || u.status === 'ACTIVE')
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                            : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                            : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
                         }`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${(u.status === 'active' || u.status === 'ACTIVE') ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
                           {u.status || 'active'}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-right text-slate-400 text-xs font-medium">
+                      <td className="px-5 py-3.5 text-right text-slate-500 dark:text-slate-400 text-xs font-medium">
                         {u.createdAt ? new Date(u.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                       </td>
                     </tr>
@@ -333,19 +333,19 @@ export const AdminDashboard = () => {
         </div>
 
         {/* Recent Activities */}
-        <div className="bg-[#111827] rounded-xl border border-[#1e293b] shadow-lg overflow-hidden">
-          <div className="p-5 border-b border-[#1e293b] bg-[#172033]">
-            <h2 className="text-lg font-bold text-white">Recent Activities</h2>
+        <div className="bg-white dark:bg-[#111827] rounded-xl border border-slate-200 dark:border-[#1e293b] shadow-sm dark:shadow-lg overflow-hidden transition-colors">
+          <div className="p-5 border-b border-slate-200 dark:border-[#1e293b] bg-slate-50 dark:bg-[#172033]">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Recent Activities</h2>
           </div>
-          <div className="divide-y divide-[#1e293b]">
+          <div className="divide-y divide-slate-100 dark:divide-[#1e293b]">
             {activities.map((act, i) => (
-              <div key={i} className="p-4 flex items-start gap-3 hover:bg-[#172033]/50 transition-colors">
-                <div className="w-8 h-8 rounded-lg bg-[#172033] flex items-center justify-center flex-shrink-0 border border-[#1e293b] mt-0.5">
+              <div key={i} className="p-4 flex items-start gap-3 hover:bg-slate-50/60 dark:hover:bg-[#172033]/50 transition-colors">
+                <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-[#172033] flex items-center justify-center flex-shrink-0 border border-slate-200 dark:border-[#1e293b] mt-0.5">
                   {act.icon}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-slate-200 font-medium">{act.text}</p>
-                  <p className="text-[11px] text-slate-500 mt-0.5 font-medium">{act.time}</p>
+                  <p className="text-sm text-slate-800 dark:text-slate-200 font-medium">{act.text}</p>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 font-medium">{act.time}</p>
                 </div>
               </div>
             ))}

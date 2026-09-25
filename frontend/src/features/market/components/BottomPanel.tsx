@@ -209,7 +209,7 @@ export const BottomPanel = ({
 
         {activeTab === 'orders' && (
           <table className="w-full text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
-            <thead className="sticky top-0 bg-[#f8f9fa] dark:bg-[#0b0e11] text-[#787b86] font-normal text-[11px] border-b border-[#e6e8ea] dark:border-transparent">
+            <thead className="sticky top-0 bg-[#f8f9fa] dark:bg-[#0b0e11] text-[#787b86] font-normal text-[11px] border-b border-[#e6e8ea] dark:border-[#2a2e39] transition-colors">
               <tr>
                 <th className="px-4 py-2 font-medium">Mã</th>
                 <th className="px-4 py-2 font-medium">Loại lệnh</th>
@@ -218,13 +218,13 @@ export const BottomPanel = ({
                 <th className="px-4 py-2 font-medium text-right">Thao tác</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#2a2e39]/50">
+            <tbody className="divide-y divide-[#e6e8ea] dark:divide-[#2a2e39]/50">
               {pendingOrders.length === 0 ? (
                 <tr><td colSpan={5} className="px-4 py-8 text-center text-[#787b86]">Không có lệnh mở nào</td></tr>
               ) : (
                 pendingOrders.map(order => (
-                  <tr key={order._id} className="hover:bg-[#1e222d] transition-colors">
-                    <td className="px-4 py-2 font-bold text-white">{order.symbol}</td>
+                  <tr key={order._id} className="hover:bg-[#f5f5f5] dark:hover:bg-[#1e222d] transition-colors">
+                    <td className="px-4 py-2 font-bold text-[#1e2329] dark:text-white">{order.symbol}</td>
                     <td className="px-4 py-2">
                       <span className={`font-bold mr-1 ${order.side === 'LONG' ? 'text-green-500' : 'text-red-500'}`}>{order.side}</span>
                       {order.type} {order.leverage}x
@@ -232,7 +232,7 @@ export const BottomPanel = ({
                     <td className="px-4 py-2 font-mono">{order.price.toLocaleString('vi-VN')}</td>
                     <td className="px-4 py-2 font-mono">{order.quantity?.toFixed(2)}</td>
                     <td className="px-4 py-2 text-right">
-                      <button onClick={() => onCancelOrder(order._id)} className="text-red-500 hover:text-red-400 font-bold px-3 py-1">Hủy</button>
+                      <button onClick={() => onCancelOrder(order._id)} className="text-red-500 hover:text-red-400 font-bold px-3 py-1 cursor-pointer">Hủy</button>
                     </td>
                   </tr>
                 ))
@@ -242,8 +242,8 @@ export const BottomPanel = ({
         )}
 
         {['order_history', 'trade_history', 'position_history', 'cashflow_history'].includes(activeTab) && (
-          <table className="w-full text-left">
-            <thead className="sticky top-0 bg-[#131722] text-[#787b86] font-medium border-b border-[#2a2e39]">
+          <table className="w-full text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
+            <thead className="sticky top-0 bg-[#f8f9fa] dark:bg-[#0b0e11] text-[#787b86] font-normal text-[11px] border-b border-[#e6e8ea] dark:border-[#2a2e39] transition-colors">
               <tr>
                 <th className="px-4 py-2 font-medium">Thời gian</th>
                 <th className="px-4 py-2 font-medium">Loại</th>
@@ -350,10 +350,10 @@ export const BottomPanel = ({
       {/* Add Margin Modal */}
       {addingMargin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#1e222d] rounded-xl w-[320px] p-5 shadow-2xl border border-[#2a2e39]">
+          <div className="bg-white dark:bg-[#1e222d] rounded-xl w-[320px] p-5 shadow-2xl border border-[#e6e8ea] dark:border-[#2a2e39]">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-white font-semibold">Thêm ký quỹ ({addingMargin.symbol})</h3>
-              <button onClick={() => setAddingMargin(null)} className="text-[#787b86] hover:text-white transition-colors">
+              <h3 className="text-[#1e2329] dark:text-white font-semibold">Thêm ký quỹ ({addingMargin.symbol})</h3>
+              <button onClick={() => setAddingMargin(null)} className="text-[#787b86] hover:text-[#1e2329] dark:hover:text-white transition-colors cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -365,7 +365,7 @@ export const BottomPanel = ({
                   type="number" 
                   value={addingMargin.amount}
                   onChange={e => setAddingMargin({...addingMargin, amount: e.target.value})}
-                  className="w-full bg-[#131722] border border-[#2a2e39] rounded px-3 py-2 text-white focus:outline-none focus:border-[#2962ff] font-mono text-sm"
+                  className="w-full bg-[#f8f9fa] dark:bg-[#131722] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-2 text-[#1e2329] dark:text-white focus:outline-none focus:border-[#2962ff] font-mono text-sm"
                   placeholder="Ví dụ: 1000000"
                 />
               </div>
@@ -374,7 +374,7 @@ export const BottomPanel = ({
             <div className="flex gap-3 mt-6">
               <button 
                 onClick={() => setAddingMargin(null)}
-                className="flex-1 py-2 rounded font-medium text-[#d1d4dc] bg-[#2a2e39] hover:bg-[#363a45] transition-colors"
+                className="flex-1 py-2 rounded font-medium text-[#4b5563] dark:text-[#d1d4dc] bg-[#f0f1f3] hover:bg-[#e0e5f2] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] transition-colors cursor-pointer"
               >
                 Hủy
               </button>

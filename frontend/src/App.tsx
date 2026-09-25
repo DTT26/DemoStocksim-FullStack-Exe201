@@ -26,14 +26,13 @@ import { AdminLayout } from './layouts/AdminLayout';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminUsers } from './pages/admin/Users';
 import { AdminSimulations } from './pages/admin/AdminSimulations';
-import { AdminSettings } from './pages/admin/AdminSettings';
 import { AdminProfile } from './pages/admin/AdminProfile';
 
 import { StudentLayout } from './layouts/StudentLayout';
 import { StudentJournal } from './pages/student/Journal';
+import { SessionDetailPage } from './pages/student/SessionDetailPage';
 import { StudentTradeDetail } from './pages/student/TradeDetail';
 import { StudentProfile } from './pages/student/Profile';
-import { StudentSettings } from './pages/student/Settings';
 
 import { LandingPage } from './pages/shared/LandingPage';
 
@@ -64,9 +63,9 @@ function App() {
             <Route path="assignments/:id" element={<StudentAssignmentDetail />} />
             <Route path="performance" element={<StudentPerformance />} />
             <Route path="journal" element={<StudentJournal />} />
-            <Route path="journal/:tradeId" element={<StudentTradeDetail />} />
+            <Route path="journal/:sessionId" element={<SessionDetailPage />} />
+            <Route path="journal/trade/:tradeId" element={<StudentTradeDetail />} />
             <Route path="profile" element={<StudentProfile />} />
-            <Route path="settings" element={<StudentSettings />} />
           </Route>
           <Route path="/leaderboard" element={<Leaderboard />} />
         </Route>
@@ -95,7 +94,6 @@ function App() {
             <Route index element={<AdminDashboard />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="simulations" element={<AdminSimulations />} />
-            <Route path="settings" element={<AdminSettings />} />
             <Route path="profile" element={<AdminProfile />} />
           </Route>
         </Route>
@@ -117,6 +115,7 @@ function App() {
             <Route index element={<SimulationsList />} />
             <Route path=":id" element={<SimulationDetail />} />
           </Route>
+          <Route path="journal" element={<Navigate to="/student/journal" replace />} />
         </Route>
       </Route>
     </Routes>

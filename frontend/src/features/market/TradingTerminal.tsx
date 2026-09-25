@@ -6,6 +6,7 @@ import { RightToolbar } from './components/RightToolbar';
 import { WatchlistPanel, type Watchlist } from './components/WatchlistPanel';
 import { SimulationPanel, type SimulationConfig } from './components/SimulationPanel';
 import { CalculatorPanel } from './components/CalculatorPanel';
+import { TradingJournalPanel } from './components/TradingJournalPanel';
 import { LeftToolbar } from './components/LeftToolbar';
 import { ToolbarNavbar } from '../../components/ToolbarNavbar';
 import { ChartSettingsModal } from './components/ChartSettingsModal';
@@ -73,7 +74,7 @@ export const TradingTerminal = () => {
   const [toast, setToast] = useState<{ msg: string, type: 'info' | 'warning' } | null>(null);
   const [editingSymbol, setEditingSymbol] = useState<string | null>(null);
 
-  const [activeRightPanel, setActiveRightPanel] = useState<'watchlist' | 'order' | 'simulation' | 'calculator' | null>('watchlist');
+  const [activeRightPanel, setActiveRightPanel] = useState<'watchlist' | 'order' | 'simulation' | 'calculator' | 'journal' | null>('watchlist');
 
   const { user, login } = useAuth();
   const { addNotification } = useNotificationStore();
@@ -1189,6 +1190,10 @@ export const TradingTerminal = () => {
               initialBalance={balance}
               currentStock={selectedStock}
             />
+          )}
+
+          {activeRightPanel === 'journal' && (
+            <TradingJournalPanel />
           )}
 
           <RightToolbar

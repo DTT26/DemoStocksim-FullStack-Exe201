@@ -29,6 +29,10 @@ interface AuthContextType {
   registerRequest: (name: string, email: string, password: string, termsAccepted: boolean, captchaToken?: string) => Promise<{ success: boolean; message?: string }>;
   verifyOtp: (email: string, otp: string) => Promise<{ success: boolean; message?: string }>;
   resendOtp: (email: string) => Promise<{ success: boolean; message?: string }>;
+  forgotPassword: (email: string, captchaToken?: string) => Promise<{ success: boolean; message?: string }>;
+  verifyForgotOtp: (email: string, otp: string) => Promise<{ success: boolean; message?: string }>;
+  resetPassword: (email: string, otp: string, newPassword: string, captchaToken?: string) => Promise<{ success: boolean; message?: string }>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; message?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -41,6 +45,10 @@ const AuthContext = createContext<AuthContextType>({
   registerRequest: async () => ({ success: false }),
   verifyOtp: async () => ({ success: false }),
   resendOtp: async () => ({ success: false }),
+  forgotPassword: async () => ({ success: false }),
+  verifyForgotOtp: async () => ({ success: false }),
+  resetPassword: async () => ({ success: false }),
+  changePassword: async () => ({ success: false }),
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -221,6 +229,75 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Yêu cầu quên mật khẩu (gửi OTP)
+  const forgotPassword = async (email: string, captchaToken?: string) => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const res = await fetch(`${apiUrl}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, captchaToken }),
+      });
+      const data = await res.json();
+      return { success: res.ok, message: data.message };
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Lỗi kết nối khi yêu cầu đặt lại mật khẩu' };
+    }
+  };
+
+  // Kiểm tra OTP quên mật khẩu trước khi sang bước đổi mật khẩu
+  const verifyForgotOtp = async (email: string, otp: string) => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const res = await fetch(`${apiUrl}/auth/verify-forgot-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp }),
+      });
+      const data = await res.json();
+      return { success: res.ok, message: data.message };
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Lỗi kết nối khi xác thực OTP' };
+    }
+  };
+
+  // Xác thực OTP và đặt lại mật khẩu
+  const resetPassword = async (email: string, otp: string, newPassword: string, captchaToken?: string) => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const res = await fetch(`${apiUrl}/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp, newPassword, captchaToken }),
+      });
+      const data = await res.json();
+      return { success: res.ok, message: data.message };
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Lỗi kết nối khi đặt lại mật khẩu' };
+    }
+  };
+
+  // Đổi mật khẩu trong Profile
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${apiUrl}/users/change-password`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json();
+      return { success: res.ok, message: data.message };
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Lỗi kết nối khi đổi mật khẩu' };
+    }
+  };
+
   const login = () => setIsLoginModalOpen(true);
 
   const logout = async () => {
@@ -251,6 +328,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       registerRequest,
       verifyOtp,
       resendOtp,
+      forgotPassword,
+      verifyForgotOtp,
+      resetPassword,
+      changePassword,
     }}>
       {children}
       <LoginModal 

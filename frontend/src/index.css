@@ -97,3 +97,10 @@
   border: 2px solid var(--lev-thumb-border);
   cursor: pointer;
 }
+
+/* Ẩn huy hiệu reCAPTCHA v3 trôi nổi ở góc màn hình */
+.grecaptcha-badge {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}

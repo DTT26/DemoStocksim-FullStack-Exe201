@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import bcrypt from 'bcrypt';
 import { AuthRequest } from '../middleware/authMiddleware';
 import User from '../models/User';
 import Wallet from '../models/Wallet';
@@ -152,5 +153,48 @@ export const deleteUser = async (req: AuthRequest, res: Response) => {
     }
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+// PUT /api/users/change-password
+export const changePassword = async (req: AuthRequest, res: Response) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 8) {
+      return res.status(400).json({ message: 'Mật khẩu mới phải có tối thiểu 8 ký tự.' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'Không tìm thấy thông tin tài khoản người dùng.' });
+    }
+
+    // Nếu tài khoản đã có mật khẩu thì bắt buộc kiểm tra mật khẩu hiện tại
+    if (user.passwordHash) {
+      if (!currentPassword) {
+        return res.status(400).json({ message: 'Vui lòng nhập mật khẩu cũ / hiện tại.' });
+      }
+
+      const isCurrentMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!isCurrentMatch) {
+        return res.status(400).json({ message: 'Mật khẩu cũ không chính xác. Vui lòng kiểm tra lại.' });
+      }
+
+      const isSamePassword = await bcrypt.compare(newPassword, user.passwordHash);
+      if (isSamePassword) {
+        return res.status(400).json({ message: 'Mật khẩu mới không được trùng với mật khẩu cũ.' });
+      }
+    }
+
+    // Băm và lưu mật khẩu mới
+    const salt = await bcrypt.genSalt(10);
+    user.passwordHash = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    res.status(200).json({ message: 'Đổi mật khẩu thành công!' });
+  } catch (error) {
+    console.error('changePassword error:', error);
+    res.status(500).json({ message: 'Lỗi máy chủ trong quá trình đổi mật khẩu.' });
   }
 };

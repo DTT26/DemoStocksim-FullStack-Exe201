@@ -98,15 +98,15 @@ export const StudentAssignments = () => {
   return (
     <div className="space-y-8 animate-in fade-in duration-500 max-w-6xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold text-white tracking-tight">Bài tập & Phân tích (Assignments)</h1>
-        <p className="text-slate-400 mt-2 text-base">
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Bài tập & Phân tích (Assignments)</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-2 text-base">
           Hoàn thành các bài tập phân tích kỹ thuật và quản trị vốn do Giảng viên giao.
         </p>
       </div>
 
-      <div className="bg-[#111827] rounded-2xl border border-[#253047] shadow-xl overflow-hidden">
+      <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] shadow-sm dark:shadow-xl overflow-hidden transition-colors">
         {/* Filter Tabs */}
-        <div className="flex border-b border-[#253047] px-4 overflow-x-auto">
+        <div className="flex border-b border-slate-200 dark:border-[#253047] px-4 overflow-x-auto">
           {['All', 'In Progress', 'Submitted', 'Graded', 'Overdue'].map(tab => {
             const labelMap: Record<string, string> = {
               'All': 'Tất cả',
@@ -121,8 +121,8 @@ export const StudentAssignments = () => {
                 onClick={() => setFilter(tab)}
                 className={`px-5 py-4 font-semibold text-sm transition-colors border-b-2 whitespace-nowrap ${
                   filter === tab
-                    ? 'border-indigo-500 text-indigo-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                    ? 'border-indigo-600 dark:border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
                 }`}
               >
                 {labelMap[tab] || tab}
@@ -134,13 +134,13 @@ export const StudentAssignments = () => {
         {/* Table Content */}
         <div className="overflow-x-auto">
           {loading ? (
-            <div className="p-12 text-center text-slate-400">
+            <div className="p-12 text-center text-slate-400 dark:text-slate-500">
               <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
               <span>Đang tải danh sách bài tập...</span>
             </div>
           ) : (
             <table className="w-full text-left text-sm whitespace-nowrap">
-              <thead className="bg-[#172033] border-b border-[#253047] text-slate-400 uppercase tracking-wider text-xs">
+              <thead className="bg-slate-50 dark:bg-[#172033] border-b border-slate-200 dark:border-[#253047] text-slate-500 dark:text-slate-400 uppercase tracking-wider text-xs">
                 <tr>
                   <th className="px-6 py-4 font-semibold">Tên bài tập</th>
                   <th className="px-6 py-4 font-semibold">Kỳ thi mô phỏng</th>
@@ -150,7 +150,7 @@ export const StudentAssignments = () => {
                   <th className="px-6 py-4 font-semibold text-right">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#253047]">
+              <tbody className="divide-y divide-slate-200 dark:divide-[#253047]">
                 {filteredAssignments.map((assignment) => {
                   const id = assignment._id || assignment.id;
                   const status = getStatus(assignment);
@@ -159,48 +159,48 @@ export const StudentAssignments = () => {
                   const score = assignment.mySubmission?.score;
 
                   return (
-                    <tr key={id} className="hover:bg-[#172033]/50 transition-colors group">
+                    <tr key={id} className="hover:bg-slate-50/80 dark:hover:bg-[#172033]/50 transition-colors group">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className={`p-2.5 rounded-xl ${
-                            status === 'Graded' ? 'bg-purple-500/10 text-purple-400' :
-                            status === 'Submitted' ? 'bg-emerald-500/10 text-emerald-400' :
-                            status === 'Overdue' ? 'bg-rose-500/10 text-rose-400' :
-                            'bg-indigo-500/10 text-indigo-400'
+                            status === 'Graded' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400' :
+                            status === 'Submitted' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                            status === 'Overdue' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
+                            'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
                           }`}>
                             <FileText className="w-4 h-4" />
                           </div>
                           <div>
-                            <span className="font-bold text-white group-hover:text-indigo-400 transition-colors block">
+                            <span className="font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors block">
                               {assignment.title}
                             </span>
-                            <span className="text-[11px] text-slate-500 font-mono">
-                              Mã CP: <strong className="text-slate-400">{assignment.symbol || 'FPT'}</strong>
+                            <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono">
+                              Mã CP: <strong className="text-slate-600 dark:text-slate-400">{assignment.symbol || 'FPT'}</strong>
                             </span>
                           </div>
                         </div>
                       </td>
 
-                      <td className="px-6 py-4 text-slate-300 font-medium">
+                      <td className="px-6 py-4 text-slate-700 dark:text-slate-300 font-medium">
                         {simName}
                       </td>
 
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 text-slate-300">
-                          <Calendar className="w-4 h-4 text-slate-500" />
+                        <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                          <Calendar className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                           <span>{new Date(assignment.deadline).toLocaleDateString('vi-VN')}</span>
                         </div>
                       </td>
 
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-24 bg-[#253047] rounded-full h-2 overflow-hidden">
+                          <div className="w-24 bg-slate-200 dark:bg-[#253047] rounded-full h-2 overflow-hidden">
                             <div 
                               className={`h-full rounded-full transition-all duration-300 ${progress === 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`} 
                               style={{ width: `${progress}%` }}
                             />
                           </div>
-                          <span className="text-xs font-mono font-bold text-slate-300">{progress}%</span>
+                          <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-300">{progress}%</span>
                         </div>
                       </td>
 
@@ -211,7 +211,7 @@ export const StudentAssignments = () => {
                       <td className="px-6 py-4 text-right">
                         <Link 
                           to={`/student/assignments/${id}`} 
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-lg font-semibold text-xs transition-colors"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 dark:bg-indigo-600/20 dark:hover:bg-indigo-600/30 dark:text-indigo-300 dark:border-indigo-500/30 rounded-lg font-semibold text-xs transition-colors"
                         >
                           <span>{status === 'Submitted' || status === 'Graded' ? 'Xem bài làm' : 'Làm bài'}</span>
                           <ArrowRight className="w-3.5 h-3.5" />
@@ -223,9 +223,9 @@ export const StudentAssignments = () => {
 
                 {filteredAssignments.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-6 py-16 text-center text-slate-400">
-                      <FileText className="w-10 h-10 mx-auto text-slate-600 mb-2" />
-                      <p className="text-base font-semibold text-slate-300">Không có bài tập nào trong mục này</p>
+                    <td colSpan={6} className="px-6 py-16 text-center text-slate-400 dark:text-slate-500">
+                      <FileText className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
+                      <p className="text-base font-semibold text-slate-700 dark:text-slate-300">Không có bài tập nào trong mục này</p>
                       <p className="text-xs text-slate-500 mt-1">Các bài tập mới từ giảng viên sẽ xuất hiện tại đây.</p>
                     </td>
                   </tr>

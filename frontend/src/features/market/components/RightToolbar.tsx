@@ -1,8 +1,8 @@
-import { List, ArrowLeftRight, BarChart2, Calculator } from 'lucide-react';
+import { List, ArrowLeftRight, BarChart2, Calculator, BookOpen } from 'lucide-react';
 
 interface RightToolbarProps {
-  activePanel: 'watchlist' | 'order' | 'simulation' | 'calculator' | null;
-  onChangePanel: (panel: 'watchlist' | 'order' | 'simulation' | 'calculator' | null) => void;
+  activePanel: 'watchlist' | 'order' | 'simulation' | 'calculator' | 'journal' | null;
+  onChangePanel: (panel: 'watchlist' | 'order' | 'simulation' | 'calculator' | 'journal' | null) => void;
 }
 
 export const RightToolbar = ({ activePanel, onChangePanel }: RightToolbarProps) => {
@@ -44,6 +44,19 @@ export const RightToolbar = ({ activePanel, onChangePanel }: RightToolbarProps) 
         <ArrowLeftRight className="w-[22px] h-[22px] stroke-[1.5]" />
       </button>
 
+      {/* Trading Journal right under Bảng đặt lệnh */}
+      <button
+        onClick={() => onChangePanel(activePanel === 'journal' ? null : 'journal')}
+        className={`p-2 rounded transition-colors ${
+          activePanel === 'journal' 
+            ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' 
+            : 'text-[#787b86] hover:bg-[#f5f5f5] dark:hover:bg-[#2a2e39]/50 hover:text-[#1e2329] dark:hover:text-white'
+        }`}
+        title="Nhật ký"
+      >
+        <BookOpen className="w-[22px] h-[22px] stroke-[1.5]" />
+      </button>
+
       {/* Calculator at the bottom (or just below order) */}
       <button
         onClick={() => onChangePanel(activePanel === 'calculator' ? null : 'calculator')}
@@ -59,3 +72,4 @@ export const RightToolbar = ({ activePanel, onChangePanel }: RightToolbarProps) 
     </div>
   );
 };
+

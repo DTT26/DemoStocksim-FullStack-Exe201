@@ -4,7 +4,7 @@ import User from '../models/User';
 import Wallet from '../models/Wallet';
 import Otp from '../models/Otp';
 import jwt from 'jsonwebtoken';
-import { sendOtpEmail } from '../services/emailService';
+import { sendOtpEmail, sendForgotPasswordEmail } from '../services/emailService';
 
 /**
  * Helper cấp phát JWT Access Token (7 ngày) & Refresh Token (30 ngày)
@@ -176,7 +176,16 @@ export const verifyOtp = async (req: Request, res: Response) => {
     const otpDoc = await Otp.findOne({ email: cleanEmail, otp: cleanOtp });
     if (!otpDoc) {
       return res.status(400).json({
-        message: 'Mã OTP không chính xác hoặc đã hết hạn (hiệu lực 10 phút). Vui lòng thử lại hoặc bấm Gửi lại mã.'
+        message: 'Mã OTP không chính xác hoặc đã hết hạn (hiệu lực đúng 10 phút). Vui lòng thử lại hoặc bấm Gửi lại mã.'
+      });
+    }
+
+    // Kiểm tra chính xác thời gian hiệu lực 10 phút (600,000 ms)
+    const TEN_MINUTES_MS = 10 * 60 * 1000;
+    if (Date.now() - new Date(otpDoc.createdAt).getTime() > TEN_MINUTES_MS) {
+      await Otp.deleteMany({ email: cleanEmail });
+      return res.status(400).json({
+        message: 'Mã OTP đăng ký đã hết hạn sau đúng 10 phút. Vui lòng bấm Gửi lại mã OTP mới.'
       });
     }
 
@@ -241,7 +250,15 @@ export const resendOtp = async (req: Request, res: Response) => {
 
     if (!existingOtp) {
       return res.status(400).json({
-        message: 'Phiên đăng ký của bạn đã hết hạn. Vui lòng nhập lại thông tin đăng ký.'
+        message: 'Phiên đăng ký của bạn đã hết hạn (quá 10 phút). Vui lòng nhập lại thông tin đăng ký.'
+      });
+    }
+
+    const TEN_MINUTES_MS = 10 * 60 * 1000;
+    if (Date.now() - new Date(existingOtp.createdAt).getTime() > TEN_MINUTES_MS) {
+      await Otp.deleteMany({ email: cleanEmail });
+      return res.status(400).json({
+        message: 'Phiên đăng ký của bạn đã hết hạn sau đúng 10 phút. Vui lòng nhập lại thông tin đăng ký.'
       });
     }
 
@@ -471,3 +488,170 @@ export const logout = (req: Request, res: Response) => {
   res.clearCookie('refreshToken');
   res.status(200).json({ message: 'Logged out successfully' });
 };
+
+/**
+ * POST /api/auth/forgot-password
+ * Yêu cầu gửi mã OTP đặt lại mật khẩu qua email
+ */
+export const forgotPassword = async (req: Request, res: Response) => {
+  try {
+    const { email, captchaToken } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: 'Vui lòng nhập địa chỉ Email.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Xác thực reCAPTCHA v3 nếu có token
+    if (captchaToken) {
+      const isCaptchaValid = await verifyRecaptchaV3(captchaToken);
+      if (!isCaptchaValid) {
+        return res.status(403).json({ message: 'Xác thực an toàn reCAPTCHA không thành công. Vui lòng thử lại.' });
+      }
+    }
+
+    // Tìm tài khoản theo email
+    const user = await User.findOne({ email: cleanEmail });
+    if (!user) {
+      return res.status(404).json({ message: 'Không tìm thấy tài khoản với email này trong hệ thống.' });
+    }
+
+    if (user.status === 'DISABLED' || user.status === 'SUSPENDED') {
+      return res.status(403).json({ message: 'Tài khoản của bạn đã bị khóa hoặc tạm ngưng. Vui lòng liên hệ Quản trị viên.' });
+    }
+
+    // Sinh mã OTP 6 số
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Xóa các mã OTP đặt lại mật khẩu cũ của email này nếu có
+    await Otp.deleteMany({ email: cleanEmail, purpose: 'FORGOT_PASSWORD' });
+
+    // Lưu bản ghi OTP mới
+    await Otp.create({
+      email: cleanEmail,
+      otp,
+      name: user.name || 'Người dùng',
+      purpose: 'FORGOT_PASSWORD',
+    });
+
+    // Gửi email chứa OTP
+    await sendForgotPasswordEmail(cleanEmail, otp, user.name || 'Người dùng');
+
+    res.status(200).json({
+      message: 'Mã xác thực OTP đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư đến (hoặc hòm thư rác/spam).'
+    });
+  } catch (error) {
+    console.error('forgotPassword error:', error);
+    res.status(500).json({ message: 'Lỗi máy chủ trong quá trình xử lý quên mật khẩu' });
+  }
+};
+
+/**
+ * POST /api/auth/reset-password
+ * Xác thực OTP và đặt lại mật khẩu mới
+ */
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { email, otp, newPassword, captchaToken } = req.body;
+
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ message: 'Vui lòng cung cấp đầy đủ Email, mã OTP và Mật khẩu mới.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanOtp = otp.toString().trim();
+
+    // Xác thực reCAPTCHA v3 nếu có token
+    if (captchaToken) {
+      const isCaptchaValid = await verifyRecaptchaV3(captchaToken);
+      if (!isCaptchaValid) {
+        return res.status(403).json({ message: 'Xác thực an toàn reCAPTCHA không thành công. Vui lòng thử lại.' });
+      }
+    }
+
+    // Kiểm tra tiêu chuẩn mật khẩu mới
+    if (newPassword.length < 8) {
+      return res.status(400).json({ message: 'Mật khẩu mới phải có tối thiểu 8 ký tự.' });
+    }
+
+    // Tìm mã OTP hợp lệ
+    const otpDoc = await Otp.findOne({ email: cleanEmail, otp: cleanOtp, purpose: 'FORGOT_PASSWORD' });
+    if (!otpDoc) {
+      return res.status(400).json({
+        message: 'Mã xác thực OTP không chính xác hoặc đã hết hạn (hiệu lực đúng 10 phút). Vui lòng thử lại hoặc yêu cầu gửi lại mã mới.'
+      });
+    }
+
+    // Kiểm tra chính xác thời gian hiệu lực 10 phút (600,000 ms)
+    const TEN_MINUTES_MS = 10 * 60 * 1000;
+    if (Date.now() - new Date(otpDoc.createdAt).getTime() > TEN_MINUTES_MS) {
+      await Otp.deleteMany({ email: cleanEmail, purpose: 'FORGOT_PASSWORD' });
+      return res.status(400).json({
+        message: 'Mã OTP khôi phục mật khẩu đã hết hạn sau đúng 10 phút. Vui lòng gửi lại yêu cầu để nhận mã mới.'
+      });
+    }
+
+    // Tìm user và cập nhật mật khẩu
+    const user = await User.findOne({ email: cleanEmail });
+    if (!user) {
+      return res.status(404).json({ message: 'Không tìm thấy tài khoản người dùng.' });
+    }
+
+    // Băm mật khẩu mới
+    const salt = await bcrypt.genSalt(10);
+    user.passwordHash = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    // Xóa OTP sau khi sử dụng thành công
+    await Otp.deleteMany({ email: cleanEmail, purpose: 'FORGOT_PASSWORD' });
+
+    res.status(200).json({
+      message: 'Đặt lại mật khẩu thành công! Bạn có thể sử dụng mật khẩu mới để đăng nhập ngay bây giờ.'
+    });
+  } catch (error) {
+    console.error('resetPassword error:', error);
+    res.status(500).json({ message: 'Lỗi máy chủ trong quá trình đặt lại mật khẩu' });
+  }
+};
+
+/**
+ * POST /api/auth/verify-forgot-otp
+ * Kiểm tra mã OTP quên mật khẩu trước khi cho phép người dùng đặt mật khẩu mới
+ */
+export const verifyForgotOtp = async (req: Request, res: Response) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ message: 'Vui lòng cung cấp đầy đủ Email và mã OTP.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanOtp = otp.toString().trim();
+
+    const otpDoc = await Otp.findOne({ email: cleanEmail, otp: cleanOtp, purpose: 'FORGOT_PASSWORD' });
+    if (!otpDoc) {
+      return res.status(400).json({
+        message: 'Mã xác thực OTP không chính xác hoặc đã hết hạn (hiệu lực đúng 10 phút).'
+      });
+    }
+
+    // Kiểm tra chính xác thời gian hiệu lực 10 phút (600,000 ms)
+    const TEN_MINUTES_MS = 10 * 60 * 1000;
+    if (Date.now() - new Date(otpDoc.createdAt).getTime() > TEN_MINUTES_MS) {
+      await Otp.deleteMany({ email: cleanEmail, purpose: 'FORGOT_PASSWORD' });
+      return res.status(400).json({
+        message: 'Mã OTP đã hết hạn sau đúng 10 phút. Vui lòng gửi lại yêu cầu để nhận mã mới.'
+      });
+    }
+
+    res.status(200).json({
+      message: 'Mã OTP hợp lệ! Hãy thiết lập mật khẩu mới cho tài khoản của bạn.'
+    });
+  } catch (error) {
+    console.error('verifyForgotOtp error:', error);
+    res.status(500).json({ message: 'Lỗi máy chủ trong quá trình kiểm tra mã OTP' });
+  }
+};
+

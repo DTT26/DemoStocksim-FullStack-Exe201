@@ -5,6 +5,9 @@ import {
   registerRequest, 
   verifyOtp, 
   resendOtp, 
+  forgotPassword,
+  verifyForgotOtp,
+  resetPassword,
   refreshAccessToken, 
   logout 
 } from '../controllers/authController';
@@ -19,6 +22,15 @@ router.post('/verify-otp', verifyOtp as any);
 
 // POST /api/auth/resend-otp (Gửi lại mã OTP)
 router.post('/resend-otp', resendOtp as any);
+
+// POST /api/auth/forgot-password (Yêu cầu gửi OTP đặt lại mật khẩu)
+router.post('/forgot-password', forgotPassword as any);
+
+// POST /api/auth/verify-forgot-otp (Kiểm tra OTP quên mật khẩu trước khi đổi mk)
+router.post('/verify-forgot-otp', verifyForgotOtp as any);
+
+// POST /api/auth/reset-password (Xác thực OTP và đặt lại mật khẩu)
+router.post('/reset-password', resetPassword as any);
 
 // POST /api/auth/login (Đăng nhập bằng Email & Mật khẩu)
 router.post('/login', emailLogin as any);

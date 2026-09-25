@@ -115,7 +115,9 @@ export const CalculatorPanel = ({ initialBalance, currentStock }: CalculatorPane
           <button 
             onClick={() => handleMarketTypeChange('forex')}
             className={`flex-1 flex flex-col items-center justify-center text-center font-bold text-sm py-2 px-1 rounded-md transition-colors ${
-              marketType === 'forex' ? 'bg-[#089981] text-white' : 'bg-[#1e222d] text-[#787b86] hover:text-white'
+              marketType === 'forex' 
+                ? 'bg-[#089981] text-white shadow-sm' 
+                : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] hover:bg-[#e0e3eb] dark:hover:bg-[#2a2e39] hover:text-[#1e2329] dark:hover:text-white border border-[#e6e8ea] dark:border-[#2a2e39]'
             }`}
           >
             Ngoại hối <br/><span className="font-normal text-xs">(Forex)</span>
@@ -123,7 +125,9 @@ export const CalculatorPanel = ({ initialBalance, currentStock }: CalculatorPane
           <button 
             onClick={() => handleMarketTypeChange('crypto')}
             className={`flex-1 flex flex-col items-center justify-center text-center font-bold text-sm py-2 px-1 rounded-md transition-colors ${
-              marketType === 'crypto' ? 'bg-[#089981] text-white' : 'bg-[#1e222d] text-[#787b86] hover:text-white'
+              marketType === 'crypto' 
+                ? 'bg-[#089981] text-white shadow-sm' 
+                : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] hover:bg-[#e0e3eb] dark:hover:bg-[#2a2e39] hover:text-[#1e2329] dark:hover:text-white border border-[#e6e8ea] dark:border-[#2a2e39]'
             }`}
           >
             Tiền điện tử <br/><span className="font-normal text-xs">(Crypto)</span>
@@ -131,7 +135,9 @@ export const CalculatorPanel = ({ initialBalance, currentStock }: CalculatorPane
           <button 
             onClick={() => handleMarketTypeChange('commodity')}
             className={`flex-1 flex items-center justify-center text-center font-bold text-sm py-2 px-1 rounded-md transition-colors ${
-              marketType === 'commodity' ? 'bg-[#089981] text-white' : 'bg-[#1e222d] text-[#787b86] hover:text-white'
+              marketType === 'commodity' 
+                ? 'bg-[#089981] text-white shadow-sm' 
+                : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] hover:bg-[#e0e3eb] dark:hover:bg-[#2a2e39] hover:text-[#1e2329] dark:hover:text-white border border-[#e6e8ea] dark:border-[#2a2e39]'
             }`}
           >
             Commodity
@@ -149,11 +155,11 @@ export const CalculatorPanel = ({ initialBalance, currentStock }: CalculatorPane
                 const s = STOCKS.find(x => x.symbol === e.target.value);
                 if (s) setEntryPrice(s.price.toString());
               }}
-              className="w-full bg-[#1e222d] border border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-white font-bold outline-none transition-colors appearance-none"
+              className="w-full bg-[#f8f9fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-[#1e2329] dark:text-white font-bold outline-none transition-colors appearance-none cursor-pointer"
             >
-              <option value="" disabled>Chọn mã...</option>
+              <option value="" disabled className="bg-white dark:bg-[#1e222d] text-[#1e2329] dark:text-white">Chọn mã...</option>
               {availableSymbols.map(s => (
-                <option key={s.symbol} value={s.symbol}>{s.symbol}</option>
+                <option key={s.symbol} value={s.symbol} className="bg-white dark:bg-[#1e222d] text-[#1e2329] dark:text-white">{s.symbol}</option>
               ))}
             </select>
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#787b86] pointer-events-none" />
@@ -167,7 +173,7 @@ export const CalculatorPanel = ({ initialBalance, currentStock }: CalculatorPane
             type="number"
             value={balance}
             onChange={e => setBalance(parseFloat(e.target.value))}
-            className="bg-[#1e222d] border border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-white font-mono outline-none transition-colors"
+            className="bg-[#f8f9fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-[#1e2329] dark:text-white font-mono outline-none transition-colors"
           />
         </div>
 
@@ -175,16 +181,16 @@ export const CalculatorPanel = ({ initialBalance, currentStock }: CalculatorPane
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
             <label className="text-[11px] font-bold text-[#787b86] tracking-wider uppercase">Mức rủi ro mỗi lệnh</label>
-            <div className="flex bg-[#1e222d] rounded overflow-hidden border border-[#2a2e39]">
+            <div className="flex bg-[#f0f1f3] dark:bg-[#1e222d] rounded overflow-hidden border border-[#e6e8ea] dark:border-[#2a2e39]">
               <button 
                 onClick={() => setRiskType('%')}
-                className={`px-2 py-0.5 text-xs font-bold transition-colors ${riskType === '%' ? 'bg-[#089981] text-white' : 'text-[#787b86]'}`}
+                className={`px-2.5 py-0.5 text-xs font-bold transition-colors ${riskType === '%' ? 'bg-[#089981] text-white' : 'text-[#787b86] hover:text-[#1e2329] dark:hover:text-white'}`}
               >
                 %
               </button>
               <button 
                 onClick={() => setRiskType('$')}
-                className={`px-2 py-0.5 text-xs font-bold transition-colors ${riskType === '$' ? 'bg-[#089981] text-white' : 'text-[#787b86]'}`}
+                className={`px-2.5 py-0.5 text-xs font-bold transition-colors ${riskType === '$' ? 'bg-[#089981] text-white' : 'text-[#787b86] hover:text-[#1e2329] dark:hover:text-white'}`}
               >
                 $
               </button>
@@ -194,7 +200,7 @@ export const CalculatorPanel = ({ initialBalance, currentStock }: CalculatorPane
             type="number"
             value={riskValue}
             onChange={e => setRiskValue(parseFloat(e.target.value))}
-            className="bg-[#1e222d] border border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-white font-mono outline-none transition-colors"
+            className="bg-[#f8f9fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-[#1e2329] dark:text-white font-mono outline-none transition-colors"
           />
           
           {riskType === '%' && (
@@ -204,7 +210,9 @@ export const CalculatorPanel = ({ initialBalance, currentStock }: CalculatorPane
                   key={pct}
                   onClick={() => setRiskValue(pct)}
                   className={`flex-1 py-1 text-xs font-semibold rounded transition-colors ${
-                    riskValue === pct ? 'bg-[#089981] text-white' : 'bg-[#1e222d] text-[#787b86] hover:bg-[#2a2e39] border border-[#2a2e39]'
+                    riskValue === pct 
+                      ? 'bg-[#089981] text-white' 
+                      : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] hover:bg-[#e0e3eb] dark:hover:bg-[#2a2e39] hover:text-[#1e2329] dark:hover:text-white border border-[#e6e8ea] dark:border-[#2a2e39]'
                   }`}
                 >
                   {pct}%
@@ -213,7 +221,7 @@ export const CalculatorPanel = ({ initialBalance, currentStock }: CalculatorPane
             </div>
           )}
           
-          <div className="text-xs text-[#f23645] mt-1 font-mono">
+          <div className="text-xs text-[#f23645] mt-1 font-mono font-medium">
             = ${riskAmount.toFixed(2)}
           </div>
         </div>
@@ -222,12 +230,12 @@ export const CalculatorPanel = ({ initialBalance, currentStock }: CalculatorPane
         <div className="flex flex-col gap-1.5">
           <label className="text-[11px] font-bold text-[#787b86] tracking-wider uppercase">Đòn bẩy</label>
           <div className="flex items-center gap-2">
-            <span className="font-bold text-white text-sm shrink-0">1 :</span>
+            <span className="font-bold text-[#1e2329] dark:text-white text-sm shrink-0">1 :</span>
             <input 
               type="number"
               value={leverage}
               onChange={e => setLeverage(parseFloat(e.target.value))}
-              className="flex-1 bg-[#1e222d] border border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-white font-mono outline-none transition-colors"
+              className="flex-1 bg-[#f8f9fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-[#1e2329] dark:text-white font-mono outline-none transition-colors"
             />
           </div>
         </div>
@@ -239,7 +247,7 @@ export const CalculatorPanel = ({ initialBalance, currentStock }: CalculatorPane
             type="number"
             value={entryPrice}
             onChange={e => setEntryPrice(e.target.value)}
-            className="bg-[#1e222d] border border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-white font-mono outline-none transition-colors"
+            className="bg-[#f8f9fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-[#1e2329] dark:text-white font-mono outline-none transition-colors"
           />
         </div>
 
@@ -251,14 +259,14 @@ export const CalculatorPanel = ({ initialBalance, currentStock }: CalculatorPane
             value={stopLoss}
             onChange={e => setStopLoss(e.target.value)}
             placeholder="Cắt lỗ (SL)"
-            className="bg-[#1e222d] border border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-white font-mono outline-none transition-colors placeholder:text-[#434651]"
+            className="bg-[#f8f9fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-[#1e2329] dark:text-white font-mono outline-none transition-colors placeholder:text-[#a3a6af] dark:placeholder:text-[#434651]"
           />
         </div>
 
         {/* Take Profit */}
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
-            <label className="text-[11px] font-bold text-[#787b86] tracking-wider uppercase">Chốt lời (TP) <span className="text-[#434651] normal-case">(tùy chọn)</span></label>
+            <label className="text-[11px] font-bold text-[#787b86] tracking-wider uppercase">Chốt lời (TP) <span className="text-[#a3a6af] dark:text-[#787b86] normal-case">(tùy chọn)</span></label>
             <ChevronDown className="w-3.5 h-3.5 text-[#787b86]" />
           </div>
           <input 
@@ -266,7 +274,7 @@ export const CalculatorPanel = ({ initialBalance, currentStock }: CalculatorPane
             value={takeProfit}
             onChange={e => setTakeProfit(e.target.value)}
             placeholder="Chốt lời (TP)"
-            className="bg-[#1e222d] border border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-white font-mono outline-none transition-colors placeholder:text-[#434651]"
+            className="bg-[#f8f9fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] focus:border-[#2962ff] rounded-md px-3 py-2.5 text-sm text-[#1e2329] dark:text-white font-mono outline-none transition-colors placeholder:text-[#a3a6af] dark:placeholder:text-[#434651]"
           />
         </div>
 
@@ -278,11 +286,11 @@ export const CalculatorPanel = ({ initialBalance, currentStock }: CalculatorPane
             </h3>
             <div className="flex justify-between items-center text-sm">
               <span className="text-[#787b86]">Khối lượng đề xuất:</span>
-              <span className="font-mono font-bold text-white text-base">{calculationResult.lots} Lots</span>
+              <span className="font-mono font-bold text-[#1e2329] dark:text-white text-base">{calculationResult.lots} Lots</span>
             </div>
             <div className="flex justify-between items-center text-xs">
               <span className="text-[#787b86]">Quy mô thực tế (Units):</span>
-              <span className="font-mono text-[#d1d4dc]">{calculationResult.units}</span>
+              <span className="font-mono text-[#1e2329] dark:text-[#d1d4dc]">{calculationResult.units}</span>
             </div>
           </div>
         )}

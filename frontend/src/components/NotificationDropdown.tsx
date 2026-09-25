@@ -49,7 +49,11 @@ export const NotificationDropdown = () => {
     <div className="relative" ref={dropdownRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="relative hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#d1d4dc]"
+        className={`relative p-1.5 rounded transition-colors shrink-0 cursor-pointer ${
+          isOpen 
+            ? 'bg-[#f0f3fa] dark:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]' 
+            : 'text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39]'
+        }`}
         title="Thông báo"
       >
         <Bell className="w-5 h-5" />

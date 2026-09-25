@@ -52,7 +52,7 @@ export const UserDropdown = ({
     <div className="relative shrink-0" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-8 h-8 rounded-full overflow-hidden hover:ring-2 hover:ring-[#2a2e39] transition-all focus:outline-none"
+        className="w-8 h-8 rounded-full overflow-hidden hover:ring-2 hover:ring-gray-300 dark:hover:ring-[#2a2e39] transition-all focus:outline-none cursor-pointer"
       >
         {user.picture ? (
           <img src={user.picture} alt={user.name} className="w-full h-full object-cover" />

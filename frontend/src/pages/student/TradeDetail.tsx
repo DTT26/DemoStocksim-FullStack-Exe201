@@ -121,16 +121,16 @@ export const StudentTradeDetail = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex items-center gap-4">
-        <Link to="/student/journal" className="p-2 text-slate-400 hover:text-white hover:bg-[#172033] rounded-lg transition-colors">
+        <Link to="/student/journal" className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-[#172033] rounded-lg transition-colors">
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
             Trade Details
-            <span className={`px-2.5 py-0.5 rounded text-sm font-bold uppercase ${trade.side === 'BUY' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+            <span className={`px-2.5 py-0.5 rounded text-sm font-bold uppercase ${trade.side === 'BUY' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500' : 'bg-rose-500/10 text-rose-600 dark:text-rose-500'}`}>
               {trade.side}
             </span>
-            <span className="bg-[#172033] text-slate-300 px-2.5 py-0.5 rounded text-sm font-bold border border-[#253047]">
+            <span className="bg-slate-100 text-slate-700 dark:bg-[#172033] dark:text-slate-300 px-2.5 py-0.5 rounded text-sm font-bold border border-slate-200 dark:border-[#253047]">
               {trade.symbol}
             </span>
           </h1>
@@ -139,103 +139,103 @@ export const StudentTradeDetail = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-[#111827] rounded-2xl border border-[#253047] overflow-hidden">
-            <div className="p-6 border-b border-[#253047]">
-              <h2 className="text-lg font-semibold text-white">Execution Summary</h2>
+          <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] shadow-sm dark:shadow-md overflow-hidden transition-colors">
+            <div className="p-6 border-b border-slate-200 dark:border-[#253047]">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Execution Summary</h2>
             </div>
             <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
               <div>
-                <p className="text-sm text-slate-400 mb-1">Status</p>
-                <p className="font-semibold text-white">{trade.status}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Status</p>
+                <p className="font-semibold text-slate-800 dark:text-white">{trade.status}</p>
               </div>
               <div>
-                <p className="text-sm text-slate-400 mb-1">Quantity</p>
-                <p className="font-semibold text-white">{trade.quantity.toLocaleString()}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Quantity</p>
+                <p className="font-semibold text-slate-800 dark:text-white">{trade.quantity.toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-sm text-slate-400 mb-1">Entry Price</p>
-                <p className="font-semibold text-white">{trade.entryPrice.toLocaleString('vi-VN')}₫</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Entry Price</p>
+                <p className="font-semibold text-slate-800 dark:text-white">{trade.entryPrice.toLocaleString('vi-VN')}₫</p>
               </div>
               <div>
-                <p className="text-sm text-slate-400 mb-1">Exit Price</p>
-                <p className="font-semibold text-white">{trade.exitPrice ? trade.exitPrice.toLocaleString('vi-VN') + '₫' : '-'}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Exit Price</p>
+                <p className="font-semibold text-slate-800 dark:text-white">{trade.exitPrice ? trade.exitPrice.toLocaleString('vi-VN') + '₫' : '-'}</p>
               </div>
               
               <div>
-                <p className="text-sm text-slate-400 mb-1">Entry Time</p>
-                <p className="font-semibold text-white text-sm">{new Date(trade.entryTime).toLocaleString()}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Entry Time</p>
+                <p className="font-semibold text-slate-800 dark:text-white text-sm">{new Date(trade.entryTime).toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-sm text-slate-400 mb-1">Exit Time</p>
-                <p className="font-semibold text-white text-sm">{trade.exitTime ? new Date(trade.exitTime).toLocaleString() : '-'}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Exit Time</p>
+                <p className="font-semibold text-slate-800 dark:text-white text-sm">{trade.exitTime ? new Date(trade.exitTime).toLocaleString() : '-'}</p>
               </div>
               <div>
-                <p className="text-sm text-slate-400 mb-1">Stop Loss</p>
-                <p className="font-semibold text-white">{trade.stopLoss ? trade.stopLoss.toLocaleString('vi-VN') + '₫' : '-'}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Stop Loss</p>
+                <p className="font-semibold text-slate-800 dark:text-white">{trade.stopLoss ? trade.stopLoss.toLocaleString('vi-VN') + '₫' : '-'}</p>
               </div>
               <div>
-                <p className="text-sm text-slate-400 mb-1">Take Profit</p>
-                <p className="font-semibold text-white">{trade.takeProfit ? trade.takeProfit.toLocaleString('vi-VN') + '₫' : '-'}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Take Profit</p>
+                <p className="font-semibold text-slate-800 dark:text-white">{trade.takeProfit ? trade.takeProfit.toLocaleString('vi-VN') + '₫' : '-'}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-[#111827] rounded-2xl border border-[#253047] overflow-hidden">
-            <div className="p-6 border-b border-[#253047]">
-              <h2 className="text-lg font-semibold text-white">Trade Notes</h2>
+          <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] shadow-sm dark:shadow-md overflow-hidden transition-colors">
+            <div className="p-6 border-b border-slate-200 dark:border-[#253047]">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Trade Notes</h2>
             </div>
             <div className="p-6">
-              <p className="text-slate-300 whitespace-pre-wrap">{trade.notes || 'No notes for this trade.'}</p>
+              <p className="text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{trade.notes || 'No notes for this trade.'}</p>
             </div>
           </div>
         </div>
 
         <div className="space-y-6">
-          <div className="bg-[#111827] rounded-2xl border border-[#253047] overflow-hidden">
-            <div className="p-6 border-b border-[#253047]">
-              <h2 className="text-lg font-semibold text-white">Financials</h2>
+          <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] shadow-sm dark:shadow-md overflow-hidden transition-colors">
+            <div className="p-6 border-b border-slate-200 dark:border-[#253047]">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Financials</h2>
             </div>
             <div className="p-6 space-y-4">
-              <div className="flex justify-between items-center pb-4 border-b border-[#253047]/50">
-                <span className="text-slate-400">Gross P&L</span>
-                <span className={`font-semibold ${isWin ? 'text-emerald-500' : isLoss ? 'text-rose-500' : 'text-slate-300'}`}>
+              <div className="flex justify-between items-center pb-4 border-b border-slate-200 dark:border-[#253047]/50">
+                <span className="text-slate-500 dark:text-slate-400">Gross P&L</span>
+                <span className={`font-semibold ${isWin ? 'text-emerald-600 dark:text-emerald-500' : isLoss ? 'text-rose-600 dark:text-rose-500' : 'text-slate-700 dark:text-slate-300'}`}>
                   {trade.pnl > 0 ? '+' : ''}{(trade.pnl + (trade.commission || 0)).toLocaleString('vi-VN')}₫
                 </span>
               </div>
-              <div className="flex justify-between items-center pb-4 border-b border-[#253047]/50">
-                <span className="text-slate-400">Commission & Fees</span>
-                <span className="font-semibold text-rose-400">
+              <div className="flex justify-between items-center pb-4 border-b border-slate-200 dark:border-[#253047]/50">
+                <span className="text-slate-500 dark:text-slate-400">Commission & Fees</span>
+                <span className="font-semibold text-rose-600 dark:text-rose-400">
                   -{trade.commission?.toLocaleString('vi-VN') || 0}₫
                 </span>
               </div>
               <div className="flex justify-between items-center pt-2">
-                <span className="text-white font-medium">Net P&L</span>
-                <span className={`text-xl font-bold ${isWin ? 'text-emerald-500' : isLoss ? 'text-rose-500' : 'text-white'}`}>
+                <span className="text-slate-900 dark:text-white font-medium">Net P&L</span>
+                <span className={`text-xl font-bold ${isWin ? 'text-emerald-600 dark:text-emerald-500' : isLoss ? 'text-rose-600 dark:text-rose-500' : 'text-slate-900 dark:text-white'}`}>
                   {trade.pnl > 0 ? '+' : ''}{trade.pnl.toLocaleString('vi-VN')}₫
                 </span>
               </div>
               <div className="flex justify-between items-center pt-1">
-                <span className="text-slate-400 text-sm">Return Rate</span>
-                <span className={`text-sm font-bold ${isWin ? 'text-emerald-500' : isLoss ? 'text-rose-500' : 'text-slate-300'}`}>
+                <span className="text-slate-500 dark:text-slate-400 text-sm">Return Rate</span>
+                <span className={`text-sm font-bold ${isWin ? 'text-emerald-600 dark:text-emerald-500' : isLoss ? 'text-rose-600 dark:text-rose-500' : 'text-slate-700 dark:text-slate-300'}`}>
                   {trade.returnRate > 0 ? '+' : ''}{trade.returnRate}%
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="bg-[#111827] rounded-2xl border border-[#253047] overflow-hidden p-6">
-            <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Context</h2>
+          <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] shadow-sm dark:shadow-md overflow-hidden p-6 transition-colors">
+            <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Context</h2>
             <div className="space-y-4">
               <div>
-                <p className="text-xs text-slate-500 mb-1">Simulation</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">Simulation</p>
                 <div className="flex justify-between items-center">
-                  <p className="text-sm font-medium text-white">{trade.simulation}</p>
-                  <ExternalLink className="w-4 h-4 text-slate-400" />
+                  <p className="text-sm font-medium text-slate-800 dark:text-white">{trade.simulation}</p>
+                  <ExternalLink className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                 </div>
               </div>
               <div>
-                <p className="text-xs text-slate-500 mb-1">Setup / Strategy</p>
-                <p className="text-sm font-medium text-white">{trade.setup || 'None'}</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">Setup / Strategy</p>
+                <p className="text-sm font-medium text-slate-800 dark:text-white">{trade.setup || 'None'}</p>
               </div>
             </div>
           </div>

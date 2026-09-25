@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User, Mail, Shield, Save, Key, Camera, Loader2, Phone, Building, Briefcase, GraduationCap, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { ChangePasswordCard } from '../../components/ChangePasswordCard';
 
 export const LecturerProfile = () => {
   const { user, refreshUser } = useAuth();
@@ -270,6 +271,9 @@ export const LecturerProfile = () => {
               </div>
             </form>
           </div>
+
+          {/* Đổi mật khẩu */}
+          <ChangePasswordCard />
         </div>
 
       </div>
