@@ -12,18 +12,6 @@ export interface ExchangeConfig {
 
 /** Cấu hình màu sắc & logo cho từng sàn */
 export const EXCHANGE_CONFIGS: Record<string, ExchangeConfig> = {
-  HOSE: {
-    label: 'HOSE',
-    shortLabel: 'HO',
-    color: '#ffffff',
-    bg: '#c0392b',
-  },
-  HNX: {
-    label: 'HNX',
-    shortLabel: 'HN',
-    color: '#ffffff',
-    bg: '#2980b9',
-  },
   BINANCE: {
     label: 'BINANCE',
     shortLabel: 'BNB',
@@ -98,12 +86,6 @@ export const EXCHANGE_CONFIGS: Record<string, ExchangeConfig> = {
     color: '#ffffff',
     bg: '#00a550',
   },
-  UPCOM: {
-    label: 'UPCOM',
-    shortLabel: 'UP',
-    color: '#ffffff',
-    bg: '#d35400',
-  },
   NYSE: {
     label: 'NYSE',
     shortLabel: 'NYS',
@@ -176,18 +158,6 @@ export const getCoinLogoUrl = (symbol: string): string => {
   return `https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/${cleaned.toLowerCase()}.png`;
 };
 
-/** Màu avatar cho cổ phiếu VN theo tên công ty */
-const VN_STOCK_COLORS: Record<string, { bg: string; color: string; logoUrl?: string }> = {
-  FPT: { bg: '#ff6f00', color: '#ffffff', logoUrl: 'https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://fpt.com.vn&size=128' },
-  VCB: { bg: '#006633', color: '#ffffff', logoUrl: 'https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://vietcombank.com.vn&size=128' },
-  HPG: { bg: '#c0392b', color: '#ffffff', logoUrl: 'https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://hoaphat.com.vn&size=128' },
-  SSI: { bg: '#1565c0', color: '#ffffff', logoUrl: 'https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://ssi.com.vn&size=128' },
-  VIC: { bg: '#6a1b9a', color: '#ffffff', logoUrl: 'https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://vingroup.net&size=128' },
-  VHM: { bg: '#0277bd', color: '#ffffff', logoUrl: 'https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://vinhomes.vn&size=128' },
-  MSN: { bg: '#e65100', color: '#ffffff', logoUrl: 'https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://masangroup.com&size=128' },
-  BSR: { bg: '#d35400', color: '#ffffff', logoUrl: 'https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://bsr.com.vn&size=128' },
-  VGI: { bg: '#e74c3c', color: '#ffffff', logoUrl: 'https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://viettelglobal.vn&size=128' },
-};
 
 /** Màu cho hàng hóa / forex */
 const COMMODITY_COLORS: Record<string, { bg: string; color: string; emoji?: string }> = {
@@ -270,15 +240,6 @@ export const getAssetStyle = (symbol: string, market: string): AssetStyle => {
     };
   }
 
-  // Cổ phiếu VN
-  const vnStyle = VN_STOCK_COLORS[cleanSymbol];
-  if (vnStyle) {
-    return {
-      ...vnStyle,
-      text: cleanSymbol.slice(0, 3),
-      isCrypto: false,
-    };
-  }
 
   // Cổ phiếu Mỹ
   const usStyle = US_STOCK_COLORS[cleanSymbol];

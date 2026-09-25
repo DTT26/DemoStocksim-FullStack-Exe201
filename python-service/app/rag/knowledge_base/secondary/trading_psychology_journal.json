@@ -1,0 +1,44 @@
+[
+  {
+    "id": "psy_001",
+    "title": "FOMO, Revenge Trading and Emotional Discipline",
+    "concept": "Trading Psychology",
+    "framework": "PSYCHOLOGY",
+    "content": "FOMO (Fear Of Missing Out) xảy ra khi trader nhìn thấy một cây nến tăng vọt và vội vã nhấn Buy vì sợ bỏ lỡ đà tăng, thường dẫn đến việc mua đúng ngay đỉnh hồi quy hoặc thanh khoản bị gom (Liquidity Run). Revenge Trading (Giao dịch trả thù) xuất hiện ngay sau một lệnh thua: trader cảm thấy bực tức, tăng khối lượng vị thế gấp đôi để 'gỡ gạc' lại số tiền đã mất, dẫn đến vi phạm toàn bộ nguyên tắc quản trị rủi ro và cháy tài khoản nhanh chóng. Cách duy nhất để khắc phục là quy định nghỉ giao dịch bắt buộc (Cool-down Period) ít nhất 30-60 phút sau 2 lệnh thua liên tiếp.",
+    "source": "Trading in the Zone: Master the Market with Confidence, Discipline and a Winning Attitude",
+    "sourceUrl": "https://www.penguinrandomhouse.com/books/299696/trading-in-the-zone-by-mark-douglas/",
+    "author": "Mark Douglas",
+    "publishedDate": "2000-01-01",
+    "sourceType": "SECONDARY",
+    "tags": ["PSYCHOLOGY", "FOMO", "Revenge Trading", "Discipline", "Cool-down"],
+    "language": "vi"
+  },
+  {
+    "id": "psy_002",
+    "title": "Moving Stop Loss and Rule Breaking in the Heat of the Moment",
+    "concept": "Rule Breaking",
+    "framework": "PSYCHOLOGY",
+    "content": "Một trong những sai lầm chết người nhất của người mới học trading là dời Stop Loss (Moving Stop Loss) ra xa hơn khi giá chuẩn bị chạm điểm cắt lỗ. Hành vi này bắt nguồn từ sự từ chối chấp nhận mình đã sai (Ego) và hy vọng hão huyền rằng giá sẽ sớm quay đầu. Trong thực tế, khi giá đã vi phạm điểm Invalidation ban đầu, cấu trúc lệnh đã hoàn toàn bị vô hiệu hóa; việc nới rộng Stop Loss chỉ biến một khoản lỗ nhỏ theo kế hoạch (1-2R) thành một khoản lỗ khổng lồ (5-10R) phá hủy hoàn toàn tâm lý.",
+    "source": "The Daily Trading Coach: 101 Lessons for Becoming Your Own Trading Psychologist",
+    "sourceUrl": "https://www.wiley.com/en-us/The+Daily+Trading+Coach-p-9780470423974",
+    "author": "Dr. Brett N. Steenbarger",
+    "publishedDate": "2009-03-23",
+    "sourceType": "SECONDARY",
+    "tags": ["PSYCHOLOGY", "Moving Stop Loss", "Rule Breaking", "Trading Journal"],
+    "language": "vi"
+  },
+  {
+    "id": "psy_003",
+    "title": "The Power of the Trading Journal: Process Over Outcome",
+    "concept": "Trading Journal",
+    "framework": "PSYCHOLOGY",
+    "content": "Nhật ký giao dịch (Trading Journal) không chỉ đơn thuần là sổ ghi chép lãi lỗ tài chính, mà là công cụ kiểm toán quy trình ra quyết định (Decision-making audit). Một 'Good Trade' là lệnh tuân thủ 100% kế hoạch: đúng setup, đúng điểm invalidation, đúng tỷ lệ rủi ro, cho dù kết quả cuối cùng có thể là chạm Stop Loss (Winning vs Good Trade). Ngược lại, một lệnh vi phạm kế hoạch, vào lệnh theo cảm tính mà may mắn ăn tiền là một 'Bad Trade' độc hại vì nó nuôi dưỡng ảo tưởng và thói quen xấu. Nhật ký giao dịch giúp nhận diện các lỗi lặp lại như vào lệnh quá sớm (Early Entry) hay giao dịch quá nhiều (Overtrading).",
+    "source": "Best Loser Wins: Why Normal Thinking Never Wins the Trading Game",
+    "sourceUrl": "https://harriman-house.com/bestloserwins",
+    "author": "Tom Hougaard",
+    "publishedDate": "2022-08-16",
+    "sourceType": "SECONDARY",
+    "tags": ["PSYCHOLOGY", "Trading Journal", "Process Over Outcome", "Good Trade"],
+    "language": "vi"
+  }
+]

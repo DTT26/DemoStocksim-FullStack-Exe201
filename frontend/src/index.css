@@ -1,8 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
-/* Kích hoạt chế độ Dark Mode thủ công bằng class .dark cho Tailwind v4 */
-@custom-variant dark (&:where(.dark, .dark *));
+/* Kích hoạt chế độ Dark Mode bằng class .dark cho Tailwind v4 với độ ưu tiên CSS cao */
+@variant dark (&:is(.dark, .dark *));
 
 @theme {
   --color-background: #0f172a;

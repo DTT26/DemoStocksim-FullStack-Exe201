@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, User, Bell, Moon, Sun, Globe, Trophy } from 'lucide-react';
+import { Settings, User, Bell, Moon, Sun, Globe, Trophy, Sparkles } from 'lucide-react';
 import { UserDropdown } from './UserDropdown';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -11,6 +11,7 @@ interface ToolbarNavbarProps {
   balance: number;
   onOpenSettings?: () => void;
   onOpenChallenge?: () => void;
+  onOpenAiTutor?: () => void;
   challengeLevelName?: string;
   challengeStatus?: string;
   accountRankBadge?: string;
@@ -22,6 +23,7 @@ export const ToolbarNavbar = ({
   balance, 
   onOpenSettings,
   onOpenChallenge, 
+  onOpenAiTutor,
   challengeLevelName, 
   challengeStatus,
   accountRankBadge,
@@ -38,7 +40,7 @@ export const ToolbarNavbar = ({
   return (
     <>
       <nav className="h-12 bg-white dark:bg-[#131722] border-b border-[#e6e8ea] dark:border-[#2a2e39] flex items-center px-4 justify-between text-[#1e2329] dark:text-[#d1d4dc] text-sm shrink-0 relative z-50">
-        {/* Logo & Prop Firm Challenge */}
+        {/* Logo AITRADEX & Prop Firm Challenge */}
         <div className="flex items-center gap-3">
           <img src="/images/logo.jpg" alt="AITRADEX" className="h-7 object-contain rounded" />
           
@@ -92,7 +94,18 @@ export const ToolbarNavbar = ({
         </div>
 
         {/* Right side controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          {/* Nút AI Trading Tutor */}
+          <button
+            onClick={onOpenAiTutor}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-blue-500/15 via-purple-500/15 to-amber-500/15 hover:from-blue-500/25 hover:to-amber-500/25 border border-blue-500/30 text-blue-600 dark:text-blue-300 font-bold text-xs transition-all shadow-xs hover:scale-[1.02] cursor-pointer"
+            title="Mở Trợ lý & Gia sư AI Trading Tutor (Hỏi đáp, So sánh chiến lược, RAG)"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 animate-pulse" />
+            <span>AI Tutor</span>
+          </button>
+
+          {/* Thông báo */}
           <NotificationDropdown />
           <button 
             onClick={toggleTheme}

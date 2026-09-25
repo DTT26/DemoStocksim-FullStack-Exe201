@@ -302,6 +302,29 @@ export const StudentAssignmentDetail = () => {
             </div>
           </div>
 
+          {/* Quy định & Ràng buộc bài tập (Rules & Constraints) */}
+          <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] p-6 shadow-sm dark:shadow-lg transition-colors">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white mb-4">Quy định & Ràng buộc bài tập</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-3 bg-slate-50 dark:bg-[#172033] rounded-xl border border-slate-200 dark:border-[#253047]">
+                <div className="text-slate-500 dark:text-[#787b86] text-[11px] font-semibold uppercase mb-1">Mục tiêu</div>
+                <div className="text-slate-900 dark:text-white font-bold font-mono text-sm">{assignment.symbol || 'FPT / BTC'}</div>
+              </div>
+              <div className="p-3 bg-slate-50 dark:bg-[#172033] rounded-xl border border-slate-200 dark:border-[#253047]">
+                <div className="text-slate-500 dark:text-[#787b86] text-[11px] font-semibold uppercase mb-1">Đòn bẩy tối đa</div>
+                <div className="text-slate-900 dark:text-white font-bold font-mono text-sm">1x (Spot)</div>
+              </div>
+              <div className="p-3 bg-slate-50 dark:bg-[#172033] rounded-xl border border-slate-200 dark:border-[#253047]">
+                <div className="text-slate-500 dark:text-[#787b86] text-[11px] font-semibold uppercase mb-1">Hạn nộp bài</div>
+                <div className="text-slate-900 dark:text-white font-bold font-mono text-sm">{new Date(assignment.dueDate).toLocaleDateString('vi-VN')}</div>
+              </div>
+              <div className="p-3 bg-slate-50 dark:bg-[#172033] rounded-xl border border-slate-200 dark:border-[#253047]">
+                <div className="text-slate-500 dark:text-[#787b86] text-[11px] font-semibold uppercase mb-1">Trạng thái</div>
+                <div className="text-emerald-600 dark:text-emerald-400 font-bold font-mono text-sm">{isSubmitted ? 'Đã nộp bài' : 'Đang làm'}</div>
+              </div>
+            </div>
+          </div>
+
           {/* Checklist tiêu chí */}
           <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] overflow-hidden shadow-sm dark:shadow-lg transition-colors">
             <div className="p-5 border-b border-slate-200 dark:border-[#253047] flex justify-between items-center bg-slate-50/50 dark:bg-[#172033]/50">

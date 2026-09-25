@@ -27,14 +27,6 @@ export const formatVolume = (vol?: number): string => {
 };
 
 export const STOCKS: Stock[] = [
-  // Cổ phiếu VN (HOSE/HNX)
-  { symbol: 'FPT', name: 'FPT Corp', price: 66.40, change: 0.80, percent: 1.22, type: 'up', market: 'Cổ phiếu', exchange: 'HOSE', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 550_000_000 },
-  { symbol: 'VCB', name: 'Vietcombank', price: 58.90, change: -0.40, percent: -0.67, type: 'down', market: 'Cổ phiếu', exchange: 'HOSE', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 320_000_000 },
-  { symbol: 'HPG', name: 'Hoa Phat Group', price: 20.88, change: -0.25, percent: -1.18, type: 'down', market: 'Cổ phiếu', exchange: 'HOSE', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 780_000_000 },
-  { symbol: 'SSI', name: 'SSI Securities', price: 20.90, change: 0.30, percent: 1.46, type: 'up', market: 'Cổ phiếu', exchange: 'HOSE', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 450_000_000 },
-  { symbol: 'VIC', name: 'Vingroup', price: 45.00, change: -0.98, percent: -2.13, type: 'down', market: 'Cổ phiếu', exchange: 'HOSE', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 290_000_000 },
-  { symbol: 'BSR', name: 'Binh Son Refining', price: 19.50, change: 0.20, percent: 1.04, type: 'up', market: 'Cổ phiếu', exchange: 'UPCOM', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 180_000_000 },
-  { symbol: 'VGI', name: 'Viettel Global', price: 82.10, change: -1.40, percent: -1.68, type: 'down', market: 'Cổ phiếu', exchange: 'UPCOM', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 95_000_000 },
 
   // Crypto Spot (Binance)
   { symbol: 'BTCUSDT', name: 'Bitcoin', price: 64200.50, change: 1200.50, percent: 1.90, type: 'up', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE', leverageInfo: { max: 125, marks: [25, 50, 75, 100, 125] }, volume24h: 28_540_000_000 },

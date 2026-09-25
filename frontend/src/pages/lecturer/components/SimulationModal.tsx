@@ -22,28 +22,15 @@ export const SimulationModal = ({ isOpen, onClose, onSaved, simulationToEdit }: 
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (isOpen) {
-      setStep(1);
-      setError('');
-      if (simulationToEdit) {
-        setFormData({
-          name: simulationToEdit.name || '',
-          description: simulationToEdit.description || '',
-          initialBalance: simulationToEdit.initialBalance || 100000000,
-          market: simulationToEdit.market || 'VN',
-          startDate: simulationToEdit.startDate ? new Date(simulationToEdit.startDate).toISOString().split('T')[0] : '',
-          endDate: simulationToEdit.endDate ? new Date(simulationToEdit.endDate).toISOString().split('T')[0] : '',
-        });
-      } else {
-        setFormData({
-          name: '',
-          description: '',
-          initialBalance: 100000000,
-          market: 'VN',
-          startDate: new Date().toISOString().split('T')[0],
-          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        });
-      }
+    if (simulationToEdit) {
+      setFormData({
+        name: simulationToEdit.name || '',
+        description: simulationToEdit.description || '',
+        initialBalance: simulationToEdit.initialBalance || 100000000,
+        market: simulationToEdit.market || 'GLOBAL',
+        startDate: simulationToEdit.startDate ? new Date(simulationToEdit.startDate).toISOString().split('T')[0] : '',
+        endDate: simulationToEdit.endDate ? new Date(simulationToEdit.endDate).toISOString().split('T')[0] : '',
+      });
     }
   }, [simulationToEdit, isOpen]);
 
@@ -177,35 +164,37 @@ export const SimulationModal = ({ isOpen, onClose, onSaved, simulationToEdit }: 
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-300 mb-2">Initial Balance (VND) *</label>
-                      <input
-                        type="number"
-                        name="initialBalance"
-                        required
-                        min="0"
-                        step="1000000"
-                        value={formData.initialBalance}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2.5 bg-[#172033] border border-[#253047] rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-white"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-300 mb-2">Market *</label>
-                      <select
-                        name="market"
-                        value={formData.market}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2.5 bg-[#172033] border border-[#253047] rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-white"
-                      >
-                        <option value="VN">Vietnam (HOSE, HNX, UPCOM)</option>
-                        <option value="US">US Market</option>
-                        <option value="CRYPTO">Cryptocurrency</option>
-                      </select>
-                    </div>
-                  </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-[#d1d4dc] mb-2">Vốn khởi tạo (Initial Balance)</label>
+                <input
+                  type="number"
+                  name="initialBalance"
+                  required
+                  min="0"
+                  step="1000"
+                  value={formData.initialBalance}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#131722] border border-slate-200 dark:border-[#2a2e39] text-slate-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-[#1e222d] transition-colors"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-[#d1d4dc] mb-2">Thị trường (Market)</label>
+                <select
+                  name="market"
+                  value={formData.market}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#131722] border border-slate-200 dark:border-[#2a2e39] text-slate-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-[#1e222d] transition-colors"
+                >
+                  <option value="GLOBAL">Crypto & US Stocks (Quốc tế)</option>
+                  <option value="VN">Cổ phiếu Việt Nam (HOSE, HNX)</option>
+                  <option value="CRYPTO">Crypto Only</option>
+                  <option value="US">US Stocks Only</option>
+                  <option value="FOREX">Ngoại hối (Forex)</option>
+                </select>
+              </div>
+            </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>

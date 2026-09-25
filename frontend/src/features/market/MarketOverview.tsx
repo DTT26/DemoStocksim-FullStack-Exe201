@@ -32,9 +32,9 @@ export const MarketOverview = () => {
             <h3 className="text-lg font-semibold text-white mb-4">Top Gainers</h3>
             <div className="space-y-3">
               {[
-                { s: 'HPG', c: '+4.09%' },
-                { s: 'TCB', c: '+3.69%' },
-                { s: 'FPT', c: '+2.21%' }
+                { s: 'DOGEUSDT', c: '+15.3%' },
+                { s: 'BTCUSDT', c: '+1.90%' },
+                { s: 'NVDA', c: '+1.76%' }
               ].map(t => (
                 <div key={t.s} className="flex justify-between items-center p-2 rounded hover:bg-slate-800/50 transition-colors cursor-pointer">
                   <span className="font-medium text-slate-200">{t.s}</span>

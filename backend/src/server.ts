@@ -24,8 +24,8 @@ mongoose.connect(MONGO_URI_LOCAL)
     if (!existingWallet) {
       await Wallet.create({
         userId: DUMMY_USER_ID,
-        balance: 100000000,
-        availableBalance: 100000000
+        balance: 10000,
+        availableBalance: 10000
       });
       console.log('✅ Created Dummy Wallet for testing');
     }

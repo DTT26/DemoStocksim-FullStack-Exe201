@@ -9,8 +9,8 @@ import assignmentRoutes from './routes/assignment';
 import watchlistRoutes from './routes/watchlist';
 import paperTradingRoutes from './routes/paperTrading';
 import challengeRoutes from './routes/challengeRoutes';
-import stockRoutes from './routes/stockRoutes';
 import walletRoutes from './routes/walletRoutes';
+import aiRoutes from './routes/aiRoutes';
 
 const app = express();
 
@@ -36,7 +36,7 @@ app.use('/api/assignments', assignmentRoutes);
 app.use('/api/watchlists', watchlistRoutes);
 app.use('/api/paper-trading', paperTradingRoutes);
 app.use('/api/challenge', challengeRoutes);
-app.use('/api/stocks', stockRoutes);
 app.use('/api/wallet', walletRoutes);
+app.use('/api/ai', aiRoutes);
 
 export default app;

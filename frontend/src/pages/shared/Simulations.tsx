@@ -156,18 +156,20 @@ export const SimulationsList = () => {
                   {sim.description}
                 </p>
 
-                <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
                   <div className="flex flex-col gap-1 text-sm">
                     <div className="flex items-center gap-1 text-slate-400 dark:text-slate-500">
                       <DollarSign className="w-3.5 h-3.5" /> Capital
                     </div>
-                    <span className="font-semibold text-slate-800 dark:text-white">{(sim.initialBalance / 1000000).toFixed(0)}M ₫</span>
+                    <span className="font-semibold text-slate-800 dark:text-white">
+                      {sim.initialBalance >= 1000000 ? `${(sim.initialBalance / 1000000).toFixed(0)}M ₫` : `$${(sim.initialBalance || 10000).toLocaleString('en-US')} USD`}
+                    </span>
                   </div>
                   <div className="flex flex-col gap-1 text-sm">
                     <div className="flex items-center gap-1 text-slate-400 dark:text-slate-500">
                       <BarChart2 className="w-3.5 h-3.5" /> Market
                     </div>
-                    <span className="font-semibold text-slate-800 dark:text-white">{sim.market || 'VN'}</span>
+                    <span className="font-semibold text-slate-800 dark:text-white">{sim.market || 'Crypto & US Stocks'}</span>
                   </div>
                   <div className="flex flex-col gap-1 text-sm">
                     <div className="flex items-center gap-1 text-slate-400 dark:text-slate-500">

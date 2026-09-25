@@ -35,6 +35,7 @@ import { StudentTradeDetail } from './pages/student/TradeDetail';
 import { StudentProfile } from './pages/student/Profile';
 
 import { LandingPage } from './pages/shared/LandingPage';
+import { AiLearningDashboard } from './features/ai/AiLearningDashboard';
 
 function App() {
   const { user, loading } = useAuth();
@@ -65,6 +66,7 @@ function App() {
             <Route path="journal" element={<StudentJournal />} />
             <Route path="journal/:sessionId" element={<SessionDetailPage />} />
             <Route path="journal/trade/:tradeId" element={<StudentTradeDetail />} />
+            <Route path="learning-dashboard" element={<AiLearningDashboard />} />
             <Route path="profile" element={<StudentProfile />} />
           </Route>
           <Route path="/leaderboard" element={<Leaderboard />} />
@@ -109,6 +111,9 @@ function App() {
           user.role === 'lecturer' ? <Navigate to="/lecturer" /> :
           <Navigate to="/student" />
         } />
+
+        {/* Learning Dashboard direct route */}
+        <Route path="learning-dashboard" element={<AiLearningDashboard />} />
 
         {/* Shared Routes (require login but any role, legacy paths) */}
         <Route element={<ProtectedRoute />}>

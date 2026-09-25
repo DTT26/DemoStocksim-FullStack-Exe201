@@ -75,6 +75,30 @@ export const StudentDashboard = () => {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Main Column */}
         <div className="xl:col-span-2 space-y-6">
+          {/* Active Simulation */}
+          <section>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">Active Simulation</h2>
+            </div>
+            <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] shadow-sm p-6 overflow-hidden relative transition-colors">
+              <div className="absolute top-0 left-0 w-2 h-full bg-blue-600"></div>
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-emerald-200 dark:border-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      Live
+                    </span>
+                    <span className="text-sm text-slate-500 dark:text-[#787b86] font-medium">Started Sep 12, 2026</span>
+                  </div>
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Trading Challenge #01</h3>
+                  <p className="text-slate-600 dark:text-[#787b86] mt-2 max-w-lg text-sm">
+                    Luyện tập giao dịch mô phỏng thời gian thực, hoàn thành các bài tập của giảng viên và cạnh tranh bảng xếp hạng hiệu suất.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
 
           {/* Performance Chart */}
           <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] shadow-sm dark:shadow-lg p-6 transition-colors">

@@ -40,7 +40,7 @@ export const TransactionHistory = ({ refreshTrigger }: { refreshTrigger: number 
               <th className="px-4 py-2 font-medium">Thời gian</th>
               <th className="px-4 py-2 font-medium">Loại</th>
               <th className="px-4 py-2 font-medium">Chi tiết</th>
-              <th className="px-4 py-2 font-medium text-right">Biến động (VND)</th>
+              <th className="px-4 py-2 font-medium text-right">Biến động ($)</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#2a2e39]/50">

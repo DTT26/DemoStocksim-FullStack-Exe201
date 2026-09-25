@@ -106,7 +106,7 @@ export const SymbolSearchModal = ({ isOpen, onClose, onSelect, watchlistMode, ac
               autoFocus
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="TÌM KIẾM (VÍ DỤ: BTCUSDT, EURUSD, XAUUSD, FPT)..."
+              placeholder="TÌM KIẾM (VÍ DỤ: BTCUSDT, EURUSD, XAUUSD, AAPL)..."
               className="w-full bg-[#f5f5f5] dark:bg-[#131722] border border-[#e6e8ea] dark:border-[#2a2e39] focus:border-[#2962ff] focus:outline-none rounded-lg py-3 pl-12 pr-4 text-[#1e2329] dark:text-white placeholder:text-[#a0a3af] dark:placeholder:text-[#434651] transition-colors"
             />
           </div>

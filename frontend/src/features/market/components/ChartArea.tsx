@@ -4,7 +4,6 @@ import type { Chart, KLineData, DataLoaderGetBarsParams, DataLoaderSubscribeBarP
 import { Settings2, Trash2, Edit2, Type, Minus, MoreHorizontal, Lock, Unlock, GripVertical, LayoutGrid, Pencil, Plus, ChevronRight, Copy, Settings, X, Layers } from 'lucide-react';
 import { generateOHLCV, getPricePrecision, timeframeToMs, type Stock } from '../data';
 import { fetchBinanceKlines, mapTimeframeToBinance, subscribeBinanceKline } from '../../../services/binanceApi';
-import { fetchVnStockKlines } from '../../../services/vnStockApi';
 import type { TradeOrder } from '../TradingTerminal';
 import type { ChartSettings } from '../chartSettings';
 import { INDICATOR_LIST } from './IndicatorModal';
@@ -4340,29 +4339,9 @@ export const ChartArea = ({
         } catch (error) {
           allData = [];
         }
-      } else if (selectedStock.market === 'Cổ phiếu' || selectedStock.market === 'Chỉ số') {
-        // Lấy dữ liệu thật từ VNDirect qua Backend API
-        try {
-          const fromSec = (isReplaying && currentReplayTime)
-            ? Math.floor((currentReplayTime - 365 * 24 * 3600 * 1000) / 1000)
-            : undefined;
-          const toSec = (isReplaying && currentReplayTime)
-            ? Math.floor((currentReplayTime + 300 * intervalMs) / 1000)
-            : undefined;
-
-          allData = await fetchVnStockKlines({
-            symbol: selectedStock.symbol,
-            timeframe: activeTimeframe,
-            from: fromSec,
-            to: toSec
-          });
-        } catch (error) {
-          console.warn(`Failed to fetch VN klines for ${selectedStock.symbol}:`, error);
-          allData = [];
-        }
       }
 
-      // NẾU allData rỗng (hoặc thị trường không phải Crypto/VN Stock, hoặc API lỗi)
+      // NẾU allData rỗng (hoặc thị trường không phải Crypto, hoặc API lỗi)
       if (!allData || allData.length === 0) {
         const targetEndTime = (isReplaying && currentReplayTime)
           ? Math.min(Date.now(), currentReplayTime + 500 * intervalMs)

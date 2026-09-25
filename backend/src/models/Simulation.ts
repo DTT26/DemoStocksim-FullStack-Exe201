@@ -17,8 +17,8 @@ const SimulationSchema: Schema = new Schema(
   {
     name: { type: String, required: true },
     description: { type: String },
-    initialBalance: { type: Number, required: true, default: 100000000 },
-    market: { type: String, default: 'HOSE' },
+    initialBalance: { type: Number, required: true, default: 10000 },
+    market: { type: String, default: 'GLOBAL' },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
     status: { 
