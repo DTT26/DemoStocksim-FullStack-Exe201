@@ -59,6 +59,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string>('');
   const [suspendedModal, setSuspendedModal] = useState<{ isOpen: boolean; message: string } | null>(null);
+  const [isGoogleAuthenticating, setIsGoogleAuthenticating] = useState(false);
   const captchaTokenRef = useRef<string>('');
 
   const fetchUser = async () => {
@@ -106,6 +107,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const triggerGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
+        setIsGoogleAuthenticating(true);
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
         const tokenToSend = captchaTokenRef.current || captchaToken;
         const res = await fetch(`${apiUrl}/auth/google`, { 
@@ -127,8 +129,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             localStorage.setItem('refreshToken', data.refreshToken);
           }
           await fetchUser();
+          setIsLoginModalOpen(false);
         } else {
           console.error('Backend login failed:', data.message);
+          setIsLoginModalOpen(false);
           setSuspendedModal({
             isOpen: true,
             message: data.message || 'Tài khoản của bạn đã bị khóa hoặc tạm ngưng (Suspended). Vui lòng liên hệ Quản trị viên để được hỗ trợ.'
@@ -136,9 +140,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       } catch (err) {
         console.error('Failed to authenticate', err);
+      } finally {
+        setIsGoogleAuthenticating(false);
       }
     },
-    onError: () => console.log('Login Failed')
+    onError: (err) => {
+      console.log('Login Failed', err);
+      setIsGoogleAuthenticating(false);
+    }
   });
 
   // Đăng nhập bằng Email & Mật khẩu
@@ -338,13 +347,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       {children}
       <LoginModal 
         isOpen={isLoginModalOpen} 
-        onClose={() => setIsLoginModalOpen(false)} 
+        onClose={() => {
+          if (!isGoogleAuthenticating) {
+            setIsLoginModalOpen(false);
+          }
+        }} 
+        isGoogleLoading={isGoogleAuthenticating}
         onLoginGoogle={(token) => {
           captchaTokenRef.current = token;
           setCaptchaToken(token);
+          setIsGoogleAuthenticating(true);
           triggerGoogleLogin();
         }} 
       />
+      {/* Global Google Authenticating Loading Overlay */}
+      {isGoogleAuthenticating && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-all animate-fadeIn">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-[#253047] rounded-2xl p-6 shadow-2xl flex flex-col items-center gap-3.5 max-w-sm w-full mx-4 text-center animate-in zoom-in-95 duration-200">
+            <div className="relative flex items-center justify-center my-1">
+              <div className="w-14 h-14 rounded-full border-4 border-slate-100 dark:border-slate-800 border-t-indigo-600 dark:border-t-indigo-500 animate-spin" />
+              <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-6 h-6 absolute" alt="Google" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">Đang đăng nhập...</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Hệ thống đang xác thực tài khoản Google và thiết lập phiên bảo mật, vui lòng đợi trong giây lát.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Đang đồng bộ dữ liệu
+            </div>
+          </div>
+        </div>
+      )}
       <SuspendedModal 
         isOpen={Boolean(suspendedModal?.isOpen)} 
         message={suspendedModal?.message} 

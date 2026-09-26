@@ -789,7 +789,7 @@ export const TradingTerminal = () => {
       const res = await tradingApi.addMargin(symbol, side, amount, user?._id);
       if (res.success) {
         await fetchPortfolio();
-        addNotification({ title: 'Thêm ký quỹ', message: `Đã bơm thêm ${amount.toLocaleString('vi-VN')}₫ ký quỹ cho vị thế ${side} mã ${symbol}.`, type: 'info' });
+        addNotification({ title: 'Thêm ký quỹ', message: `Đã bơm thêm $${amount.toLocaleString('en-US')} ký quỹ cho vị thế ${side} mã ${symbol}.`, type: 'info' });
         return { success: true, message: res.message || `✅ Đã bơm thêm ký quỹ` };
       }
       return { success: false, message: res.message || 'Lỗi bơm ký quỹ' };

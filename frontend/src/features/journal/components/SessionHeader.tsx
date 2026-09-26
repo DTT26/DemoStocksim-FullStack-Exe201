@@ -94,10 +94,10 @@ export const SessionHeader: React.FC<SessionHeaderProps> = ({ session }) => {
         </div>
 
         {/* Action Button: View Trading Terminal */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 w-full lg:w-auto">
           <button
             onClick={() => navigate(`/trade/${session.symbol.toLowerCase()}`)}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-xl transition-all shadow-sm shadow-blue-500/20"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-xl transition-all shadow-sm shadow-blue-500/20 cursor-pointer"
           >
             <span>View Trading Terminal</span>
             <ExternalLink className="w-4 h-4" />

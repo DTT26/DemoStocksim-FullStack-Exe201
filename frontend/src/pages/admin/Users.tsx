@@ -24,24 +24,24 @@ const EditRoleModal = ({ user, onClose, onSave }: { user: UserData; onClose: () 
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#1e293b] shadow-2xl w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
-        <div className="p-6 border-b border-slate-200 dark:border-[#1e293b] flex justify-between items-center">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white dark:bg-[#09090b] rounded-2xl border border-slate-200 dark:border-[#262626] shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+        <div className="p-5 sm:p-6 border-b border-slate-200 dark:border-[#262626] flex justify-between items-center">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white">Edit User Role</h3>
-          <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg cursor-pointer"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-[#1c1c1f]"><X className="w-5 h-5" /></button>
         </div>
-        <div className="p-6 space-y-5">
+        <div className="p-5 sm:p-6 space-y-5">
           <div className="flex items-center gap-4">
             {user.picture ? (
-              <img src={user.picture} alt="" className="w-12 h-12 rounded-full border border-slate-200 dark:border-[#1e293b]" />
+              <img src={user.picture} alt="" className="w-12 h-12 rounded-full border border-slate-200 dark:border-[#262626] object-cover" />
             ) : (
               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg font-bold">
                 {user.name ? user.name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
               </div>
             )}
-            <div>
-              <p className="font-bold text-slate-900 dark:text-white">{user.name || 'Unknown'}</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">{user.email}</p>
+            <div className="min-w-0">
+              <p className="font-bold text-slate-900 dark:text-white truncate">{user.name || 'Unknown'}</p>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 truncate">{user.email}</p>
             </div>
           </div>
           <div>
@@ -49,22 +49,22 @@ const EditRoleModal = ({ user, onClose, onSave }: { user: UserData; onClose: () 
             <select
               value={selectedRole}
               onChange={e => { setSelectedRole(e.target.value); setConfirming(false); }}
-              className="w-full bg-slate-50 dark:bg-[#172033] border border-slate-200 dark:border-[#1e293b] text-slate-900 dark:text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-blue-500 text-sm"
+              className="w-full bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:outline-none focus:border-blue-500 text-sm cursor-pointer"
             >
-              <option value="student" className="bg-white dark:bg-[#172033] text-slate-900 dark:text-white">Student</option>
-              <option value="lecturer" className="bg-white dark:bg-[#172033] text-slate-900 dark:text-white">Lecturer</option>
-              <option value="admin" className="bg-white dark:bg-[#172033] text-slate-900 dark:text-white">Admin</option>
+              <option value="student" className="bg-white dark:bg-[#121214] text-slate-900 dark:text-white">Student</option>
+              <option value="lecturer" className="bg-white dark:bg-[#121214] text-slate-900 dark:text-white">Lecturer</option>
+              <option value="admin" className="bg-white dark:bg-[#121214] text-slate-900 dark:text-white">Admin</option>
             </select>
           </div>
           {confirming && selectedRole !== user.role && (
-            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-600 dark:text-amber-400 text-sm">
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-600 dark:text-amber-400 text-xs sm:text-sm">
               ⚠️ Are you sure you want to change this user's role from <strong>{user.role}</strong> to <strong>{selectedRole}</strong>?
             </div>
           )}
         </div>
-        <div className="p-6 border-t border-slate-200 dark:border-[#1e293b] flex justify-end gap-3">
-          <button onClick={onClose} className="px-5 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-[#172033] border border-slate-200 dark:border-[#1e293b] rounded-lg transition-colors cursor-pointer">Cancel</button>
-          <button onClick={handleSave} className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-lg shadow-blue-600/20 cursor-pointer">
+        <div className="p-5 sm:p-6 border-t border-slate-200 dark:border-[#262626] flex justify-end gap-3 bg-slate-50/50 dark:bg-[#000000]">
+          <button onClick={onClose} className="px-5 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] rounded-xl transition-colors cursor-pointer">Cancel</button>
+          <button onClick={handleSave} className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors shadow-lg shadow-blue-600/20 cursor-pointer">
             {confirming ? 'Confirm Change' : 'Save Changes'}
           </button>
         </div>
@@ -76,23 +76,23 @@ const EditRoleModal = ({ user, onClose, onSave }: { user: UserData; onClose: () 
 const SuspendModal = ({ user, onClose, onConfirm }: { user: UserData; onClose: () => void; onConfirm: () => void }) => {
   const isActive = user.status === 'ACTIVE' || user.status === 'active';
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#1e293b] shadow-2xl w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
-        <div className="p-6 border-b border-slate-200 dark:border-[#1e293b]">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white dark:bg-[#09090b] rounded-2xl border border-slate-200 dark:border-[#262626] shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+        <div className="p-5 sm:p-6 border-b border-slate-200 dark:border-[#262626]">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white">{isActive ? 'Suspend User?' : 'Activate User?'}</h3>
         </div>
-        <div className="p-6 space-y-4">
+        <div className="p-5 sm:p-6 space-y-4">
           <div className="flex items-center gap-4">
             {user.picture ? (
-              <img src={user.picture} alt="" className="w-12 h-12 rounded-full border border-slate-200 dark:border-[#1e293b]" />
+              <img src={user.picture} alt="" className="w-12 h-12 rounded-full border border-slate-200 dark:border-[#262626] object-cover" />
             ) : (
               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg font-bold">
                 {user.name ? user.name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
               </div>
             )}
-            <div>
-              <p className="font-bold text-slate-900 dark:text-white">{user.name || 'Unknown'}</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">{user.email}</p>
+            <div className="min-w-0">
+              <p className="font-bold text-slate-900 dark:text-white truncate">{user.name || 'Unknown'}</p>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 truncate">{user.email}</p>
             </div>
           </div>
           <p className="text-sm text-slate-600 dark:text-slate-300">
@@ -101,9 +101,9 @@ const SuspendModal = ({ user, onClose, onConfirm }: { user: UserData; onClose: (
               : 'Are you sure you want to activate this account? The user will regain access to the platform.'}
           </p>
         </div>
-        <div className="p-6 border-t border-slate-200 dark:border-[#1e293b] flex justify-end gap-3">
-          <button onClick={onClose} className="px-5 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-[#172033] border border-slate-200 dark:border-[#1e293b] rounded-lg transition-colors cursor-pointer">Cancel</button>
-          <button onClick={onConfirm} className={`px-5 py-2.5 text-sm font-medium text-white rounded-lg transition-colors shadow-lg cursor-pointer ${
+        <div className="p-5 sm:p-6 border-t border-slate-200 dark:border-[#262626] flex justify-end gap-3 bg-slate-50/50 dark:bg-[#000000]">
+          <button onClick={onClose} className="px-5 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] rounded-xl transition-colors cursor-pointer">Cancel</button>
+          <button onClick={onConfirm} className={`px-5 py-2.5 text-sm font-medium text-white rounded-xl transition-colors shadow-lg cursor-pointer ${
             isActive ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/20' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
           }`}>
             {isActive ? 'Suspend User' : 'Activate User'}
@@ -239,59 +239,149 @@ export const AdminUsers = () => {
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">User Management</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-2 text-lg">View, search, filter and manage users in the system.</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">User Management</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1 sm:mt-2 text-sm sm:text-base">View, search, filter and manage users in the system.</p>
       </div>
 
       {/* Toolbar & Table Card */}
-      <div className="bg-white dark:bg-[#111827] rounded-xl border border-slate-200 dark:border-[#1e293b] shadow-sm dark:shadow-lg overflow-hidden">
-        <div className="p-4 flex flex-col lg:flex-row gap-3 items-start lg:items-center justify-between">
+      <div className="bg-white dark:bg-[#09090b] rounded-2xl border border-slate-200 dark:border-[#262626] shadow-sm dark:shadow-lg overflow-hidden">
+        <div className="p-4 flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
           {/* Search */}
           <div className="relative w-full lg:max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
             <input
               type="text"
               placeholder="Search by name or email..."
               value={searchTerm}
               onChange={e => { setSearchTerm(e.target.value); setPage(1); }}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-[#172033] border border-slate-200 dark:border-[#1e293b] rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
             />
           </div>
 
           {/* Filters */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-[#172033] border border-slate-200 dark:border-[#1e293b] rounded-lg px-3 py-2">
-              <Filter className="w-3.5 h-3.5 text-slate-500" />
-              <select value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setPage(1); }} className="bg-transparent border-none text-sm text-slate-700 dark:text-slate-300 outline-none cursor-pointer">
-                <option value="" className="bg-white dark:bg-[#172033] text-slate-900 dark:text-white">All Roles</option>
-                <option value="student" className="bg-white dark:bg-[#172033] text-slate-900 dark:text-white">Student</option>
-                <option value="lecturer" className="bg-white dark:bg-[#172033] text-slate-900 dark:text-white">Lecturer</option>
-                <option value="admin" className="bg-white dark:bg-[#172033] text-slate-900 dark:text-white">Admin</option>
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full lg:w-auto">
+            <div className="col-span-1 flex items-center gap-1.5 bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] rounded-xl px-3 py-2">
+              <Filter className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+              <select value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setPage(1); }} className="w-full bg-transparent border-none text-xs sm:text-sm text-slate-700 dark:text-slate-300 outline-none cursor-pointer">
+                <option value="" className="bg-white dark:bg-[#121214] text-slate-900 dark:text-white">All Roles</option>
+                <option value="student" className="bg-white dark:bg-[#121214] text-slate-900 dark:text-white">Student</option>
+                <option value="lecturer" className="bg-white dark:bg-[#121214] text-slate-900 dark:text-white">Lecturer</option>
+                <option value="admin" className="bg-white dark:bg-[#121214] text-slate-900 dark:text-white">Admin</option>
               </select>
             </div>
-            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-[#172033] border border-slate-200 dark:border-[#1e293b] rounded-lg px-3 py-2">
-              <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }} className="bg-transparent border-none text-sm text-slate-700 dark:text-slate-300 outline-none cursor-pointer">
-                <option value="" className="bg-white dark:bg-[#172033] text-slate-900 dark:text-white">All Status</option>
-                <option value="active" className="bg-white dark:bg-[#172033] text-slate-900 dark:text-white">Active</option>
-                <option value="suspended" className="bg-white dark:bg-[#172033] text-slate-900 dark:text-white">Suspended</option>
+            <div className="col-span-1 flex items-center gap-1.5 bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] rounded-xl px-3 py-2">
+              <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }} className="w-full bg-transparent border-none text-xs sm:text-sm text-slate-700 dark:text-slate-300 outline-none cursor-pointer">
+                <option value="" className="bg-white dark:bg-[#121214] text-slate-900 dark:text-white">All Status</option>
+                <option value="active" className="bg-white dark:bg-[#121214] text-slate-900 dark:text-white">Active</option>
+                <option value="suspended" className="bg-white dark:bg-[#121214] text-slate-900 dark:text-white">Suspended</option>
               </select>
             </div>
-            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-[#172033] border border-slate-200 dark:border-[#1e293b] rounded-lg px-3 py-2">
-              <ArrowUpDown className="w-3.5 h-3.5 text-slate-500" />
-              <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="bg-transparent border-none text-sm text-slate-700 dark:text-slate-300 outline-none cursor-pointer">
-                <option value="newest" className="bg-white dark:bg-[#172033] text-slate-900 dark:text-white">Newest</option>
-                <option value="oldest" className="bg-white dark:bg-[#172033] text-slate-900 dark:text-white">Oldest</option>
-                <option value="nameAZ" className="bg-white dark:bg-[#172033] text-slate-900 dark:text-white">Name A-Z</option>
-                <option value="nameZA" className="bg-white dark:bg-[#172033] text-slate-900 dark:text-white">Name Z-A</option>
+            <div className="col-span-2 sm:col-span-1 flex items-center gap-1.5 bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] rounded-xl px-3 py-2">
+              <ArrowUpDown className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="w-full bg-transparent border-none text-xs sm:text-sm text-slate-700 dark:text-slate-300 outline-none cursor-pointer">
+                <option value="newest" className="bg-white dark:bg-[#121214] text-slate-900 dark:text-white">Newest</option>
+                <option value="oldest" className="bg-white dark:bg-[#121214] text-slate-900 dark:text-white">Oldest</option>
+                <option value="nameAZ" className="bg-white dark:bg-[#121214] text-slate-900 dark:text-white">Name A-Z</option>
+                <option value="nameZA" className="bg-white dark:bg-[#121214] text-slate-900 dark:text-white">Name Z-A</option>
               </select>
             </div>
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50/80 dark:bg-[#172033]/50 border-y border-slate-200 dark:border-[#1e293b] text-slate-500 dark:text-slate-400 uppercase tracking-wider text-xs">
+        {/* --- MOBILE CARDS VIEW (Visible only on < md screens) --- */}
+        <div className="block md:hidden border-t border-slate-200 dark:border-[#262626]">
+          {loading ? (
+            <div className="p-4 space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="p-4 bg-slate-50 dark:bg-[#121214] rounded-xl animate-pulse h-28" />
+              ))}
+            </div>
+          ) : paginated.length === 0 ? (
+            <div className="py-12 text-center p-4">
+              <Users className="w-10 h-10 opacity-20 mx-auto mb-2 text-slate-400" />
+              <p className="font-medium text-slate-700 dark:text-slate-300 text-sm">No users found</p>
+              <p className="text-xs text-slate-500 mt-1">Try changing your search or filters.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100 dark:divide-[#262626]">
+              {paginated.map(u => {
+                const isUserActive = u.status === 'ACTIVE' || u.status === 'active';
+                return (
+                  <div key={u._id} className="p-4 space-y-3 hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors">
+                    {/* Top Row: User Avatar + Name + Email + Status */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {u.picture ? (
+                          <img src={u.picture} alt="" className="w-10 h-10 rounded-full border border-slate-200 dark:border-[#262626] object-cover shrink-0" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm font-bold shrink-0">
+                            {u.name ? u.name.charAt(0).toUpperCase() : u.email.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-900 dark:text-white text-sm truncate">{u.name || 'Unknown'}</p>
+                          <p className="text-slate-500 dark:text-slate-400 text-xs truncate" title={u.email}>{u.email}</p>
+                        </div>
+                      </div>
+                      <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider inline-flex items-center gap-1 border shrink-0 ${
+                        isUserActive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${isUserActive ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
+                        {isUserActive ? 'Active' : 'Suspended'}
+                      </span>
+                    </div>
+
+                    {/* Middle Row: Role and Joined Date */}
+                    <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100 dark:border-[#262626]/50">
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-400 dark:text-slate-500">Role:</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider border ${getRoleBadge(u.role)}`}>
+                          {u.role}
+                        </span>
+                      </div>
+                      <span className="text-slate-400 dark:text-slate-500 text-[11px]">
+                        Joined: {u.createdAt ? new Date(u.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                      </span>
+                    </div>
+
+                    {/* Bottom Row: Actions */}
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <button
+                        onClick={() => setEditRoleUser(u)}
+                        className="py-1.5 px-3 bg-slate-100 hover:bg-slate-200 dark:bg-[#18181b] dark:hover:bg-[#262626] text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <Shield className="w-3.5 h-3.5 text-blue-500" /> Edit Role
+                      </button>
+                      <button
+                        onClick={() => setSuspendUser(u)}
+                        className={`py-1.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                          isUserActive 
+                            ? 'bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400' 
+                            : 'bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                        }`}
+                      >
+                        {isUserActive ? (
+                          <>
+                            <UserX className="w-3.5 h-3.5" /> Suspend
+                          </>
+                        ) : (
+                          <>
+                            <UserCheck className="w-3.5 h-3.5" /> Activate
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* --- DESKTOP TABLE VIEW (Visible only on >= md screens) --- */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="min-w-[800px] w-full text-left text-sm whitespace-nowrap">
+            <thead className="bg-slate-50/80 dark:bg-[#121214] border-y border-slate-200 dark:border-[#262626] text-slate-500 dark:text-slate-400 uppercase tracking-wider text-xs">
               <tr>
                 <th className="px-5 py-3.5 font-semibold">User</th>
                 <th className="px-5 py-3.5 font-semibold">Email</th>
@@ -301,11 +391,11 @@ export const AdminUsers = () => {
                 <th className="px-5 py-3.5 font-semibold text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-[#1e293b]">
+            <tbody className="divide-y divide-slate-100 dark:divide-[#262626]">
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
-                    <td colSpan={6} className="px-5 py-4"><div className="h-6 bg-slate-100 dark:bg-[#1e293b] rounded animate-pulse"></div></td>
+                    <td colSpan={6} className="px-5 py-4"><div className="h-6 bg-slate-100 dark:bg-[#18181b] rounded animate-pulse"></div></td>
                   </tr>
                 ))
               ) : paginated.length === 0 ? (
@@ -322,20 +412,20 @@ export const AdminUsers = () => {
                 paginated.map(u => {
                   const isUserActive = u.status === 'ACTIVE' || u.status === 'active';
                   return (
-                    <tr key={u._id} className="hover:bg-slate-50/60 dark:hover:bg-[#172033]/50 transition-colors">
+                    <tr key={u._id} className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors">
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
                           {u.picture ? (
-                            <img src={u.picture} alt="" className="w-9 h-9 rounded-full border border-slate-200 dark:border-[#1e293b]" />
+                            <img src={u.picture} alt="" className="w-9 h-9 rounded-full border border-slate-200 dark:border-[#262626] object-cover shrink-0" />
                           ) : (
-                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs font-bold">
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs font-bold shrink-0">
                               {u.name ? u.name.charAt(0).toUpperCase() : u.email.charAt(0).toUpperCase()}
                             </div>
                           )}
                           <span className="font-semibold text-slate-900 dark:text-white">{u.name || 'Unknown'}</span>
                         </div>
                       </td>
-                      <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400 text-xs">{u.email}</td>
+                      <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400 text-xs max-w-[200px] truncate" title={u.email}>{u.email}</td>
                       <td className="px-5 py-3.5">
                         <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider border ${getRoleBadge(u.role)}`}>
                           {u.role}
@@ -356,12 +446,12 @@ export const AdminUsers = () => {
                         <div className="relative inline-block" ref={openMenuId === u._id ? menuRef : null}>
                           <button
                             onClick={() => setOpenMenuId(openMenuId === u._id ? null : u._id)}
-                            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#172033] rounded-lg transition-colors cursor-pointer"
+                            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#18181b] rounded-lg transition-colors cursor-pointer"
                           >
                             <MoreVertical className="w-4 h-4" />
                           </button>
                           {openMenuId === u._id && (
-                            <div className="absolute right-0 mt-1 w-44 bg-white dark:bg-[#172033] rounded-lg shadow-2xl border border-slate-200 dark:border-[#1e293b] overflow-hidden z-40">
+                            <div className="absolute right-0 mt-1 w-44 bg-white dark:bg-[#121214] rounded-xl shadow-2xl border border-slate-200 dark:border-[#262626] overflow-hidden z-40">
                               <button
                                 onClick={() => { setEditRoleUser(u); setOpenMenuId(null); }}
                                 className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
@@ -391,32 +481,32 @@ export const AdminUsers = () => {
 
         {/* Pagination */}
         {!loading && filtered.length > 0 && (
-          <div className="p-4 border-t border-slate-200 dark:border-[#1e293b] flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+          <div className="p-4 border-t border-slate-200 dark:border-[#262626] flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
               <span>Showing {((page - 1) * pageSize) + 1}-{Math.min(page * pageSize, filtered.length)} of {filtered.length}</span>
               <span className="text-slate-300 dark:text-slate-600">|</span>
-              <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }} className="bg-slate-50 dark:bg-[#172033] border border-slate-200 dark:border-[#1e293b] text-slate-700 dark:text-slate-300 rounded px-2 py-1 text-xs outline-none cursor-pointer">
+              <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }} className="bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] text-slate-700 dark:text-slate-300 rounded-lg px-2 py-1 text-xs outline-none cursor-pointer">
                 <option value={10}>10 / page</option>
                 <option value={20}>20 / page</option>
                 <option value={50}>50 / page</option>
               </select>
             </div>
-            <div className="flex items-center gap-1">
-              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-[#172033] border border-slate-200 dark:border-[#1e293b] rounded-lg disabled:opacity-30 hover:bg-slate-200 dark:hover:bg-[#1e293b] transition-colors flex items-center gap-1 cursor-pointer">
-                <ChevronLeft className="w-4 h-4" /> Previous
+            <div className="flex items-center gap-1 flex-wrap justify-center">
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] rounded-lg disabled:opacity-30 hover:bg-slate-200 dark:hover:bg-[#1c1c1f] transition-colors flex items-center gap-1 cursor-pointer">
+                <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Previous
               </button>
               {Array.from({ length: Math.min(totalPages, 5) }).map((_, i) => {
                 const pageNum = i + 1;
                 return (
-                  <button key={pageNum} onClick={() => setPage(pageNum)} className={`w-9 h-9 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
-                    page === pageNum ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#172033]'
+                  <button key={pageNum} onClick={() => setPage(pageNum)} className={`w-8 h-8 sm:w-9 sm:h-9 text-xs sm:text-sm font-medium rounded-lg transition-colors cursor-pointer ${
+                    page === pageNum ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#18181b]'
                   }`}>
                     {pageNum}
                   </button>
                 );
               })}
-              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-[#172033] border border-slate-200 dark:border-[#1e293b] rounded-lg disabled:opacity-30 hover:bg-slate-200 dark:hover:bg-[#1e293b] transition-colors flex items-center gap-1 cursor-pointer">
-                Next <ChevronRight className="w-4 h-4" />
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] rounded-lg disabled:opacity-30 hover:bg-slate-200 dark:hover:bg-[#1c1c1f] transition-colors flex items-center gap-1 cursor-pointer">
+                Next <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
             </div>
           </div>

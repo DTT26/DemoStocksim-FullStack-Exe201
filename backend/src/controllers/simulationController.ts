@@ -8,6 +8,7 @@ import Submission from '../models/Submission';
 import Order from '../models/Order';
 import PaperTradingSession from '../models/PaperTradingSession';
 import PaperTradingHistory from '../models/PaperTradingHistory';
+import { createNotification } from './notificationController';
 
 
 // POST /api/simulations (Lecturer/Admin only)
@@ -43,9 +44,25 @@ export const getSimulations = async (req: AuthRequest, res: Response) => {
       filter = { status: { $in: ['PUBLISHED', 'ACTIVE', 'ENDED'] } };
     }
     
-    // Nếu là lecturer, lấy tất cả hoặc lấy những simulation do họ tạo (tùy nghiệp vụ)
-    const simulations = await Simulation.find(filter).populate('createdBy', 'name email');
-    res.json(simulations);
+    const simulations = await Simulation.find(filter).populate('createdBy', 'name email').lean();
+
+    const simIds = simulations.map(s => s._id);
+    const participantCounts = await SimulationParticipant.aggregate([
+      { $match: { simulationId: { $in: simIds } } },
+      { $group: { _id: '$simulationId', count: { $sum: 1 } } }
+    ]);
+
+    const countMap = new Map();
+    participantCounts.forEach((p: any) => {
+      countMap.set(p._id.toString(), p.count);
+    });
+
+    const enrichedSimulations = simulations.map(sim => ({
+      ...sim,
+      participantsCount: countMap.get(sim._id.toString()) || 0
+    }));
+
+    res.json(enrichedSimulations);
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
   }
@@ -125,6 +142,23 @@ export const joinSimulation = async (req: AuthRequest, res: Response) => {
     });
 
     await participant.save();
+
+    await createNotification(userId, {
+      title: 'Yêu cầu tham gia mô phỏng',
+      message: `Bạn đã gửi yêu cầu tham gia cuộc thi "${simulation.name}". Đang chờ Giảng viên phê duyệt.`,
+      type: 'SIMULATION_JOIN',
+      link: '/student/simulations'
+    });
+
+    if (simulation.createdBy) {
+      await createNotification(simulation.createdBy, {
+        title: 'Yêu cầu tham gia mới',
+        message: `Sinh viên ${req.user.name || req.user.email} muốn tham gia "${simulation.name}".`,
+        type: 'SIMULATION_JOIN',
+        link: `/lecturer/simulations/${simulation._id}/students`
+      });
+    }
+
     res.status(201).json({ message: 'Yêu cầu tham gia đã gửi. Vui lòng chờ Giảng viên phê duyệt!', participant });
   } catch (error: any) {
     if (error.code === 11000) {
@@ -145,6 +179,15 @@ export const approveParticipant = async (req: AuthRequest, res: Response) => {
     }
     participant.status = 'ACTIVE';
     await participant.save();
+
+    const sim = await Simulation.findById(id);
+    await createNotification(participant.userId, {
+      title: 'Tham gia mô phỏng thành công',
+      message: `Chúc mừng! Giảng viên đã duyệt bạn vào cuộc thi "${sim?.name || 'Mô phỏng'}". Hãy bắt đầu giao dịch ngay!`,
+      type: 'SIMULATION_APPROVED',
+      link: `/trade/${id}`
+    });
+
     res.json({ message: 'Đã chấp nhận sinh viên vào simulation', participant });
   } catch (error) {
     res.status(500).json({ message: 'Server Error', error });
@@ -161,6 +204,15 @@ export const rejectParticipant = async (req: AuthRequest, res: Response) => {
     }
     participant.status = 'REJECTED';
     await participant.save();
+
+    const sim = await Simulation.findById(id);
+    await createNotification(participant.userId, {
+      title: 'Yêu cầu tham gia bị từ chối',
+      message: `Yêu cầu tham gia cuộc thi "${sim?.name || 'Mô phỏng'}" của bạn đã bị từ chối.`,
+      type: 'SIMULATION_REJECTED',
+      link: '/student/simulations'
+    });
+
     res.json({ message: 'Đã từ chối yêu cầu tham gia', participant });
   } catch (error) {
     res.status(500).json({ message: 'Server Error', error });
@@ -200,6 +252,13 @@ export const addStudentToSimulation = async (req: AuthRequest, res: Response) =>
     });
 
     await participant.save();
+
+    await createNotification(studentId, {
+      title: 'Được thêm vào cuộc thi mô phỏng',
+      message: `Bạn đã được Giảng viên thêm vào cuộc thi "${simulation.name}". Hãy vào tham gia ngay!`,
+      type: 'SIMULATION_APPROVED',
+      link: `/trade/${simulation._id}`
+    });
     
     // Populate user info to return
     const populatedParticipant = await SimulationParticipant.findById(participant._id)
@@ -232,6 +291,14 @@ export const removeStudentFromSimulation = async (req: AuthRequest, res: Respons
     }
 
     await participant.deleteOne();
+
+    await createNotification(studentId, {
+      title: 'Rời khỏi cuộc thi mô phỏng',
+      message: `Bạn đã bị xóa khỏi cuộc thi mô phỏng "${simulation.name}".`,
+      type: 'SIMULATION_KICKED',
+      link: '/student/simulations'
+    });
+
     res.json({ message: 'Student removed successfully' });
   } catch (error) {
     console.error(error);
@@ -434,8 +501,26 @@ export const getSimulationParticipants = async (req: AuthRequest, res: Response)
 // GET /api/simulations/participations/me
 export const getMyParticipationsList = async (req: AuthRequest, res: Response) => {
   try {
-    const participations = await SimulationParticipant.find({ userId: req.user._id });
-    res.json(participations);
+    const participations = await SimulationParticipant.find({ userId: req.user._id }).lean();
+
+    const enrichedParticipations = await Promise.all(
+      participations.map(async (part) => {
+        const higherRankCount = await SimulationParticipant.countDocuments({
+          simulationId: part.simulationId,
+          returnRate: { $gt: part.returnRate || 0 }
+        });
+        const totalInSim = await SimulationParticipant.countDocuments({
+          simulationId: part.simulationId
+        });
+        return {
+          ...part,
+          rank: higherRankCount + 1,
+          totalParticipants: totalInSim
+        };
+      })
+    );
+
+    res.json(enrichedParticipations);
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
   }

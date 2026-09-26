@@ -29,28 +29,28 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-[#253047] rounded-xl p-4 sm:p-5 relative transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 shadow-sm flex flex-col justify-between">
+    <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-[#253047] rounded-xl p-3 sm:p-5 relative transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 shadow-sm flex flex-col justify-between min-w-0">
       {/* Top Header */}
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400">
+      <div className="flex items-center justify-between gap-1.5 mb-1.5 sm:mb-2">
+        <div className="flex items-center gap-1 min-w-0">
+          <span className="text-[10px] sm:text-xs uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 truncate">
             {label}
           </span>
           {tooltip && (
-            <div className="relative inline-flex items-center">
+            <div className="relative inline-flex items-center shrink-0">
               <button
                 type="button"
                 onMouseEnter={() => setShowTooltip(true)}
                 onMouseLeave={() => setShowTooltip(false)}
                 onClick={() => setShowTooltip(!showTooltip)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-0.5 rounded"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-0.5 rounded cursor-pointer"
                 aria-label={`Info about ${label}`}
               >
-                <HelpCircle className="w-3.5 h-3.5" />
+                <HelpCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               </button>
 
               {showTooltip && (
-                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 sm:w-64 p-2.5 bg-slate-900 dark:bg-[#1e2329] border border-slate-700 dark:border-[#363c4e] text-xs text-slate-200 rounded-lg shadow-xl z-50 pointer-events-none leading-relaxed text-left animate-in fade-in zoom-in-95">
+                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-52 sm:w-64 max-w-[calc(100vw-2rem)] p-2.5 bg-slate-900 dark:bg-[#1e2329] border border-slate-700 dark:border-[#363c4e] text-xs text-slate-200 rounded-lg shadow-xl z-50 pointer-events-none leading-relaxed text-left animate-in fade-in zoom-in-95">
                   <p>{tooltip}</p>
                   <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-slate-900 dark:border-t-[#1e2329]" />
                 </div>
@@ -67,12 +67,12 @@ export const MetricCard: React.FC<MetricCardProps> = ({
       </div>
 
       {/* Main Value */}
-      <div className="flex items-baseline justify-between gap-2 mt-1">
-        <h3 className={`text-xl sm:text-2xl font-bold tracking-tight ${getTrendColor()}`}>
+      <div className="flex items-baseline justify-between gap-1.5 mt-0.5 sm:mt-1">
+        <h3 className={`text-base sm:text-xl lg:text-2xl font-bold tracking-tight truncate ${getTrendColor()}`}>
           {value}
         </h3>
         {badge && (
-          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+          <span className="text-[10px] sm:text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
             {badge}
           </span>
         )}
@@ -80,7 +80,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
 
       {/* Subtext */}
       {subValue && (
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 font-medium truncate">
+        <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-1.5 sm:mt-2 font-medium truncate">
           {subValue}
         </p>
       )}
