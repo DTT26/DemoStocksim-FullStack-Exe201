@@ -101,81 +101,86 @@ export const AssignStudentsModal = ({ isOpen, onClose, assignment, onSaved }: As
     filteredStudents.every(s => selectedIds.includes(s._id));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-[#080C14]/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#111827] rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh] border border-[#253047]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/60 dark:bg-black/85 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-[#09090b] rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[88vh] sm:max-h-[85vh] border border-slate-200 dark:border-[#262626] transition-colors">
         {/* Header */}
-        <div className="px-6 py-5 border-b border-[#253047] flex justify-between items-center bg-[#172033]">
+        <div className="px-5 sm:px-6 py-4 sm:py-5 border-b border-slate-200 dark:border-[#262626] flex justify-between items-center bg-slate-50/80 dark:bg-[#000000]">
           <div>
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <Users className="w-5 h-5 text-indigo-400" />
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               Assign to Students
             </h2>
-            <p className="text-sm text-slate-400 mt-1">Assignment: <span className="text-white font-medium">{assignment?.title}</span></p>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">Assignment: <span className="text-slate-900 dark:text-white font-medium">{assignment?.title}</span></p>
           </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-white hover:bg-[#253047] rounded-lg transition-colors">
+          <button 
+            onClick={onClose} 
+            className="p-1.5 sm:p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#1c1c1f] rounded-lg transition-colors cursor-pointer"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-6 flex-1 overflow-hidden flex flex-col gap-4 bg-[#111827]">
+        <div className="p-4 sm:p-6 flex-1 overflow-hidden flex flex-col gap-4 bg-white dark:bg-[#09090b]">
           {/* Search Bar */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
             <input 
               type="text" 
               placeholder="Search students by name or email..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-[#172033] border border-[#253047] rounded-lg py-2.5 pl-9 pr-4 text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors text-sm placeholder-slate-500"
+              className="w-full bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] rounded-xl py-2.5 pl-10 pr-4 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
           </div>
 
           {/* Selection Controls */}
           <div className="flex justify-between items-center px-1">
-            <span className="text-sm font-medium text-slate-300 flex items-center gap-2">
-              <div className="w-6 h-6 rounded-md bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs font-bold">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs font-bold font-mono">
                 {selectedIds.length}
               </div>
               Students Selected
             </span>
             <button 
               onClick={toggleAll}
-              className="text-sm text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+              className="text-xs sm:text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium transition-colors cursor-pointer"
             >
               {allFilteredSelected ? 'Deselect All Filtered' : 'Select All Filtered'}
             </button>
           </div>
 
           {/* Student List */}
-          <div className="flex-1 overflow-y-auto bg-[#172033] rounded-xl border border-[#253047]">
+          <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-[#121214] rounded-xl border border-slate-200 dark:border-[#262626]">
             {loading ? (
-              <div className="flex flex-col justify-center items-center h-full min-h-[200px] text-slate-500">
+              <div className="flex flex-col justify-center items-center h-full min-h-[200px] text-slate-400 dark:text-slate-500">
                 <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-3"></div>
                 Loading students...
               </div>
             ) : filteredStudents.length === 0 ? (
-              <div className="flex flex-col justify-center items-center h-full min-h-[200px] text-slate-500 p-6 text-center">
+              <div className="flex flex-col justify-center items-center h-full min-h-[200px] text-slate-400 dark:text-slate-500 p-6 text-center">
                 <ShieldAlert className="w-10 h-10 mb-3 opacity-20" />
                 <p>No students found.</p>
                 {searchTerm && <p className="text-sm mt-1">Try adjusting your search query.</p>}
               </div>
             ) : (
-              <ul className="divide-y divide-[#253047]">
+              <ul className="divide-y divide-slate-200 dark:divide-[#262626]">
                 {filteredStudents.map(student => {
                   const isSelected = selectedIds.includes(student._id);
                   return (
                     <li 
                       key={student._id}
                       onClick={() => toggleStudent(student._id)}
-                      className={`flex items-center gap-4 p-4 cursor-pointer transition-colors ${
-                        isSelected ? 'bg-indigo-500/5 hover:bg-indigo-500/10' : 'hover:bg-[#111827]'
+                      className={`flex items-center gap-4 p-3.5 sm:p-4 cursor-pointer transition-colors ${
+                        isSelected 
+                          ? 'bg-indigo-50/50 dark:bg-indigo-500/10 hover:bg-indigo-50 dark:hover:bg-indigo-500/15' 
+                          : 'hover:bg-slate-100/70 dark:hover:bg-[#1c1c1f]'
                       }`}
                     >
                       <div className="flex-shrink-0">
                         <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
                           isSelected 
                             ? 'bg-indigo-600 border-indigo-600' 
-                            : 'border-[#3b4b72] bg-[#111827]'
+                            : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-[#121214]'
                         }`}>
                           {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
                         </div>
@@ -185,15 +190,15 @@ export const AssignStudentsModal = ({ isOpen, onClose, assignment, onSaved }: As
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
                           isSelected 
                             ? 'bg-indigo-600 text-white' 
-                            : 'bg-[#253047] text-slate-400'
+                            : 'bg-slate-200 dark:bg-[#262626] text-slate-600 dark:text-slate-400'
                         }`}>
                           {student.name ? student.name.charAt(0).toUpperCase() : <User className="w-4 h-4" />}
                         </div>
                         <div className="flex flex-col">
-                          <span className={`font-bold ${isSelected ? 'text-indigo-400' : 'text-white'}`}>
+                          <span className={`font-semibold text-sm ${isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-900 dark:text-white'}`}>
                             {student.name || 'Unknown User'}
                           </span>
-                          <span className="text-slate-500 text-xs">{student.email}</span>
+                          <span className="text-slate-500 dark:text-slate-400 text-xs">{student.email}</span>
                         </div>
                       </div>
                     </li>
@@ -205,17 +210,17 @@ export const AssignStudentsModal = ({ isOpen, onClose, assignment, onSaved }: As
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-[#253047] flex justify-end gap-3 bg-[#172033]">
+        <div className="px-5 sm:px-6 py-4 border-t border-slate-200 dark:border-[#262626] flex justify-end gap-3 bg-slate-50/80 dark:bg-[#000000]">
           <button 
             onClick={onClose}
-            className="px-6 py-2.5 text-sm font-semibold text-slate-400 hover:text-white transition-colors"
+            className="px-5 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer"
           >
             Cancel
           </button>
           <button 
             onClick={handleSave}
             disabled={saving}
-            className="px-6 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-indigo-600/20"
+            className="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-500 transition-colors disabled:opacity-50 flex items-center gap-2 shadow-sm cursor-pointer"
           >
             {saving ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>

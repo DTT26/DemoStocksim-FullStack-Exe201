@@ -102,10 +102,10 @@ export const PositionsManager = ({ currentPrice }: PositionsManagerProps) => {
                       <td className="px-4 py-2">{pnlInfo.actualQty.toLocaleString('vi-VN')}</td>
                       <td className="px-4 py-2">{p.entryPrice.toLocaleString('vi-VN')}</td>
                       <td className="px-4 py-2">{pnlInfo.markPrice.toLocaleString('vi-VN')}</td>
-                      <td className="px-4 py-2">{p.margin.toLocaleString('vi-VN', { maximumFractionDigits: 0 })}</td>
+                      <td className="px-4 py-2 font-mono">${p.margin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       <td className={`px-4 py-2 font-bold ${p.side === 'LONG' ? 'text-[#089981]' : 'text-[#f23645]'}`}>{p.side} x{store.session!.config.leverage}</td>
                       <td className={`px-4 py-2 text-right font-mono font-bold ${pnlColor}`}>
-                        {pnlInfo.netPnl >= 0 ? '+' : ''}{pnlInfo.netPnl.toLocaleString('vi-VN', { maximumFractionDigits: 0 })} 
+                        {pnlInfo.netPnl >= 0 ? '+' : '-'}${Math.abs(pnlInfo.netPnl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
                         <span className="text-[10px] ml-1">({pnlInfo.netPnl >= 0 ? '+' : ''}{pnlInfo.roe.toFixed(2)}%)</span>
                       </td>
                       <td className="px-4 py-2 text-center text-[#787b86]">
@@ -192,7 +192,7 @@ export const PositionsManager = ({ currentPrice }: PositionsManagerProps) => {
                       {tx.entryPrice.toLocaleString('vi-VN')} / {tx.exitPrice.toLocaleString('vi-VN')}
                     </td>
                     <td className={`px-4 py-2 text-right font-mono font-bold ${tx.netPnL >= 0 ? 'text-[#089981]' : 'text-[#f23645]'}`}>
-                      {tx.netPnL >= 0 ? '+' : ''}{tx.netPnL.toLocaleString('vi-VN', { maximumFractionDigits: 0 })}
+                      {tx.netPnL >= 0 ? '+' : '-'}${Math.abs(tx.netPnL).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td className="px-4 py-2 text-[#787b86]">{tx.closeReason}</td>
                   </tr>

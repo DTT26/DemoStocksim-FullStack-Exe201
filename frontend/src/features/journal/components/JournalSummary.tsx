@@ -11,69 +11,69 @@ export const JournalSummary: React.FC<JournalSummaryProps> = ({ stats }) => {
   const isProfit = stats.netPnL >= 0;
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
       {/* Total Sessions */}
-      <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-[#253047] rounded-xl p-4 sm:p-5 shadow-sm">
-        <div className="flex items-center justify-between text-slate-400 dark:text-slate-500 mb-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+      <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-[#253047] rounded-xl p-3.5 sm:p-5 shadow-sm min-w-0">
+        <div className="flex items-center justify-between text-slate-400 dark:text-slate-500 mb-1.5 sm:mb-2">
+          <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">
             Total Sessions
           </span>
-          <Calendar className="w-4 h-4 text-blue-500" />
+          <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 shrink-0" />
         </div>
-        <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+        <div className="text-lg sm:text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight truncate">
           {stats.totalSessions}
         </div>
-        <div className="text-xs text-slate-400 dark:text-slate-500 mt-1 font-medium">
+        <div className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 mt-0.5 sm:mt-1 font-medium truncate">
           Recorded sessions
         </div>
       </div>
 
       {/* Total Trades */}
-      <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-[#253047] rounded-xl p-4 sm:p-5 shadow-sm">
-        <div className="flex items-center justify-between text-slate-400 dark:text-slate-500 mb-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+      <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-[#253047] rounded-xl p-3.5 sm:p-5 shadow-sm min-w-0">
+        <div className="flex items-center justify-between text-slate-400 dark:text-slate-500 mb-1.5 sm:mb-2">
+          <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">
             Total Trades
           </span>
-          <Hash className="w-4 h-4 text-indigo-500" />
+          <Hash className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-500 shrink-0" />
         </div>
-        <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+        <div className="text-lg sm:text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight truncate">
           {stats.totalTrades}
         </div>
-        <div className="text-xs text-slate-400 dark:text-slate-500 mt-1 font-medium">
+        <div className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 mt-0.5 sm:mt-1 font-medium truncate">
           Executed orders
         </div>
       </div>
 
       {/* Win Rate */}
-      <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-[#253047] rounded-xl p-4 sm:p-5 shadow-sm">
-        <div className="flex items-center justify-between text-slate-400 dark:text-slate-500 mb-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+      <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-[#253047] rounded-xl p-3.5 sm:p-5 shadow-sm min-w-0">
+        <div className="flex items-center justify-between text-slate-400 dark:text-slate-500 mb-1.5 sm:mb-2">
+          <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">
             Win Rate
           </span>
-          <Target className="w-4 h-4 text-emerald-500" />
+          <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0" />
         </div>
-        <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+        <div className="text-lg sm:text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight truncate">
           {formatPercent(stats.winRate, false)}
         </div>
-        <div className="text-xs text-slate-400 dark:text-slate-500 mt-1 font-medium">
+        <div className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 mt-0.5 sm:mt-1 font-medium truncate">
           Profitable trades ratio
         </div>
       </div>
 
       {/* Net P&L */}
-      <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-[#253047] rounded-xl p-4 sm:p-5 shadow-sm">
-        <div className="flex items-center justify-between text-slate-400 dark:text-slate-500 mb-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+      <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-[#253047] rounded-xl p-3.5 sm:p-5 shadow-sm min-w-0">
+        <div className="flex items-center justify-between text-slate-400 dark:text-slate-500 mb-1.5 sm:mb-2">
+          <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">
             Net P&L
           </span>
           {isProfit ? (
-            <TrendingUp className="w-4 h-4 text-emerald-500" />
+            <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0" />
           ) : (
-            <TrendingDown className="w-4 h-4 text-rose-500" />
+            <TrendingDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-500 shrink-0" />
           )}
         </div>
         <div
-          className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${
+          className={`text-lg sm:text-2xl lg:text-3xl font-extrabold tracking-tight truncate ${
             isProfit
               ? 'text-emerald-600 dark:text-[#089981]'
               : 'text-rose-600 dark:text-[#f23645]'
@@ -81,8 +81,8 @@ export const JournalSummary: React.FC<JournalSummaryProps> = ({ stats }) => {
         >
           {formatMoneyVND(stats.netPnL, true)}
         </div>
-        <div className="text-xs text-slate-400 dark:text-slate-500 mt-1 font-medium">
-          Realized cumulative result
+        <div className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 mt-0.5 sm:mt-1 font-medium truncate">
+          Realized cumulative
         </div>
       </div>
     </div>

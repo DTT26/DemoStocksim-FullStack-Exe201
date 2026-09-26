@@ -40,7 +40,7 @@ export interface SimulationConfig {
 }
 
 const DEFAULT_CONFIG: SimulationConfig = {
-  balance: 100_000_000,
+  balance: 100_000,
   leverage: 10,
   minLot: 0.01,
   lotStep: 0.01,
@@ -87,9 +87,6 @@ export const SimulationPanel = ({
   const [isDeleting, setIsDeleting] = useState(false);
 
   const formatSessionMoney = (amount: number = 0) => {
-    if (Math.abs(amount) >= 1000000) {
-      return `${amount.toLocaleString('vi-VN', { maximumFractionDigits: 0 })} ₫`;
-    }
     return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
@@ -108,9 +105,6 @@ export const SimulationPanel = ({
   const formatSessionPnL = (amount: number = 0) => {
     const sign = amount >= 0 ? '+' : '-';
     const abs = Math.abs(amount);
-    if (abs >= 100000) {
-      return `${sign}${abs.toLocaleString('vi-VN', { maximumFractionDigits: 0 })} ₫`;
-    }
     return `${sign}$${abs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
@@ -385,7 +379,7 @@ export const SimulationPanel = ({
           {/* SỐ DƯ BAN ĐẦU */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[11px] font-bold text-[#1e2329] dark:text-white tracking-wider flex items-center gap-1.5 uppercase">
-              Số dư ban đầu (VND)
+              Số dư ban đầu (USD)
               <HelpCircle className="w-3.5 h-3.5 text-[#787b86]" />
             </label>
             <input 

@@ -19,7 +19,7 @@ export const StudentLayout = () => {
       
       {/* Main Content Area */}
       <div 
-        className={`flex-1 flex flex-col min-h-screen transition-all duration-300 w-full ${
+        className={`flex-1 flex flex-col min-h-screen transition-all duration-300 w-full min-w-0 ${
           collapsed ? 'md:ml-[80px]' : 'md:ml-[260px]'
         }`}
       >
@@ -28,7 +28,7 @@ export const StudentLayout = () => {
           setMobileOpen={setMobileOpen} 
         />
         
-        <main className="flex-1 w-full max-w-[1500px] mx-auto p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 w-full min-w-0 max-w-[1500px] mx-auto p-3.5 sm:p-6 lg:p-8">
           <Outlet />
         </main>
       </div>

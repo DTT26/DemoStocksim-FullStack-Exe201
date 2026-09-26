@@ -154,11 +154,11 @@ export const StudentTradeDetail = () => {
               </div>
               <div>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Entry Price</p>
-                <p className="font-semibold text-slate-800 dark:text-white">{trade.entryPrice.toLocaleString('vi-VN')}₫</p>
+                <p className="font-semibold text-slate-800 dark:text-white">${trade.entryPrice.toLocaleString('en-US')}</p>
               </div>
               <div>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Exit Price</p>
-                <p className="font-semibold text-slate-800 dark:text-white">{trade.exitPrice ? trade.exitPrice.toLocaleString('vi-VN') + '₫' : '-'}</p>
+                <p className="font-semibold text-slate-800 dark:text-white">{trade.exitPrice ? `$${trade.exitPrice.toLocaleString('en-US')}` : '-'}</p>
               </div>
               
               <div>
@@ -171,11 +171,11 @@ export const StudentTradeDetail = () => {
               </div>
               <div>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Stop Loss</p>
-                <p className="font-semibold text-slate-800 dark:text-white">{trade.stopLoss ? trade.stopLoss.toLocaleString('vi-VN') + '₫' : '-'}</p>
+                <p className="font-semibold text-slate-800 dark:text-white">{trade.stopLoss ? `$${trade.stopLoss.toLocaleString('en-US')}` : '-'}</p>
               </div>
               <div>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Take Profit</p>
-                <p className="font-semibold text-slate-800 dark:text-white">{trade.takeProfit ? trade.takeProfit.toLocaleString('vi-VN') + '₫' : '-'}</p>
+                <p className="font-semibold text-slate-800 dark:text-white">{trade.takeProfit ? `$${trade.takeProfit.toLocaleString('en-US')}` : '-'}</p>
               </div>
             </div>
           </div>
@@ -199,19 +199,19 @@ export const StudentTradeDetail = () => {
               <div className="flex justify-between items-center pb-4 border-b border-slate-200 dark:border-[#253047]/50">
                 <span className="text-slate-500 dark:text-slate-400">Gross P&L</span>
                 <span className={`font-semibold ${isWin ? 'text-emerald-600 dark:text-emerald-500' : isLoss ? 'text-rose-600 dark:text-rose-500' : 'text-slate-700 dark:text-slate-300'}`}>
-                  {trade.pnl > 0 ? '+' : ''}{(trade.pnl + (trade.commission || 0)).toLocaleString('vi-VN')}₫
+                  {trade.pnl > 0 ? '+' : trade.pnl < 0 ? '-' : ''}${Math.abs(trade.pnl + (trade.commission || 0)).toLocaleString('en-US')}
                 </span>
               </div>
               <div className="flex justify-between items-center pb-4 border-b border-slate-200 dark:border-[#253047]/50">
                 <span className="text-slate-500 dark:text-slate-400">Commission & Fees</span>
                 <span className="font-semibold text-rose-600 dark:text-rose-400">
-                  -{trade.commission?.toLocaleString('vi-VN') || 0}₫
+                  -${(trade.commission || 0).toLocaleString('en-US')}
                 </span>
               </div>
               <div className="flex justify-between items-center pt-2">
                 <span className="text-slate-900 dark:text-white font-medium">Net P&L</span>
                 <span className={`text-xl font-bold ${isWin ? 'text-emerald-600 dark:text-emerald-500' : isLoss ? 'text-rose-600 dark:text-rose-500' : 'text-slate-900 dark:text-white'}`}>
-                  {trade.pnl > 0 ? '+' : ''}{trade.pnl.toLocaleString('vi-VN')}₫
+                  {trade.pnl > 0 ? '+' : trade.pnl < 0 ? '-' : ''}${Math.abs(trade.pnl).toLocaleString('en-US')}
                 </span>
               </div>
               <div className="flex justify-between items-center pt-1">
