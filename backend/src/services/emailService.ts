@@ -9,10 +9,13 @@ dotenv.config();
  * Nếu có cấu hình SMTP trong .env thì dùng SMTP thật.
  */
 const createTransporter = () => {
+  // Nạp biến môi trường từ .env (hỗ trợ cả khi chạy từ root hoặc từ thư mục backend)
   dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+  dotenv.config({ path: path.resolve(process.cwd(), 'backend', '.env') });
+  dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
-  const user = (process.env.SMTP_USER || 'phucle20704@gmail.com').trim();
-  const pass = (process.env.SMTP_PASS || 'evqy umre cehe ulop').replace(/\s+/g, '');
+  const user = (process.env.SMTP_USER || '').trim();
+  const pass = (process.env.SMTP_PASS || '').replace(/\s+/g, '');
   const host = process.env.SMTP_HOST || 'smtp.gmail.com';
 
   if (user && pass) {
@@ -101,9 +104,10 @@ export const sendOtpEmail = async (email: string, otp: string, name: string): Pr
   `;
 
   try {
-    const sender = (process.env.SMTP_USER || 'phucle20704@gmail.com').trim();
+    const sender = (process.env.SMTP_USER || '').trim();
+    const fromAddress = process.env.SMTP_FROM || (sender ? `"StockSim Platform" <${sender}>` : '"StockSim Platform" <no-reply@stocksim.vn>');
     const info = await transporter.sendMail({
-      from: `"StockSim Platform" <${sender}>`,
+      from: fromAddress,
       to: email,
       subject: `[StockSim] ${otp} là mã xác thực đăng ký tài khoản của bạn`,
       html: htmlContent,
@@ -182,9 +186,10 @@ export const sendForgotPasswordEmail = async (email: string, otp: string, name: 
   `;
 
   try {
-    const sender = (process.env.SMTP_USER || 'phucle20704@gmail.com').trim();
+    const sender = (process.env.SMTP_USER || '').trim();
+    const fromAddress = process.env.SMTP_FROM || (sender ? `"StockSim Security" <${sender}>` : '"StockSim Security" <no-reply@stocksim.vn>');
     const info = await transporter.sendMail({
-      from: `"StockSim Security" <${sender}>`,
+      from: fromAddress,
       to: email,
       subject: `[StockSim] ${otp} là mã xác nhận đặt lại mật khẩu của bạn`,
       html: htmlContent,
