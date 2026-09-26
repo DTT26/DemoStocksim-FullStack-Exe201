@@ -64,7 +64,7 @@ export const BreakdownTab: React.FC<BreakdownTabProps> = ({ session }) => {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300 min-w-0">
       {/* 1. SYMBOL & LONG/SHORT ROW */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Performance by Symbol */}

@@ -23,15 +23,13 @@ export const SimulationInfoCard = ({ simulation, loading }: SimulationInfoCardPr
   }
 
   const formatMoney = (val: number) => {
-    if (!val) return '0 ₫';
-    if (val >= 1000000) {
-      return new Intl.NumberFormat('vi-VN', {
-        style: 'currency',
-        currency: 'VND',
-        maximumFractionDigits: 0
-      }).format(val);
-    }
-    return `$${val.toLocaleString('en-US')} USD`;
+    if (!val) return '$0';
+    const amount = val >= 1000000 ? val / 1000 : val;
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0
+    }).format(amount);
   };
 
   const formatDate = (dateStr: string) => {

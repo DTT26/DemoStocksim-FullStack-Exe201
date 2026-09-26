@@ -92,16 +92,19 @@ export interface HoldingTimeBucket {
 
 export const formatMoneyVND = (value: number | undefined | null, includeSign = false): string => {
   if (value === undefined || value === null || isNaN(value)) return 'N/A';
-  const formatted = new Intl.NumberFormat('vi-VN', {
+  const formatted = new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 0
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
   }).format(Math.abs(value));
 
   if (value === 0) return formatted;
   if (value > 0) return includeSign ? `+${formatted}` : formatted;
   return `-${formatted}`;
 };
+
+export const formatMoneyUSD = formatMoneyVND;
 
 export const formatPercent = (value: number | undefined | null, includeSign = true): string => {
   if (value === undefined || value === null || isNaN(value)) return 'N/A';

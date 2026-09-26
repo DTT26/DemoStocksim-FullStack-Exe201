@@ -21,13 +21,14 @@ interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLoginGoogle: (captchaToken: string) => void;
+  isGoogleLoading?: boolean;
 }
 
 type AuthTab = 'login' | 'register' | 'forgot_password';
 type RegisterStep = 'form' | 'otp';
 type ForgotStep = 'email' | 'otp' | 'new_password' | 'success';
 
-export const LoginModal = ({ isOpen, onClose, onLoginGoogle }: LoginModalProps) => {
+export const LoginModal = ({ isOpen, onClose, onLoginGoogle, isGoogleLoading = false }: LoginModalProps) => {
   const { loginWithEmail, registerRequest, verifyOtp, resendOtp, forgotPassword, verifyForgotOtp, resetPassword } = useAuth();
 
   const [tab, setTab] = useState<AuthTab>('login');
@@ -162,11 +163,9 @@ export const LoginModal = ({ isOpen, onClose, onLoginGoogle }: LoginModalProps) 
     setErrorMsg('');
     try {
       const token = await getRecaptchaToken('google_login');
-      onClose();
       onLoginGoogle(token);
     } catch (err: any) {
       setErrorMsg('Không thể khởi tạo đăng nhập Google. Vui lòng thử lại.');
-    } finally {
       setLoading(false);
     }
   };
@@ -529,7 +528,9 @@ export const LoginModal = ({ isOpen, onClose, onLoginGoogle }: LoginModalProps) 
   return (
     <div 
       className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/50 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" 
-      onClick={onClose}
+      onClick={() => {
+        if (!loading && !isGoogleLoading) onClose();
+      }}
     >
       <div 
         className="bg-white dark:bg-[#111827] w-full max-w-[460px] rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200 dark:border-[#253047] animate-in zoom-in-95 duration-200 max-h-[92vh] text-slate-800 dark:text-slate-100 transition-colors"
@@ -547,8 +548,11 @@ export const LoginModal = ({ isOpen, onClose, onLoginGoogle }: LoginModalProps) 
             </div>
           </div>
           <button 
-            onClick={onClose} 
-            className="p-1.5 hover:bg-slate-200/60 dark:hover:bg-[#253047] rounded-lg transition-colors text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+            disabled={loading || isGoogleLoading}
+            onClick={() => {
+              if (!loading && !isGoogleLoading) onClose();
+            }} 
+            className="p-1.5 hover:bg-slate-200/60 dark:hover:bg-[#253047] rounded-lg transition-colors text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <X className="w-5 h-5" />
           </button>
@@ -711,12 +715,21 @@ export const LoginModal = ({ isOpen, onClose, onLoginGoogle }: LoginModalProps) 
               {/* Nút Đăng nhập Google */}
               <button
                 type="button"
-                disabled={loading}
+                disabled={loading || isGoogleLoading}
                 onClick={handleGoogleClick}
-                className="w-full py-2.5 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-3 transition-all bg-white hover:bg-slate-50 dark:bg-[#172033] dark:hover:bg-[#1e2a42] border border-slate-200 dark:border-[#253047] text-slate-700 hover:text-slate-900 dark:text-white shadow-sm cursor-pointer active:scale-[0.99]"
+                className="w-full py-2.5 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-3 transition-all bg-white hover:bg-slate-50 dark:bg-[#172033] dark:hover:bg-[#1e2a42] border border-slate-200 dark:border-[#253047] text-slate-700 hover:text-slate-900 dark:text-white shadow-sm cursor-pointer active:scale-[0.99] disabled:opacity-75 disabled:cursor-wait"
               >
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
-                <span>Tiếp tục bằng Google</span>
+                {isGoogleLoading || (loading && !loginEmail) ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin text-indigo-600 dark:text-indigo-400" />
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">Đang đăng nhập bằng Google...</span>
+                  </>
+                ) : (
+                  <>
+                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
+                    <span>Tiếp tục bằng Google</span>
+                  </>
+                )}
               </button>
 
               <div className="text-center pt-2">
