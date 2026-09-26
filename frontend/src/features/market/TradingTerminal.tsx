@@ -476,7 +476,7 @@ export const TradingTerminal = () => {
             fetch('https://fapi.binance.com/fapi/v1/ticker/price').catch(() => null)
           ]);
           if (!(window as any).cachedBinancePrices) (window as any).cachedBinancePrices = {};
-          
+
           if (spotRes) {
             const spotData = await spotRes.json();
             spotData.forEach((item: any) => (window as any).cachedBinancePrices[item.symbol] = parseFloat(item.price));
@@ -486,7 +486,7 @@ export const TradingTerminal = () => {
             futData.forEach((item: any) => (window as any).cachedBinancePrices[item.symbol + '.P'] = parseFloat(item.price));
           }
         }
-      } catch (err) {}
+      } catch (err) { }
 
       // Ghi đè giá Live từ Binance cho các vị thế & lệnh chờ không nằm trên chart hiện tại
       if ((window as any).cachedBinancePrices) {
@@ -502,20 +502,20 @@ export const TradingTerminal = () => {
       priceMap[selectedStock.symbol] = selectedStock.price;
 
       tradingApi.checkTriggers(priceMap, user._id)
-      .then(res => {
-        if (res && res.processed > 0) {
-          fetchPortfolio(user._id);
-          setTradeCount(c => c + 1);
-          if (res.messages && Array.isArray(res.messages)) {
-            res.messages.forEach((msg: string, i: number) => {
-              setTimeout(() => showToast(msg, 'success'), i * 800);
-            });
+        .then(res => {
+          if (res && res.processed > 0) {
+            fetchPortfolio(user._id);
+            setTradeCount(c => c + 1);
+            if (res.messages && Array.isArray(res.messages)) {
+              res.messages.forEach((msg: string, i: number) => {
+                setTimeout(() => showToast(msg, 'success'), i * 800);
+              });
+            }
           }
-        }
-      })
-      .catch(() => {
-        // silent catch
-      });
+        })
+        .catch(() => {
+          // silent catch
+        });
     };
     checkTriggers();
   }, [user?._id, selectedStock.price, selectedStock.symbol, positions, pendingOrders]);
@@ -660,7 +660,7 @@ export const TradingTerminal = () => {
         if (res.success) {
           await fetchPortfolio();
           setTradeCount(c => c + 1);
-          addNotification({ title: 'Đóng vị thế', message: `Đã chốt vị thế ${pos.side} mã ${selectedStock.symbol} thành công.`, type: 'success' });
+          addNotification?.({ title: 'Đóng vị thế', message: `Đã chốt vị thế ${pos.side} mã ${selectedStock.symbol} thành công.`, type: 'success' });
           return { success: true, message: `✅ Đã chốt vị thế ${pos.side} thành công` };
         }
       } else if (type === 'limit_buy' || type === 'limit_sell') {
@@ -669,7 +669,7 @@ export const TradingTerminal = () => {
         if (res.success) {
           await fetchPortfolio();
           setTradeCount(c => c + 1);
-          addNotification({ title: 'Đặt lệnh Limit', message: `Lệnh ${side} Limit mã ${selectedStock.symbol} tại giá ${price.toLocaleString('vi-VN')} đã được đặt.`, type: 'info' });
+          addNotification?.({ title: 'Đặt lệnh Limit', message: `Lệnh ${side} Limit mã ${selectedStock.symbol} tại giá ${price.toLocaleString('vi-VN')} đã được đặt.`, type: 'info' });
           return { success: true, message: res.message };
         }
       } else if (type === 'stop_buy' || type === 'stop_sell') {
@@ -678,7 +678,7 @@ export const TradingTerminal = () => {
         if (res.success) {
           await fetchPortfolio();
           setTradeCount(c => c + 1);
-          addNotification({ title: 'Đặt lệnh Stop', message: `Lệnh ${side} Stop mã ${selectedStock.symbol} tại giá ${price.toLocaleString('vi-VN')} đã được đặt.`, type: 'info' });
+          addNotification?.({ title: 'Đặt lệnh Stop', message: `Lệnh ${side} Stop mã ${selectedStock.symbol} tại giá ${price.toLocaleString('vi-VN')} đã được đặt.`, type: 'info' });
           return { success: true, message: res.message };
         }
       } else if (type === 'buy') {
@@ -691,7 +691,7 @@ export const TradingTerminal = () => {
           };
           setTradeOrders(prev => [...prev, order]);
           setTradeCount(c => c + 1);
-          addNotification({ title: 'Mở vị thế LONG', message: `Đã mở LONG ${selectedStock.symbol} tại giá ${price.toLocaleString('vi-VN')} đòn bẩy ${leverage}x.`, type: 'success' });
+          addNotification?.({ title: 'Mở vị thế LONG', message: `Đã mở LONG ${selectedStock.symbol} tại giá ${price.toLocaleString('vi-VN')} đòn bẩy ${leverage}x.`, type: 'success' });
           return { success: true, message: `✅ Mở LONG ${selectedStock.symbol} thành công` };
         }
       } else if (type === 'sell') {
@@ -704,7 +704,7 @@ export const TradingTerminal = () => {
           };
           setTradeOrders(prev => [...prev, order]);
           setTradeCount(c => c + 1);
-          addNotification({ title: 'Mở vị thế SHORT', message: `Đã mở SHORT ${selectedStock.symbol} tại giá ${price.toLocaleString('vi-VN')} đòn bẩy ${leverage}x.`, type: 'success' });
+          addNotification?.({ title: 'Mở vị thế SHORT', message: `Đã mở SHORT ${selectedStock.symbol} tại giá ${price.toLocaleString('vi-VN')} đòn bẩy ${leverage}x.`, type: 'success' });
           return { success: true, message: `✅ Mở SHORT ${selectedStock.symbol} thành công` };
         }
       }
@@ -730,7 +730,7 @@ export const TradingTerminal = () => {
         await fetchPortfolio();
         setTradeCount(c => c + 1);
         showToast('Đã hủy lệnh chờ thành công!', 'info');
-        addNotification({ title: 'Hủy lệnh', message: `Lệnh chờ đã bị hủy.`, type: 'warning' });
+        addNotification?.({ title: 'Hủy lệnh', message: `Lệnh chờ đã bị hủy.`, type: 'warning' });
         showAlert({
           title: 'Hủy lệnh',
           message: 'Đã hủy lệnh chờ thành công!',
@@ -755,7 +755,7 @@ export const TradingTerminal = () => {
       const res = await tradingApi.updateTPSL(selectedStock.symbol, pos.side, tp, sl, user?._id);
       if (res.success) {
         await fetchPortfolio();
-        addNotification({ title: 'Cập nhật TP/SL', message: `Đã cập nhật Chốt lời/Cắt lỗ cho vị thế ${pos.side} mã ${selectedStock.symbol}.`, type: 'info' });
+        addNotification?.({ title: 'Cập nhật TP/SL', message: `Đã cập nhật Chốt lời/Cắt lỗ cho vị thế ${pos.side} mã ${selectedStock.symbol}.`, type: 'info' });
         return { success: true, message: `✅ Đã cập nhật TP/SL` };
       }
       return { success: false, message: 'Lỗi cập nhật' };
@@ -775,7 +775,7 @@ export const TradingTerminal = () => {
       if (res.success) {
         await fetchPortfolio();
         setTradeCount(c => c + 1);
-        addNotification({ title: 'Đóng vị thế', message: `Đã chốt vị thế ${pos.side} mã ${symbolToClose}.`, type: 'success' });
+        addNotification?.({ title: 'Đóng vị thế', message: `Đã chốt vị thế ${pos.side} mã ${symbolToClose}.`, type: 'success' });
         return { success: true, message: `✅ Đã chốt vị thế ${symbolToClose} thành công` };
       }
       return { success: false, message: res.message || 'Lỗi đóng lệnh' };
@@ -789,7 +789,7 @@ export const TradingTerminal = () => {
       const res = await tradingApi.addMargin(symbol, side, amount, user?._id);
       if (res.success) {
         await fetchPortfolio();
-        addNotification({ title: 'Thêm ký quỹ', message: `Đã bơm thêm ${amount.toLocaleString('vi-VN')}₫ ký quỹ cho vị thế ${side} mã ${symbol}.`, type: 'info' });
+        addNotification?.({ title: 'Thêm ký quỹ', message: `Đã bơm thêm ${amount.toLocaleString('vi-VN')}₫ ký quỹ cho vị thế ${side} mã ${symbol}.`, type: 'info' });
         return { success: true, message: res.message || `✅ Đã bơm thêm ký quỹ` };
       }
       return { success: false, message: res.message || 'Lỗi bơm ký quỹ' };
@@ -889,8 +889,8 @@ export const TradingTerminal = () => {
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden bg-white dark:bg-[#131722] text-[#1e2329] dark:text-[#d1d4dc]">
-      <ToolbarNavbar 
-        balance={balance} 
+      <ToolbarNavbar
+        balance={balance}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
         onOpenChallenge={() => setIsChallengeModalOpen(true)}
         onOpenAiTutor={() => setIsAiTutorOpen(true)}
@@ -900,7 +900,7 @@ export const TradingTerminal = () => {
         accountRankName={`${accountRankConfig.badge} - ${accountRankConfig.levelName}`}
         certCount={challengeState.certificates?.length || 0}
       />
-      
+
       {/* Dynamic Prop Challenge Header Bar - Chỉ hiển thị khi đang trong bài thi hoặc có kết quả */}
       {challengeState.status !== 'NOT_STARTED' && (
         <div className="h-9 bg-[#161a24] border-b border-[#232936] flex items-center px-4 justify-between text-xs text-[#d1d4dc] shrink-0 animate-in fade-in duration-150">
@@ -910,17 +910,16 @@ export const TradingTerminal = () => {
                 <Trophy className="w-3.5 h-3.5 text-amber-400" />
                 <span>{currentChallengeLevel.levelName}</span>
               </span>
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
-                challengeState.status === 'ACTIVE' 
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${challengeState.status === 'ACTIVE'
                   ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/30'
                   : challengeState.status === 'PAUSED'
-                  ? 'bg-amber-900/30 text-amber-300 border-amber-500/30'
-                  : challengeState.status === 'PASSED'
-                  ? 'bg-purple-900/30 text-purple-400 border-purple-500/30'
-                  : challengeState.status === 'FAILED'
-                  ? 'bg-rose-900/30 text-rose-400 border-rose-500/30'
-                  : 'bg-slate-800 text-slate-400 border-slate-700'
-              }`}>
+                    ? 'bg-amber-900/30 text-amber-300 border-amber-500/30'
+                    : challengeState.status === 'PASSED'
+                      ? 'bg-purple-900/30 text-purple-400 border-purple-500/30'
+                      : challengeState.status === 'FAILED'
+                        ? 'bg-rose-900/30 text-rose-400 border-rose-500/30'
+                        : 'bg-slate-800 text-slate-400 border-slate-700'
+                }`}>
                 {challengeState.status === 'ACTIVE' && '🟢 ĐANG THI (LIVE)'}
                 {challengeState.status === 'PAUSED' && '⏸️ ĐANG TẠM DỪNG'}
                 {challengeState.status === 'PASSED' && '🏆 ĐÃ ĐỖ'}
@@ -1008,9 +1007,9 @@ export const TradingTerminal = () => {
       )}
 
       <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto lg:overflow-hidden">
-        <LeftToolbar 
-          activeTool={activeTool} 
-          onToolSelect={handleToolClick} 
+        <LeftToolbar
+          activeTool={activeTool}
+          onToolSelect={handleToolClick}
           magnetMode={magnetMode}
           onToggleMagnet={() => setMagnetMode(!magnetMode)}
           stayInDrawingMode={stayInDrawingMode}
@@ -1070,15 +1069,15 @@ export const TradingTerminal = () => {
                   pendingOrders={store.isActive ? store.orders.map(o => ({ ...o, price: o.limitPrice, quantity: o.lot })) : pendingOrders}
                   activeIndicators={activeIndicators}
                   activePosition={
-                    store.isActive 
+                    store.isActive
                       ? (store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase()) ? {
-                          quantity: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.lot,
-                          averagePrice: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.entryPrice,
-                          side: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.side,
-                          leverage: store.session!.config.leverage,
-                          tp: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.tp,
-                          sl: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.sl
-                        } : undefined)
+                        quantity: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.lot,
+                        averagePrice: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.entryPrice,
+                        side: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.side,
+                        leverage: store.session!.config.leverage,
+                        tp: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.tp,
+                        sl: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.sl
+                      } : undefined)
                       : (positions[selectedStock.symbol] as any)
                   }
                   simulatorPositions={store.isActive ? store.positions : undefined}
@@ -1097,7 +1096,7 @@ export const TradingTerminal = () => {
                       return { ...prev, price, change, percent, type: change >= 0 ? 'up' : 'down' };
                     });
                     handlePriceChange(price);
-                    
+
                     if (store.isActive && store.session) {
                       store.tick(price, timestamp ? new Date(timestamp).toISOString() : new Date().toISOString());
                     }
@@ -1241,8 +1240,8 @@ export const TradingTerminal = () => {
       {toast && (
         <div className="fixed top-4 right-1/2 translate-x-1/2 z-50 animate-bounce">
           <div className={`px-4 py-3 rounded-lg shadow-xl border flex items-center gap-3 ${(toast.type === 'warning' || toast.type === 'error')
-              ? 'bg-red-900/90 border-red-500 text-red-100'
-              : 'bg-green-900/90 border-green-500 text-green-100'
+            ? 'bg-red-900/90 border-red-500 text-red-100'
+            : 'bg-green-900/90 border-green-500 text-green-100'
             }`}>
             <span className="font-medium whitespace-pre-line text-sm">{toast.msg}</span>
           </div>
@@ -1272,7 +1271,7 @@ export const TradingTerminal = () => {
         onClose={() => setIsIndicatorModalOpen(false)}
         activeIndicators={activeIndicators}
         onToggle={(ind) => {
-          setActiveIndicators(prev => 
+          setActiveIndicators(prev =>
             prev.includes(ind) ? prev.filter(i => i !== ind) : [...prev, ind]
           );
         }}
