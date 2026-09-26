@@ -52,7 +52,7 @@ export const ToolbarNavbar = ({
             title={`Thử Thách Cấp Vốn Quỹ • Hạng tài khoản: ${accountRankName || 'Cấp 1'}`}
           >
             <Trophy className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
-            <span>Thử Thách Quỹ</span>
+            <span className="hidden sm:inline">Thử Thách Quỹ</span>
             {challengeStatus === 'ACTIVE' ? (
               <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -103,21 +103,21 @@ export const ToolbarNavbar = ({
             title="Mở Trợ lý & Gia sư AI Trading Tutor (Hỏi đáp, So sánh chiến lược, RAG)"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 animate-pulse" />
-            <span>AI Tutor</span>
+            <span className="hidden sm:inline">AI Tutor</span>
           </button>
 
           {/* Thông báo */}
           <NotificationDropdown />
           <button 
             onClick={toggleTheme}
-            className="hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] cursor-pointer"
+            className="hidden md:flex hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] cursor-pointer"
             title="Đổi giao diện (Sáng/Tối)"
           >
             {isDarkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
           </button>
           <button 
             onClick={() => setIsLanguageModalOpen(true)}
-            className="hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 flex items-center gap-1 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] cursor-pointer"
+            className="hidden md:flex hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 items-center gap-1 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] cursor-pointer"
             title="Ngôn ngữ"
           >
             <Globe className="w-5 h-5" />
@@ -125,7 +125,7 @@ export const ToolbarNavbar = ({
           </button>
           <button 
             onClick={onOpenSettings}
-            className="hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] cursor-pointer"
+            className="hidden md:flex hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] cursor-pointer"
             title="Cài đặt"
           >
             <Settings className="w-5 h-5" />

@@ -1007,7 +1007,7 @@ export const TradingTerminal = () => {
         </div>
       )}
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto lg:overflow-hidden">
         <LeftToolbar 
           activeTool={activeTool} 
           onToolSelect={handleToolClick} 
@@ -1020,7 +1020,7 @@ export const TradingTerminal = () => {
           hideDrawing={hideDrawing}
           onToggleHide={() => setHideDrawing(!hideDrawing)}
         />
-        <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex flex-col flex-1 overflow-visible lg:overflow-hidden min-h-[600px] lg:min-h-0">
           <TickerHeader
             stock={selectedStock}
             activeTab={activeTab}
@@ -1165,7 +1165,7 @@ export const TradingTerminal = () => {
             <ContractInfoPanel stock={selectedStock} />
           )}
         </div>
-        <div className="flex shrink-0">
+        <div className="flex flex-col lg:flex-row shrink-0 w-full lg:w-auto border-t lg:border-t-0 border-[#2a2e39]">
           {activeRightPanel === 'watchlist' && (
             <WatchlistPanel
               watchlists={watchlists}

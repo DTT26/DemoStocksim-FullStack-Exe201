@@ -332,7 +332,7 @@ export const LeftToolbar = ({
   }, [onToolSelect]);
 
   return (
-    <div ref={toolbarRef} className="w-[52px] bg-white dark:bg-[#1e222d] border-r border-[#e6e8ea] dark:border-[#2a2e39] flex flex-col items-center py-2 gap-1 shrink-0 z-10 transition-colors relative">
+    <div ref={toolbarRef} className="hidden lg:flex w-[52px] bg-white dark:bg-[#1e222d] border-r border-[#e6e8ea] dark:border-[#2a2e39] flex-col items-center py-2 gap-1 shrink-0 z-10 transition-colors relative">
       <div className="w-full h-full flex flex-col items-center overflow-y-auto hide-scrollbar">
         {TOOLS.map((tool) => {
           const isToolActive = activeTool === tool.id || 
