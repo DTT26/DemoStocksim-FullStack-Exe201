@@ -86,7 +86,7 @@ export const AdminTopbar = ({ mobileOpen, setMobileOpen }: AdminTopbarProps) => 
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-[#172033] rounded-xl shadow-2xl border border-slate-200 dark:border-[#1e293b] overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+            <div className="absolute right-0 mt-2 w-80 sm:w-96 max-w-[calc(100vw-1.5rem)] bg-white dark:bg-[#172033] rounded-xl shadow-2xl border border-slate-200 dark:border-[#1e293b] overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
               <div className="p-4 border-b border-slate-200 dark:border-[#1e293b] flex justify-between items-center bg-slate-50 dark:bg-[#111827]">
                 <h3 className="font-semibold text-slate-900 dark:text-white text-sm">Notifications</h3>
                 <button className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium cursor-pointer">Mark all as read</button>
@@ -134,7 +134,7 @@ export const AdminTopbar = ({ mobileOpen, setMobileOpen }: AdminTopbarProps) => 
           </button>
 
           {showProfileMenu && (
-            <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#172033] rounded-xl shadow-2xl border border-slate-200 dark:border-[#1e293b] overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+            <div className="absolute right-0 mt-2 w-56 max-w-[calc(100vw-1.5rem)] bg-white dark:bg-[#172033] rounded-xl shadow-2xl border border-slate-200 dark:border-[#1e293b] overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
               <div className="p-4 border-b border-slate-200 dark:border-[#1e293b] bg-slate-50 dark:bg-[#111827]">
                 <p className="font-semibold text-slate-900 dark:text-white text-sm">{user?.name}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{user?.email}</p>

@@ -7,6 +7,7 @@ import Order from '../models/Order';
 import PaperTradingSession from '../models/PaperTradingSession';
 import PaperTradingHistory from '../models/PaperTradingHistory';
 import PaperTradingPosition from '../models/PaperTradingPosition';
+import { createNotification } from './notificationController';
 
 // POST /api/assignments (Lecturer/Admin only)
 export const createAssignment = async (req: AuthRequest, res: Response) => {
@@ -26,6 +27,21 @@ export const createAssignment = async (req: AuthRequest, res: Response) => {
     });
 
     const createdAssignment = await assignment.save();
+
+    // Notify enrolled students in background
+    if (simulationId) {
+      SimulationParticipant.find({ simulationId, status: 'APPROVED' }).select('userId').then((participants) => {
+        participants.forEach((p) => {
+          createNotification(p.userId, {
+            title: 'Bài tập mới được giao',
+            message: `Giảng viên đã giao bài tập mới: "${title}".`,
+            type: 'ASSIGNMENT_NEW',
+            link: '/assignments',
+          });
+        });
+      }).catch(err => console.error('Failed to notify participants of new assignment:', err));
+    }
+
     res.status(201).json(createdAssignment);
   } catch (error) {
     console.error('createAssignment error:', error);
@@ -283,6 +299,24 @@ export const submitAssignment = async (req: AuthRequest, res: Response) => {
     );
 
     const tradingEvidence = await fetchStudentTradingEvidence(req.user._id.toString(), assignment, submission.submittedAt);
+
+    // Notify student about successful submission
+    createNotification(req.user._id, {
+      title: 'Nộp bài tập thành công',
+      message: `Bạn đã nộp thành công bài tập "${assignment.title}".`,
+      type: 'ASSIGNMENT_SUBMITTED',
+      link: '/assignments',
+    }).catch(err => console.error('Failed to notify student on submission:', err));
+
+    // Notify assignment creator (lecturer)
+    if (assignment.createdBy && assignment.createdBy.toString() !== req.user._id.toString()) {
+      createNotification(assignment.createdBy, {
+        title: 'Học viên nộp bài tập',
+        message: `${req.user.name || 'Học viên'} đã nộp bài tập "${assignment.title}".`,
+        type: 'ASSIGNMENT_SUBMITTED',
+        link: '/lecturer/assignments',
+      }).catch(err => console.error('Failed to notify lecturer on submission:', err));
+    }
 
     res.json({
       success: true,
@@ -572,6 +606,16 @@ export const gradeSubmission = async (req: AuthRequest, res: Response) => {
     const tradingEvidence = assignment 
       ? await fetchStudentTradingEvidence(submission.studentId.toString(), assignment, submission.submittedAt)
       : null;
+
+    // Notify student about assignment grade
+    if (submission.studentId) {
+      createNotification(submission.studentId, {
+        title: 'Bài tập đã được chấm điểm',
+        message: `Bài tập "${assignment?.title || 'bài tập'}" đã được chấm điểm: ${submission.score}/100.`,
+        type: 'ASSIGNMENT_GRADED',
+        link: '/assignments',
+      }).catch(err => console.error('Failed to notify student of grade:', err));
+    }
 
     res.json({
       success: true,

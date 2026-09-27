@@ -58,7 +58,7 @@ export const SessionDetailPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300 min-w-0">
       {/* Session Top Header */}
       <SessionHeader session={session} />
 

@@ -1,35 +1,63 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Calendar, Users, DollarSign, BarChart2, PlusCircle, ArrowRight } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  Calendar,
+  Users,
+  DollarSign,
+  BarChart2,
+  PlusCircle,
+  ArrowRight,
+  TrendingUp,
+  Activity,
+  BookOpen,
+  Search,
+  Clock,
+  CheckCircle2,
+  ChevronDown
+} from 'lucide-react';
 import { useModal } from '../../contexts/ModalContext';
 
 export const SimulationsList = () => {
   const { showAlert } = useModal();
   const [simulations, setSimulations] = useState<any[]>([]);
   const [participations, setParticipations] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [joiningId, setJoiningId] = useState<string | null>(null);
-  const [filter, setFilter] = useState('All');
-  
-  const navigate = useNavigate();
+  const [filter, setFilter] = useState<'All' | 'Active' | 'Upcoming' | 'Completed'>('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'newest' | 'capital_high' | 'capital_low' | 'name'>('newest');
 
   const fetchData = async () => {
     setLoading(true);
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-      const headers = { };
+      const token = localStorage.getItem('token');
+      const headers: Record<string, string> = {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      };
 
-      const [simRes, partRes] = await Promise.all([
+      const [simRes, partRes, assRes] = await Promise.all([
         fetch(`${apiUrl}/simulations`, { credentials: 'include', headers }),
-        fetch(`${apiUrl}/simulations/participations/me`, { credentials: 'include', headers })
+        fetch(`${apiUrl}/simulations/participations/me`, { credentials: 'include', headers }),
+        fetch(`${apiUrl}/assignments/my`, { credentials: 'include', headers }).catch(() => null)
       ]);
 
-      if (simRes.ok && partRes.ok) {
+      if (simRes.ok) {
         setSimulations(await simRes.json());
+      }
+      if (partRes.ok) {
         setParticipations(await partRes.json());
+      }
+      if (assRes && assRes.ok) {
+        const assData = await assRes.json();
+        setAssignments(Array.isArray(assData) ? assData : []);
+      } else {
+        setAssignments([]);
       }
     } catch (error) {
       console.error('Error fetching simulations data:', error);
+      setAssignments([]);
     } finally {
       setLoading(false);
     }
@@ -43,17 +71,21 @@ export const SimulationsList = () => {
     setJoiningId(simId);
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-      
-      const response = await fetch(`${apiUrl}/simulations/${simId}/join`, { credentials: 'include',
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${apiUrl}/simulations/${simId}/join`, {
+        credentials: 'include',
         method: 'POST',
-        });
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        }
+      });
 
       if (response.ok) {
-        // Refresh data to show "Enter Simulation" button
         fetchData();
         showAlert({
           title: 'Thành công',
-          message: 'Tham gia mô phỏng thành công!',
+          message: 'Gửi yêu cầu tham gia mô phỏng thành công!',
           type: 'success'
         });
       } else {
@@ -68,7 +100,7 @@ export const SimulationsList = () => {
       console.error('Error joining simulation:', error);
       showAlert({
         title: 'Lỗi',
-        message: 'An error occurred while joining the simulation',
+        message: 'Có lỗi xảy ra khi tham gia mô phỏng',
         type: 'error'
       });
     } finally {
@@ -77,180 +109,514 @@ export const SimulationsList = () => {
   };
 
   const hasJoined = (simId: string) => {
-    return participations.some(p => p.simulationId === simId);
+    return participations.some(p => p.simulationId === simId || p.simulationId?._id === simId);
   };
 
   const getParticipation = (simId: string) => {
-    return participations.find(p => p.simulationId === simId);
+    return participations.find(p => p.simulationId === simId || p.simulationId?._id === simId);
   };
 
-  const filteredSimulations = simulations.filter(sim => {
-    if (filter === 'All') return true;
-    if (filter === 'Live' && sim.status === 'ACTIVE') return true;
-    if (filter === 'Upcoming' && sim.status === 'PUBLISHED') return true;
-    if (filter === 'Completed' && sim.status === 'ENDED') return true;
-    return false;
-  });
+  // KPI Calculations
+  const activeSimsCount = useMemo(() => {
+    return simulations.filter(s => s.status === 'ACTIVE').length;
+  }, [simulations]);
+
+  const bestReturn = useMemo(() => {
+    const list = participations
+      .map(p => typeof p.returnRate === 'number' ? p.returnRate : (p.pnlPercent || 0))
+      .filter(r => !isNaN(r));
+    if (list.length > 0) {
+      return Math.max(...list);
+    }
+    return 0;
+  }, [participations]);
+
+  const pendingAssignmentsCount = useMemo(() => {
+    return assignments.filter((a: any) => {
+      const status = a.studentStatus || a.status;
+      return status !== 'COMPLETED' && status !== 'GRADED' && status !== 'SUBMITTED';
+    }).length;
+  }, [assignments]);
+
+  // Tab counts
+  const counts = useMemo(() => ({
+    All: simulations.length,
+    Active: simulations.filter(s => s.status === 'ACTIVE').length,
+    Upcoming: simulations.filter(s => s.status === 'PUBLISHED' || s.status === 'DRAFT').length,
+    Completed: simulations.filter(s => s.status === 'ENDED').length
+  }), [simulations]);
+
+  // Filtering and sorting
+  const filteredSimulations = useMemo(() => {
+    return simulations
+      .filter(sim => {
+        if (filter === 'Active' && sim.status !== 'ACTIVE') return false;
+        if (filter === 'Upcoming' && sim.status !== 'PUBLISHED' && sim.status !== 'DRAFT') return false;
+        if (filter === 'Completed' && sim.status !== 'ENDED') return false;
+
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          const matchName = (sim.name || '').toLowerCase().includes(q);
+          const matchDesc = (sim.description || '').toLowerCase().includes(q);
+          const matchMarket = (sim.market || '').toLowerCase().includes(q);
+          if (!matchName && !matchDesc && !matchMarket) return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'newest') {
+          return new Date(b.createdAt || b.startDate || 0).getTime() - new Date(a.createdAt || a.startDate || 0).getTime();
+        }
+        if (sortBy === 'capital_high') {
+          return (b.initialBalance || 0) - (a.initialBalance || 0);
+        }
+        if (sortBy === 'capital_low') {
+          return (a.initialBalance || 0) - (b.initialBalance || 0);
+        }
+        if (sortBy === 'name') {
+          return (a.name || '').localeCompare(b.name || '');
+        }
+        return 0;
+      });
+  }, [simulations, filter, searchQuery, sortBy]);
+
+  const formatDate = (dateStr?: string | Date) => {
+    if (!dateStr) return 'Tùy chọn';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+
+  const formatCapital = (amount?: number, market?: string) => {
+    if (amount === undefined || amount === null) return '100,000,000 ₫';
+    if (market === 'VN' || market === 'HOSE' || market === 'HNX' || amount >= 1000000) {
+      return `${amount.toLocaleString('vi-VN')} ₫`;
+    }
+    return `$${amount.toLocaleString('en-US')}`;
+  };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Simulations</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-2 text-lg">Practice trading, compete with other students, and improve your investment skills.</p>
+    <div className="space-y-6 sm:space-y-7 animate-in fade-in duration-500 max-w-6xl mx-auto">
+      {/* 2. Compact Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+            Simulations
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 text-xs sm:text-sm">
+            Join trading simulations, practice with virtual capital, and track your performance.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 self-start sm:self-center">
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-[#172033] text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-[#253047]">
+            {simulations.length} Simulations
+          </span>
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            {activeSimsCount} Active
+          </span>
+        </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex border-b border-slate-200 dark:border-[#253047] overflow-x-auto scrollbar-hide">
-        {['All', 'Live', 'Upcoming', 'Completed'].map((tab) => (
-          <button 
-            key={tab}
-            onClick={() => setFilter(tab)}
-            className={`px-6 py-4 font-semibold text-sm border-b-2 transition-colors whitespace-nowrap ${
-              filter === tab 
-                ? 'border-indigo-600 dark:border-indigo-500 text-indigo-600 dark:text-indigo-400' 
-                : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
+      {/* 3. Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
+        {/* Active Simulations */}
+        <div className="bg-white dark:bg-[#111827] p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-[#253047] shadow-sm relative overflow-hidden group transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              Active Simulations
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <Activity className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2.5 flex items-baseline gap-2">
+            <span className="text-2xl sm:text-3xl font-bold font-mono text-slate-900 dark:text-white">
+              {activeSimsCount}
+            </span>
+            <span className="text-xs text-slate-400 dark:text-slate-500">running now</span>
+          </div>
+        </div>
+
+        {/* Best Return */}
+        <div className="bg-white dark:bg-[#111827] p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-[#253047] shadow-sm relative overflow-hidden group transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              Best Return
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+              <TrendingUp className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2.5 flex items-baseline gap-2">
+            <span
+              className={`text-2xl sm:text-3xl font-bold font-mono ${
+                bestReturn >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+              }`}
+            >
+              {bestReturn >= 0 ? `+${bestReturn.toFixed(2)}%` : `${bestReturn.toFixed(2)}%`}
+            </span>
+            <span className="text-xs text-slate-400 dark:text-slate-500">across simulations</span>
+          </div>
+        </div>
+
+        {/* Assignments */}
+        <div className="bg-white dark:bg-[#111827] p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-[#253047] shadow-sm relative overflow-hidden group transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              Assignments
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+              <BookOpen className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2.5 flex items-baseline gap-2">
+            <span className="text-2xl sm:text-3xl font-bold font-mono text-slate-900 dark:text-white">
+              {pendingAssignmentsCount}
+            </span>
+            <span className="text-xs text-slate-400 dark:text-slate-500">active / pending</span>
+          </div>
+        </div>
       </div>
 
+      {/* 4. Horizontal Filter Bar & Search */}
+      <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200/80 dark:border-[#253047] shadow-sm p-2 sm:p-2.5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+        {/* Tabs */}
+        <div className="flex items-center gap-1 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          {(['All', 'Active', 'Upcoming', 'Completed'] as const).map(tab => {
+            const isActive = filter === tab;
+            return (
+              <button
+                key={tab}
+                onClick={() => setFilter(tab)}
+                className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer active:scale-95 ${
+                  isActive
+                    ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200/80 dark:border-indigo-800/60 shadow-xs'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100/70 dark:hover:bg-[#172033] border border-transparent'
+                }`}
+              >
+                <span>{tab}</span>
+                <span
+                  className={`text-[10px] sm:text-[11px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
+                    isActive
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-slate-100 dark:bg-[#1a2337] text-slate-600 dark:text-slate-400'
+                  }`}
+                >
+                  {counts[tab]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Search & Sort Controls */}
+        <div className="flex items-center gap-2">
+          {/* Search Input */}
+          <div className="relative flex-1 sm:w-60">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search simulations..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-[#172033] border border-slate-200 dark:border-[#253047] text-slate-900 dark:text-white placeholder:text-slate-400 text-xs rounded-xl pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
+            />
+          </div>
+
+          {/* Sort Dropdown */}
+          <div className="relative shrink-0">
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as any)}
+              className="bg-slate-50 dark:bg-[#172033] border border-slate-200 dark:border-[#253047] text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-xl pl-3 pr-7 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer appearance-none transition-all"
+            >
+              <option value="newest">Newest</option>
+              <option value="capital_high">Highest Capital</option>
+              <option value="capital_low">Lowest Capital</option>
+              <option value="name">Name A-Z</option>
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+        </div>
+      </div>
+
+      {/* 5. Simulation Cards Grid */}
       {loading ? (
         <div className="py-20 text-center text-slate-400 dark:text-slate-500 flex flex-col items-center justify-center">
-          <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-          Loading simulations...
+          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-3" />
+          <span className="text-sm">Loading simulations...</span>
         </div>
       ) : filteredSimulations.length === 0 ? (
-        <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] shadow-sm dark:shadow-lg p-12 text-center text-slate-500 dark:text-slate-400">
-          No simulations found matching this filter.
+        <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] shadow-sm p-12 text-center text-slate-500 dark:text-slate-400">
+          <BarChart2 className="w-10 h-10 opacity-30 mx-auto mb-2 text-slate-400" />
+          <p className="text-base font-semibold text-slate-800 dark:text-slate-200">No simulations found</p>
+          <p className="text-xs text-slate-400 mt-1">Try adjusting your filters or search keywords.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {filteredSimulations.map((sim) => {
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 items-stretch">
+          {filteredSimulations.map(sim => {
             const joined = hasJoined(sim._id);
             const participation = getParticipation(sim._id);
-            
+            const pnlRate = participation?.returnRate ?? (participation?.pnlPercent ?? 0);
+            const isApproved = participation?.status === 'ACTIVE';
+            const isPending = participation?.status === 'PENDING';
+            const isRejected = participation?.status === 'REJECTED';
+
+            const statusBorder =
+              sim.status === 'ACTIVE'
+                ? 'border-l-4 border-l-emerald-500'
+                : sim.status === 'ENDED'
+                ? 'border-l-4 border-l-slate-400 dark:border-l-slate-600'
+                : 'border-l-4 border-l-indigo-500';
+
             return (
-              <div key={sim._id} className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] shadow-sm dark:shadow-lg p-6 hover:shadow-md dark:hover:shadow-xl hover:border-slate-300 dark:hover:border-[#253047]/80 transition-all relative overflow-hidden flex flex-col group">
-                <div className={`absolute top-0 left-0 w-1.5 h-full transition-colors ${
-                  sim.status === 'ACTIVE' ? 'bg-emerald-500 group-hover:bg-emerald-400' :
-                  sim.status === 'ENDED' ? 'bg-slate-400 dark:bg-slate-500' : 'bg-amber-500'
-                }`}></div>
-                
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <span className={`text-xs px-2.5 py-0.5 rounded font-bold uppercase tracking-wider mb-3 inline-flex items-center gap-1.5 border ${
-                      sim.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border-emerald-500/20' :
-                      sim.status === 'ENDED' ? 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20' : 
-                      'bg-amber-500/10 text-amber-600 dark:text-amber-500 border-amber-500/20'
-                    }`}>
-                      {sim.status === 'ACTIVE' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>}
-                      {sim.status === 'PUBLISHED' ? 'Upcoming' : sim.status}
-                    </span>
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white mt-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{sim.name}</h2>
-                  </div>
-                </div>
-                
-                <p className="text-slate-600 dark:text-slate-400 mb-6 text-sm flex-1">
-                  {sim.description}
-                </p>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
-                  <div className="flex flex-col gap-1 text-sm">
-                    <div className="flex items-center gap-1 text-slate-400 dark:text-slate-500">
-                      <DollarSign className="w-3.5 h-3.5" /> Capital
-                    </div>
-                    <span className="font-semibold text-slate-800 dark:text-white">
-                      {sim.initialBalance >= 1000000 ? `${(sim.initialBalance / 1000000).toFixed(0)}M ₫` : `$${(sim.initialBalance || 10000).toLocaleString('en-US')} USD`}
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-1 text-sm">
-                    <div className="flex items-center gap-1 text-slate-400 dark:text-slate-500">
-                      <BarChart2 className="w-3.5 h-3.5" /> Market
-                    </div>
-                    <span className="font-semibold text-slate-800 dark:text-white">{sim.market || 'Crypto & US Stocks'}</span>
-                  </div>
-                  <div className="flex flex-col gap-1 text-sm">
-                    <div className="flex items-center gap-1 text-slate-400 dark:text-slate-500">
-                      <Calendar className="w-3.5 h-3.5" /> Ends
-                    </div>
-                    <span className="font-semibold text-slate-800 dark:text-white">{new Date(sim.endDate).toLocaleDateString()}</span>
-                  </div>
-                </div>
-
-                {joined ? (
-                  <>
-                    <div className="bg-slate-50 dark:bg-[#172033] p-4 rounded-xl border border-slate-200 dark:border-[#253047] flex justify-between items-center mb-6">
-                      <div>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">Your Return</p>
-                        <p className={`text-lg font-bold ${participation.returnRate >= 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-500'}`}>
-                          {participation.returnRate > 0 ? '+' : ''}{participation.returnRate.toFixed(2)}%
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">Status</p>
-                        <p className={`text-sm font-bold ${
-                          participation.status === 'ACTIVE' ? 'text-emerald-600 dark:text-emerald-400' :
-                          participation.status === 'PENDING' ? 'text-amber-600 dark:text-amber-400' :
-                          participation.status === 'REJECTED' ? 'text-rose-600 dark:text-rose-400' : 'text-slate-600 dark:text-slate-400'
-                        }`}>
-                          {participation.status === 'ACTIVE' ? 'Đã duyệt (Active)' :
-                           participation.status === 'PENDING' ? 'Chờ phê duyệt' :
-                           participation.status === 'REJECTED' ? 'Bị từ chối' : participation.status}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-3 mt-auto">
-                      {participation.status === 'ACTIVE' ? (
-                        <Link to={`/trade/${sim._id}`} className="flex-1 text-center bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-md shadow-indigo-600/20">
-                          Enter Simulation
-                          <ArrowRight className="w-4 h-4" />
-                        </Link>
-                      ) : participation.status === 'PENDING' ? (
-                        <button disabled className="flex-1 text-center bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-medium py-2.5 px-4 rounded-lg cursor-not-allowed flex items-center justify-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
-                          Chờ Giảng viên duyệt...
-                        </button>
+              <div
+                key={sim._id}
+                className={`bg-white dark:bg-[#111827] rounded-2xl border border-slate-200/80 dark:border-[#253047] shadow-sm hover:shadow-md transition-all p-5 sm:p-6 flex flex-col justify-between relative overflow-hidden group ${statusBorder}`}
+              >
+                {/* Top Section */}
+                <div>
+                  {/* 6. Card Header */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      {/* Status Badge */}
+                      {sim.status === 'ACTIVE' ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          ACTIVE
+                        </span>
+                      ) : sim.status === 'ENDED' ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20">
+                          COMPLETED
+                        </span>
                       ) : (
-                        <button 
-                          onClick={() => handleJoinSimulation(sim._id)}
-                          disabled={joiningId === sim._id}
-                          className="flex-1 text-center bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-                        >
-                          {joiningId === sim._id ? (
-                            <div className="w-5 h-5 border-2 border-rose-500 border-t-transparent rounded-full animate-spin"></div>
-                          ) : (
-                            <PlusCircle className="w-5 h-5" />
-                          )}
-                          Xin nộp lại yêu cầu
-                        </button>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                          UPCOMING
+                        </span>
                       )}
-                      <Link to={`/leaderboard?sim=${sim._id}`} className="bg-slate-100 hover:bg-slate-200 dark:bg-[#172033] dark:hover:bg-[#253047] text-slate-800 dark:text-white border border-slate-200 dark:border-[#253047] font-medium py-2.5 px-3 rounded-lg transition-colors text-xs flex items-center">
+
+                      {/* Simulation Name */}
+                      <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mt-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">
+                        {sim.name}
+                      </h3>
+                    </div>
+
+                    {/* Top-Right Participants */}
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium shrink-0 bg-slate-50 dark:bg-[#172033] px-2.5 py-1 rounded-lg border border-slate-100 dark:border-[#253047]/60">
+                      <Users className="w-3.5 h-3.5 text-slate-400" />
+                      <span>{sim.participantsCount ?? 0} {sim.participantsCount === 1 ? 'Participant' : 'Participants'}</span>
+                    </div>
+                  </div>
+
+                  {/* Description (max 2 lines) */}
+                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1.5 line-clamp-2 min-h-[2.5rem] leading-relaxed">
+                    {sim.description || 'Practice portfolio management with VN stocks in a live simulated environment.'}
+                  </p>
+
+                  {/* 7. Simulation Information Row */}
+                  <div className="grid grid-cols-3 gap-2 py-2.5 px-3.5 bg-slate-50/80 dark:bg-[#172033]/60 rounded-xl border border-slate-100 dark:border-[#253047]/60 my-3 text-xs">
+                    <div>
+                      <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 block mb-0.5">
+                        Initial Capital
+                      </span>
+                      <span className="font-bold text-slate-800 dark:text-white font-mono truncate block text-xs sm:text-sm">
+                        {formatCapital(sim.initialBalance, sim.market)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 block mb-0.5">
+                        Market
+                      </span>
+                      <span className="font-bold text-slate-800 dark:text-white truncate block text-xs sm:text-sm">
+                        {sim.market || 'VN'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 block mb-0.5">
+                        Ends
+                      </span>
+                      <span className="font-bold text-slate-800 dark:text-white font-mono truncate block text-xs sm:text-sm">
+                        {formatDate(sim.endDate)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 8. Participation Status Panel */}
+                  {joined ? (
+                    isApproved ? (
+                      <div className="bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40 rounded-xl p-3 my-2 text-xs">
+                        <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-indigo-100/70 dark:border-indigo-900/30">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-400">
+                            YOUR PERFORMANCE
+                          </span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                            ACTIVE
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-0.5">
+                              Portfolio Value
+                            </span>
+                            <span className="font-bold text-slate-800 dark:text-white font-mono truncate block text-xs">
+                              {formatCapital(
+                                participation.portfolioValue || participation.currentBalance || sim.initialBalance,
+                                sim.market
+                              )}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-0.5">
+                              Return
+                            </span>
+                            <span
+                              className={`font-bold font-mono text-xs ${
+                                pnlRate >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+                              }`}
+                            >
+                              {pnlRate >= 0 ? '+' : ''}
+                              {pnlRate.toFixed(2)}%
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-0.5">
+                              Rank
+                            </span>
+                            <span className="font-bold font-mono text-indigo-600 dark:text-indigo-400 text-xs">
+                              {participation.rank
+                                ? `#${participation.rank} / ${participation.totalParticipants || sim.participantsCount || 1}`
+                                : `#1 / ${sim.participantsCount || 1}`}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : isPending ? (
+                      <div className="bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/40 rounded-xl p-3 my-2 text-xs flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping shrink-0" />
+                          <div>
+                            <span className="font-bold text-amber-800 dark:text-amber-400 block text-xs">
+                              Chờ phê duyệt
+                            </span>
+                            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                              Yêu cầu tham gia đang chờ Giảng viên duyệt
+                            </span>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 shrink-0">
+                          PENDING
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200/70 dark:border-rose-900/40 rounded-xl p-3 my-2 text-xs flex items-center justify-between">
+                        <div>
+                          <span className="font-bold text-rose-800 dark:text-rose-400 block text-xs">
+                            Yêu cầu bị từ chối
+                          </span>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                            Bạn có thể xin nộp lại yêu cầu tham gia
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20 shrink-0">
+                          REJECTED
+                        </span>
+                      </div>
+                    )
+                  ) : (
+                    /* 10. Not Joined */
+                    <div className="bg-slate-50/60 dark:bg-[#172033]/40 border border-slate-100 dark:border-[#253047]/40 rounded-xl p-2.5 my-2 text-xs flex items-center justify-between">
+                      <span className="text-slate-500 dark:text-slate-400">Trạng thái tham gia:</span>
+                      <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-slate-800 px-2.5 py-0.5 rounded-full">
+                        Not joined
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Bottom Actions */}
+                {joined ? (
+                  isApproved ? (
+                    /* 9. Active Simulation Actions */
+                    <div className="flex items-center gap-2 mt-auto pt-3">
+                      <Link
+                        to={`/trade/${sim._id}`}
+                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm shadow-indigo-600/20 transition-all"
+                      >
+                        <span>Enter Simulation</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </Link>
+                      <Link
+                        to={`/leaderboard?sim=${sim._id}`}
+                        className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200/80 dark:bg-[#172033] dark:hover:bg-[#253047] text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-[#253047] font-semibold rounded-xl text-xs sm:text-sm transition-colors text-center"
+                      >
                         Leaderboard
                       </Link>
-                      <Link to="/student/journal" className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-medium py-2.5 px-3 rounded-lg transition-colors text-xs flex items-center">
+                      <Link
+                        to="/student/journal"
+                        className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200/80 dark:bg-[#172033] dark:hover:bg-[#253047] text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-[#253047] font-semibold rounded-xl text-xs sm:text-sm transition-colors text-center"
+                      >
                         Journal
                       </Link>
                     </div>
-                  </>
+                  ) : isPending ? (
+                    <div className="flex items-center gap-2 mt-auto pt-3">
+                      <button
+                        disabled
+                        className="flex-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        <Clock className="w-4 h-4" />
+                        <span>Chờ Giảng viên duyệt...</span>
+                      </button>
+                      <Link
+                        to={`/leaderboard?sim=${sim._id}`}
+                        className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200/80 dark:bg-[#172033] dark:hover:bg-[#253047] text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-[#253047] font-semibold rounded-xl text-xs sm:text-sm transition-colors text-center"
+                      >
+                        View Leaderboard
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 mt-auto pt-3">
+                      <button
+                        onClick={() => handleJoinSimulation(sim._id)}
+                        disabled={joiningId === sim._id}
+                        className="flex-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        {joiningId === sim._id ? (
+                          <div className="w-4 h-4 border-2 border-rose-500 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <PlusCircle className="w-4 h-4" />
+                        )}
+                        <span>Xin nộp lại yêu cầu</span>
+                      </button>
+                      <Link
+                        to={`/leaderboard?sim=${sim._id}`}
+                        className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200/80 dark:bg-[#172033] dark:hover:bg-[#253047] text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-[#253047] font-semibold rounded-xl text-xs sm:text-sm transition-colors text-center"
+                      >
+                        View Leaderboard
+                      </Link>
+                    </div>
+                  )
                 ) : (
-                  <div className="flex gap-3 mt-auto pt-6 border-t border-slate-200 dark:border-[#253047]">
-                    <button 
+                  /* 10. Simulation Not Joined Action */
+                  <div className="flex items-center gap-2 mt-auto pt-3">
+                    <button
                       onClick={() => handleJoinSimulation(sim._id)}
                       disabled={joiningId === sim._id || sim.status === 'ENDED'}
-                      className="flex-1 text-center bg-indigo-50 hover:bg-indigo-100 dark:bg-[#172033] dark:hover:bg-[#253047] text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30 font-medium py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.99] text-white font-semibold py-2.5 px-4 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm shadow-indigo-600/20 transition-all cursor-pointer"
                     >
                       {joiningId === sim._id ? (
-                        <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       ) : (
-                        <PlusCircle className="w-5 h-5" />
+                        <PlusCircle className="w-4 h-4" />
                       )}
-                      Join Simulation
+                      <span>Join Simulation</span>
                     </button>
-                    <Link to={`/leaderboard?sim=${sim._id}`} className="bg-slate-100 hover:bg-slate-200 dark:bg-[#172033] dark:hover:bg-[#253047] text-slate-800 dark:text-white border border-slate-200 dark:border-[#253047] font-medium py-2.5 px-4 rounded-lg transition-colors">
-                      Leaderboard
+                    <Link
+                      to={`/leaderboard?sim=${sim._id}`}
+                      className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200/80 dark:bg-[#172033] dark:hover:bg-[#253047] text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-[#253047] font-semibold rounded-xl text-xs sm:text-sm transition-colors text-center"
+                    >
+                      View Leaderboard
                     </Link>
                   </div>
                 )}

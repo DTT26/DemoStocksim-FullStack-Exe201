@@ -18,7 +18,7 @@ export const JournalEmptyState: React.FC<JournalEmptyStateProps> = ({
   const navigate = useNavigate();
 
   return (
-    <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-[#253047] rounded-2xl p-12 text-center max-w-lg mx-auto shadow-sm my-8">
+    <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-[#253047] rounded-2xl p-6 sm:p-12 text-center max-w-lg mx-auto shadow-sm my-4 sm:my-8">
       <div className="w-14 h-14 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto mb-4">
         <Target className="w-7 h-7" />
       </div>

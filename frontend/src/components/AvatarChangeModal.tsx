@@ -136,10 +136,10 @@ export const AvatarChangeModal: React.FC<AvatarChangeModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-[#111827] rounded-3xl border border-slate-200 dark:border-[#253047] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-[#09090b] rounded-3xl border border-slate-200 dark:border-[#262626] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] transition-colors">
         {/* Header */}
-        <div className="p-5 border-b border-slate-200 dark:border-[#253047] flex items-center justify-between bg-slate-50 dark:bg-[#172033]/60">
+        <div className="p-5 border-b border-slate-200 dark:border-[#262626] flex items-center justify-between bg-slate-50/80 dark:bg-[#000000]">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
               <Sparkles className="w-4 h-4" />
@@ -151,7 +151,7 @@ export const AvatarChangeModal: React.FC<AvatarChangeModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg transition-colors cursor-pointer hover:bg-slate-100 dark:hover:bg-[#1c1c1f]"
           >
             <X className="w-5 h-5" />
           </button>
@@ -233,7 +233,7 @@ export const AvatarChangeModal: React.FC<AvatarChangeModalProps> = ({
               />
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-slate-300 dark:border-[#253047] hover:border-indigo-500 rounded-2xl p-6 text-center cursor-pointer transition-colors bg-slate-50/50 dark:bg-[#172033]/30 flex flex-col items-center justify-center gap-3"
+                className="border-2 border-dashed border-slate-300 dark:border-[#262626] hover:border-indigo-500 rounded-2xl p-6 text-center cursor-pointer transition-colors bg-slate-50/50 dark:bg-[#121214] flex flex-col items-center justify-center gap-3"
               >
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-sm">
                   <Upload className="w-6 h-6" />
@@ -277,7 +277,7 @@ export const AvatarChangeModal: React.FC<AvatarChangeModalProps> = ({
                       <img
                         src={preset.url}
                         alt={preset.label}
-                        className="w-full h-full object-cover rounded-full bg-slate-100 dark:bg-[#172033]"
+                        className="w-full h-full object-cover rounded-full bg-slate-100 dark:bg-[#121214]"
                       />
                       {isSelected && (
                         <div className="absolute inset-0 bg-indigo-600/40 flex items-center justify-center rounded-full">
@@ -303,7 +303,7 @@ export const AvatarChangeModal: React.FC<AvatarChangeModalProps> = ({
                   placeholder="https://example.com/avatar.jpg"
                   value={urlInput}
                   onChange={(e) => setUrlInput(e.target.value)}
-                  className="flex-1 px-3.5 py-2.5 bg-slate-50 dark:bg-[#172033] border border-slate-200 dark:border-[#253047] rounded-xl text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
+                  className="flex-1 px-3.5 py-2.5 bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] rounded-xl text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
                 />
                 <button
                   type="button"
@@ -318,7 +318,7 @@ export const AvatarChangeModal: React.FC<AvatarChangeModalProps> = ({
         </div>
 
         {/* Footer actions */}
-        <div className="p-4 border-t border-slate-200 dark:border-[#253047] bg-slate-50 dark:bg-[#172033]/60 flex items-center justify-between gap-3">
+        <div className="p-4 border-t border-slate-200 dark:border-[#262626] bg-slate-50/80 dark:bg-[#000000] flex items-center justify-between gap-3">
           {currentPicture ? (
             <button
               type="button"

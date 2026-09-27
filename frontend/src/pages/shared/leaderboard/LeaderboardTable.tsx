@@ -19,15 +19,14 @@ export const LeaderboardTable = ({ users, currentUserEmail, loading, onRefresh }
   );
 
   const formatMoney = (val: number) => {
-    if (val === undefined || val === null) return '0 ₫';
-    if (Math.abs(val) >= 1000000) {
-      return new Intl.NumberFormat('vi-VN', {
-        style: 'currency',
-        currency: 'VND',
-        maximumFractionDigits: 0
-      }).format(val);
-    }
-    return `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    if (val === undefined || val === null) return '$0.00';
+    const amount = Math.abs(val) >= 1000000 ? val / 1000 : val;
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount);
   };
 
   const formatReturn = (val: number) => {

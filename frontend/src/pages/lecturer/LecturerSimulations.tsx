@@ -134,14 +134,14 @@ export const LecturerSimulations = () => {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Simulations</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-2 text-lg">Create, manage and monitor trading simulations.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Simulations</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 sm:mt-2 text-sm sm:text-base">Create, manage and monitor trading simulations.</p>
         </div>
         <button 
           onClick={handleOpenCreateModal}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors shadow-lg shadow-indigo-600/20 flex items-center gap-2"
+          className="w-full sm:w-auto justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-5 sm:px-6 rounded-xl transition-colors shadow-lg shadow-indigo-600/20 flex items-center gap-2 cursor-pointer"
         >
           <PlusCircle className="w-5 h-5" />
           Create Simulation
@@ -149,35 +149,35 @@ export const LecturerSimulations = () => {
       </div>
 
       {/* Tabs and Filters */}
-      <div className="flex flex-col md:flex-row justify-between gap-4 border-b border-slate-200 dark:border-[#253047] pb-4">
-        <div className="flex overflow-x-auto scrollbar-hide gap-2">
+      <div className="flex flex-col md:flex-row justify-between gap-3 sm:gap-4 border-b border-slate-200 dark:border-[#253047] pb-4">
+        <div className="flex flex-wrap gap-1.5 sm:gap-2">
           {['All', 'Live', 'Upcoming', 'Completed', 'Draft'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === tab
-                  ? 'bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20'
+                  ? 'bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#172033] border border-transparent'
               }`}
             >
-              {tab} <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === tab ? 'bg-indigo-600/20 text-indigo-600 dark:text-indigo-300' : 'bg-slate-100 dark:bg-[#253047] text-slate-600 dark:text-slate-300'}`}>{(counts as any)[tab]}</span>
+              {tab} <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-bold ${activeTab === tab ? 'bg-indigo-600/20 text-indigo-600 dark:text-indigo-300' : 'bg-slate-100 dark:bg-[#253047] text-slate-600 dark:text-slate-300'}`}>{(counts as any)[tab]}</span>
             </button>
           ))}
         </div>
         
-        <div className="flex gap-3">
-          <div className="relative group">
+        <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto">
+          <div className="relative group flex-1 md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-500" />
             <input
               type="text"
               placeholder="Search simulations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 bg-white dark:bg-[#111827] border border-slate-200 dark:border-[#253047] rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-full md:w-64 transition-colors"
+              className="pl-9 pr-4 py-2 bg-white dark:bg-[#111827] border border-slate-200 dark:border-[#253047] rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-full transition-colors"
             />
           </div>
-          <button className="p-2 border border-slate-200 dark:border-[#253047] rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#172033] transition-colors">
+          <button className="p-2 shrink-0 border border-slate-200 dark:border-[#253047] rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#172033] transition-colors cursor-pointer">
             <Filter className="w-4 h-4" />
           </button>
         </div>
@@ -273,7 +273,7 @@ export const LecturerSimulations = () => {
                     <p className="text-slate-500 dark:text-slate-400 text-xs uppercase mb-1">Capital</p>
                     <p className="text-slate-800 dark:text-white font-medium flex items-center gap-1.5 font-mono">
                       <Activity className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
-                      {(sim.initialBalance / 1000000).toLocaleString()}M VND
+                      ${(sim.initialBalance >= 1000000 ? (sim.initialBalance / 1000) : (sim.initialBalance || 10000)).toLocaleString('en-US')}
                     </p>
                   </div>
                   <div>

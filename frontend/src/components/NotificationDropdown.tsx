@@ -8,11 +8,12 @@ export const NotificationDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
-  const { notifications, markAsRead, markAllAsRead, clearNotifications } = useNotificationStore();
+  const { notifications, markAsRead, markAllAsRead, clearNotifications, fetchNotifications } = useNotificationStore();
   
   const unreadCount = notifications.filter(n => !n.read).length;
 
   useEffect(() => {
+    fetchNotifications();
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
@@ -21,17 +22,29 @@ export const NotificationDropdown = () => {
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [fetchNotifications]);
 
   if (!user) return null;
 
   const getIcon = (type: string) => {
     switch(type) {
-      case 'success': return <CheckCircle2 className="w-5 h-5 text-emerald-500" />;
-      case 'error': return <AlertCircle className="w-5 h-5 text-rose-500" />;
-      case 'warning': return <AlertCircle className="w-5 h-5 text-amber-500" />;
+      case 'SIMULATION_APPROVED':
+      case 'ASSIGNMENT_GRADED':
+      case 'success': 
+        return <CheckCircle2 className="w-5 h-5 text-emerald-500" />;
+      case 'SIMULATION_REJECTED':
+      case 'SIMULATION_KICKED':
+      case 'error': 
+        return <AlertCircle className="w-5 h-5 text-rose-500" />;
+      case 'ASSIGNMENT_DUE':
+      case 'warning': 
+        return <AlertCircle className="w-5 h-5 text-amber-500" />;
+      case 'SIMULATION_JOIN':
+      case 'ASSIGNMENT_NEW':
+      case 'ASSIGNMENT_SUBMITTED':
       case 'info':
-      default: return <Info className="w-5 h-5 text-blue-500" />;
+      default: 
+        return <Info className="w-5 h-5 text-blue-500" />;
     }
   };
 

@@ -386,7 +386,7 @@ export const StudentAssignmentDetail = () => {
               <div className="space-y-3">
                 {(() => {
                   const ev = submission.tradingEvidence;
-                  const currSymbol = ev.currencySymbol || '₫';
+                  const currSymbol = ev.currencySymbol || '$';
                   const totalFilled = ev.totalFilledOrders !== undefined ? ev.totalFilledOrders : ev.totalOrders;
                   const totalCancelled = ev.totalCancelledOrders || 0;
 
@@ -537,7 +537,7 @@ export const StudentAssignmentDetail = () => {
                   rows={6}
                   value={analysisContent}
                   onChange={(e) => setAnalysisContent(e.target.value)}
-                  placeholder="Ví dụ: Dựa trên chỉ báo RSI chạm vùng quá bán 28 và đường MACD chuẩn bị cắt lên Signal line tại khung H1, tôi đã lên kế hoạch đặt lệnh Mua Limit giá 135.500 VND..."
+                  placeholder="Ví dụ: Dựa trên chỉ báo RSI chạm vùng quá bán 28 và đường MACD chuẩn bị cắt lên Signal line tại khung H1, tôi đã lên kế hoạch đặt lệnh Mua Limit giá 135.50 USD..."
                   className="w-full p-4 bg-slate-50 dark:bg-[#172033] border border-slate-200 dark:border-[#253047] rounded-xl text-slate-800 dark:text-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none leading-relaxed placeholder:text-slate-400 dark:placeholder:text-slate-500 font-sans"
                 />
               </div>

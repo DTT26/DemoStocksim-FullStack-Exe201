@@ -1,39 +1,39 @@
 export const MOCK_STUDENT_PORTFOLIO = {
-  totalValue: 108520000,
+  totalValue: 108520,
   totalReturn: 8.52,
   winRate: 65.2,
   totalTrades: 23,
   winningTrades: 15,
   losingTrades: 8,
-  averageWin: 1250000,
-  averageLoss: -680000,
-  bestTrade: 4200000,
-  worstTrade: -1500000,
+  averageWin: 1250,
+  averageLoss: -680,
+  bestTrade: 4200,
+  worstTrade: -1500,
   profitFactor: 2.1,
   averageHoldingTime: '2.5 days',
   mostTradedSymbol: 'FPT',
-  averagePositionSize: 25000000,
+  averagePositionSize: 25000,
   averageTradesPerSession: 4.5,
   mostActiveTradingPeriod: 'Morning (9:00 - 11:30)',
 };
 
 export const MOCK_PERFORMANCE_HISTORY = [
-  { date: '2026-09-01', value: 100000000 },
-  { date: '2026-09-03', value: 101200000 },
-  { date: '2026-09-05', value: 99500000 },
-  { date: '2026-09-07', value: 102400000 },
-  { date: '2026-09-10', value: 104500000 },
-  { date: '2026-09-12', value: 103800000 },
-  { date: '2026-09-15', value: 106200000 },
-  { date: '2026-09-18', value: 108520000 },
+  { date: '2026-09-01', value: 100000 },
+  { date: '2026-09-03', value: 101200 },
+  { date: '2026-09-05', value: 99500 },
+  { date: '2026-09-07', value: 102400 },
+  { date: '2026-09-10', value: 104500 },
+  { date: '2026-09-12', value: 103800 },
+  { date: '2026-09-15', value: 106200 },
+  { date: '2026-09-18', value: 108520 },
 ];
 
 export const MOCK_PERFORMANCE_BY_SYMBOL = [
-  { symbol: 'FPT', trades: 8, winRate: 75.0, pnl: 4200000, returnRate: 8.1 },
-  { symbol: 'HPG', trades: 6, winRate: 50.0, pnl: 1100000, returnRate: 2.4 },
-  { symbol: 'VNM', trades: 4, winRate: 25.0, pnl: -800000, returnRate: -1.8 },
-  { symbol: 'MWG', trades: 3, winRate: 100.0, pnl: 2500000, returnRate: 5.5 },
-  { symbol: 'SSI', trades: 2, winRate: 50.0, pnl: 1520000, returnRate: 3.2 },
+  { symbol: 'FPT', trades: 8, winRate: 75.0, pnl: 4200, returnRate: 8.1 },
+  { symbol: 'HPG', trades: 6, winRate: 50.0, pnl: 1100, returnRate: 2.4 },
+  { symbol: 'VNM', trades: 4, winRate: 25.0, pnl: -800, returnRate: -1.8 },
+  { symbol: 'MWG', trades: 3, winRate: 100.0, pnl: 2500, returnRate: 5.5 },
+  { symbol: 'SSI', trades: 2, winRate: 50.0, pnl: 1520, returnRate: 3.2 },
 ];
 
 export const MOCK_ASSIGNMENTS = [

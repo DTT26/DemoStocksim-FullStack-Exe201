@@ -205,7 +205,7 @@ export const SimulatorTradingPanel = ({
             <span>Balance</span>
           </div>
           <span className="font-mono text-[#089981] font-bold">
-            {store.session.balance.toLocaleString('vi-VN', { maximumFractionDigits: 0 })} ₫
+            ${store.session.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
         </div>
 
@@ -230,7 +230,7 @@ export const SimulatorTradingPanel = ({
         <div className="flex gap-2">
           <div className="flex flex-col gap-1 flex-1">
             <label className="text-[10px] text-[#787b86] uppercase tracking-wider font-semibold">
-              {orderType === 'MARKET' ? 'Giá (Thị trường)' : 'Giá đặt (VND)'}
+              {orderType === 'MARKET' ? 'Giá (Thị trường)' : 'Giá đặt (USD)'}
             </label>
             {orderType === 'MARKET' ? (
               <div className="bg-[#f0f1f3] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
@@ -442,7 +442,7 @@ export const SimulatorTradingPanel = ({
           <div className="flex items-center justify-between">
             <span className="text-[#787b86]">Ký quỹ yêu cầu</span>
             <span className="font-mono text-[#1e2329] dark:text-white font-bold">
-              {marginRequired.toLocaleString('vi-VN', { maximumFractionDigits: 0 })} ₫
+              ${marginRequired.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
           <div className="flex items-center justify-between text-[11px]">
@@ -458,7 +458,7 @@ export const SimulatorTradingPanel = ({
           <div className="flex items-center justify-between text-[11px] border-t border-[#e6e8ea] dark:border-[#2a2e39] pt-1.5 mt-0.5">
             <span className="text-[#787b86]">Ký quỹ khả dụng</span>
             <span className="font-mono text-[#787b86]">
-              {freeMarginAvailable.toLocaleString('vi-VN', { maximumFractionDigits: 0 })} ₫
+              ${freeMarginAvailable.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
           {isMarginExceeded && (

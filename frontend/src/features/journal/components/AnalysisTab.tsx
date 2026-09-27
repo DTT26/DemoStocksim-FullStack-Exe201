@@ -77,7 +77,7 @@ export const AnalysisTab: React.FC<AnalysisTabProps> = ({ session }) => {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300 min-w-0">
       {/* ROW 1: EQUITY CURVE & DRAWDOWN */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Equity Curve */}

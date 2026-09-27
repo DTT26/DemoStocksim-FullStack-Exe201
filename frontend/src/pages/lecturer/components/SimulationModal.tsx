@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Check, ChevronRight, ChevronLeft, Target, Users, Settings as SettingsIcon, AlertCircle } from 'lucide-react';
+import { X, Check, ChevronRight, ChevronLeft, Target, Settings as SettingsIcon, Users, AlertCircle } from 'lucide-react';
 
 interface SimulationModalProps {
   isOpen: boolean;
@@ -13,8 +13,8 @@ export const SimulationModal = ({ isOpen, onClose, onSaved, simulationToEdit }: 
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    initialBalance: 100000000,
     market: 'VN',
+    initialBalance: 100000000,
     startDate: new Date().toISOString().split('T')[0],
     endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
   });
@@ -22,15 +22,28 @@ export const SimulationModal = ({ isOpen, onClose, onSaved, simulationToEdit }: 
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (simulationToEdit) {
-      setFormData({
-        name: simulationToEdit.name || '',
-        description: simulationToEdit.description || '',
-        initialBalance: simulationToEdit.initialBalance || 100000000,
-        market: simulationToEdit.market || 'GLOBAL',
-        startDate: simulationToEdit.startDate ? new Date(simulationToEdit.startDate).toISOString().split('T')[0] : '',
-        endDate: simulationToEdit.endDate ? new Date(simulationToEdit.endDate).toISOString().split('T')[0] : '',
-      });
+    if (isOpen) {
+      setStep(1);
+      setError('');
+      if (simulationToEdit) {
+        setFormData({
+          name: simulationToEdit.name || '',
+          description: simulationToEdit.description || '',
+          market: simulationToEdit.market || 'VN',
+          initialBalance: simulationToEdit.initialBalance || 100000000,
+          startDate: simulationToEdit.startDate ? new Date(simulationToEdit.startDate).toISOString().split('T')[0] : '',
+          endDate: simulationToEdit.endDate ? new Date(simulationToEdit.endDate).toISOString().split('T')[0] : '',
+        });
+      } else {
+        setFormData({
+          name: '',
+          description: '',
+          market: 'VN',
+          initialBalance: 100000000,
+          startDate: new Date().toISOString().split('T')[0],
+          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        });
+      }
     }
   }, [simulationToEdit, isOpen]);
 
@@ -54,18 +67,11 @@ export const SimulationModal = ({ isOpen, onClose, onSaved, simulationToEdit }: 
         : `${apiUrl}/simulations`;
       const method = simulationToEdit ? 'PUT' : 'POST';
 
-      const response = await fetch(url, { 
+      const response = await fetch(url, {
         credentials: 'include',
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.name,
-          description: formData.description,
-          initialBalance: formData.initialBalance,
-          market: formData.market,
-          startDate: formData.startDate,
-          endDate: formData.endDate
-        })
+        body: JSON.stringify(formData)
       });
 
       if (response.ok) {
@@ -89,35 +95,44 @@ export const SimulationModal = ({ isOpen, onClose, onSaved, simulationToEdit }: 
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-[#080C14]/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#111827] rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] border border-[#253047]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-6 bg-slate-900/60 dark:bg-black/85 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-[#09090b] rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh] border border-slate-200 dark:border-[#262626] transition-colors">
         {/* Header */}
-        <div className="px-6 py-5 border-b border-[#253047] flex justify-between items-center bg-[#172033]">
-          <h2 className="text-xl font-bold text-white">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-5 border-b border-slate-200 dark:border-[#262626] flex justify-between items-center bg-slate-50/80 dark:bg-[#000000]">
+          <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
             {simulationToEdit ? 'Edit Simulation' : 'Create New Simulation'}
           </h2>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-white hover:bg-[#253047] rounded-lg transition-colors">
+          <button 
+            onClick={onClose} 
+            className="p-1.5 sm:p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#1c1c1f] rounded-lg transition-colors cursor-pointer"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
         
         {/* Stepper */}
-        <div className="px-6 py-4 bg-[#111827] border-b border-[#253047] overflow-x-auto scrollbar-hide">
-          <div className="flex items-center min-w-[600px]">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 bg-slate-50/50 dark:bg-[#000000] border-b border-slate-200 dark:border-[#262626] overflow-x-auto scrollbar-hide no-scrollbar">
+          <div className="flex items-center min-w-[460px] sm:min-w-[600px]">
             {steps.map((s, i) => (
               <div key={s.num} className="flex-1 flex items-center">
-                <div className={`flex flex-col items-center gap-2 w-full relative ${s.num <= step ? 'text-indigo-400' : 'text-slate-500'}`}>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors ${
-                    s.num < step ? 'bg-indigo-600 border-indigo-600 text-white' : 
-                    s.num === step ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400' : 
-                    'border-[#253047] bg-[#172033] text-slate-500'
+                <div className={`flex flex-col items-center gap-1.5 sm:gap-2 w-full relative ${
+                  s.num <= step ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'
+                }`}>
+                  <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 transition-colors text-xs sm:text-sm font-semibold ${
+                    s.num < step 
+                      ? 'bg-indigo-600 border-indigo-600 text-white' 
+                      : s.num === step 
+                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400' 
+                      : 'border-slate-200 dark:border-[#262626] bg-slate-100 dark:bg-[#141416] text-slate-400 dark:text-slate-500'
                   }`}>
-                    {s.num < step ? <Check className="w-5 h-5" /> : s.icon}
+                    {s.num < step ? <Check className="w-4 h-4 sm:w-5 sm:h-5" /> : s.icon}
                   </div>
-                  <span className="text-xs font-semibold uppercase tracking-wider">{s.title}</span>
+                  <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider">{s.title}</span>
                 </div>
                 {i < steps.length - 1 && (
-                  <div className={`h-px w-full -mt-6 mx-2 transition-colors ${s.num < step ? 'bg-indigo-600' : 'bg-[#253047]'}`} />
+                  <div className={`h-px w-full -mt-5 sm:-mt-6 mx-1 sm:mx-2 transition-colors ${
+                    s.num < step ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-[#262626]'
+                  }`} />
                 )}
               </div>
             ))}
@@ -125,10 +140,10 @@ export const SimulationModal = ({ isOpen, onClose, onSaved, simulationToEdit }: 
         </div>
         
         {/* Content */}
-        <div className="p-6 overflow-y-auto flex-1 bg-[#111827]">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-white dark:bg-[#09090b]">
           {error && (
-            <div className="mb-6 p-4 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-lg text-sm flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 shrink-0" />
+            <div className="mb-6 p-4 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20 rounded-xl text-sm flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
               <p>{error}</p>
             </div>
           )}
@@ -136,11 +151,11 @@ export const SimulationModal = ({ isOpen, onClose, onSaved, simulationToEdit }: 
           <div className="max-w-2xl mx-auto py-2">
             {step === 1 && (
               <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                <h3 className="text-lg font-semibold text-white mb-4">Basic Information</h3>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Basic Information</h3>
                 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold text-slate-300 mb-2">Simulation Name *</label>
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Simulation Name *</label>
                     <input
                       type="text"
                       name="name"
@@ -148,69 +163,69 @@ export const SimulationModal = ({ isOpen, onClose, onSaved, simulationToEdit }: 
                       value={formData.name}
                       onChange={handleChange}
                       placeholder="e.g. Vietnam Stock Challenge #01"
-                      className="w-full px-4 py-2.5 bg-[#172033] border border-[#253047] rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-white placeholder:text-slate-500"
+                      className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:bg-white dark:focus:bg-[#18181b] text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-colors"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-semibold text-slate-300 mb-2">Description</label>
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Description</label>
                     <textarea
                       name="description"
                       rows={3}
                       value={formData.description}
                       onChange={handleChange}
                       placeholder="Describe the rules and goals..."
-                      className="w-full px-4 py-2.5 bg-[#172033] border border-[#253047] rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-white placeholder:text-slate-500 resize-none"
+                      className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:bg-white dark:focus:bg-[#18181b] text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none transition-colors"
                     />
                   </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-[#d1d4dc] mb-2">Vốn khởi tạo (Initial Balance)</label>
-                <input
-                  type="number"
-                  name="initialBalance"
-                  required
-                  min="0"
-                  step="1000"
-                  value={formData.initialBalance}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#131722] border border-slate-200 dark:border-[#2a2e39] text-slate-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-[#1e222d] transition-colors"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-[#d1d4dc] mb-2">Thị trường (Market)</label>
-                <select
-                  name="market"
-                  value={formData.market}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#131722] border border-slate-200 dark:border-[#2a2e39] text-slate-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-[#1e222d] transition-colors"
-                >
-                  <option value="GLOBAL">Crypto & US Stocks (Quốc tế)</option>
-                  <option value="VN">Cổ phiếu Việt Nam (HOSE, HNX)</option>
-                  <option value="CRYPTO">Crypto Only</option>
-                  <option value="US">US Stocks Only</option>
-                  <option value="FOREX">Ngoại hối (Forex)</option>
-                </select>
-              </div>
-            </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-slate-300 mb-2">Start Date *</label>
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Vốn khởi tạo (Initial Balance USD) *</label>
+                      <input
+                        type="number"
+                        name="initialBalance"
+                        required
+                        min="0"
+                        step="1000"
+                        value={formData.initialBalance}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:bg-white dark:focus:bg-[#18181b] text-slate-900 dark:text-white font-mono transition-colors"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Thị trường (Market) *</label>
+                      <select
+                        name="market"
+                        value={formData.market}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:bg-white dark:focus:bg-[#18181b] text-slate-900 dark:text-white transition-colors cursor-pointer"
+                      >
+                        <option value="VN">Cổ phiếu Việt Nam (HOSE, HNX)</option>
+                        <option value="GLOBAL">Crypto & US Stocks (Quốc tế)</option>
+                        <option value="CRYPTO">Crypto Only</option>
+                        <option value="US">US Stocks Only</option>
+                        <option value="FOREX">Ngoại hối (Forex)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Start Date *</label>
                       <input
                         type="date"
                         name="startDate"
                         required
                         value={formData.startDate}
                         onChange={handleChange}
-                        className="w-full px-4 py-2.5 bg-[#172033] border border-[#253047] rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-white [color-scheme:dark]"
+                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:bg-white dark:focus:bg-[#18181b] text-slate-900 dark:text-white [color-scheme:light] dark:[color-scheme:dark] transition-colors"
                       />
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-semibold text-slate-300 mb-2">End Date *</label>
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">End Date *</label>
                       <input
                         type="date"
                         name="endDate"
@@ -218,7 +233,7 @@ export const SimulationModal = ({ isOpen, onClose, onSaved, simulationToEdit }: 
                         min={formData.startDate}
                         value={formData.endDate}
                         onChange={handleChange}
-                        className="w-full px-4 py-2.5 bg-[#172033] border border-[#253047] rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-white [color-scheme:dark]"
+                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:bg-white dark:focus:bg-[#18181b] text-slate-900 dark:text-white [color-scheme:light] dark:[color-scheme:dark] transition-colors"
                       />
                     </div>
                   </div>
@@ -228,11 +243,11 @@ export const SimulationModal = ({ isOpen, onClose, onSaved, simulationToEdit }: 
 
             {step === 2 && (
               <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                <h3 className="text-lg font-semibold text-white mb-4">Trading Settings</h3>
-                <div className="bg-[#172033] border border-[#253047] rounded-xl p-8 flex flex-col items-center justify-center text-center">
-                  <SettingsIcon className="w-12 h-12 text-slate-500 mb-4 opacity-50" />
-                  <h4 className="text-white font-medium mb-2">Advanced settings are not yet supported</h4>
-                  <p className="text-slate-400 text-sm max-w-md">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Trading Settings</h3>
+                <div className="bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] rounded-2xl p-8 flex flex-col items-center justify-center text-center">
+                  <SettingsIcon className="w-12 h-12 text-slate-400 dark:text-slate-600 mb-4 opacity-50" />
+                  <h4 className="text-slate-900 dark:text-white font-bold mb-2">Advanced settings are not yet supported</h4>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md">
                     Features like Commission, Transaction Fee, Trading Limit, and Short Selling will be available in a future backend update. For now, default simulator rules apply.
                   </p>
                 </div>
@@ -241,11 +256,11 @@ export const SimulationModal = ({ isOpen, onClose, onSaved, simulationToEdit }: 
 
             {step === 3 && (
               <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                <h3 className="text-lg font-semibold text-white mb-4">Add Students</h3>
-                <div className="bg-[#172033] border border-[#253047] rounded-xl p-8 flex flex-col items-center justify-center text-center">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Add Students</h3>
+                <div className="bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] rounded-2xl p-8 flex flex-col items-center justify-center text-center">
                   <Users className="w-12 h-12 text-indigo-500 mb-4 opacity-50" />
-                  <h4 className="text-white font-medium mb-2">Assign Participants Later</h4>
-                  <p className="text-slate-400 text-sm max-w-md">
+                  <h4 className="text-slate-900 dark:text-white font-bold mb-2">Assign Participants Later</h4>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md">
                     To add students, please finish creating this simulation first. Then, use the "Manage Participants" action from the Simulations list to invite students.
                   </p>
                 </div>
@@ -254,37 +269,37 @@ export const SimulationModal = ({ isOpen, onClose, onSaved, simulationToEdit }: 
 
             {step === 4 && (
               <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                <h3 className="text-lg font-semibold text-white mb-4">Review Simulation</h3>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Review Simulation</h3>
                 
-                <div className="bg-[#172033] border border-[#253047] rounded-xl p-6 space-y-4">
-                  <div className="grid grid-cols-3 gap-4 pb-4 border-b border-[#253047]">
+                <div className="bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] rounded-2xl p-6 space-y-4">
+                  <div className="grid grid-cols-3 gap-4 pb-4 border-b border-slate-200 dark:border-[#262626]">
                     <div className="col-span-3">
-                      <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Name</p>
-                      <p className="text-white font-medium">{formData.name || <span className="text-rose-400">Required</span>}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Name</p>
+                      <p className="text-slate-900 dark:text-white font-bold">{formData.name || <span className="text-rose-500">Required</span>}</p>
                     </div>
                     <div className="col-span-3">
-                      <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Description</p>
-                      <p className="text-white text-sm">{formData.description || 'No description'}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Description</p>
+                      <p className="text-slate-700 dark:text-slate-300 text-sm">{formData.description || 'No description'}</p>
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Market</p>
-                      <p className="text-white font-medium flex items-center gap-2">
-                        <Target className="w-4 h-4 text-indigo-400" />
+                      <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Market</p>
+                      <p className="text-slate-900 dark:text-white font-semibold flex items-center gap-2">
+                        <Target className="w-4 h-4 text-indigo-500" />
                         {formData.market === 'VN' ? 'Vietnam (HOSE, HNX)' : formData.market}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Initial Capital</p>
-                      <p className="text-white font-medium text-emerald-400">
-                        {Number(formData.initialBalance).toLocaleString('vi-VN')} VND
+                      <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Initial Capital</p>
+                      <p className="text-emerald-600 dark:text-emerald-400 font-bold font-mono">
+                        ${Number(formData.initialBalance >= 1000000 ? formData.initialBalance / 1000 : formData.initialBalance).toLocaleString('en-US')} USD
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Duration</p>
-                      <p className="text-white text-sm">
+                      <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Duration</p>
+                      <p className="text-slate-700 dark:text-slate-300 text-sm font-medium">
                         {formData.startDate} → {formData.endDate}
                       </p>
                     </div>
@@ -296,19 +311,19 @@ export const SimulationModal = ({ isOpen, onClose, onSaved, simulationToEdit }: 
         </div>
         
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-[#253047] flex justify-between bg-[#172033]">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-200 dark:border-[#262626] flex justify-between items-center bg-slate-50/80 dark:bg-[#000000] gap-2">
           <button
             onClick={onClose}
-            className="px-6 py-2.5 text-sm font-semibold text-slate-400 hover:text-white transition-colors"
+            className="px-3 sm:px-5 py-2 text-xs sm:text-sm font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer"
           >
             Cancel
           </button>
           
-          <div className="flex gap-3">
+          <div className="flex gap-2 sm:gap-3">
             {step > 1 && (
               <button
                 onClick={handlePrev}
-                className="px-6 py-2.5 text-sm font-semibold text-slate-300 bg-[#111827] border border-[#253047] rounded-lg hover:bg-[#253047] transition-colors flex items-center gap-2"
+                className="px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-[#121214] border border-slate-200 dark:border-[#262626] rounded-xl hover:bg-slate-100 dark:hover:bg-[#1c1c1f] transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <ChevronLeft className="w-4 h-4" /> Back
               </button>
@@ -318,7 +333,7 @@ export const SimulationModal = ({ isOpen, onClose, onSaved, simulationToEdit }: 
               <button
                 onClick={handleNext}
                 disabled={step === 1 && (!formData.name || !formData.initialBalance || !formData.startDate || !formData.endDate)}
-                className="px-6 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 cursor-pointer shadow-sm shadow-indigo-600/25"
               >
                 Next <ChevronRight className="w-4 h-4" />
               </button>
@@ -326,7 +341,7 @@ export const SimulationModal = ({ isOpen, onClose, onSaved, simulationToEdit }: 
               <button
                 onClick={handleSubmit}
                 disabled={loading}
-                className="px-6 py-2.5 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-emerald-600/20"
+                className="px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center gap-1.5 shadow-lg shadow-emerald-600/20 cursor-pointer"
               >
                 {loading ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>

@@ -35,7 +35,7 @@ export const SimulationDetail = () => {
                 <DollarSign className="w-4 h-4" />
                 <span className="text-sm font-medium">Initial Capital</span>
               </div>
-<p className="text-xl font-bold text-slate-900 dark:text-white">100,000,000 VND / $10,000 USD</p>
+<p className="text-xl font-bold text-slate-900 dark:text-white">$100,000 USD</p>
             </div>
             <div>
               <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 mb-2">
