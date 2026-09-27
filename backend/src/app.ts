@@ -16,7 +16,10 @@ import notificationRoutes from './routes/notification';
 const app = express();
 
 app.use(cors({
-  origin: process.env.CLIENT_URL || process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Cho phép localhost, thanhtung2612.id.vn, onrender.com và mọi client hợp lệ
+    callback(null, true);
+  },
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));

@@ -17,7 +17,7 @@ export const createAssignment = async (req: AuthRequest, res: Response) => {
     const assignment = new Assignment({
       simulationId,
       title,
-      symbol: symbol || 'FPT',
+      symbol: symbol || 'BTCUSDT',
       description,
       instructions,
       requirements: Array.isArray(requirements) ? requirements : [],
@@ -346,7 +346,7 @@ export const submitAssignment = async (req: AuthRequest, res: Response) => {
  */
 export async function fetchStudentTradingEvidence(studentId: string, assignment: any, submissionDate?: Date) {
   try {
-    const symbol = (assignment.symbol || 'FPT').toUpperCase();
+    const symbol = (assignment.symbol || 'BTCUSDT').toUpperCase();
     const symbolRegex = new RegExp(`^${symbol}$`, 'i');
 
     // Time window filter: FROM assignment created TO student submission

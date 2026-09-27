@@ -110,7 +110,7 @@ export const StudentDashboard = () => {
                 </div>
                 <div className="pt-2 sm:pt-0 shrink-0">
                   <Link 
-                    to="/trade/fpt" 
+                    to="/trade/btcusdt" 
                     className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
                   >
                     Trade Now <ArrowRight className="w-4 h-4" />

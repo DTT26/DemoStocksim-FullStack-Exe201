@@ -69,14 +69,14 @@ mongoose.connect(MONGO_URI_LOCAL)
         await Assignment.create([
           {
             simulationId: sim._id,
-            title: 'Technical Analysis: FPT',
-            symbol: 'FPT',
-            description: 'Thực hành phân tích kỹ thuật xu hướng cổ phiếu FPT bằng các chỉ báo MACD và RSI.',
-            instructions: 'Quan sát biến động nến của FPT. Sử dụng MACD để nhận diện giao cắt xu hướng và RSI để tìm vùng quá mua/quá bán. Thực hiện ít nhất một lệnh mua Limit trên hệ thống và thiết lập Stop Loss bảo vệ vốn.',
+            title: 'Technical Analysis: BTCUSDT',
+            symbol: 'BTCUSDT',
+            description: 'Thực hành phân tích kỹ thuật xu hướng BTCUSDT bằng các chỉ báo MACD và RSI.',
+            instructions: 'Quan sát biến động nến của BTCUSDT. Sử dụng MACD để nhận diện giao cắt xu hướng và RSI để tìm vùng quá mua/quá bán. Thực hiện ít nhất một lệnh mua Limit trên hệ thống và thiết lập Stop Loss bảo vệ vốn.',
             requirements: [
-              { id: 'r1', text: 'Quan sát và áp dụng chỉ báo MACD trên biểu đồ FPT' },
-              { id: 'r2', text: 'Quan sát và áp dụng chỉ báo RSI trên biểu đồ FPT' },
-              { id: 'r3', text: 'Viết nhận định tóm tắt về xu hướng giá FPT trong ngắn hạn' },
+              { id: 'r1', text: 'Quan sát và áp dụng chỉ báo MACD trên biểu đồ BTCUSDT' },
+              { id: 'r2', text: 'Quan sát và áp dụng chỉ báo RSI trên biểu đồ BTCUSDT' },
+              { id: 'r3', text: 'Viết nhận định tóm tắt về xu hướng giá BTCUSDT trong ngắn hạn' },
               { id: 'r4', text: 'Thực hành đặt lệnh Mua (Limit BUY) trên Trading Terminal' },
               { id: 'r5', text: 'Thiết lập mức Cắt lỗ (Stop Loss) an toàn cho lệnh' },
             ],
@@ -86,8 +86,8 @@ mongoose.connect(MONGO_URI_LOCAL)
           },
           {
             simulationId: sim._id,
-            title: 'Risk Management Strategy: VN30',
-            symbol: 'VN30',
+            title: 'Risk Management Strategy: ETHUSDT',
+            symbol: 'ETHUSDT',
             description: 'Xây dựng kế hoạch quản trị rủi ro vốn không quá 5% cho mỗi giao dịch.',
             instructions: 'Lập kế hoạch phân bổ vốn khi thị trường biến động mạnh. Đảm bảo tỷ lệ Risk/Reward tối thiểu 1:2 cho mọi vị thế mở.',
             requirements: [

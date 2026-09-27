@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useI18n } from '../contexts/I18nContext';
-import { Settings, User, Bell, Moon, Sun, Globe, Trophy, Sparkles } from 'lucide-react';
+import { User, Bell, Moon, Sun, Globe, Trophy, Sparkles } from 'lucide-react';
 import { UserDropdown } from './UserDropdown';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -70,30 +70,6 @@ export const ToolbarNavbar = ({
           </button>
         </div>
 
-        {/* Simulation Info (Centered) */}
-        <div className="hidden lg:flex flex-1 items-center justify-center gap-6 text-xs">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-[#1e2329] dark:text-white">Vietnam Stock Challenge #01</span>
-            <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> LIVE
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[#787b86]">Rank</span>
-              <span className="font-bold text-blue-600 dark:text-blue-400">#7 / 42</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[#787b86]">Return</span>
-              <span className="font-bold text-emerald-600 dark:text-emerald-400">+8.52%</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[#787b86]">Simulation Time</span>
-              <span className="font-mono text-[#1e2329] dark:text-slate-300">2026-09-12 14:30</span>
-            </div>
-          </div>
-        </div>
-
         {/* Right side controls */}
         <div className="flex items-center gap-2.5">
           {/* Nút AI Trading Tutor */}
@@ -122,13 +98,6 @@ export const ToolbarNavbar = ({
           >
             <Globe className="w-5 h-5" />
             <span className="text-xs font-semibold">{language.toUpperCase()}</span>
-          </button>
-          <button 
-            onClick={onOpenSettings}
-            className="hidden md:flex hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] cursor-pointer"
-            title="Cài đặt"
-          >
-            <Settings className="w-5 h-5" />
           </button>
 
           <div className="w-px h-4 bg-[#e6e8ea] dark:bg-[#2a2e39] mx-1" />

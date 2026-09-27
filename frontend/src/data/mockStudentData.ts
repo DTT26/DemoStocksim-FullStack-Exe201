@@ -11,7 +11,7 @@ export const MOCK_STUDENT_PORTFOLIO = {
   worstTrade: -1500,
   profitFactor: 2.1,
   averageHoldingTime: '2.5 days',
-  mostTradedSymbol: 'FPT',
+  mostTradedSymbol: 'BTCUSDT',
   averagePositionSize: 25000,
   averageTradesPerSession: 4.5,
   mostActiveTradingPeriod: 'Morning (9:00 - 11:30)',
@@ -29,25 +29,25 @@ export const MOCK_PERFORMANCE_HISTORY = [
 ];
 
 export const MOCK_PERFORMANCE_BY_SYMBOL = [
-  { symbol: 'FPT', trades: 8, winRate: 75.0, pnl: 4200, returnRate: 8.1 },
-  { symbol: 'HPG', trades: 6, winRate: 50.0, pnl: 1100, returnRate: 2.4 },
-  { symbol: 'VNM', trades: 4, winRate: 25.0, pnl: -800, returnRate: -1.8 },
-  { symbol: 'MWG', trades: 3, winRate: 100.0, pnl: 2500, returnRate: 5.5 },
-  { symbol: 'SSI', trades: 2, winRate: 50.0, pnl: 1520, returnRate: 3.2 },
+  { symbol: 'BTCUSDT', trades: 8, winRate: 75.0, pnl: 4200, returnRate: 8.1 },
+  { symbol: 'ETHUSDT', trades: 6, winRate: 50.0, pnl: 1100, returnRate: 2.4 },
+  { symbol: 'SOLUSDT', trades: 4, winRate: 25.0, pnl: -800, returnRate: -1.8 },
+  { symbol: 'BNBUSDT', trades: 3, winRate: 100.0, pnl: 2500, returnRate: 5.5 },
+  { symbol: 'XRPUSDT', trades: 2, winRate: 50.0, pnl: 1520, returnRate: 3.2 },
 ];
 
 export const MOCK_ASSIGNMENTS = [
   {
     id: '1',
-    title: 'Technical Analysis: FPT',
-    simulation: 'Vietnam Stock Challenge #01',
+    title: 'Technical Analysis: BTCUSDT',
+    simulation: 'Global Crypto Challenge #01',
     deadline: '2026-09-15T23:59:59Z',
     status: 'In Progress',
     progress: 60,
     requirementsCompleted: 3,
     totalRequirements: 5,
     lecturer: 'Dr. Nguyen Van A',
-    instructions: 'Analyze the current trend of FPT using MACD and RSI. Place at least one limit order based on your analysis.',
+    instructions: 'Analyze the current trend of BTCUSDT using MACD and RSI. Place at least one limit order based on your analysis.',
     requirements: [
       { id: 'r1', text: 'Apply MACD indicator to chart', completed: true },
       { id: 'r2', text: 'Apply RSI indicator to chart', completed: true },
@@ -113,14 +113,14 @@ export const MOCK_TRADES = [
   {
     id: 't1',
     date: '2026-09-18T10:15:00Z',
-    symbol: 'FPT',
+    symbol: 'BTCUSDT',
     side: 'BUY',
-    entryPrice: 92500,
-    exitPrice: 95000,
-    quantity: 1000,
-    pnl: 2500000,
+    entryPrice: 62500,
+    exitPrice: 64200,
+    quantity: 1,
+    pnl: 1700,
     returnRate: 2.7,
-    simulation: 'Vietnam Stock Challenge #01',
+    simulation: 'Global Crypto Challenge #01',
     status: 'CLOSED',
     entryTime: '2026-09-16T14:20:00Z',
     exitTime: '2026-09-18T10:15:00Z',
@@ -177,7 +177,7 @@ export const MOCK_NOTIFICATIONS = [
     id: 'n1',
     type: 'assignment_deadline',
     title: 'Assignment Due Soon',
-    description: 'Technical Analysis: FPT is due tomorrow.',
+    description: 'Technical Analysis: BTCUSDT is due tomorrow.',
     time: '2026-09-14T10:00:00Z',
     read: false
   },

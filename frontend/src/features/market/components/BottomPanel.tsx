@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, CheckSquare, Square, Settings2, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
-import { STOCKS } from '../data';
+import { STOCKS, getPricePrecision } from '../data';
 import { tradingApi } from '../../../services/tradingApi';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useModal } from '../../../contexts/ModalContext';
@@ -200,6 +200,7 @@ export const BottomPanel = ({
                   <th className="px-4 py-2">Size</th>
                   <th className="px-4 py-2">Giá mở</th>
                   <th className="px-4 py-2">Giá hiện tại</th>
+                  <th className="px-4 py-2 text-[#f23645] dark:text-[#ff6b6b] font-semibold">Giá thanh lý</th>
                   <th className="px-4 py-2">Margin</th>
                   <th className="px-4 py-2">Side</th>
                   <th className="px-4 py-2 text-right">PNL (ROE%)</th>
@@ -214,12 +215,31 @@ export const BottomPanel = ({
                   const pnl = p.side === 'LONG' ? (markPrice - p.averagePrice) * p.quantity : (p.averagePrice - markPrice) * p.quantity;
                   const roe = margin > 0 ? (pnl / margin) * 100 : 0;
                   
+                  // Giá thanh lý (Liquidation Price) theo chuẩn Binance Isolated Futures (MMR = 0.4%)
+                  const mmr = 0.004;
+                  let liqPrice: number | null = null;
+                  if (p.leverage > 1 && p.averagePrice > 0 && p.quantity > 0) {
+                    const marginPerUnit = margin / p.quantity;
+                    const mmPerUnit = p.averagePrice * mmr;
+                    if (p.side === 'LONG') {
+                      const rawLiq = p.averagePrice - marginPerUnit + mmPerUnit;
+                      liqPrice = rawLiq > 0 ? rawLiq : 0;
+                    } else {
+                      const rawLiq = p.averagePrice + marginPerUnit - mmPerUnit;
+                      liqPrice = rawLiq > 0 ? rawLiq : 0;
+                    }
+                  }
+                  const precision = getPricePrecision(p.averagePrice);
+                  
                   return (
                     <tr key={p.symbol} className="hover:bg-[#f5f5f5] dark:hover:bg-[#1e222d] transition-colors">
                       <td className="px-4 py-2 font-bold">{p.symbol}</td>
                       <td className="px-4 py-2 font-mono">{p.quantity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} Lot</td>
                       <td className="px-4 py-2 font-mono">${p.averagePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
                       <td className="px-4 py-2 font-mono">${markPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
+                      <td className="px-4 py-2 font-mono font-semibold text-[#f23645] dark:text-[#ff6b6b]">
+                        {liqPrice !== null && liqPrice > 0 ? `$${liqPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: precision })}` : '--'}
+                      </td>
                       <td className="px-4 py-2 font-mono">
                         {addingMargin?.symbol === p.symbol ? (
                           <div className="flex items-center gap-1">

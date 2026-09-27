@@ -11,7 +11,7 @@ const SEED_SESSIONS: JournalSession[] = [
     name: 'Morning Trading Session',
     simulationName: 'Trading Challenge #01',
     simulationId: 'sim-01',
-    symbol: 'FPT',
+    symbol: 'BTCUSDT',
     timeframe: '5m',
     status: 'COMPLETED',
     startedAt: '2026-09-24T09:00:00Z',
@@ -26,7 +26,7 @@ const SEED_SESSIONS: JournalSession[] = [
     trades: [
       {
         id: 't-01',
-        symbol: 'FPT',
+        symbol: 'BTCUSDT',
         side: 'BUY',
         entryPrice: 128500,
         exitPrice: 132000,
@@ -83,7 +83,7 @@ const SEED_SESSIONS: JournalSession[] = [
       },
       {
         id: 't-04',
-        symbol: 'FPT',
+        symbol: 'BTCUSDT',
         side: 'BUY',
         entryPrice: 131000,
         exitPrice: 133500,
@@ -121,7 +121,7 @@ const SEED_SESSIONS: JournalSession[] = [
       },
       {
         id: 't-06',
-        symbol: 'FPT',
+        symbol: 'BTCUSDT',
         side: 'BUY',
         entryPrice: 133000,
         exitPrice: 136550,

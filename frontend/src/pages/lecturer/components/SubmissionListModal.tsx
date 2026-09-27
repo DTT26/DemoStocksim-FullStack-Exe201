@@ -112,7 +112,7 @@ export const SubmissionListModal = ({ isOpen, onClose, assignment }: SubmissionL
           <div>
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-0.5 rounded text-[11px] font-bold uppercase bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30">
-                Mã cổ phiếu: {assignment.symbol || 'FPT'}
+                Mã cổ phiếu: {assignment.symbol || 'BTCUSDT'}
               </span>
               <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-wide">
                 Đánh giá bài nộp: {assignment.title}
@@ -294,11 +294,11 @@ export const SubmissionListModal = ({ isOpen, onClose, assignment }: SubmissionL
 
                         {/* Link to open Trading Terminal for this stock */}
                         <Link
-                          to={`/trade/${assignment.symbol || 'FPT'}`}
+                          to={`/trade/${assignment.symbol || 'BTCUSDT'}`}
                           target="_blank"
                           className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 flex items-center gap-1 font-semibold transition-colors"
                         >
-                          <span>Mở Trading Terminal ({assignment.symbol || 'FPT'})</span>
+                          <span>Mở Trading Terminal ({assignment.symbol || 'BTCUSDT'})</span>
                           <ExternalLink className="w-3.5 h-3.5" />
                         </Link>
                       </div>
@@ -422,9 +422,9 @@ export const SubmissionListModal = ({ isOpen, onClose, assignment }: SubmissionL
                         <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-3">
                           <AlertTriangle className="w-5 h-5 text-amber-500 dark:text-amber-400 shrink-0 mt-0.5" />
                           <div>
-                            <p className="font-bold text-sm">Chưa phát hiện lệnh giao dịch nào cho mã {assignment.symbol || 'FPT'}</p>
+                            <p className="font-bold text-sm">Chưa phát hiện lệnh giao dịch nào cho mã {assignment.symbol || 'BTCUSDT'}</p>
                             <p className="text-xs text-amber-700 dark:text-amber-400/80 mt-1 leading-relaxed">
-                              Hệ thống không tìm thấy lệnh giao dịch Khớp (FILLED) nào của sinh viên này với mã {assignment.symbol || 'FPT'}. Sinh viên có thể đã chỉ nộp lý thuyết mà chưa thực hành đặt lệnh trên Trading Terminal.
+                              Hệ thống không tìm thấy lệnh giao dịch Khớp (FILLED) nào của sinh viên này với mã {assignment.symbol || 'BTCUSDT'}. Sinh viên có thể đã chỉ nộp lý thuyết mà chưa thực hành đặt lệnh trên Trading Terminal.
                             </p>
                           </div>
                         </div>

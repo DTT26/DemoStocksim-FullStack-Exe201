@@ -618,7 +618,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
                     />
                     {/* Quick presets for TP */}
                     <div className="flex gap-1 mt-0.5">
-                      {[5, 10, 25, 50].map(pct => (
+                      {[25, 50, 75, 100].map(pct => (
                         <button
                           key={pct}
                           type="button"
@@ -652,7 +652,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
                     />
                     {/* Quick presets for SL */}
                     <div className="flex gap-1 mt-0.5">
-                      {[2, 5, 10, 15].map(pct => (
+                      {[25, 50, 75, 100].map(pct => (
                         <button
                           key={pct}
                           type="button"
