@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, CandlestickChart, List, TrendingUp, Edit3, Clock, Calendar, Check, ChevronDown } from 'lucide-react';
 
-import { type ChartSettings } from '../chartSettings';
+import { DEFAULT_CHART_SETTINGS, type ChartSettings } from '../chartSettings';
 
 interface ChartSettingsModalProps {
   onClose: () => void;
@@ -15,18 +15,18 @@ type TabType = 'symbol' | 'status' | 'scales' | 'canvas' | 'alerts' | 'events';
 const CheckboxRow = ({ checked, label, colorPickers, onChange }: { checked: boolean; label: string; colorPickers?: React.ReactNode; onChange?: (checked: boolean) => void }) => (
   <label className="flex items-center justify-between cursor-pointer group py-2">
     <div className="flex items-center gap-3">
-      <div className={`w-[18px] h-[18px] rounded flex items-center justify-center border transition-colors ${checked ? 'bg-[#089981] border-[#089981]' : 'border-[#434651] group-hover:border-[#787b86]'}`}>
+      <div className={`w-[18px] h-[18px] rounded flex items-center justify-center border transition-colors ${checked ? 'bg-[#089981] border-[#089981]' : 'border-[#b2b5be] dark:border-[#434651] group-hover:border-[#787b86]'}`}>
         <input type="checkbox" className="hidden" checked={checked} onChange={(e) => onChange?.(e.target.checked)} />
         {checked && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
       </div>
-      <span className="text-[13px] text-[#d1d4dc]">{label}</span>
+      <span className="text-[13px] text-[#1e2329] dark:text-[#d1d4dc]">{label}</span>
     </div>
     {colorPickers && <div className="flex items-center gap-2">{colorPickers}</div>}
   </label>
 );
 
 const ColorBox = ({ color, onChange }: { color: string; onChange?: (color: string) => void }) => (
-  <label className="w-6 h-6 rounded flex-shrink-0 border border-[#2a2e39] cursor-pointer hover:border-white transition-colors relative overflow-hidden block" style={{ backgroundColor: color }}>
+  <label className="w-6 h-6 rounded flex-shrink-0 border border-[#e6e8ea] dark:border-[#2a2e39] cursor-pointer hover:border-[#1e2329] dark:hover:border-white transition-colors relative overflow-hidden block shadow-xs" style={{ backgroundColor: color }}>
     <input 
       type="color" 
       value={color} 
@@ -53,15 +53,16 @@ const SelectDropdown = ({ value, options, onChange, className }: { value: string
   return (
     <div className="relative" ref={containerRef}>
       <button 
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center justify-between px-3 py-1.5 bg-[#1e222d] border ${isOpen ? 'border-[#089981]' : 'border-[#2a2e39]'} rounded hover:border-[#434651] transition-colors text-[13px] text-white focus:outline-none ${className || 'w-48'}`}
+        className={`flex items-center justify-between px-3 py-1.5 bg-[#f0f1f3] dark:bg-[#1e222d] border ${isOpen ? 'border-[#089981]' : 'border-[#e6e8ea] dark:border-[#2a2e39]'} rounded hover:border-[#b2b5be] dark:hover:border-[#434651] transition-colors text-[13px] text-[#1e2329] dark:text-white focus:outline-none ${className || 'w-48'}`}
       >
-        <span>{value}</span>
-        <ChevronDown className="w-4 h-4 text-[#787b86]" />
+        <span className="truncate">{value}</span>
+        <ChevronDown className="w-4 h-4 text-[#787b86] shrink-0 ml-1.5" />
       </button>
       
       {isOpen && options && options.length > 0 && (
-        <div className="absolute z-[110] top-full mt-1 left-0 w-full bg-[#1e222d] border border-[#2a2e39] rounded shadow-xl py-1 max-h-48 overflow-y-auto">
+        <div className="absolute z-[110] top-full mt-1 left-0 w-full bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded shadow-xl py-1 max-h-48 overflow-y-auto">
           {options.map((opt, i) => (
             <div 
               key={i} 
@@ -69,7 +70,7 @@ const SelectDropdown = ({ value, options, onChange, className }: { value: string
                 onChange?.(opt);
                 setIsOpen(false);
               }}
-              className={`px-3 py-2 text-[13px] cursor-pointer transition-colors ${opt === value ? 'bg-[#089981] text-white' : 'text-[#d1d4dc] hover:bg-[#2a2e39] hover:text-white'}`}
+              className={`px-3 py-2 text-[13px] cursor-pointer transition-colors ${opt === value ? 'bg-[#089981] text-white font-medium' : 'text-[#1e2329] dark:text-[#d1d4dc] hover:bg-[#f0f1f3] dark:hover:bg-[#2a2e39] hover:text-[#1e2329] dark:hover:text-white'}`}
             >
               {opt}
             </div>
@@ -126,11 +127,11 @@ const SymbolTab = ({ settings, onChange }: { settings: ChartSettings; onChange: 
         </>} 
       />
       
-      <div className="mt-4 mb-2 h-px bg-[#2a2e39] w-full" />
+      <div className="mt-4 mb-2 h-px bg-[#e6e8ea] dark:bg-[#2a2e39] w-full" />
       
       <SectionTitle title="ĐIỀU CHỈNH DỮ LIỆU" />
       <div className="flex items-center justify-between py-2">
-        <span className="text-[13px] text-[#d1d4dc]">Precision</span>
+        <span className="text-[13px] text-[#1e2329] dark:text-[#d1d4dc]">Precision</span>
         <SelectDropdown 
           value={settings.symbol.precision} 
           onChange={(v) => updateSymbol('precision', v)}
@@ -138,7 +139,7 @@ const SymbolTab = ({ settings, onChange }: { settings: ChartSettings; onChange: 
         />
       </div>
       <div className="flex items-center justify-between py-2">
-        <span className="text-[13px] text-[#d1d4dc]">Timezone</span>
+        <span className="text-[13px] text-[#1e2329] dark:text-[#d1d4dc]">Timezone</span>
         <SelectDropdown 
           value={settings.symbol.timezone} 
           onChange={(v) => updateSymbol('timezone', v)}
@@ -162,7 +163,7 @@ const StatusTab = ({ settings, onChange }: { settings: ChartSettings; onChange: 
           <div className="w-[18px] h-[18px] rounded flex items-center justify-center border bg-[#089981] border-[#089981]">
             <Check className="w-3.5 h-3.5 text-white stroke-[3]" />
           </div>
-          <span className="text-[13px] text-[#d1d4dc]">Title</span>
+          <span className="text-[13px] text-[#1e2329] dark:text-[#d1d4dc]">Title</span>
         </div>
         <SelectDropdown 
           value={settings.status.title} 
@@ -176,7 +177,7 @@ const StatusTab = ({ settings, onChange }: { settings: ChartSettings; onChange: 
       <CheckboxRow checked={settings.status.barChangeValues} onChange={(v) => updateStatus('barChangeValues', v)} label="Bar change values" />
       <CheckboxRow checked={settings.status.volume} onChange={(v) => updateStatus('volume', v)} label="Volume" />
 
-      <div className="mt-4 mb-2 h-px bg-[#2a2e39] w-full" />
+      <div className="mt-4 mb-2 h-px bg-[#e6e8ea] dark:bg-[#2a2e39] w-full" />
 
       <SectionTitle title="INDICATORS" />
       <CheckboxRow checked={settings.status.indicatorTitles} onChange={(v) => updateStatus('indicatorTitles', v)} label="Titles" />
@@ -206,7 +207,7 @@ const ScalesTab = ({ settings, onChange }: { settings: ChartSettings; onChange: 
       <CheckboxRow checked={settings.scales.countdown} onChange={(v) => updateScale('countdown', v)} label="Countdown to bar close" />
       
       <div className="flex items-center justify-between py-2">
-        <span className="text-[13px] text-[#d1d4dc]">Symbol</span>
+        <span className="text-[13px] text-[#1e2329] dark:text-[#d1d4dc]">Symbol</span>
         <div className="flex items-center gap-2">
           <SelectDropdown 
             value={settings.scales.symbolVal} 
@@ -218,7 +219,7 @@ const ScalesTab = ({ settings, onChange }: { settings: ChartSettings; onChange: 
       </div>
       
       <div className="flex items-center justify-between py-2">
-        <span className="text-[13px] text-[#d1d4dc]">Symbol label color</span>
+        <span className="text-[13px] text-[#1e2329] dark:text-[#d1d4dc]">Symbol label color</span>
         <div className="flex items-center gap-2">
           <ColorBox color={settings.scales.symbolLabelColor1} onChange={(v) => updateScale('symbolLabelColor1', v)} />
           <ColorBox color={settings.scales.symbolLabelColor2} onChange={(v) => updateScale('symbolLabelColor2', v)} />
@@ -226,7 +227,7 @@ const ScalesTab = ({ settings, onChange }: { settings: ChartSettings; onChange: 
       </div>
       
       <div className="flex items-center justify-between py-2">
-        <span className="text-[13px] text-[#d1d4dc]">Indicators and financials</span>
+        <span className="text-[13px] text-[#1e2329] dark:text-[#d1d4dc]">Indicators and financials</span>
         <SelectDropdown 
           value={settings.scales.indVal} 
           onChange={(v) => updateScale('indVal', v)}
@@ -236,7 +237,7 @@ const ScalesTab = ({ settings, onChange }: { settings: ChartSettings; onChange: 
       </div>
       
       <div className="flex items-center justify-between py-2">
-        <span className="text-[13px] text-[#d1d4dc]">High and low</span>
+        <span className="text-[13px] text-[#1e2329] dark:text-[#d1d4dc]">High and low</span>
         <div className="flex items-center gap-2">
           <SelectDropdown 
             value={settings.scales.hlVal} 
@@ -248,13 +249,13 @@ const ScalesTab = ({ settings, onChange }: { settings: ChartSettings; onChange: 
         </div>
       </div>
       
-      <div className="mt-4 mb-2 h-px bg-[#2a2e39] w-full" />
+      <div className="mt-4 mb-2 h-px bg-[#e6e8ea] dark:bg-[#2a2e39] w-full" />
       
       <SectionTitle title="TIME SCALE" />
       <CheckboxRow checked={settings.scales.dayOfWeek} onChange={(v) => updateScale('dayOfWeek', v)} label="Day of week on labels" />
       
       <div className="flex items-center justify-between py-2">
-        <span className="text-[13px] text-[#d1d4dc]">Date format</span>
+        <span className="text-[13px] text-[#1e2329] dark:text-[#d1d4dc]">Date format</span>
         <SelectDropdown 
           value={settings.scales.dateFormat} 
           onChange={(v) => updateScale('dateFormat', v)}
@@ -264,7 +265,7 @@ const ScalesTab = ({ settings, onChange }: { settings: ChartSettings; onChange: 
       </div>
 
       <div className="flex items-center justify-between py-2">
-        <span className="text-[13px] text-[#d1d4dc]">Time hours format</span>
+        <span className="text-[13px] text-[#1e2329] dark:text-[#d1d4dc]">Time hours format</span>
         <SelectDropdown 
           value={settings.scales.timeFormat} 
           onChange={(v) => updateScale('timeFormat', v)}
@@ -277,7 +278,6 @@ const ScalesTab = ({ settings, onChange }: { settings: ChartSettings; onChange: 
 };
 
 const CanvasTab = ({ settings, onChange }: { settings: ChartSettings; onChange: (s: ChartSettings) => void }) => {
-
   const updateCanvas = (key: keyof ChartSettings['canvas'], val: any) => {
     onChange({ ...settings, canvas: { ...settings.canvas, [key]: val } });
   };
@@ -288,7 +288,7 @@ const CanvasTab = ({ settings, onChange }: { settings: ChartSettings; onChange: 
   return (
     <div className="flex flex-col pb-24">
       <div className="flex items-center justify-between py-2">
-        <span className="text-[13px] text-[#d1d4dc]">Background</span>
+        <span className="text-[13px] text-[#1e2329] dark:text-[#d1d4dc]">Background</span>
         <div className="flex items-center gap-2">
           <SelectDropdown 
             value={settings.canvas.bgType} 
@@ -312,12 +312,12 @@ const CanvasTab = ({ settings, onChange }: { settings: ChartSettings; onChange: 
       <div className="flex items-center justify-between py-2">
         <div className="flex items-center gap-3">
           <div 
-            className={`w-[18px] h-[18px] rounded flex items-center justify-center border cursor-pointer transition-colors ${settings.canvas.vGridShow ? 'bg-[#089981] border-[#089981]' : 'border-[#434651] hover:border-[#787b86]'}`}
+            className={`w-[18px] h-[18px] rounded flex items-center justify-center border cursor-pointer transition-colors ${settings.canvas.vGridShow ? 'bg-[#089981] border-[#089981]' : 'border-[#b2b5be] dark:border-[#434651] hover:border-[#787b86]'}`}
             onClick={() => updateCanvas('vGridShow', !settings.canvas.vGridShow)}
           >
             {settings.canvas.vGridShow && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
           </div>
-          <span className="text-[13px] text-[#d1d4dc]">Vertical grid lines</span>
+          <span className="text-[13px] text-[#1e2329] dark:text-[#d1d4dc]">Vertical grid lines</span>
         </div>
         <div className="flex items-center gap-2">
           <ColorBox color={settings.canvas.vGridColor} onChange={(v) => updateCanvas('vGridColor', v)} />
@@ -328,12 +328,12 @@ const CanvasTab = ({ settings, onChange }: { settings: ChartSettings; onChange: 
       <div className="flex items-center justify-between py-2">
         <div className="flex items-center gap-3">
           <div 
-            className={`w-[18px] h-[18px] rounded flex items-center justify-center border cursor-pointer transition-colors ${settings.canvas.hGridShow ? 'bg-[#089981] border-[#089981]' : 'border-[#434651] hover:border-[#787b86]'}`}
+            className={`w-[18px] h-[18px] rounded flex items-center justify-center border cursor-pointer transition-colors ${settings.canvas.hGridShow ? 'bg-[#089981] border-[#089981]' : 'border-[#b2b5be] dark:border-[#434651] hover:border-[#787b86]'}`}
             onClick={() => updateCanvas('hGridShow', !settings.canvas.hGridShow)}
           >
             {settings.canvas.hGridShow && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
           </div>
-          <span className="text-[13px] text-[#d1d4dc]">Horizontal grid lines</span>
+          <span className="text-[13px] text-[#1e2329] dark:text-[#d1d4dc]">Horizontal grid lines</span>
         </div>
         <div className="flex items-center gap-2">
           <ColorBox color={settings.canvas.hGridColor} onChange={(v) => updateCanvas('hGridColor', v)} />
@@ -342,7 +342,7 @@ const CanvasTab = ({ settings, onChange }: { settings: ChartSettings; onChange: 
       </div>
       
       <div className="flex items-center justify-between py-2">
-        <span className="text-[13px] text-[#d1d4dc]">Crosshair</span>
+        <span className="text-[13px] text-[#1e2329] dark:text-[#d1d4dc]">Crosshair</span>
         <div className="flex items-center gap-2">
           <ColorBox color={settings.canvas.crosshairColor} onChange={(v) => updateCanvas('crosshairColor', v)} />
           <SelectDropdown value={settings.canvas.crosshairStyle} onChange={(v) => updateCanvas('crosshairStyle', v as any)} options={['—', '- - -', '· · ·']} className="w-24 text-center font-bold" />
@@ -350,7 +350,7 @@ const CanvasTab = ({ settings, onChange }: { settings: ChartSettings; onChange: 
       </div>
       
       <div className="flex items-center justify-between py-2">
-        <span className="text-[13px] text-[#d1d4dc]">Watermark</span>
+        <span className="text-[13px] text-[#1e2329] dark:text-[#d1d4dc]">Watermark</span>
         <div className="flex items-center gap-2">
           <SelectDropdown 
             value={settings.canvas.watermarkVal} 
@@ -361,29 +361,29 @@ const CanvasTab = ({ settings, onChange }: { settings: ChartSettings; onChange: 
         </div>
       </div>
       
-      <div className="mt-4 mb-2 h-px bg-[#2a2e39] w-full" />
+      <div className="mt-4 mb-2 h-px bg-[#e6e8ea] dark:bg-[#2a2e39] w-full" />
       
       <SectionTitle title="SCALES" />
       <div className="flex items-center justify-between py-2">
-        <span className="text-[13px] text-[#d1d4dc]">Text</span>
+        <span className="text-[13px] text-[#1e2329] dark:text-[#d1d4dc]">Text</span>
         <div className="flex items-center gap-2">
           <ColorBox color={settings.scales.textColor} onChange={(v) => updateScale('textColor', v)} />
           <SelectDropdown value={settings.scales.textSize.toString()} onChange={(v) => updateScale('textSize', parseInt(v))} options={['10', '11', '12', '14', '16', '20']} className="w-16 text-center" />
         </div>
       </div>
       <div className="flex items-center justify-between py-2">
-        <span className="text-[13px] text-[#d1d4dc]">Lines</span>
+        <span className="text-[13px] text-[#1e2329] dark:text-[#d1d4dc]">Lines</span>
         <div className="flex items-center gap-2">
           <ColorBox color={settings.scales.lineColor} onChange={(v) => updateScale('lineColor', v)} />
           <SelectDropdown value="—" options={['—', '- - -', '· · ·']} className="w-24 text-center font-bold" />
         </div>
       </div>
       
-      <div className="mt-4 mb-2 h-px bg-[#2a2e39] w-full" />
+      <div className="mt-4 mb-2 h-px bg-[#e6e8ea] dark:bg-[#2a2e39] w-full" />
       
       <SectionTitle title="BUTTONS" />
       <div className="flex items-center justify-between py-2">
-        <span className="text-[13px] text-[#d1d4dc]">Navigation</span>
+        <span className="text-[13px] text-[#1e2329] dark:text-[#d1d4dc]">Navigation</span>
         <SelectDropdown 
           value={settings.canvas.navVal} 
           onChange={(v) => updateCanvas('navVal', v)}
@@ -392,7 +392,7 @@ const CanvasTab = ({ settings, onChange }: { settings: ChartSettings; onChange: 
         />
       </div>
       <div className="flex items-center justify-between py-2">
-        <span className="text-[13px] text-[#d1d4dc]">Pane</span>
+        <span className="text-[13px] text-[#1e2329] dark:text-[#d1d4dc]">Pane</span>
         <SelectDropdown 
           value={settings.canvas.paneVal} 
           onChange={(v) => updateCanvas('paneVal', v)}
@@ -401,27 +401,27 @@ const CanvasTab = ({ settings, onChange }: { settings: ChartSettings; onChange: 
         />
       </div>
 
-      <div className="mt-4 mb-2 h-px bg-[#2a2e39] w-full" />
+      <div className="mt-4 mb-2 h-px bg-[#e6e8ea] dark:bg-[#2a2e39] w-full" />
 
       <SectionTitle title="MARGINS" />
       <div className="flex items-center justify-between py-2">
-        <span className="text-[13px] text-[#d1d4dc]">Top</span>
+        <span className="text-[13px] text-[#1e2329] dark:text-[#d1d4dc]">Top</span>
         <div className="flex items-center gap-2">
-          <input type="number" value={settings.canvas.marginTop} onChange={(e) => updateCanvas('marginTop', parseInt(e.target.value) || 0)} className="w-16 bg-[#1e222d] border border-[#2a2e39] rounded px-2 py-1 text-[13px] text-white text-right focus:outline-none focus:border-[#089981]" />
+          <input type="number" value={settings.canvas.marginTop} onChange={(e) => updateCanvas('marginTop', parseInt(e.target.value) || 0)} className="w-16 bg-[#f0f1f3] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-2 py-1 text-[13px] text-[#1e2329] dark:text-white text-right focus:outline-none focus:border-[#089981]" />
           <span className="text-[13px] text-[#787b86] w-6">%</span>
         </div>
       </div>
       <div className="flex items-center justify-between py-2">
-        <span className="text-[13px] text-[#d1d4dc]">Bottom</span>
+        <span className="text-[13px] text-[#1e2329] dark:text-[#d1d4dc]">Bottom</span>
         <div className="flex items-center gap-2">
-          <input type="number" value={settings.canvas.marginBottom} onChange={(e) => updateCanvas('marginBottom', parseInt(e.target.value) || 0)} className="w-16 bg-[#1e222d] border border-[#2a2e39] rounded px-2 py-1 text-[13px] text-white text-right focus:outline-none focus:border-[#089981]" />
+          <input type="number" value={settings.canvas.marginBottom} onChange={(e) => updateCanvas('marginBottom', parseInt(e.target.value) || 0)} className="w-16 bg-[#f0f1f3] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-2 py-1 text-[13px] text-[#1e2329] dark:text-white text-right focus:outline-none focus:border-[#089981]" />
           <span className="text-[13px] text-[#787b86] w-6">%</span>
         </div>
       </div>
       <div className="flex items-center justify-between py-2">
-        <span className="text-[13px] text-[#d1d4dc]">Right</span>
+        <span className="text-[13px] text-[#1e2329] dark:text-[#d1d4dc]">Right</span>
         <div className="flex items-center gap-2">
-          <input type="number" value={settings.canvas.marginRight} onChange={(e) => updateCanvas('marginRight', parseInt(e.target.value) || 0)} className="w-16 bg-[#1e222d] border border-[#2a2e39] rounded px-2 py-1 text-[13px] text-white text-right focus:outline-none focus:border-[#089981]" />
+          <input type="number" value={settings.canvas.marginRight} onChange={(e) => updateCanvas('marginRight', parseInt(e.target.value) || 0)} className="w-16 bg-[#f0f1f3] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-2 py-1 text-[13px] text-[#1e2329] dark:text-white text-right focus:outline-none focus:border-[#089981]" />
           <span className="text-[13px] text-[#787b86] w-6">bars</span>
         </div>
       </div>
@@ -450,16 +450,16 @@ const EventsTab = ({ settings, onChange }: { settings: ChartSettings; onChange: 
       <SectionTitle title="EVENTS" />
       <CheckboxRow 
         checked={settings.events.sessionBreaks} 
-        onChange={(v) => updateEvents('sessionBreaks', v)}
+        onChange={(v) => updateEvents('sessionBreaks', v)} 
         label="Session breaks" 
         colorPickers={
           <>
             <ColorBox color={settings.events.sessionBreaksColor} onChange={(v) => updateEvents('sessionBreaksColor', v)} />
             <SelectDropdown 
               value={settings.events.sessionBreaksStyle} 
-              onChange={(v) => updateEvents('sessionBreaksStyle', v as any)}
+              onChange={(v) => updateEvents('sessionBreaksStyle', v as any)} 
               options={['—', '- - -', '· · ·']} 
-              className="w-24 font-bold text-center"
+              className="w-24 font-bold text-center" 
             />
           </>
         } 
@@ -471,6 +471,18 @@ const EventsTab = ({ settings, onChange }: { settings: ChartSettings; onChange: 
 // Main Modal Component
 export const ChartSettingsModal = ({ onClose, chartSettings, onSettingsChange }: ChartSettingsModalProps) => {
   const [activeTab, setActiveTab] = useState<TabType>('symbol');
+  const [isTemplateOpen, setIsTemplateOpen] = useState(false);
+  const templateRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (templateRef.current && !templateRef.current.contains(event.target as Node)) {
+        setIsTemplateOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const tabs = [
     { id: 'symbol', label: 'Mã giao dịch', icon: <CandlestickChart className="w-[18px] h-[18px]" /> },
@@ -482,12 +494,18 @@ export const ChartSettingsModal = ({ onClose, chartSettings, onSettingsChange }:
   ];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
-      <div className="bg-[#1e222d] w-[750px] rounded flex flex-col shadow-2xl font-sans" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+      <div 
+        className="bg-white dark:bg-[#1e222d] w-[750px] rounded-lg flex flex-col shadow-2xl font-sans border border-[#e6e8ea] dark:border-[#2a2e39] overflow-hidden transition-colors" 
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#2a2e39]">
-          <h2 className="text-lg font-bold text-white">Cài đặt biểu đồ</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-[#2a2e39] rounded transition-colors text-[#787b86] hover:text-[#d1d4dc]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e6e8ea] dark:border-[#2a2e39]">
+          <h2 className="text-lg font-bold text-[#1e2329] dark:text-white">Cài đặt biểu đồ</h2>
+          <button 
+            onClick={onClose} 
+            className="p-1.5 hover:bg-[#f0f1f3] dark:hover:bg-[#2a2e39] rounded transition-colors text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -495,15 +513,15 @@ export const ChartSettingsModal = ({ onClose, chartSettings, onSettingsChange }:
         {/* Body */}
         <div className="flex h-[460px]">
           {/* Sidebar */}
-          <div className="w-[220px] border-r border-[#2a2e39] flex flex-col py-3 shrink-0 relative">
+          <div className="w-[220px] bg-[#f8f9fa] dark:bg-[#1e222d] border-r border-[#e6e8ea] dark:border-[#2a2e39] flex flex-col py-3 shrink-0 relative">
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as TabType)}
                 className={`flex items-center gap-3 px-4 py-2.5 mx-2 rounded transition-colors text-[13px] relative ${
                   activeTab === tab.id 
-                    ? 'bg-[#2a2e39] text-white font-medium' 
-                    : 'text-[#d1d4dc] hover:bg-[#2a2e39]/50'
+                    ? 'bg-[#e6e8ea] dark:bg-[#2a2e39] text-[#1e2329] dark:text-white font-medium' 
+                    : 'text-[#6a6d78] dark:text-[#d1d4dc] hover:bg-[#e6e8ea]/50 dark:hover:bg-[#2a2e39]/50'
                 }`}
               >
                 {/* Active indicator bar */}
@@ -519,7 +537,7 @@ export const ChartSettingsModal = ({ onClose, chartSettings, onSettingsChange }:
           </div>
 
           {/* Content Area */}
-          <div className="flex-1 bg-[#131722] p-6 overflow-y-auto">
+          <div className="flex-1 bg-white dark:bg-[#131722] p-6 overflow-y-auto">
             {activeTab === 'symbol' && <SymbolTab settings={chartSettings} onChange={onSettingsChange} />}
             {activeTab === 'status' && <StatusTab settings={chartSettings} onChange={onSettingsChange} />}
             {activeTab === 'scales' && <ScalesTab settings={chartSettings} onChange={onSettingsChange} />}
@@ -530,17 +548,45 @@ export const ChartSettingsModal = ({ onClose, chartSettings, onSettingsChange }:
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-3 border-t border-[#2a2e39] bg-[#1e222d]">
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm text-[#d1d4dc] hover:bg-[#2a2e39] border border-transparent hover:border-[#434651] transition-colors">
-            <span>Bản mẫu</span>
-            <ChevronDown className="w-4 h-4" />
-          </button>
+        <div className="flex items-center justify-between px-6 py-3 border-t border-[#e6e8ea] dark:border-[#2a2e39] bg-[#f8f9fa] dark:bg-[#1e222d]">
+          <div className="relative" ref={templateRef}>
+            <button 
+              type="button"
+              onClick={() => setIsTemplateOpen(!isTemplateOpen)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm text-[#1e2329] dark:text-[#d1d4dc] hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39] border border-[#e6e8ea] dark:border-[#2a2e39] transition-colors"
+            >
+              <span>Bản mẫu</span>
+              <ChevronDown className="w-4 h-4" />
+            </button>
+            {isTemplateOpen && (
+              <div className="absolute bottom-full left-0 mb-1.5 w-44 bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded shadow-xl py-1 z-50 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSettingsChange(DEFAULT_CHART_SETTINGS);
+                    setIsTemplateOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-[#1e2329] dark:text-[#d1d4dc] hover:bg-[#f0f1f3] dark:hover:bg-[#2a2e39] transition-colors"
+                >
+                  Khôi phục mặc định
+                </button>
+              </div>
+            )}
+          </div>
           
           <div className="flex gap-2">
-            <button onClick={onClose} className="px-5 py-1.5 rounded text-sm text-[#d1d4dc] hover:text-white border border-[#2a2e39] hover:bg-[#2a2e39] transition-colors font-medium">
+            <button 
+              type="button"
+              onClick={onClose} 
+              className="px-5 py-1.5 rounded text-sm text-[#1e2329] dark:text-[#d1d4dc] hover:text-black dark:hover:text-white border border-[#e6e8ea] dark:border-[#2a2e39] hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39] transition-colors font-medium"
+            >
               Hủy
             </button>
-            <button onClick={onClose} className="px-5 py-1.5 bg-[#089981] hover:bg-[#089981]/90 rounded text-sm text-white transition-colors font-medium">
+            <button 
+              type="button"
+              onClick={onClose} 
+              className="px-5 py-1.5 bg-[#089981] hover:bg-[#089981]/90 rounded text-sm text-white transition-colors font-medium shadow-sm"
+            >
               Đồng ý
             </button>
           </div>

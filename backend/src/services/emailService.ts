@@ -1,19 +1,28 @@
+import { Resend } from 'resend';
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import path from 'path';
 
-dotenv.config();
+// Nạp biến môi trường từ .env (hỗ trợ cả khi chạy từ root hoặc từ thư mục backend)
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+dotenv.config({ path: path.resolve(process.cwd(), 'backend', '.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 /**
- * Khởi tạo transporter cho nodemailer.
- * Nếu có cấu hình SMTP trong .env thì dùng SMTP thật.
+ * Khởi tạo client Resend nếu có RESEND_API_KEY
+ */
+const getResendClient = () => {
+  const apiKey = (process.env.RESEND_API_KEY || '').trim();
+  if (apiKey) {
+    return new Resend(apiKey);
+  }
+  return null;
+};
+
+/**
+ * Khởi tạo transporter cho nodemailer (dự phòng nếu muốn dùng SMTP)
  */
 const createTransporter = () => {
-  // Nạp biến môi trường từ .env (hỗ trợ cả khi chạy từ root hoặc từ thư mục backend)
-  dotenv.config({ path: path.resolve(process.cwd(), '.env') });
-  dotenv.config({ path: path.resolve(process.cwd(), 'backend', '.env') });
-  dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-
   const user = (process.env.SMTP_USER || '').trim();
   const pass = (process.env.SMTP_PASS || '').replace(/\s+/g, '');
   const host = process.env.SMTP_HOST || 'smtp.gmail.com';
@@ -37,6 +46,79 @@ const createTransporter = () => {
 };
 
 /**
+ * Hàm điều phối gửi email: Ưu tiên Resend SDK -> Dự phòng SMTP -> Giả lập console
+ */
+const sendMailMessage = async ({
+  to,
+  subject,
+  html,
+  fromTitle = 'StockSim Platform',
+}: {
+  to: string;
+  subject: string;
+  html: string;
+  fromTitle?: string;
+}): Promise<boolean> => {
+  const resend = getResendClient();
+
+  // 1. Ưu tiên gửi qua Resend API
+  if (resend) {
+    try {
+      const fromAddress =
+        process.env.RESEND_FROM ||
+        (process.env.RESEND_DOMAIN
+          ? `"${fromTitle}" <no-reply@${process.env.RESEND_DOMAIN}>`
+          : `"${fromTitle}" <onboarding@resend.dev>`);
+
+      const { data, error } = await resend.emails.send({
+        from: fromAddress,
+        to: [to],
+        subject,
+        html,
+      });
+
+      if (error) {
+        console.error('❌ [RESEND ERROR] Gửi email thất bại:', error);
+        return false;
+      }
+
+      console.log(`✅ [RESEND SUCCESS] Gửi thành công tới: ${to} | ID: ${data?.id}`);
+      return true;
+    } catch (err) {
+      console.error('❌ [RESEND EXCEPTION] Lỗi ngoại lệ khi gửi qua Resend:', err);
+      return false;
+    }
+  }
+
+  // 2. Dự phòng: Gửi qua Nodemailer SMTP nếu chưa cấu hình Resend
+  const transporter = createTransporter();
+  if (transporter) {
+    try {
+      const sender = (process.env.SMTP_USER || '').trim();
+      const fromAddress =
+        process.env.SMTP_FROM ||
+        (sender ? `"${fromTitle}" <${sender}>` : `"${fromTitle}" <no-reply@stocksim.vn>`);
+
+      const info = await transporter.sendMail({
+        from: fromAddress,
+        to,
+        subject,
+        html,
+      });
+      console.log(`✅ [SMTP SUCCESS] Gửi thành công tới: ${to} | MessageId: ${info.messageId}`);
+      return true;
+    } catch (err) {
+      console.error('❌ [SMTP ERROR] Lỗi khi gửi email qua SMTP:', err);
+      return false;
+    }
+  }
+
+  // 3. Không có cấu hình: Chế độ mô phỏng (OTP đã in trên console)
+  console.warn('⚠️ [EMAIL] Chưa cấu hình RESEND_API_KEY hoặc SMTP. Đang chạy chế độ mô phỏng.');
+  return true;
+};
+
+/**
  * Gửi email chứa mã xác nhận OTP 6 số
  */
 export const sendOtpEmail = async (email: string, otp: string, name: string): Promise<boolean> => {
@@ -47,12 +129,6 @@ export const sendOtpEmail = async (email: string, otp: string, name: string): Pr
   console.log(`MÃ XÁC THỰC OTP: >>> [ ${otp} ] <<<`);
   console.log(`Hiệu lực: 10 phút`);
   console.log('==================================================\n');
-
-  const transporter = createTransporter();
-  if (!transporter) {
-    // Không có SMTP config, chế độ mô phỏng hoàn tất thành công
-    return true;
-  }
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -103,6 +179,7 @@ export const sendOtpEmail = async (email: string, otp: string, name: string): Pr
     </html>
   `;
 
+<<<<<<< HEAD
   try {
     const resendKey = process.env.RESEND_API_KEY;
     const resendFrom = process.env.RESEND_FROM || '"StockSim Platform" <no-reply@stocksim.vn>';
@@ -157,6 +234,14 @@ export const sendOtpEmail = async (email: string, otp: string, name: string): Pr
     console.error('❌ Lỗi cuối cùng khi gửi email:', err);
     return true; // Vẫn nuốt lỗi để dev test cho dễ
   }
+=======
+  return sendMailMessage({
+    to: email,
+    subject: `[StockSim] ${otp} là mã xác thực đăng ký tài khoản của bạn`,
+    html: htmlContent,
+    fromTitle: 'StockSim Platform',
+  });
+>>>>>>> 6d6f9b07c316bcc3eb6f9a1a1c54bed57fff37eb
 };
 
 /**
@@ -169,11 +254,6 @@ export const sendForgotPasswordEmail = async (email: string, otp: string, name: 
   console.log(`MÃ ĐẶT LẠI MẬT KHẨU: >>> [ ${otp} ] <<<`);
   console.log(`Hiệu lực: 10 phút`);
   console.log('==================================================\n');
-
-  const transporter = createTransporter();
-  if (!transporter) {
-    return true;
-  }
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -224,6 +304,7 @@ export const sendForgotPasswordEmail = async (email: string, otp: string, name: 
     </html>
   `;
 
+<<<<<<< HEAD
   try {
     const resendKey = process.env.RESEND_API_KEY;
     const resendFrom = process.env.RESEND_FROM || '"StockSim Security" <no-reply@stocksim.vn>';
@@ -278,4 +359,12 @@ export const sendForgotPasswordEmail = async (email: string, otp: string, name: 
     console.error('❌ Lỗi cuối cùng khi gửi email:', err);
     return true; // Nuốt lỗi
   }
+=======
+  return sendMailMessage({
+    to: email,
+    subject: `[StockSim] ${otp} là mã xác nhận đặt lại mật khẩu của bạn`,
+    html: htmlContent,
+    fromTitle: 'StockSim Security',
+  });
+>>>>>>> 6d6f9b07c316bcc3eb6f9a1a1c54bed57fff37eb
 };

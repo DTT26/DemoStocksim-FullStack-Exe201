@@ -66,9 +66,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
       const token = localStorage.getItem('token');
+
+      // Nếu không có token trong localStorage (chưa đăng nhập hoặc đã đăng xuất):
+      // Dừng ngay lập tức, không gửi request để tránh cookie cũ chưa kịp xóa khôi phục lại phiên (zombie session khi F5)
+      if (!token) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
       const res = await fetch(`${apiUrl}/users/me`, {
         credentials: 'include',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         const userData = await res.json();
@@ -94,6 +103,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error('Failed to fetch user:', error);
       setUser(null);
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('userId');
     } finally {
       setLoading(false);
     }
@@ -312,16 +324,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = () => setIsLoginModalOpen(true);
 
   const logout = async () => {
-    googleLogout();
+    const token = localStorage.getItem('token');
+
+    // 1. Gửi yêu cầu đăng xuất lên backend để hủy cookies HttpOnly trên mọi domain trước
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
       await fetch(`${apiUrl}/auth/logout`, {
         method: 'POST',
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        }
       });
     } catch (err) {
       console.error('Failed to logout on backend', err);
     }
+
+    // 2. Hủy phiên Google nếu có
+    try {
+      googleLogout();
+    } catch (e) {
+      console.warn('googleLogout error:', e);
+    }
+
+    // 3. Xóa sạch token, userId và set user null (đảm bảo cookie đã bị server xóa trước khi trigger re-render)
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('userId');

@@ -1,10 +1,22 @@
-import { Request, Response } from 'express';
+import { Request, Response, CookieOptions } from 'express';
 import bcrypt from 'bcrypt';
 import User from '../models/User';
 import Wallet from '../models/Wallet';
 import Otp from '../models/Otp';
 import jwt from 'jsonwebtoken';
 import { sendOtpEmail, sendForgotPasswordEmail } from '../services/emailService';
+
+/**
+ * Helper cấp phát cookie bảo mật HttpOnly cho cả cross-site web deploy và local
+ */
+export const getAuthCookieOptions = (): CookieOptions => {
+  return {
+    httpOnly: true,
+    secure: true, // Bắt buộc khi sameSite: 'none' trên HTTPS web deployment
+    sameSite: 'none',
+    path: '/',
+  };
+};
 
 /**
  * Helper cấp phát JWT Access Token (7 ngày) & Refresh Token (30 ngày)
@@ -26,17 +38,15 @@ const issueTokensAndCookies = (res: Response, user: any) => {
     { expiresIn: '30d' }
   );
 
+  const cookieOptions = getAuthCookieOptions();
+
   res.cookie('token', token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'none',
+    ...cookieOptions,
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
   res.cookie('refreshToken', refreshToken, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'none',
+    ...cookieOptions,
     maxAge: 30 * 24 * 60 * 60 * 1000,
   });
 
@@ -470,10 +480,9 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
       { expiresIn: '7d' }
     );
 
+    const cookieOptions = getAuthCookieOptions();
     res.cookie('token', newAccessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      ...cookieOptions,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -485,11 +494,43 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
 
 /**
  * POST /api/auth/logout
- * Đăng xuất tài khoản & xóa cookies
+ * Đăng xuất tài khoản & xóa triệt để cookies trên mọi trình duyệt & môi trường web deploy
  */
 export const logout = (req: Request, res: Response) => {
-  res.clearCookie('token');
-  res.clearCookie('refreshToken');
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  const cookieOptionsNone: CookieOptions = {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    path: '/',
+  };
+
+  const cookieOptionsLax: CookieOptions = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'lax',
+    path: '/',
+  };
+
+  // 1. Xóa cookie cross-site SameSite=None (Bắt buộc cho web deploy trên Vercel / Render / HTTPS)
+  res.clearCookie('token', cookieOptionsNone);
+  res.clearCookie('refreshToken', cookieOptionsNone);
+
+  // 2. Xóa cookie SameSite=Lax (cho localhost / same-site)
+  res.clearCookie('token', cookieOptionsLax);
+  res.clearCookie('refreshToken', cookieOptionsLax);
+
+  // 3. Xóa cookie với path mặc định
+  res.clearCookie('token', { path: '/' });
+  res.clearCookie('refreshToken', { path: '/' });
+
+  // 4. Ghi đè giá trị rỗng và đặt thời gian hết hạn về 0 (Epoch 1970) để ép mọi trình duyệt hủy cookie
+  res.cookie('token', '', { ...cookieOptionsNone, maxAge: 0, expires: new Date(0) });
+  res.cookie('refreshToken', '', { ...cookieOptionsNone, maxAge: 0, expires: new Date(0) });
+  res.cookie('token', '', { ...cookieOptionsLax, maxAge: 0, expires: new Date(0) });
+  res.cookie('refreshToken', '', { ...cookieOptionsLax, maxAge: 0, expires: new Date(0) });
+
   res.status(200).json({ message: 'Logged out successfully' });
 };
 

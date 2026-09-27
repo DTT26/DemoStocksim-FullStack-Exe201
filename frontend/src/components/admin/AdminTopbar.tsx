@@ -5,6 +5,8 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { Link } from 'react-router-dom';
 import { UserAvatar } from '../UserAvatar';
 
+import { useNotificationStore } from '../../stores/useNotificationStore';
+
 interface AdminTopbarProps {
   mobileOpen: boolean;
   setMobileOpen: (v: boolean) => void;
@@ -19,6 +21,12 @@ export const AdminTopbar = ({ mobileOpen, setMobileOpen }: AdminTopbarProps) => 
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
+  const { notifications, unreadCount, fetchNotifications, markAllAsRead } = useNotificationStore();
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
   // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -28,15 +36,6 @@ export const AdminTopbar = ({ mobileOpen, setMobileOpen }: AdminTopbarProps) => 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  // Mock notifications — no backend endpoint exists
-  const notifications = [
-    { id: 1, icon: <UserPlus className="w-4 h-4 text-blue-500 dark:text-blue-400" />, title: 'New user registered', description: 'A new student has joined the platform.', time: '2 minutes ago', read: false },
-    { id: 2, icon: <Play className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />, title: 'Simulation started', description: 'Vietnam Stock Challenge #01 is now live.', time: '1 hour ago', read: false },
-    { id: 3, icon: <CheckCircle className="w-4 h-4 text-slate-400" />, title: 'Simulation completed', description: 'US Market Training has ended.', time: 'Yesterday', read: true },
-    { id: 4, icon: <ShieldAlert className="w-4 h-4 text-amber-500 dark:text-amber-400" />, title: 'User role changed', description: 'A user was promoted to Lecturer.', time: '2 days ago', read: true },
-  ];
-  const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <header className="h-16 border-b border-[#e2e8f0] dark:border-[#1e293b] bg-white/80 dark:bg-[#111827]/80 backdrop-blur-md sticky top-0 z-30 px-4 flex items-center justify-between transition-colors">
@@ -89,24 +88,32 @@ export const AdminTopbar = ({ mobileOpen, setMobileOpen }: AdminTopbarProps) => 
             <div className="absolute right-0 mt-2 w-80 sm:w-96 max-w-[calc(100vw-1.5rem)] bg-white dark:bg-[#172033] rounded-xl shadow-2xl border border-slate-200 dark:border-[#1e293b] overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
               <div className="p-4 border-b border-slate-200 dark:border-[#1e293b] flex justify-between items-center bg-slate-50 dark:bg-[#111827]">
                 <h3 className="font-semibold text-slate-900 dark:text-white text-sm">Notifications</h3>
-                <button className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium cursor-pointer">Mark all as read</button>
+                <button onClick={() => markAllAsRead()} className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium cursor-pointer">Mark all as read</button>
               </div>
               <div className="max-h-80 overflow-y-auto">
-                {notifications.map(n => (
-                  <div key={n.id} className={`p-4 border-b border-slate-100 dark:border-[#1e293b] last:border-0 hover:bg-slate-50 dark:hover:bg-[#111827]/50 transition-colors cursor-pointer flex gap-3 ${!n.read ? 'bg-blue-50/50 dark:bg-blue-500/5' : ''}`}>
-                    <div className="mt-0.5 w-8 h-8 rounded-lg bg-slate-100 dark:bg-[#111827] flex items-center justify-center flex-shrink-0 border border-slate-200 dark:border-[#1e293b]">
-                      {n.icon}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start gap-2">
-                        <p className={`text-sm font-medium ${!n.read ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-300'}`}>{n.title}</p>
-                        {!n.read && <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5"></div>}
-                      </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">{n.description}</p>
-                      <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-medium uppercase">{n.time}</p>
-                    </div>
+                {notifications.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-slate-400 dark:text-slate-500">
+                    Không có thông báo mới
                   </div>
-                ))}
+                ) : (
+                  notifications.map(n => (
+                    <div key={n._id || n.id} className={`p-4 border-b border-slate-100 dark:border-[#1e293b] last:border-0 hover:bg-slate-50 dark:hover:bg-[#111827]/50 transition-colors cursor-pointer flex gap-3 ${!n.read ? 'bg-blue-50/50 dark:bg-blue-500/5' : ''}`}>
+                      <div className="mt-0.5 w-8 h-8 rounded-lg bg-slate-100 dark:bg-[#111827] flex items-center justify-center flex-shrink-0 border border-slate-200 dark:border-[#1e293b]">
+                        <Bell className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start gap-2">
+                          <p className={`text-sm font-medium ${!n.read ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-300'}`}>{n.title}</p>
+                          {!n.read && <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5"></div>}
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">{n.message || n.description}</p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-medium uppercase">
+                          {n.createdAt ? new Date(n.createdAt).toLocaleDateString('vi-VN') : ''}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}
