@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Crosshair, TrendingUp, AlignLeft, Brush, Type, Waypoints, SlidersHorizontal, Smile, Ruler, ZoomIn, Magnet, PenTool, Lock, Eye, Trash2, ChevronRight, Share, GitCommit, Play, FastForward, SkipForward, TrendingDown, BarChart2, Activity, AlignRight, MoveVertical, MoveHorizontal, Maximize, Square, Circle, MessageSquare, Bug, Coffee, Rocket, Lightbulb, Heart, Flag, MousePointer2, Dot, Eraser, Highlighter, ArrowUpRight, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, CircleDot, Triangle, Spline, Box, Milestone, Anchor, FileText, DollarSign, MapPin, Table, MessageCircle, Tag, Compass, User } from 'lucide-react';
+import { Crosshair, TrendingUp, AlignLeft, Brush, Type, Waypoints, SlidersHorizontal, Smile, Ruler, ZoomIn, Magnet, PenTool, Lock, Eye, Trash2, ChevronRight, Share, GitCommit, Play, FastForward, SkipForward, TrendingDown, BarChart2, Activity, AlignRight, MoveVertical, MoveHorizontal, Maximize, Square, Circle, MessageSquare, Bug, Coffee, Rocket, Lightbulb, Heart, Flag, MousePointer2, Dot, Eraser, Highlighter, ArrowUpRight, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, CircleDot, Triangle, Spline, Box, Milestone, Anchor, FileText, DollarSign, MapPin, Table, MessageCircle, Tag, Compass, User, Pencil } from 'lucide-react';
 import { useI18n } from '../../../contexts/I18nContext';
 
 const TrendLineIcon = ({ strokeWidth = 1.5, className = "w-[22px] h-[22px]" }: any) => (
@@ -33,6 +33,71 @@ const TrendAngleIcon = ({ strokeWidth = 1.5, className = "w-[22px] h-[22px]" }: 
     <line x1="6.5" y1="17.5" x2="17.5" y2="6.5" />
     <line x1="7" y1="19" x2="14" y2="19" />
     <path d="M 11 19 A 6 6 0 0 0 9.2 14.8" />
+  </svg>
+);
+
+const FibRetracementIcon = ({ strokeWidth = 1.5, className = "w-[22px] h-[22px]" }: any) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <line x1="4" y1="6" x2="20" y2="6" />
+    <line x1="4" y1="12" x2="20" y2="12" />
+    <line x1="4" y1="18" x2="20" y2="18" />
+    <circle cx="8" cy="18" r="1.5" fill="currentColor" />
+    <circle cx="16" cy="6" r="1.5" fill="currentColor" />
+    <line x1="8" y1="18" x2="16" y2="6" />
+  </svg>
+);
+
+const GannBoxIcon = ({ strokeWidth = 1.5, className = "w-[22px] h-[22px]" }: any) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <rect x="4" y="4" width="16" height="16" rx="1" />
+    <line x1="9.33" y1="4" x2="9.33" y2="20" />
+    <line x1="14.66" y1="4" x2="14.66" y2="20" />
+    <line x1="4" y1="9.33" x2="20" y2="9.33" />
+    <line x1="4" y1="14.66" x2="20" y2="14.66" />
+  </svg>
+);
+
+const ElliottWaveIcon = ({ strokeWidth = 1.5, className = "w-[22px] h-[22px]" }: any) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <polyline points="3,17 8,9 13,15 17,7 21,12" />
+    <circle cx="3" cy="17" r="1.5" />
+    <circle cx="8" cy="9" r="1.5" />
+    <circle cx="13" cy="15" r="1.5" />
+    <circle cx="17" cy="7" r="1.5" />
+    <circle cx="21" cy="12" r="1.5" />
+  </svg>
+);
+
+const LongPositionIcon = ({ strokeWidth = 1.5, className = "w-[22px] h-[22px]" }: any) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <circle cx="7" cy="6" r="1.5" />
+    <circle cx="7" cy="18" r="1.5" />
+    <line x1="7" y1="7.5" x2="7" y2="16.5" />
+    <line x1="9.5" y1="6" x2="19" y2="6" />
+    <line x1="4" y1="14" x2="19" y2="14" /> 
+    <line x1="9.5" y1="18" x2="19" y2="18" />
+  </svg>
+);
+
+const ShortPositionIcon = ({ strokeWidth = 1.5, className = "w-[22px] h-[22px]" }: any) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <circle cx="7" cy="6" r="1.5" />
+    <circle cx="7" cy="18" r="1.5" />
+    <line x1="7" y1="7.5" x2="7" y2="16.5" />
+    <line x1="9.5" y1="6" x2="19" y2="6" />
+    <line x1="4" y1="10" x2="19" y2="10" /> 
+    <line x1="9.5" y1="18" x2="19" y2="18" />
+  </svg>
+);
+
+const VolumeProfileIcon = ({ strokeWidth = 1.5, className = "w-[22px] h-[22px]" }: any) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <line x1="6" y1="4" x2="6" y2="20" />
+    <line x1="6" y1="6" x2="12" y2="6" />
+    <line x1="6" y1="9" x2="18" y2="9" />
+    <line x1="6" y1="12" x2="15" y2="12" />
+    <line x1="6" y1="15" x2="19" y2="15" />
+    <line x1="6" y1="18" x2="10" y2="18" />
   </svg>
 );
 
@@ -130,7 +195,72 @@ const TOOLS = [
       }
     ]
   },
-  { id: 'fibonacciLine',            icon: AlignLeft,         label: 'Các công cụ Gann và Fibonacci',separator: false, hasDropdown: false },
+  { 
+    id: 'fibonacciLine',            
+    icon: FibRetracementIcon,         
+    label: 'Các công cụ Gann và Fibonacci',
+    separator: false, 
+    hasDropdown: true,
+    subItems: [
+      {
+        category: 'GANN VÀ FIBONACCI',
+        items: [
+          { id: 'fibonacciLine', label: 'Mức thoái lui Fibonacci', icon: FibRetracementIcon, shortcut: 'Alt + F' },
+          { id: 'gannBox', label: 'Hộp Gann', icon: GannBoxIcon },
+          { id: 'cycleLines', label: 'Các đường chu kỳ', icon: GannBoxIcon },
+          { id: 'timeCycles', label: 'Chu kỳ Thời gian', icon: GannBoxIcon },
+          { id: 'sineLine', label: 'Đường Sine', icon: GannBoxIcon },
+        ]
+      }
+    ]
+  },
+  { 
+    id: 'xabcd',            
+    icon: ElliottWaveIcon,         
+    label: 'Mô hình',
+    separator: false, 
+    hasDropdown: true,
+    subItems: [
+      {
+        category: 'MÔ HÌNH',
+        items: [
+          { id: 'xabcd', label: 'Mô hình XABCD', icon: ElliottWaveIcon },
+          { id: 'abcd', label: 'Mô hình ABCD', icon: ElliottWaveIcon },
+          { id: 'cypher', label: 'Mô hình Cypher', icon: ElliottWaveIcon },
+          { id: 'threeDrives', label: 'Mô hình Ba Đường Dẫn', icon: ElliottWaveIcon },
+          { id: 'headAndShoulders', label: 'Mô hình Vai Đầu Vai', icon: ElliottWaveIcon },
+          { id: 'elliottWave', label: 'Sóng đẩy Elliott (1-2-3-4-5)', icon: ElliottWaveIcon },
+          { id: 'elliottCorrection', label: 'Sóng điều chỉnh Elliott (A-B-C)', icon: ElliottWaveIcon },
+          { id: 'elliottTriangle', label: 'Sóng tam giác Elliott (A-B-C-D-E)', icon: ElliottWaveIcon },
+          { id: 'elliottDoubleCombo', label: 'Sóng kết hợp đôi Elliott (W-X-Y)', icon: ElliottWaveIcon },
+          { id: 'elliottTripleCombo', label: 'Sóng kết hợp ba Elliott (W-X-Y-X-Z)', icon: ElliottWaveIcon },
+        ]
+      }
+    ]
+  },
+  { 
+    id: 'anchoredText',            
+    icon: Type,         
+    label: 'Các công cụ Chú thích',
+    separator: false, 
+    hasDropdown: true,
+    subItems: [
+      {
+        category: 'CHÚ THÍCH',
+        items: [
+          { id: 'anchoredText', label: 'Văn bản', icon: Type, shortcut: 'Alt + T' },
+          { id: 'note', label: 'Ghi chú (Note)', icon: FileText },
+          { id: 'priceLabel', label: 'Nhãn giá', icon: Tag },
+          { id: 'priceNote', label: 'Ghi chú giá', icon: DollarSign },
+          { id: 'callout', label: 'Chú thích bong bóng', icon: MessageCircle },
+          { id: 'comment', label: 'Bình luận', icon: MessageSquare },
+          { id: 'flagMark', label: 'Cờ báo', icon: Flag },
+          { id: 'pinMark', label: 'Đinh ghim', icon: MapPin },
+          { id: 'tableMark', label: 'Bảng', icon: Table }
+        ]
+      }
+    ]
+  },
   { 
     id: 'brush',                  
     icon: Brush,             
@@ -141,7 +271,7 @@ const TOOLS = [
       {
         category: 'CỌ',
         items: [
-          { id: 'brush', label: 'Cọ vẽ', icon: Brush },
+          { id: 'brush', label: 'Cọ vẽ', icon: Pencil },
           { id: 'highlighter', label: 'Bút đánh dấu', icon: Highlighter }
         ]
       },
@@ -175,7 +305,7 @@ const TOOLS = [
   },
   { 
     id: 'longPosition',             
-    icon: TrendingUp,         
+    icon: LongPositionIcon,         
     label: 'Công cụ Dự đoán và Đo lường',  
     separator: false, 
     hasDropdown: true,
@@ -183,8 +313,9 @@ const TOOLS = [
       {
         category: 'DỰ ĐOÁN VÀ ĐO LƯỜNG',
         items: [
-          { id: 'longPosition', label: 'Thế giá lên', icon: TrendingUp },
-          { id: 'shortPosition', label: 'Thế giá xuống', icon: TrendingDown },
+          { id: 'longPosition', label: 'Thế giá lên', icon: LongPositionIcon },
+          { id: 'shortPosition', label: 'Thế giá xuống', icon: ShortPositionIcon },
+          { id: 'fixedRangeVolumeProfile', label: 'Khối lượng Giao dịch Phạm vi Cố định', icon: VolumeProfileIcon },
           { id: 'priceRange', label: 'Khoảng giá', icon: MoveVertical },
           { id: 'timeRange', label: 'Khoảng thời gian', icon: MoveHorizontal },
           { id: 'timePriceRange', label: 'Khoảng thời gian & Giá', icon: Maximize },
