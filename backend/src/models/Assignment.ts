@@ -24,7 +24,7 @@ const AssignmentSchema: Schema = new Schema(
   {
     simulationId: { type: Schema.Types.ObjectId, ref: 'Simulation', required: true },
     title: { type: String, required: true },
-    symbol: { type: String, default: 'FPT' },
+    symbol: { type: String, default: 'BTCUSDT' },
     description: { type: String },
     instructions: { type: String },
     requirements: [

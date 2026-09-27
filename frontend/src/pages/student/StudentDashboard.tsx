@@ -175,13 +175,25 @@ export const StudentDashboard = () => {
                     </p>
                   </div>
                   <div className="pt-2 sm:pt-0 shrink-0">
-                    <Link 
-                      to={`/trade/${activeSimulation.market?.toLowerCase() || 'fpt'}`} 
+                    <Link
+                      to={`/trade/${activeSimulation.market?.toLowerCase() || 'fpt'}`}
                       className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
                     >
                       Vào giao dịch <ArrowRight className="w-4 h-4" />
                     </Link>
                   </div>
+                  <h3 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Trading Challenge #01</h3>
+                  <p className="text-slate-600 dark:text-[#787b86] mt-2 max-w-lg text-xs sm:text-sm leading-relaxed">
+                    Luyện tập giao dịch mô phỏng thời gian thực, hoàn thành các bài tập của giảng viên và cạnh tranh bảng xếp hạng hiệu suất.
+                  </p>
+                </div>
+                <div className="pt-2 sm:pt-0 shrink-0">
+                  <Link
+                    to="/trade/btcusdt"
+                    className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
+                  >
+                    Trade Now <ArrowRight className="w-4 h-4" />
+                  </Link>
                 </div>
               </div>
             ) : (
@@ -213,31 +225,31 @@ export const StudentDashboard = () => {
                 <AreaChart data={performanceHistory} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6366F1" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#6366F1" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#6366F1" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#253047' : '#f1f5f9'} vertical={false} />
-                  <XAxis 
-                    dataKey="date" 
-                    stroke="#64748b" 
-                    fontSize={11} 
-                    tickLine={false} 
-                    axisLine={false} 
-                    tickFormatter={(str) => new Date(str).toLocaleDateString('vi-VN', { month: 'numeric', day: 'numeric' })} 
+                  <XAxis
+                    dataKey="date"
+                    stroke="#64748b"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(str) => new Date(str).toLocaleDateString('vi-VN', { month: 'numeric', day: 'numeric' })}
                   />
-                  <YAxis 
-                    stroke="#64748b" 
-                    fontSize={11} 
-                    tickLine={false} 
-                    axisLine={false} 
-                    tickFormatter={(val) => `${(val / 1000000).toFixed(0)}Tr`} 
+                  <YAxis
+                    stroke="#64748b"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(val) => `${(val / 1000000).toFixed(0)}Tr`}
                   />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: isDark ? '#111827' : '#ffffff', 
-                      borderColor: isDark ? '#253047' : '#e2e8f0', 
-                      borderRadius: '0.5rem', 
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: isDark ? '#111827' : '#ffffff',
+                      borderColor: isDark ? '#253047' : '#e2e8f0',
+                      borderRadius: '0.5rem',
                       color: isDark ? '#fff' : '#0f172a',
                       boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                       fontSize: '12px'

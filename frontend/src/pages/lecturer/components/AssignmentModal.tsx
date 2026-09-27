@@ -38,7 +38,7 @@ export const AssignmentModal = ({ isOpen, onClose, onSaved, assignmentToEdit, si
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     title: '',
-    symbol: 'FPT',
+    symbol: 'BTCUSDT',
     description: '',
     instructions: '',
     simulationId: '',
@@ -56,7 +56,7 @@ export const AssignmentModal = ({ isOpen, onClose, onSaved, assignmentToEdit, si
       setError('');
       setNewReqText('');
       if (assignmentToEdit) {
-        const sym = (assignmentToEdit.symbol || 'FPT').toUpperCase();
+        const sym = (assignmentToEdit.symbol || 'BTCUSDT').toUpperCase();
         const isStandard = STOCKS.some(s => s.symbol.toUpperCase() === sym);
         setCustomSymbolMode(!isStandard);
         setFormData({
@@ -74,7 +74,7 @@ export const AssignmentModal = ({ isOpen, onClose, onSaved, assignmentToEdit, si
         setCustomSymbolMode(false);
         setFormData({
           title: '',
-          symbol: 'FPT',
+          symbol: 'BTCUSDT',
           description: '',
           instructions: '',
           simulationId: simulations.length > 0 ? simulations[0]._id : '',
@@ -229,7 +229,7 @@ export const AssignmentModal = ({ isOpen, onClose, onSaved, assignmentToEdit, si
                       required
                       value={formData.title}
                       onChange={handleChange}
-                      placeholder="Ví dụ: Phân tích kỹ thuật cổ phiếu FPT & Thực hành vào lệnh"
+                      placeholder="Ví dụ: Phân tích kỹ thuật BTCUSDT & Thực hành vào lệnh"
                       className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 transition-all text-sm"
                     />
                   </div>
@@ -273,7 +273,7 @@ export const AssignmentModal = ({ isOpen, onClose, onSaved, assignmentToEdit, si
                         onChange={(e) => {
                           setFormData(prev => ({ ...prev, symbol: e.target.value.toUpperCase() }));
                         }}
-                        placeholder="Ví dụ: FPT, HPG, VNM, VIC"
+                        placeholder="Ví dụ: BTCUSDT, ETHUSDT, SOLUSDT, BNBUSDT"
                         className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 font-mono uppercase transition-all text-sm"
                       />
                     ) : (

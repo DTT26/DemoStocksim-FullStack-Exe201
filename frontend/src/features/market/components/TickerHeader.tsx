@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, BarChart2, Play, Pause, Square, ChevronRight, CandlestickChart, Settings, RefreshCcw, Undo2, Redo2 } from 'lucide-react';
+import { Search, BarChart2, Play, Pause, Square, ChevronRight, CandlestickChart, RefreshCcw, Undo2, Redo2 } from 'lucide-react';
 import { TIMEFRAMES, getPricePrecision, type Stock } from '../data';
 import { AssetAvatar } from './AssetAvatar';
 
@@ -87,7 +87,7 @@ export const TickerHeader = ({
               <div className="flex items-center gap-1">
                 <span className="text-xl font-bold text-[#1e2329] dark:text-[#d1d4dc] group-hover:text-blue-500 dark:group-hover:text-blue-400">{stock.symbol}</span>
               </div>
-              <span className="text-[#787b86] text-[11px] underline decoration-dashed underline-offset-2">
+              <span className="text-[#787b86] text-[11px]">
                 {stock.name}
               </span>
             </div>
@@ -141,10 +141,10 @@ export const TickerHeader = ({
       </div>
 
       {/* ─── Row 2: Tabs & Tools ─── */}
-      <div className="flex items-center px-4 justify-between border-t border-b border-[#e6e8ea] dark:border-[#2a2e39] bg-[#f8f9fa] dark:bg-[#1e222d]">
+      <div className="flex items-center px-4 justify-between border-t border-b border-[#e6e8ea] dark:border-[#2a2e39] bg-[#f8f9fa] dark:bg-[#1e222d] overflow-x-auto no-scrollbar gap-4">
         
         {/* Left Side: Tabs */}
-        <div className="flex items-center gap-6 text-[13px] font-medium text-[#787b86] pt-1.5">
+        <div className="flex items-center gap-4 sm:gap-6 text-[13px] font-medium text-[#787b86] pt-1.5 shrink-0 whitespace-nowrap">
           <button 
             onClick={() => onTabChange('chart')}
             className={`pb-1.5 border-b-2 ${activeTab === 'chart' ? 'text-[#1e2329] dark:text-[#d1d4dc] border-blue-500' : 'border-transparent hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
@@ -166,7 +166,7 @@ export const TickerHeader = ({
         </div>
 
         {/* Right Side: Tools */}
-        <div className="flex items-center gap-3 text-[#787b86] text-xs py-1">
+        <div className="flex items-center gap-2 sm:gap-3 text-[#787b86] text-xs py-1 shrink-0 whitespace-nowrap">
           <span className="hidden sm:inline">Khoảng thời gian</span>
           <div className="flex items-center gap-0.5">
             {TIMEFRAMES.map(tf => (
@@ -289,8 +289,6 @@ export const TickerHeader = ({
           >
             <RefreshCcw className="w-4 h-4" />
           </button>
-          
-          <button className="hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39] p-1 rounded transition-colors hidden sm:block"><Settings className="w-4 h-4" /></button>
         </div>
       </div>
 

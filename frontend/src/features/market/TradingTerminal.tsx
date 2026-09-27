@@ -84,9 +84,18 @@ export const TradingTerminal = () => {
   const [watchlists, setWatchlists] = useState<Watchlist[]>(() => {
     try {
       const saved = localStorage.getItem('watchlists');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const cleaned = parsed.map((w: any) => ({
+            ...w,
+            symbols: (w.symbols || []).filter((sym: string) => STOCKS.some(s => s.symbol.toUpperCase() === sym.toUpperCase()))
+          })).filter((w: any) => w.symbols.length > 0);
+          if (cleaned.length > 0) return cleaned;
+        }
+      }
     } catch { }
-    return [{ id: '1', name: 'Danh sách của tôi', symbols: ['BTCUSDT', 'ETHUSDT', 'FPT', 'VNINDEX'] }];
+    return [{ id: '1', name: 'Danh sách của tôi', symbols: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT'] }];
   });
 
   // Fetch watchlists from API if user is logged in
@@ -323,11 +332,16 @@ export const TradingTerminal = () => {
   useEffect(() => {
     if (simulationId) {
       const match = STOCKS.find(s => s.symbol.toLowerCase() === simulationId.toLowerCase());
-      if (match && match.symbol !== selectedStock.symbol) {
-        setSelectedStock(match);
+      if (match) {
+        if (match.symbol !== selectedStock.symbol) {
+          setSelectedStock(match);
+        }
+      } else {
+        // If simulationId is not in STOCKS (e.g. outdated /trade/fpt link) -> redirect to default valid stock
+        navigate(`/trade/${STOCKS[0].symbol.toLowerCase()}`, { replace: true });
       }
     }
-  }, [simulationId]);
+  }, [simulationId, selectedStock.symbol, navigate]);
 
   useEffect(() => {
     if (selectedStock?.symbol) {
@@ -1052,7 +1066,7 @@ export const TradingTerminal = () => {
 
           {activeTab === 'chart' && (
             <div className="flex flex-col flex-1 overflow-hidden">
-              <div className="flex flex-col flex-1 min-h-[300px] overflow-hidden border-b border-[#2a2e39]">
+              <div className="flex flex-col flex-1 min-h-[340px] md:min-h-[460px] lg:min-h-[300px] overflow-hidden border-b border-[#2a2e39]">
                 <ChartArea
                   activeTool={activeTool}
                   onToolSelect={setActiveTool}

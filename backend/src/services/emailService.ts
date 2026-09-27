@@ -1,4 +1,3 @@
-import { Resend } from 'resend';
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -8,13 +7,21 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 dotenv.config({ path: path.resolve(process.cwd(), 'backend', '.env') });
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
+let ResendClass: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  ResendClass = require('resend').Resend;
+} catch {
+  // resend chưa được cài hoặc không khả dụng -> fallback nodemailer/console
+}
+
 /**
  * Khởi tạo client Resend nếu có RESEND_API_KEY
  */
 const getResendClient = () => {
   const apiKey = (process.env.RESEND_API_KEY || '').trim();
-  if (apiKey) {
-    return new Resend(apiKey);
+  if (apiKey && ResendClass) {
+    return new ResendClass(apiKey);
   }
   return null;
 };

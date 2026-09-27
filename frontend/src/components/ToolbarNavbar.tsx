@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useI18n } from '../contexts/I18nContext';
-import { Settings, User, Bell, Moon, Sun, Globe, Trophy, Sparkles } from 'lucide-react';
+import { User, Bell, Moon, Sun, Globe, Trophy, Sparkles } from 'lucide-react';
 import { UserDropdown } from './UserDropdown';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -83,7 +83,6 @@ export const ToolbarNavbar = ({
             </div>
           </div>
         )}
-
         {/* Right side controls */}
         <div className="flex items-center gap-2.5">
           {/* Nút AI Trading Tutor */}
@@ -112,13 +111,6 @@ export const ToolbarNavbar = ({
           >
             <Globe className="w-5 h-5" />
             <span className="text-xs font-semibold">{language.toUpperCase()}</span>
-          </button>
-          <button 
-            onClick={onOpenSettings}
-            className="hidden md:flex hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] p-1.5 rounded transition-colors shrink-0 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] cursor-pointer"
-            title="Cài đặt"
-          >
-            <Settings className="w-5 h-5" />
           </button>
 
           <div className="w-px h-4 bg-[#e6e8ea] dark:bg-[#2a2e39] mx-1" />

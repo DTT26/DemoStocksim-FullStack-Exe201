@@ -42,8 +42,9 @@ app.use(cors({
     const isLocal = cleanOrigin.includes('localhost') || cleanOrigin.includes('127.0.0.1');
     const isVercel = /\.vercel\.app$/.test(cleanOrigin);
     const isRender = /\.onrender\.com$/.test(cleanOrigin);
+    const isCustomDomain = /thanhtung2612\.id\.vn$/.test(cleanOrigin);
 
-    if (isExplicitlyAllowed || isLocal || isVercel || isRender || process.env.NODE_ENV !== 'production') {
+    if (isExplicitlyAllowed || isLocal || isVercel || isRender || isCustomDomain || process.env.NODE_ENV !== 'production') {
       callback(null, true);
     } else {
       // Trong web deploy, phản hồi origin động để cookie SameSite=None hoạt động trơn tru

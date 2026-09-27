@@ -34,51 +34,69 @@ export const fetchBinanceKlines = async ({ symbol, interval, limit = 500, isFutu
     return klineCache.get(cacheKey)!;
   }
 
-  const baseUrl = isFutures ? 'https://fapi.binance.com/fapi/v1' : 'https://api.binance.com/api/v3';
-  let url = `${baseUrl}/klines?symbol=${cleanSymbol}&interval=${interval}&limit=${limit}`;
-  if (startTime) {
-    url += `&startTime=${startTime}`;
-  }
-  if (endTime) {
-    url += `&endTime=${endTime}`;
-  }
+  const baseUrls = isFutures
+    ? ['https://fapi.binance.com/fapi/v1']
+    : [
+        'https://data-api.binance.vision/api/v3',
+        'https://api.binance.com/api/v3',
+        'https://api1.binance.com/api/v3',
+        'https://api3.binance.com/api/v3',
+      ];
 
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Binance API error: ${response.status} ${response.statusText}`);
+  let lastError: any = null;
+
+  for (const baseUrl of baseUrls) {
+    let url = `${baseUrl}/klines?symbol=${cleanSymbol}&interval=${interval}&limit=${limit}`;
+    if (startTime) {
+      url += `&startTime=${startTime}`;
+    }
+    if (endTime) {
+      url += `&endTime=${endTime}`;
     }
 
-    const data: any[][] = await response.json();
-    if (!Array.isArray(data)) {
-      return [];
-    }
-    
-    // Binance format:
-    // [0] Open time
-    // [1] Open
-    // [2] High
-    // [3] Low
-    // [4] Close
-    // [5] Volume
-    const formattedData: KLineData[] = data.map(candle => ({
-      timestamp: candle[0],
-      open: parseFloat(candle[1]),
-      high: parseFloat(candle[2]),
-      low: parseFloat(candle[3]),
-      close: parseFloat(candle[4]),
-      volume: parseFloat(candle[5]),
-    }));
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-    if (formattedData.length > 0) {
-      klineCache.set(cacheKey, formattedData);
-    }
-    return formattedData;
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
 
-  } catch (error) {
-    console.warn(`Binance fetch failed for ${cleanSymbol}:`, error);
-    return [];
+      if (!response.ok) {
+        throw new Error(`Binance API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data: any[][] = await response.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        continue;
+      }
+      
+      // Binance format:
+      // [0] Open time
+      // [1] Open
+      // [2] High
+      // [3] Low
+      // [4] Close
+      // [5] Volume
+      const formattedData: KLineData[] = data.map(candle => ({
+        timestamp: candle[0],
+        open: parseFloat(candle[1]),
+        high: parseFloat(candle[2]),
+        low: parseFloat(candle[3]),
+        close: parseFloat(candle[4]),
+        volume: parseFloat(candle[5]),
+      }));
+
+      if (formattedData.length > 0) {
+        klineCache.set(cacheKey, formattedData);
+        return formattedData;
+      }
+    } catch (error) {
+      lastError = error;
+    }
   }
+
+  console.warn(`Binance fetch failed for ${cleanSymbol}:`, lastError);
+  return [];
 };
 
 /**

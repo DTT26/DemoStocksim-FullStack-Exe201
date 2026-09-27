@@ -272,7 +272,12 @@ export interface StrategyComparisonData {
   sources: KnowledgeSource[];
 }
 
-const API_BASE = '/api/ai';
+const getRootApi = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (!envUrl) return '/api';
+  return envUrl.endsWith('/api') ? envUrl : `${envUrl.replace(/\/+$/, '')}/api`;
+};
+const API_BASE = `${getRootApi()}/ai`;
 
 function getAuthHeaders(): Record<string, string> {
   const token = localStorage.getItem('token');

@@ -130,7 +130,7 @@ export const DEFAULT_CHART_SETTINGS: ChartSettings = {
     watermarkVal: 'Hidden',
     navVal: 'Visible on mouse over',
     paneVal: 'Visible on mouse over',
-    marginTop: 10,
+    marginTop: 9,
     marginBottom: 8,
     marginRight: 10,
   },

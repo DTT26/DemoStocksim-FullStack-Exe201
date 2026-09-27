@@ -192,7 +192,7 @@ export const StudentAssignmentDetail = () => {
   const isGraded = submission?.status === 'GRADED';
   const isSubmitted = submission?.status === 'SUBMITTED' || isGraded;
 
-  const targetSymbol = (assignment.symbol || 'FPT').toLowerCase();
+  const targetSymbol = (assignment.symbol || 'BTCUSDT').toLowerCase();
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-5xl mx-auto pb-12">
@@ -225,7 +225,7 @@ export const StudentAssignmentDetail = () => {
               )}
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Mã cổ phiếu trọng tâm: <strong className="text-cyan-600 dark:text-cyan-400 font-mono text-sm">{assignment.symbol || 'FPT'}</strong>
+              Mã cổ phiếu trọng tâm: <strong className="text-cyan-600 dark:text-cyan-400 font-mono text-sm">{assignment.symbol || 'BTCUSDT'}</strong>
             </p>
           </div>
         </div>
@@ -235,7 +235,7 @@ export const StudentAssignmentDetail = () => {
           className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-500/20 transition-all hover:scale-[1.02]"
         >
           <TrendingUp className="w-4 h-4" />
-          <span>Mở Trading Terminal ({assignment.symbol || 'FPT'})</span>
+          <span>Mở Trading Terminal ({assignment.symbol || 'BTCUSDT'})</span>
         </Link>
       </div>
 
@@ -371,7 +371,7 @@ export const StudentAssignmentDetail = () => {
                 to={`/trade/${targetSymbol}`}
                 className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 font-semibold"
               >
-                <span>Mở Trading Terminal ({assignment.symbol || 'FPT'})</span>
+                <span>Mở Trading Terminal ({assignment.symbol || 'BTCUSDT'})</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -506,7 +506,7 @@ export const StudentAssignmentDetail = () => {
               <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-bold text-sm">Chưa có lệnh giao dịch nào khớp với mã {assignment.symbol || 'FPT'}</p>
+                  <p className="font-bold text-sm">Chưa có lệnh giao dịch nào khớp với mã {assignment.symbol || 'BTCUSDT'}</p>
                   <p className="text-xs text-amber-600 dark:text-amber-400/80 mt-1 leading-relaxed">
                     Giảng viên sẽ kiểm tra trực tiếp bằng chứng giao dịch thực tế trên sàn khi chấm bài. Hãy mở Trading Terminal để đặt lệnh thực hành trước khi nộp bài.
                   </p>
@@ -595,7 +595,7 @@ export const StudentAssignmentDetail = () => {
               <div>
                 <span className="text-slate-400 dark:text-slate-500 block mb-0.5">Mã cổ phiếu thực hành:</span>
                 <span className="px-2.5 py-1 bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-400 font-bold font-mono rounded border border-cyan-200 dark:border-cyan-500/30 inline-block">
-                  {assignment.symbol || 'FPT'}
+                  {assignment.symbol || 'BTCUSDT'}
                 </span>
               </div>
             </div>
@@ -623,14 +623,14 @@ export const StudentAssignmentDetail = () => {
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">Thực hành trên sàn giả lập</h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Mở Trading Terminal với mã <strong className="text-cyan-600 dark:text-cyan-400">{assignment.symbol || 'FPT'}</strong> để áp dụng chỉ báo kỹ thuật và đặt lệnh thị trường.
+                Mở Trading Terminal với mã <strong className="text-cyan-600 dark:text-cyan-400">{assignment.symbol || 'BTCUSDT'}</strong> để áp dụng chỉ báo kỹ thuật và đặt lệnh thị trường.
               </p>
             </div>
             <Link 
               to={`/trade/${targetSymbol}`} 
               className="block w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/25 transition-all hover:scale-[1.02]"
             >
-              Mở Trading Terminal ({assignment.symbol || 'FPT'})
+              Mở Trading Terminal ({assignment.symbol || 'BTCUSDT'})
             </Link>
           </div>
 

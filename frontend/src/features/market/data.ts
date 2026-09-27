@@ -127,24 +127,29 @@ export const generateOHLCV = (basePrice: number, count = 200, timeframe = 'D', e
   const baseVolMax = 30_000;
 
   // Volatility giảm theo căn bậc hai của timeframe (sqrt scaling)
-  // Candle 1m biến động ít hơn, candle D biến động nhiều hơn
-  const volScale = Math.sqrt(tfMin / 390); // tương đối so với ngày
+  const volScale = Math.sqrt(tfMin / 390);
 
   const data = [];
   // Làm tròn thời gian hiện tại về đầu khoảng interval để các mốc thời gian chẵn (VD: 09:00, 09:30)
   const now = endTime ?? Date.now();
   const alignedNow = now - (now % intervalMs);
   let time = alignedNow - intervalMs * (count - 1);
-  let close = basePrice;
+  let currentPrice = Math.max(1, basePrice);
+  const precision = getPricePrecision(basePrice);
 
   for (let i = 0; i < count; i++) {
-    const swing = basePrice * 0.015 * volScale;
-    const wick  = basePrice * 0.008 * volScale;
+    const swing = currentPrice * 0.012 * volScale;
+    const wick = currentPrice * 0.006 * volScale;
 
-    const open  = close + (Math.random() - 0.5) * swing;
-    const high  = Math.max(open, close) + Math.random() * wick;
-    const low   = Math.min(open, close) - Math.random() * wick;
-    close = open + (Math.random() - 0.5) * basePrice * 0.012 * volScale;
+    // Nến sau LUÔN mở cửa tại đúng giá đóng cửa của nến trước (không bị hở/rời rạc)
+    const open = currentPrice;
+    const bodyDelta = (Math.random() - 0.495) * swing;
+    const close = Math.max(0.0001, open + bodyDelta);
+
+    const upperWick = Math.random() * wick;
+    const lowerWick = Math.random() * wick;
+    const high = Math.max(open, close) + upperWick;
+    const low = Math.max(0.0001, Math.min(open, close) - lowerWick);
 
     // Volume: base/phút × số phút × nhiễu ngẫu nhiên [0.5, 1.5]
     const volPerMinute = baseVolMin + Math.random() * (baseVolMax - baseVolMin);
@@ -158,28 +163,31 @@ export const generateOHLCV = (basePrice: number, count = 200, timeframe = 'D', e
       close,
       volume: Math.round(volume),
     });
+
+    currentPrice = close;
     time += intervalMs;
   }
 
-  // Dịch chuyển lại toàn bộ giá trị để nến cuối cùng khớp chính xác với basePrice
+  // Chuẩn hóa theo tỉ lệ để nến cuối cùng khớp chính xác với basePrice và giữ tính liên tục hoàn hảo
   const lastClose = data[data.length - 1].close;
-  const priceDiff = basePrice - lastClose;
-  const precision = getPricePrecision(basePrice);
+  const scaleRatio = lastClose > 0 ? (basePrice / lastClose) : 1;
 
   for (let i = 0; i < count; i++) {
-    data[i].open = parseFloat((data[i].open + priceDiff).toFixed(precision));
-    data[i].high = parseFloat((data[i].high + priceDiff).toFixed(precision));
-    data[i].low = parseFloat((data[i].low + priceDiff).toFixed(precision));
-    data[i].close = parseFloat((data[i].close + priceDiff).toFixed(precision));
-    
-    // Fix trường hợp nếu trừ đi làm giá bị âm hoặc bằng 0
-    if (data[i].low <= 0) {
-      const minPositive = Math.pow(10, -precision);
-      const shiftUp = minPositive - data[i].low;
-      data[i].open = parseFloat((data[i].open + shiftUp).toFixed(precision));
-      data[i].high = parseFloat((data[i].high + shiftUp).toFixed(precision));
-      data[i].low = parseFloat((data[i].low + shiftUp).toFixed(precision));
-      data[i].close = parseFloat((data[i].close + shiftUp).toFixed(precision));
+    const rawOpen = (i === 0) ? (data[i].open * scaleRatio) : data[i - 1].close;
+    const rawClose = data[i].close * scaleRatio;
+    const rawHigh = Math.max(rawOpen, rawClose, data[i].high * scaleRatio);
+    const rawLow = Math.min(rawOpen, rawClose, Math.max(0.000001, data[i].low * scaleRatio));
+
+    data[i].open = parseFloat(rawOpen.toFixed(precision));
+    data[i].close = parseFloat(rawClose.toFixed(precision));
+    data[i].high = parseFloat(Math.max(rawHigh, data[i].open, data[i].close).toFixed(precision));
+    data[i].low = parseFloat(Math.min(rawLow, data[i].open, data[i].close).toFixed(precision));
+
+    // Đảm bảo tuyệt đối: open của nến i phải bằng close của nến i - 1
+    if (i > 0) {
+      data[i].open = data[i - 1].close;
+      data[i].high = Math.max(data[i].high, data[i].open, data[i].close);
+      data[i].low = Math.min(data[i].low, data[i].open, data[i].close);
     }
   }
 

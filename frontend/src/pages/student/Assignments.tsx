@@ -202,7 +202,7 @@ export const StudentAssignments = () => {
                               {assignment.title}
                             </h3>
                             <span className="inline-block mt-0.5 text-[11px] text-slate-400 dark:text-slate-500 font-mono">
-                              Mã CP: <strong className="text-slate-700 dark:text-slate-300 font-semibold">{assignment.symbol || 'FPT'}</strong>
+                              Mã CP: <strong className="text-slate-700 dark:text-slate-300 font-semibold">{assignment.symbol || 'BTCUSDT'}</strong>
                             </span>
                           </div>
                         </div>
@@ -295,7 +295,7 @@ export const StudentAssignments = () => {
                                   {assignment.title}
                                 </span>
                                 <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono">
-                                  Mã CP: <strong className="text-slate-600 dark:text-slate-400">{assignment.symbol || 'FPT'}</strong>
+                                  Mã CP: <strong className="text-slate-600 dark:text-slate-400">{assignment.symbol || 'BTCUSDT'}</strong>
                                 </span>
                               </div>
                             </div>

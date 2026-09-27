@@ -3775,31 +3775,19 @@ export const ChartArea = ({
         tooltip: {
           showRule: 'always',
           showType: 'standard',
+          title: {
+            show: true,
+            template: '{ticker} · {period}'
+          },
           legend: {
-            template: (data: any) => {
-              const d = data.current;
-              if (!d) return [];
-              const time = new Date(d.timestamp).toLocaleString('vi-VN', {
-                hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
-              });
-              let precision = getPricePrecision(d.close || selectedStock.price || 1);
-              const customPrecision = chartSettingsRef.current?.symbol?.precision;
-              if (customPrecision && customPrecision !== 'Default') {
-                if (customPrecision === '1') precision = 0;
-                else if (customPrecision === '1/10') precision = 1;
-                else if (customPrecision === '1/100') precision = 2;
-                else if (customPrecision === '1/1000') precision = 3;
-              }
-              return [
-                {
-                  title: '',
-                  value: {
-                    text: `Time: ${time}   Open: ${Number(d.open).toFixed(precision)}   High: ${Number(d.high).toFixed(precision)}   Low: ${Number(d.low).toFixed(precision)}   Close: ${Number(d.close).toFixed(precision)}   Volume: ${(d.volume / 1000).toFixed(2)}K`,
-                    color: isDark ? '#c4c6cb' : '#131722'
-                  }
-                }
-              ];
-            }
+            template: [
+              { title: 'time', value: '{time}' },
+              { title: 'open', value: '{open}' },
+              { title: 'high', value: '{high}' },
+              { title: 'low', value: '{low}' },
+              { title: 'close', value: '{close}' },
+              { title: 'volume', value: '{volume}' }
+            ]
           }
         },
         bar: {
@@ -3880,6 +3868,14 @@ export const ChartArea = ({
     updateCrosshairStyles(chart, activeToolRef.current);
 
     try {
+      const topGap = Math.max(0.06, (chartSettings.canvas.marginTop ?? 9) / 100);
+      const bottomGap = Math.max(0.05, (chartSettings.canvas.marginBottom ?? 8) / 100);
+      chart.overrideYAxis({
+        gap: {
+          top: topGap,
+          bottom: bottomGap
+        }
+      });
       const anyChart = chart as any;
       if (typeof anyChart.setTimezone === 'function') {
         anyChart.setTimezone(chartSettings.symbol.timezone);
@@ -3987,7 +3983,32 @@ export const ChartArea = ({
           downBorderColor: '#f23645',
           upWickColor: '#089981',
           downWickColor: '#f23645',
+        },
+        tooltip: {
+          showRule: 'always',
+          showType: 'standard',
+          title: {
+            show: true,
+            template: '{ticker} · {period}'
+          },
+          legend: {
+            template: [
+              { title: 'time', value: '{time}' },
+              { title: 'open', value: '{open}' },
+              { title: 'high', value: '{high}' },
+              { title: 'low', value: '{low}' },
+              { title: 'close', value: '{close}' },
+              { title: 'volume', value: '{volume}' }
+            ]
+          }
         }
+      }
+    });
+
+    chart.overrideYAxis({
+      gap: {
+        top: 0.09,
+        bottom: 0.08
       }
     });
 
@@ -4643,28 +4664,51 @@ export const ChartArea = ({
               }
             );
           } else {
-            // Simulate live market ticking cho các thị trường khác
+            // Simulate live market ticking cho các thị trường khác (Vàng, Dầu, Forex, ...)
             tickerInterval = setInterval(() => {
               if (allData.length === 0) return;
+              const now = Date.now();
+              const currentBucket = now - (now % intervalMs);
               const lastCandle = allData[allData.length - 1];
               const tickPrecision = getPricePrecision(lastCandle.close);
-              const swing = (Math.random() - 0.5) * lastCandle.close * 0.005;
-              const newPrice = lastCandle.close + swing;
-              const newCandle = {
-                ...lastCandle,
-                close: parseFloat(newPrice.toFixed(tickPrecision)),
-                high: parseFloat(Math.max(lastCandle.high, newPrice).toFixed(tickPrecision)),
-                low: parseFloat(Math.min(lastCandle.low, newPrice).toFixed(tickPrecision)),
-                volume: (lastCandle.volume || 0) + Math.random() * 500,
-              };
+              // Dao động giá vi mô thực tế từng giây (~0.015% / tick thay vì 0.5% làm vỡ nến)
+              const swing = (Math.random() - 0.495) * lastCandle.close * 0.00015;
+              const newPrice = parseFloat(Math.max(0.0001, lastCandle.close + swing).toFixed(tickPrecision));
 
-              allData[allData.length - 1] = newCandle;
-              params.callback(newCandle);
-              const chart = chartRef.current;
-              if (chart && typeof (chart as any).updateData === 'function') {
-                (chart as any).updateData(newCandle);
+              if (now >= lastCandle.timestamp + intervalMs) {
+                // Đã hết chu kỳ nến hiện tại (VD: đã sang phút tiếp theo): Đóng nến cũ và mở nến mới
+                const newCandle: KLineData = {
+                  timestamp: currentBucket,
+                  open: lastCandle.close,
+                  high: Math.max(lastCandle.close, newPrice),
+                  low: Math.min(lastCandle.close, newPrice),
+                  close: newPrice,
+                  volume: Math.round(50 + Math.random() * 200),
+                };
+                allData.push(newCandle);
+                params.callback(newCandle);
+                const chart = chartRef.current;
+                if (chart && typeof (chart as any).updateData === 'function') {
+                  (chart as any).updateData(newCandle);
+                }
+              } else {
+                // Vẫn trong chu kỳ nến: Cập nhật giá High, Low, Close và Volume của nến hiện tại
+                const updatedCandle: KLineData = {
+                  ...lastCandle,
+                  close: newPrice,
+                  high: parseFloat(Math.max(lastCandle.high, newPrice).toFixed(tickPrecision)),
+                  low: parseFloat(Math.min(lastCandle.low, newPrice).toFixed(tickPrecision)),
+                  volume: (lastCandle.volume || 0) + Math.round(Math.random() * 20),
+                };
+                allData[allData.length - 1] = updatedCandle;
+                params.callback(updatedCandle);
+                const chart = chartRef.current;
+                if (chart && typeof (chart as any).updateData === 'function') {
+                  (chart as any).updateData(updatedCandle);
+                }
               }
-              if (onPriceUpdate) onPriceUpdate(newCandle.close);
+
+              if (onPriceUpdate) onPriceUpdate(newPrice);
             }, 1000);
           }
         },
@@ -5072,33 +5116,6 @@ export const ChartArea = ({
       style={bgStyle}
       onMouseMove={(e) => { mousePosRef.current = { x: e.clientX, y: e.clientY }; }}
     >
-      {/* Symbol header */}
-      <div className="absolute top-2 left-4 z-10 pointer-events-none flex items-baseline gap-2 flex-wrap">
-        {['Ticker', 'Ticker and description', 'Name'].includes(chartSettings.status.title) && (
-          <span className="text-[#131722] dark:text-white font-bold text-sm">{selectedStock.symbol}</span>
-        )}
-        {['Description', 'Ticker and description'].includes(chartSettings.status.title) && (
-          <span className="text-gray-500 dark:text-[#787b86] text-xs">{selectedStock.name}</span>
-        )}
-
-        {chartSettings.status.openMarketStatus && (
-          <span className="w-2 h-2 rounded-full bg-[#089981] ml-1 self-center" title="Market Open"></span>
-        )}
-
-        {chartSettings.status.chartValues && (
-          <span className={`text-sm font-bold font-mono ml-2 ${priceColor}`}>
-            {selectedStock.price.toLocaleString('vi-VN')}
-          </span>
-        )}
-        {chartSettings.status.barChangeValues && (
-          <span className={`text-xs ${priceColor}`}>
-            {selectedStock.percent > 0 ? '+' : ''}{selectedStock.percent.toFixed(2)}%
-          </span>
-        )}
-        {chartSettings.status.volume && (
-          <span className="text-gray-500 dark:text-[#787b86] text-xs ml-2">Vol: {(dataCache.get(`${selectedStock.symbol}-${activeTimeframe}`)?.slice(-1)[0]?.volume || 0).toFixed(0)}</span>
-        )}
-      </div>
 
       {/* Watermark overlay */}
       {chartSettings.canvas.watermarkVal !== 'Hidden' && (
@@ -5259,11 +5276,10 @@ export const ChartArea = ({
       <div
         id="market-chart"
         ref={chartContainerRef}
-        className={`${isSelectingReplayStart ? 'cursor-crosshair' : ''} ${activeTool === 'cursor_arrow' ? 'cursor-mode-arrow' :
+        className={`absolute inset-0 ${isSelectingReplayStart ? 'cursor-crosshair' : ''} ${activeTool === 'cursor_arrow' ? 'cursor-mode-arrow' :
           activeTool === 'cursor_dot' ? 'cursor-mode-dot' :
             activeTool === 'eraser' ? 'cursor-mode-eraser' : 'cursor-mode-crosshair'
           }`}
-        style={{ position: 'absolute', top: `${chartSettings.canvas.marginTop}%`, left: 0, right: 0, bottom: `${chartSettings.canvas.marginBottom}%` }}
       />
 
       {/* Selection Mode Overlay / Indicator */}

@@ -28,7 +28,8 @@ export const StudentSidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileO
     { name: 'Trading Journal', path: '/student/journal', icon: <Activity className="w-5 h-5" /> },
   ];
 
-  const lastSelectedStock = localStorage.getItem('lastSelectedStock') || 'fpt';
+  const rawLastStock = localStorage.getItem('lastSelectedStock');
+  const lastSelectedStock = (rawLastStock && rawLastStock.toLowerCase() !== 'fpt') ? rawLastStock : 'btcusdt';
 
   const bottomItems = [
     { name: 'Back to Chart', path: `/trade/${lastSelectedStock}`, icon: <LineChart className="w-5 h-5" /> },

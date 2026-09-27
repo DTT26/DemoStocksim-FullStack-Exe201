@@ -25,8 +25,7 @@ const OtpSchema: Schema = new Schema(
   { timestamps: false }
 );
 
-// Tạo index để tìm kiếm theo email nhanh chóng và tự động xóa sau đúng 600s (10 phút)
+// Tạo index để tìm kiếm theo email nhanh chóng (createdAt đã có expires: 600 trong Schema)
 OtpSchema.index({ email: 1 });
-OtpSchema.index({ createdAt: 1 }, { expireAfterSeconds: 600 });
 
 export default mongoose.model<IOtp>('Otp', OtpSchema);

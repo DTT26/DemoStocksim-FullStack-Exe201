@@ -47,6 +47,7 @@ function App() {
   return (
     <Routes>
       {/* Route for Trading Terminal (Isolated) */}
+      <Route path="/trade" element={<Navigate to="/trade/btcusdt" replace />} />
       <Route path="/trade/:simulationId" element={
         <div className="h-screen w-screen bg-[#131722] overflow-hidden flex flex-col text-[#d1d4dc] transition-colors">
           <TradingTerminal />
@@ -106,7 +107,7 @@ function App() {
       <Route path="/" element={<AppLayout />}>
         {/* Default route based on role */}
         <Route index element={
-          !user ? <Navigate to="/trade/fpt" /> :
+          !user ? <Navigate to="/trade/btcusdt" replace /> :
           user.role === 'admin' ? <Navigate to="/admin" /> :
           user.role === 'lecturer' ? <Navigate to="/lecturer" /> :
           <Navigate to="/student" />

@@ -59,7 +59,7 @@ export const TradesTab: React.FC<TradesTabProps> = ({ session }) => {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search symbol (e.g. FPT, VCB, BTC)..."
+            placeholder="Search symbol (e.g. BTC, ETH, SOL)..."
             className="w-full bg-slate-50 dark:bg-[#161f31] border border-slate-200 dark:border-[#253047] text-slate-900 dark:text-white placeholder:text-slate-400 text-xs sm:text-sm rounded-xl pl-9 pr-3 py-2 sm:py-2.5 hover:border-slate-300 dark:hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
           />
         </div>
