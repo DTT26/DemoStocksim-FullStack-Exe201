@@ -10,6 +10,7 @@ import { NotificationDropdown } from './NotificationDropdown';
 
 interface ToolbarNavbarProps {
   balance: number;
+  simulationName?: string;
   onOpenSettings?: () => void;
   onOpenChallenge?: () => void;
   onOpenAiTutor?: () => void;
@@ -22,6 +23,7 @@ interface ToolbarNavbarProps {
 
 export const ToolbarNavbar = ({ 
   balance, 
+  simulationName,
   onOpenSettings,
   onOpenChallenge, 
   onOpenAiTutor,
@@ -70,29 +72,17 @@ export const ToolbarNavbar = ({
           </button>
         </div>
 
-        {/* Simulation Info (Centered) */}
-        <div className="hidden lg:flex flex-1 items-center justify-center gap-6 text-xs">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-[#1e2329] dark:text-white">Vietnam Stock Challenge #01</span>
-            <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> LIVE
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[#787b86]">Rank</span>
-              <span className="font-bold text-blue-600 dark:text-blue-400">#7 / 42</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[#787b86]">Return</span>
-              <span className="font-bold text-emerald-600 dark:text-emerald-400">+8.52%</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[#787b86]">Simulation Time</span>
-              <span className="font-mono text-[#1e2329] dark:text-slate-300">2026-09-12 14:30</span>
+        {/* Simulation Info (Centered) - Chỉ hiển thị khi có thông tin kỳ thi thực tế */}
+        {simulationName && (
+          <div className="hidden lg:flex flex-1 items-center justify-center gap-6 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-[#1e2329] dark:text-white">{simulationName}</span>
+              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> LIVE
+              </span>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Right side controls */}
         <div className="flex items-center gap-2.5">

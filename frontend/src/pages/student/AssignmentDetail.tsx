@@ -5,7 +5,6 @@ import {
   Send, Award, AlertCircle, FileText, Check, Clock, TrendingUp,
   ShieldCheck, AlertTriangle, ExternalLink
 } from 'lucide-react';
-import { MOCK_ASSIGNMENTS } from '../../data/mockStudentData';
 
 export const StudentAssignmentDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -41,11 +40,6 @@ export const StudentAssignmentDetail = () => {
         }
       } catch (e) {
         console.warn('Backend fetch assignment error:', e);
-      }
-
-      // Fallback sang mock data nếu không tìm thấy trên backend
-      if (!assData) {
-        assData = MOCK_ASSIGNMENTS.find(a => a.id === id);
       }
 
       setAssignment(assData);
@@ -578,7 +572,7 @@ export const StudentAssignmentDetail = () => {
               <div>
                 <span className="text-slate-400 dark:text-slate-500 block mb-0.5">Kỳ thi mô phỏng:</span>
                 <span className="font-semibold text-slate-900 dark:text-white text-sm">
-                  {assignment.simulationId?.name || assignment.simulation || 'Vietnam Stock Challenge'}
+                  {assignment.simulationId?.name || assignment.simulation || '—'}
                 </span>
               </div>
 
@@ -586,7 +580,7 @@ export const StudentAssignmentDetail = () => {
                 <span className="text-slate-400 dark:text-slate-500 block mb-0.5">Giảng viên phụ trách:</span>
                 <span className="font-medium text-slate-700 dark:text-slate-200 flex items-center gap-2">
                   <User className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                  {assignment.createdBy?.name || assignment.lecturer || 'TS. Nguyễn Văn A'}
+                  {assignment.createdBy?.name || assignment.lecturer || 'Giảng viên phụ trách'}
                 </span>
               </div>
 
