@@ -326,20 +326,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     const token = localStorage.getItem('token');
 
-    // 1. Ngay lập tức xóa sạch token và thông tin người dùng ở phía client
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('userId');
-    setUser(null);
-
-    // 2. Hủy phiên Google nếu có
-    try {
-      googleLogout();
-    } catch (e) {
-      console.warn('googleLogout error:', e);
-    }
-
-    // 3. Gửi yêu cầu đăng xuất lên backend để hủy cookies HttpOnly trên mọi domain
+    // 1. Gửi yêu cầu đăng xuất lên backend để hủy cookies HttpOnly trên mọi domain trước
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
       await fetch(`${apiUrl}/auth/logout`, {
@@ -353,6 +340,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (err) {
       console.error('Failed to logout on backend', err);
     }
+
+    // 2. Hủy phiên Google nếu có
+    try {
+      googleLogout();
+    } catch (e) {
+      console.warn('googleLogout error:', e);
+    }
+
+    // 3. Xóa sạch token, userId và set user null (đảm bảo cookie đã bị server xóa trước khi trigger re-render)
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('userId');
+    setUser(null);
   };
 
   return (

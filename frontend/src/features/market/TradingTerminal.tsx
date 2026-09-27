@@ -349,8 +349,14 @@ export const TradingTerminal = () => {
   };
 
   const fetchPortfolio = async (targetUserId?: string) => {
+    const uid = targetUserId || user?._id;
+    if (!uid) {
+      setPositions({});
+      setPendingOrders([]);
+      setTradeOrders([]);
+      return;
+    }
     try {
-      const uid = targetUserId || user?._id;
       const res = await tradingApi.getPortfolio(uid);
       if (res.success && res.data) {
         if (res.data.wallet) {
@@ -414,7 +420,6 @@ export const TradingTerminal = () => {
         weekResetTimestamp: 0,
         certificates: [],
       });
-      fetchPortfolio();
     }
   }, [user?._id]);
 

@@ -2,7 +2,7 @@ const ROOT_API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const API_BASE_URL = `${ROOT_API}/trade`;
 
 // Fallback UserID chỉ dành khi hoàn toàn không có tài khoản đăng nhập
-export const DUMMY_USER_ID = '64f7b1e4a3b9c2d1e8f9a0b1';
+export const DUMMY_USER_ID = '';
 
 export const getActiveUserId = (providedUserId?: string): string => {
   if (providedUserId) return providedUserId;
@@ -16,7 +16,7 @@ export const getActiveUserId = (providedUserId?: string): string => {
       if (payload.userId) return payload.userId;
     } catch {}
   }
-  return DUMMY_USER_ID;
+  return '';
 };
 
 const getHeaders = () => {
@@ -105,7 +105,10 @@ export const tradingApi = {
 
   getPortfolio: async (userId?: string) => {
     const actualUserId = getActiveUserId(userId);
-    const url = actualUserId ? `${API_BASE_URL}/portfolio/${actualUserId}` : `${API_BASE_URL}/portfolio`;
+    if (!actualUserId) {
+      return { success: true, data: { wallet: { availableBalance: 100_000_000 }, holdings: [], pendingOrders: [] } };
+    }
+    const url = `${API_BASE_URL}/portfolio/${actualUserId}`;
     const res = await fetch(url, {
       credentials: 'include',
       headers: getHeaders()
@@ -115,7 +118,10 @@ export const tradingApi = {
 
   getTransactions: async (userId?: string) => {
     const actualUserId = getActiveUserId(userId);
-    const url = actualUserId ? `${API_BASE_URL}/transactions/${actualUserId}` : `${API_BASE_URL}/transactions`;
+    if (!actualUserId) {
+      return { success: true, data: [] };
+    }
+    const url = `${API_BASE_URL}/transactions/${actualUserId}`;
     const res = await fetch(url, {
       credentials: 'include',
       headers: getHeaders()

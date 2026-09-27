@@ -63,6 +63,10 @@ export const BottomPanel = ({
   }, [selectedSymbol, currentPrice]);
 
   useEffect(() => {
+    if (!user) {
+      setTransactions([]);
+      return;
+    }
     if (['order_history', 'trade_history', 'position_history', 'cashflow_history'].includes(activeTab)) {
       const fetchHistory = async () => {
         try {
@@ -78,17 +82,17 @@ export const BottomPanel = ({
     }
   }, [activeTab, refreshTrigger, user]);
 
-  const posList = Object.entries(positions).map(([symbol, p]) => ({ symbol, ...p }));
+  const posList = user ? Object.entries(positions).map(([symbol, p]) => ({ symbol, ...p })) : [];
   const displayPositions = currentPairOnly 
     ? posList.filter(p => p.symbol === selectedSymbol)
     : posList;
 
-  const displayPendingOrders = currentPairOnly
-    ? pendingOrders.filter(o => o.symbol === selectedSymbol)
-    : pendingOrders;
+  const displayPendingOrders = user
+    ? (currentPairOnly ? pendingOrders.filter(o => o.symbol === selectedSymbol) : pendingOrders)
+    : [];
 
   // Filter transactions by tab and active symbol
-  const filteredTransactions = transactions.filter(tx => {
+  const filteredTransactions = !user ? [] : transactions.filter(tx => {
     if (currentPairOnly && !tx.description.toLowerCase().includes(selectedSymbol.toLowerCase())) {
       return false;
     }
@@ -107,14 +111,14 @@ export const BottomPanel = ({
     return true;
   });
 
-  const closedTransactions = transactions.filter(tx => {
+  const closedTransactions = !user ? [] : transactions.filter(tx => {
     const desc = tx.description || '';
     return desc.includes('Đóng') || desc.includes('Chốt lời') || desc.includes('Cắt lỗ') || (tx.type === 'DEPOSIT' && desc.includes('Lợi nhuận'));
   });
 
   const tabs = [
     { id: 'positions', label: `${t('panel.positions', 'Vị thế')} (${posList.length})` },
-    { id: 'orders', label: `${t('panel.orders', 'Lệnh mở')} (${pendingOrders.length})` },
+    { id: 'orders', label: `${t('panel.orders', 'Lệnh mở')} (${displayPendingOrders.length})` },
     { id: 'order_history', label: t('panel.orderHistory', 'Lịch sử đặt lệnh') },
     { id: 'trade_history', label: t('panel.tradeHistory', 'Lịch sử giao dịch') },
     { id: 'position_history', label: t('panel.positionHistory', 'Lịch sử vị thế') },
