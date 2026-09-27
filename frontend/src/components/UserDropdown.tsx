@@ -42,9 +42,13 @@ export const UserDropdown = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
-    googleLogout();
-    onLogout();
+  const handleLogout = async () => {
+    try {
+      googleLogout();
+    } catch (e) {
+      console.warn('googleLogout error:', e);
+    }
+    await onLogout();
   };
 
   const dashboardRoute = user.role === 'admin' ? '/admin' : user.role === 'lecturer' ? '/lecturer' : '/student';
