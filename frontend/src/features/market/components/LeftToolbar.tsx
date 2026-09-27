@@ -2,6 +2,41 @@ import { useState, useRef, useEffect } from 'react';
 import { Crosshair, TrendingUp, AlignLeft, Brush, Type, Waypoints, SlidersHorizontal, Smile, Ruler, ZoomIn, Magnet, PenTool, Lock, Eye, Trash2, ChevronRight, Share, GitCommit, Play, FastForward, SkipForward, TrendingDown, BarChart2, Activity, AlignRight, MoveVertical, MoveHorizontal, Maximize, Square, Circle, MessageSquare, Bug, Coffee, Rocket, Lightbulb, Heart, Flag, MousePointer2, Dot, Eraser, Highlighter, ArrowUpRight, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, CircleDot, Triangle, Spline, Box, Milestone, Anchor, FileText, DollarSign, MapPin, Table, MessageCircle, Tag, Compass, User } from 'lucide-react';
 import { useI18n } from '../../../contexts/I18nContext';
 
+const TrendLineIcon = ({ strokeWidth = 1.5, className = "w-[22px] h-[22px]" }: any) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <circle cx="5" cy="19" r="2" />
+    <circle cx="19" cy="5" r="2" />
+    <line x1="6.5" y1="17.5" x2="17.5" y2="6.5" />
+  </svg>
+);
+
+const RayIcon = ({ strokeWidth = 1.5, className = "w-[22px] h-[22px]" }: any) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <circle cx="5" cy="19" r="2" />
+    <line x1="6.5" y1="17.5" x2="21" y2="3" />
+  </svg>
+);
+
+const InfoLineIcon = ({ strokeWidth = 1.5, className = "w-[22px] h-[22px]" }: any) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <circle cx="5" cy="19" r="2" />
+    <circle cx="19" cy="5" r="2" />
+    <line x1="6.5" y1="17.5" x2="17.5" y2="6.5" />
+    <rect x="9" y="14" width="5" height="4" rx="1" />
+  </svg>
+);
+
+const TrendAngleIcon = ({ strokeWidth = 1.5, className = "w-[22px] h-[22px]" }: any) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <circle cx="5" cy="19" r="2" />
+    <circle cx="19" cy="5" r="2" />
+    <line x1="6.5" y1="17.5" x2="17.5" y2="6.5" />
+    <line x1="7" y1="19" x2="14" y2="19" />
+    <path d="M 11 19 A 6 6 0 0 0 9.2 14.8" />
+  </svg>
+);
+
+
 const EMOJI_CATEGORIES = [
   {
     id: 'smileys',
@@ -56,7 +91,7 @@ const TOOLS = [
   },
   { 
     id: 'segment',                  
-    icon: TrendingUp,        
+    icon: TrendLineIcon,        
     label: 'Các công cụ Đường xu hướng',   
     separator: false, 
     hasDropdown: true,
@@ -64,11 +99,11 @@ const TOOLS = [
       {
         category: 'ĐƯỜNG',
         items: [
-          { id: 'segment', label: 'Đường Xu hướng', icon: TrendingUp, shortcut: 'Alt + T' },
-          { id: 'rayLine', label: 'Tia', icon: TrendingUp },
-          { id: 'infoLine', label: 'Đường Thông tin', icon: TrendingUp },
+          { id: 'segment', label: 'Đường Xu hướng', icon: TrendLineIcon, shortcut: 'Alt + T' },
+          { id: 'rayLine', label: 'Tia', icon: RayIcon },
+          { id: 'infoLine', label: 'Đường Thông tin', icon: InfoLineIcon },
           { id: 'straightLine', label: 'Đường Mở rộng', icon: MoveHorizontal },
-          { id: 'trendAngle', label: 'Góc Xu hướng', icon: TrendingUp },
+          { id: 'trendAngle', label: 'Góc Xu hướng', icon: TrendAngleIcon },
           { id: 'horizontalStraightLine', label: 'Đường nằm ngang', icon: MoveHorizontal, shortcut: 'Alt + H' },
           { id: 'horizontalRayLine', label: 'Tia nằm ngang', icon: MoveHorizontal, shortcut: 'Alt + J' },
           { id: 'verticalStraightLine', label: 'Đường thẳng đứng', icon: MoveVertical, shortcut: 'Alt + V' },
@@ -140,7 +175,7 @@ const TOOLS = [
   },
   { 
     id: 'longPosition',             
-    icon: Crosshair,         
+    icon: TrendingUp,         
     label: 'Công cụ Dự đoán và Đo lường',  
     separator: false, 
     hasDropdown: true,
@@ -254,7 +289,7 @@ export const LeftToolbar = ({
     brush: 'brush',
     simpleAnnotation: 'simpleAnnotation',
     xabcd: 'xabcd',
-    priceChannelLine: 'longPosition'
+    longPosition: 'longPosition'
   });
   const toolbarRef = useRef<HTMLDivElement>(null);
 
@@ -332,7 +367,7 @@ export const LeftToolbar = ({
   }, [onToolSelect]);
 
   return (
-    <div ref={toolbarRef} className="hidden lg:flex w-[52px] bg-white dark:bg-[#1e222d] border-r border-[#e6e8ea] dark:border-[#2a2e39] flex-col items-center py-2 gap-1 shrink-0 z-10 transition-colors relative">
+    <div ref={toolbarRef} className="hidden lg:flex w-[52px] bg-white dark:bg-[#1e222d] border-r border-[#e6e8ea] dark:border-[#2a2e39] flex-col items-center py-2 gap-1 shrink-0 z-50 transition-colors relative">
       <div className="w-full h-full flex flex-col items-center overflow-y-auto hide-scrollbar">
         {TOOLS.map((tool) => {
           const isToolActive = activeTool === tool.id || 
