@@ -46,12 +46,12 @@ export const getChartInstance = () => globalChartInstance;
 registerOverlay({
   name: 'rect',
   totalStep: 3,
-  needDefaultPointFigure: true,
+  needDefaultPointFigure: false,
   needDefaultXAxisFigure: true,
   needDefaultYAxisFigure: true,
-  createPointFigures: ({ coordinates }) => {
+  createPointFigures: ({ coordinates, overlay }) => {
     if (coordinates.length > 1) {
-      return [
+      const figures: any[] = [
         {
           type: 'polygon',
           attrs: {
@@ -65,6 +65,25 @@ registerOverlay({
           styles: { style: 'stroke_fill', color: 'rgba(33, 150, 243, 0.2)', borderColor: '#2196f3' }
         }
       ];
+      
+      if (overlay?.extendData) {
+        const textContent = String(overlay.extendData);
+        if (textContent.trim()) {
+          const centerX = (coordinates[0].x + coordinates[1].x) / 2;
+          const centerY = (coordinates[0].y + coordinates[1].y) / 2;
+          figures.push({
+            type: 'text',
+            attrs: {
+              x: centerX,
+              y: centerY,
+              text: textContent
+            },
+            styles: overlay.styles?.text || { color: '#ffffff', size: 14 }
+          });
+        }
+      }
+
+      return figures;
     }
     return [];
   }

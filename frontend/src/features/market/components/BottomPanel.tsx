@@ -96,7 +96,7 @@ export const BottomPanel = ({
       return tx.type === 'BUY_STOCK' || tx.type === 'SELL_STOCK' || tx.description.includes('lệnh chờ');
     }
     if (activeTab === 'trade_history') {
-      return tx.type === 'BUY_STOCK' || tx.type === 'SELL_STOCK' || tx.type === 'CLOSE_POSITION';
+      return tx.type === 'BUY_STOCK' || tx.type === 'SELL_STOCK' || tx.type === 'CLOSE_POSITION' || (tx.type === 'DEPOSIT' && (tx.description || '').includes('Hủy lệnh'));
     }
     if (activeTab === 'position_history') {
       return tx.type === 'CLOSE_POSITION' || (tx.description || '').includes('Đóng') || (tx.description || '').includes('Chốt lời');
@@ -355,7 +355,7 @@ export const BottomPanel = ({
                 ) : (
                   filteredTransactions.map(tx => {
                   let displayAmount = Math.abs(tx.amount);
-                  let isPositive = tx.type === 'SELL_STOCK' || tx.type === 'DEPOSIT';
+                  let isPositive = tx.amount > 0;
                   let walletReturnNote = '';
 
                   // Extract profit from description if available (e.g., "Lợi nhuận: +$1,310" or "Lợi nhuận: $-1,350.37")
