@@ -41,6 +41,260 @@ const hexToRgba = (hex: string, alpha: number = 1) => {
 // Global reference for overlays to access chart data
 let globalChartInstance: any = null;
 export const getChartInstance = () => globalChartInstance;
+// Đăng ký các công cụ Sóng Elliott
+const createElliottOverlay = (name: string, step: number, labels: string[]) => ({
+  name,
+  totalStep: step,
+  needDefaultPointFigure: true,
+  needDefaultXAxisFigure: true,
+  needDefaultYAxisFigure: true,
+  createPointFigures: ({ coordinates }: any) => {
+    const figures: any[] = [];
+    if (coordinates.length > 1) {
+      figures.push({ type: 'line', attrs: { coordinates }, styles: { color: '#2962ff', size: 2 } });
+    }
+    coordinates.forEach((coord: any, i: number) => {
+      if (labels[i]) {
+        figures.push({
+          type: 'text',
+          attrs: { x: coord.x, y: coord.y, text: labels[i] },
+          styles: { color: '#fff', backgroundColor: '#2962ff', paddingLeft: 4, paddingRight: 4, paddingTop: 2, paddingBottom: 2, borderRadius: 4 }
+        });
+      }
+    });
+    return figures;
+  }
+});
+
+registerOverlay(createElliottOverlay('elliottWave', 7, ['', '1', '2', '3', '4', '5']));
+registerOverlay(createElliottOverlay('elliottCorrection', 5, ['', 'A', 'B', 'C']));
+registerOverlay(createElliottOverlay('elliottTriangle', 7, ['', 'A', 'B', 'C', 'D', 'E']));
+registerOverlay(createElliottOverlay('elliottDoubleCombo', 5, ['', 'W', 'X', 'Y']));
+registerOverlay(createElliottOverlay('elliottTripleCombo', 7, ['', 'W', 'X', 'Y', 'X', 'Z']));
+
+// Đăng ký Hộp Gann (Gann Box)
+registerOverlay({
+  name: 'gannBox',
+  totalStep: 3,
+  needDefaultPointFigure: true,
+  needDefaultXAxisFigure: true,
+  needDefaultYAxisFigure: true,
+  createPointFigures: ({ coordinates, overlay }: any) => {
+    if (coordinates.length < 2) return [];
+    const p1 = coordinates[0];
+    const p2 = coordinates[1];
+    const minX = Math.min(p1.x, p2.x);
+    const maxX = Math.max(p1.x, p2.x);
+    const minY = Math.min(p1.y, p2.y);
+    const maxY = Math.max(p1.y, p2.y);
+
+    const figures: any[] = [
+      { type: 'polygon', attrs: { coordinates: [{ x: minX, y: minY }, { x: maxX, y: minY }, { x: maxX, y: maxY }, { x: minX, y: maxY }] }, styles: { style: 'stroke_fill', color: 'rgba(41, 98, 255, 0.05)', borderColor: '#2962ff' } },
+      // X cross lines
+      { type: 'line', attrs: { coordinates: [{ x: minX, y: minY }, { x: maxX, y: maxY }] }, styles: { color: 'rgba(41, 98, 255, 0.5)' } },
+      { type: 'line', attrs: { coordinates: [{ x: maxX, y: minY }, { x: minX, y: maxY }] }, styles: { color: 'rgba(41, 98, 255, 0.5)' } },
+      // Middle cross lines
+      { type: 'line', attrs: { coordinates: [{ x: (minX + maxX) / 2, y: minY }, { x: (minX + maxX) / 2, y: maxY }] }, styles: { color: 'rgba(41, 98, 255, 0.5)' } },
+      { type: 'line', attrs: { coordinates: [{ x: minX, y: (minY + maxY) / 2 }, { x: maxX, y: (minY + maxY) / 2 }] }, styles: { color: 'rgba(41, 98, 255, 0.5)' } },
+    ];
+
+    const fractions = [0.25, 0.382, 0.618, 0.75];
+    fractions.forEach(f => {
+      const y = minY + (maxY - minY) * f;
+      figures.push({ type: 'line', attrs: { coordinates: [{ x: minX, y }, { x: maxX, y }] }, styles: { color: 'rgba(41, 98, 255, 0.3)', style: 'dashed' } });
+      const x = minX + (maxX - minX) * f;
+      figures.push({ type: 'line', attrs: { coordinates: [{ x, y: minY }, { x, y: maxY }] }, styles: { color: 'rgba(41, 98, 255, 0.3)', style: 'dashed' } });
+    });
+
+    // Support text overlay if user types on the gannBox
+    let textStr = '';
+    if (typeof overlay?.extendData === 'string') textStr = overlay.extendData;
+    else if (typeof overlay?.text === 'string') textStr = overlay.text;
+
+    if (textStr) {
+      figures.push({
+        type: 'text',
+        attrs: { x: (minX + maxX) / 2, y: minY - 10, text: textStr, align: 'center', baseline: 'bottom' },
+        styles: { color: '#ffffff', size: 14, family: 'Inter', backgroundColor: '#2962ff', borderRadius: 4, paddingLeft: 4, paddingRight: 4 }
+      });
+    }
+
+    return figures;
+  }
+});
+
+
+
+
+
+// Đăng ký Khoảng Giá (priceRange)
+registerOverlay({
+  name: 'priceRange',
+  totalStep: 3,
+  needDefaultPointFigure: true,
+  needDefaultXAxisFigure: true,
+  needDefaultYAxisFigure: true,
+  createPointFigures: ({ coordinates, yAxis }) => {
+    try {
+      if (coordinates.length >= 2) {
+        const p1 = coordinates[0];
+        const p2 = coordinates[1];
+        const leftX = Math.min(p1.x, p2.x) - 20;
+        const rightX = Math.max(p1.x, p2.x) + 20;
+        const topY = Math.min(p1.y, p2.y);
+        const btmY = Math.max(p1.y, p2.y);
+
+        let valDif = 0;
+        let pctDif = 0;
+        if (yAxis?.convertFromPixel) {
+          const v1 = yAxis.convertFromPixel(p1.y);
+          const v2 = yAxis.convertFromPixel(p2.y);
+          valDif = v2 - v1;
+          if (v1 !== 0) pctDif = (valDif / Math.abs(v1)) * 100;
+        }
+
+        const figures: any[] = [];
+        figures.push({
+          type: 'polygon',
+          attrs: { coordinates: [{ x: leftX, y: topY }, { x: rightX, y: topY }, { x: rightX, y: btmY }, { x: leftX, y: btmY }] },
+          styles: { style: 'stroke_fill', color: 'rgba(33, 150, 243, 0.2)', borderColor: '#2196f3' }
+        });
+        figures.push({ type: 'line', attrs: { coordinates: [{ x: leftX, y: p1.y }, { x: rightX, y: p1.y }] }, styles: { color: '#2196f3', style: 'dashed' } });
+        figures.push({ type: 'line', attrs: { coordinates: [{ x: leftX, y: p2.y }, { x: rightX, y: p2.y }] }, styles: { color: '#2196f3', style: 'dashed' } });
+
+        const text = `${valDif > 0 ? '+' : ''}${valDif.toFixed(2)} (${valDif > 0 ? '+' : ''}${pctDif.toFixed(2)}%)`;
+        figures.push({
+          type: 'text',
+          attrs: { x: (leftX + rightX) / 2, y: topY - 10, text, align: 'center', baseline: 'bottom' },
+          styles: { color: '#ffffff', backgroundColor: '#2196f3', borderRadius: 4, paddingLeft: 4, paddingRight: 4, paddingTop: 2, paddingBottom: 2 }
+        });
+        return figures;
+      }
+    } catch (e: any) {
+      if (coordinates.length > 0) {
+        return [{ type: 'text', attrs: { x: coordinates[0].x, y: coordinates[0].y, text: 'Lỗi: ' + e.message } }];
+      }
+    }
+    return [];
+  }
+});
+
+// Đăng ký Khoảng thời gian (timeRange)
+registerOverlay({
+  name: 'timeRange',
+  totalStep: 3,
+  needDefaultPointFigure: true,
+  needDefaultXAxisFigure: true,
+  needDefaultYAxisFigure: true,
+  createPointFigures: ({ coordinates, xAxis, overlay }: any) => {
+    try {
+      if (coordinates.length >= 2) {
+        const p1 = coordinates[0];
+        const p2 = coordinates[1];
+        const leftX = Math.min(p1.x, p2.x);
+        const rightX = Math.max(p1.x, p2.x);
+        const topY = Math.min(p1.y, p2.y) - 40;
+        const btmY = Math.max(p1.y, p2.y) + 40;
+
+        let barCount = 0;
+        if (xAxis?.convertFromPixel) {
+          const d1 = xAxis.convertFromPixel(p1.x);
+          const d2 = xAxis.convertFromPixel(p2.x);
+          barCount = Math.abs(Math.round(d2) - Math.round(d1));
+        } else {
+          const points = overlay?.points || [];
+          if (points.length >= 2 && points[0]?.dataIndex !== undefined && points[1]?.dataIndex !== undefined) {
+            barCount = Math.abs(points[1].dataIndex - points[0].dataIndex);
+          }
+        }
+
+        const figures: any[] = [];
+        figures.push({
+          type: 'polygon',
+          attrs: { coordinates: [{ x: leftX, y: topY }, { x: rightX, y: topY }, { x: rightX, y: btmY }, { x: leftX, y: btmY }] },
+          styles: { style: 'stroke_fill', color: 'rgba(156, 39, 176, 0.2)', borderColor: '#9c27b0' }
+        });
+
+        const text = `${barCount} Thanh`;
+        figures.push({
+          type: 'text',
+          attrs: { x: (leftX + rightX) / 2, y: topY - 10, text, align: 'center', baseline: 'bottom' },
+          styles: { color: '#ffffff', backgroundColor: '#9c27b0', borderRadius: 4, paddingLeft: 4, paddingRight: 4, paddingTop: 2, paddingBottom: 2 }
+        });
+        return figures;
+      }
+    } catch (e: any) {
+      if (coordinates.length > 0) {
+        return [{ type: 'text', attrs: { x: coordinates[0].x, y: coordinates[0].y, text: 'Lỗi: ' + e.message } }];
+      }
+    }
+    return [];
+  }
+});
+
+// Đăng ký Khoảng thời gian & Giá (timePriceRange)
+registerOverlay({
+  name: 'timePriceRange',
+  totalStep: 3,
+  needDefaultPointFigure: true,
+  needDefaultXAxisFigure: true,
+  needDefaultYAxisFigure: true,
+  createPointFigures: ({ coordinates, overlay, xAxis, yAxis }: any) => {
+    try {
+      if (coordinates.length >= 2) {
+        const p1 = coordinates[0];
+        const p2 = coordinates[1];
+        const leftX = Math.min(p1.x, p2.x);
+        const rightX = Math.max(p1.x, p2.x);
+        const topY = Math.min(p1.y, p2.y);
+        const btmY = Math.max(p1.y, p2.y);
+
+        let valDif = 0;
+        let pctDif = 0;
+        if (yAxis?.convertFromPixel) {
+          const v1 = yAxis.convertFromPixel(p1.y);
+          const v2 = yAxis.convertFromPixel(p2.y);
+          valDif = v2 - v1;
+          if (v1 !== 0) pctDif = (valDif / Math.abs(v1)) * 100;
+        }
+
+        let barCount = 0;
+        if (xAxis?.convertFromPixel) {
+          const d1 = xAxis.convertFromPixel(p1.x);
+          const d2 = xAxis.convertFromPixel(p2.x);
+          barCount = Math.abs(Math.round(d2) - Math.round(d1));
+        } else {
+          const pnts = overlay?.points || [];
+          if (pnts.length >= 2 && pnts[0]?.dataIndex !== undefined && pnts[1]?.dataIndex !== undefined) {
+            barCount = Math.abs(pnts[1].dataIndex - pnts[0].dataIndex);
+          }
+        }
+
+        const figures: any[] = [];
+        figures.push({
+          type: 'polygon',
+          attrs: { coordinates: [{ x: leftX, y: topY }, { x: rightX, y: topY }, { x: rightX, y: btmY }, { x: leftX, y: btmY }] },
+          styles: { style: 'stroke_fill', color: 'rgba(233, 30, 99, 0.2)', borderColor: '#e91e63' }
+        });
+
+        const text = `${barCount} Thanh | ${valDif > 0 ? '+' : ''}${valDif.toFixed(2)} (${valDif > 0 ? '+' : ''}${pctDif.toFixed(2)}%)`;
+        figures.push({
+          type: 'text',
+          attrs: { x: (leftX + rightX) / 2, y: topY - 10, text, align: 'center', baseline: 'bottom' },
+          styles: { color: '#ffffff', backgroundColor: '#e91e63', borderRadius: 4, paddingLeft: 4, paddingRight: 4, paddingTop: 2, paddingBottom: 2 }
+        });
+        return figures;
+      }
+    } catch (e: any) {
+      if (coordinates.length > 0) {
+        return [{ type: 'text', attrs: { x: coordinates[0].x, y: coordinates[0].y, text: 'Lỗi: ' + e.message } }];
+      }
+    }
+    return [];
+  }
+});
+
+
 
 // Đăng ký công cụ vẽ Hình chữ nhật (rect)
 registerOverlay({
@@ -65,7 +319,7 @@ registerOverlay({
           styles: { style: 'stroke_fill', color: 'rgba(33, 150, 243, 0.2)', borderColor: '#2196f3' }
         }
       ];
-      
+
       if (overlay?.extendData) {
         const textContent = String(overlay.extendData);
         if (textContent.trim()) {
@@ -505,135 +759,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Sóng Elliott Impulse (12345)
-registerOverlay({
-  name: 'elliottImpulse',
-  totalStep: 6,
-  needDefaultPointFigure: true,
-  needDefaultXAxisFigure: true,
-  needDefaultYAxisFigure: true,
-  createPointFigures: ({ coordinates }) => {
-    const figures: any[] = [];
-    if (coordinates.length > 1) {
-      figures.push({ type: 'line', attrs: { coordinates }, styles: { color: '#2962ff', size: 2 } });
-    }
-    const labels = ['(0)', '(1)', '(2)', '(3)', '(4)', '(5)'];
-    coordinates.forEach((coord, i) => {
-      if (i < 6) {
-        figures.push({
-          type: 'text',
-          attrs: { x: coord.x, y: coord.y, text: labels[i] },
-          styles: { color: '#ffffff', backgroundColor: '#9c27b0', paddingLeft: 6, paddingRight: 6, paddingTop: 3, paddingBottom: 3, borderRadius: 4 }
-        });
-      }
-    });
-    return figures;
-  }
-});
 
-// Đăng ký Sóng Elliott Triangle (ABC)
-registerOverlay({
-  name: 'elliottTriangle',
-  totalStep: 4,
-  needDefaultPointFigure: true,
-  needDefaultXAxisFigure: true,
-  needDefaultYAxisFigure: true,
-  createPointFigures: ({ coordinates }) => {
-    const figures: any[] = [];
-    if (coordinates.length > 1) {
-      figures.push({ type: 'line', attrs: { coordinates }, styles: { color: '#2962ff', size: 2 } });
-    }
-    const labels = ['(0)', '(A)', '(B)', '(C)'];
-    coordinates.forEach((coord, i) => {
-      if (i < 4) {
-        figures.push({
-          type: 'text',
-          attrs: { x: coord.x, y: coord.y, text: labels[i] },
-          styles: { color: '#ffffff', backgroundColor: '#9c27b0', paddingLeft: 6, paddingRight: 6, paddingTop: 3, paddingBottom: 3, borderRadius: 4 }
-        });
-      }
-    });
-    return figures;
-  }
-});
-
-// Đăng ký Sóng Elliott Triple Combo (WXYXZ)
-registerOverlay({
-  name: 'elliottTriple',
-  totalStep: 6,
-  needDefaultPointFigure: true,
-  needDefaultXAxisFigure: true,
-  needDefaultYAxisFigure: true,
-  createPointFigures: ({ coordinates }) => {
-    const figures: any[] = [];
-    if (coordinates.length > 1) {
-      figures.push({ type: 'line', attrs: { coordinates }, styles: { color: '#2962ff', size: 2 } });
-    }
-    const labels = ['(0)', '(W)', '(X)', '(Y)', '(X)', '(Z)'];
-    coordinates.forEach((coord, i) => {
-      if (i < 6) {
-        figures.push({
-          type: 'text',
-          attrs: { x: coord.x, y: coord.y, text: labels[i] },
-          styles: { color: '#ffffff', backgroundColor: '#9c27b0', paddingLeft: 6, paddingRight: 6, paddingTop: 3, paddingBottom: 3, borderRadius: 4 }
-        });
-      }
-    });
-    return figures;
-  }
-});
-
-// Đăng ký Sóng Elliott Tam giác (ABCDE)
-registerOverlay({
-  name: 'elliottABCDE',
-  totalStep: 6,
-  needDefaultPointFigure: true,
-  needDefaultXAxisFigure: true,
-  needDefaultYAxisFigure: true,
-  createPointFigures: ({ coordinates }) => {
-    const figures: any[] = [];
-    if (coordinates.length > 1) {
-      figures.push({ type: 'line', attrs: { coordinates }, styles: { color: '#2962ff', size: 2 } });
-    }
-    const labels = ['(0)', '(A)', '(B)', '(C)', '(D)', '(E)'];
-    coordinates.forEach((coord, i) => {
-      if (i < 6) {
-        figures.push({
-          type: 'text',
-          attrs: { x: coord.x, y: coord.y, text: labels[i] },
-          styles: { color: '#ffffff', backgroundColor: '#9c27b0', paddingLeft: 6, paddingRight: 6, paddingTop: 3, paddingBottom: 3, borderRadius: 4 }
-        });
-      }
-    });
-    return figures;
-  }
-});
-
-// Đăng ký Sóng đôi kết hợp Elliott (WXY)
-registerOverlay({
-  name: 'elliottWXY',
-  totalStep: 4,
-  needDefaultPointFigure: true,
-  needDefaultXAxisFigure: true,
-  needDefaultYAxisFigure: true,
-  createPointFigures: ({ coordinates }) => {
-    const figures: any[] = [];
-    if (coordinates.length > 1) {
-      figures.push({ type: 'line', attrs: { coordinates }, styles: { color: '#2962ff', size: 2 } });
-    }
-    const labels = ['(0)', '(W)', '(X)', '(Y)'];
-    coordinates.forEach((coord, i) => {
-      if (i < 4) {
-        figures.push({
-          type: 'text',
-          attrs: { x: coord.x, y: coord.y, text: labels[i] },
-          styles: { color: '#ffffff', backgroundColor: '#9c27b0', paddingLeft: 6, paddingRight: 6, paddingTop: 3, paddingBottom: 3, borderRadius: 4 }
-        });
-      }
-    });
-    return figures;
-  }
-});
 
 // Đăng ký Các đường chu kỳ (cycleLines) - Screenshot 2
 registerOverlay({
@@ -656,16 +782,21 @@ registerOverlay({
       });
 
       const rawDx = Math.abs(p2.x - p1.x);
-      const intervalX = rawDx > 25 ? rawDx : 120;
+      const intervalX = Math.max(rawDx, 4); // Remove 25px restriction
       const startX = p1.x;
-      const canvasHeight = 2500;
+      const canvasHeight = 4000;
 
-      // Draw repeating vertical cyan lines (Screenshot 2)
-      for (let k = -20; k <= 30; k++) {
+      const minX = startX - 4000;
+      const maxX = startX + 4000;
+      const startK = Math.floor((minX - startX) / intervalX);
+      const endK = Math.ceil((maxX - startX) / intervalX);
+
+      // Draw repeating vertical cyan lines dynamically spanning the screen
+      for (let k = startK; k <= endK; k++) {
         const vx = startX + k * intervalX;
         figures.push({
           type: 'line',
-          attrs: { coordinates: [{ x: vx, y: 0 }, { x: vx, y: canvasHeight }] },
+          attrs: { coordinates: [{ x: vx, y: -2000 }, { x: vx, y: canvasHeight }] },
           styles: { color: '#2196f3', size: 2 }
         });
       }
@@ -692,15 +823,22 @@ registerOverlay({
       const p2 = coordinates[1];
 
       const rawDx = Math.abs(p2.x - p1.x);
-      const intervalX = rawDx > 25 ? rawDx : 120;
+      const intervalX = Math.max(rawDx, 4); // Remove 25px restriction
       const baselineY = Math.max(p1.y, p2.y) + 20;
       const startX = Math.min(p1.x, p2.x);
 
-      // Render repeating green semicircles (Screenshot 3)
-      for (let k = -15; k <= 25; k++) {
+      const minX = startX - 4000;
+      const maxX = startX + 4000;
+      const startK = Math.floor((minX - startX) / intervalX);
+      const endK = Math.ceil((maxX - startX) / intervalX);
+
+      // Render repeating green semicircles dynamically spanning the screen
+      for (let k = startK; k <= endK; k++) {
         const segStartX = startX + k * intervalX;
         const arcCoords: { x: number; y: number }[] = [];
-        const steps = 24;
+
+        // Dynamically adjust steps to optimize performance for tiny circles
+        const steps = intervalX < 10 ? 8 : (intervalX < 20 ? 12 : 24);
 
         for (let i = 0; i <= steps; i++) {
           const theta = Math.PI * (1 - i / steps);
@@ -737,18 +875,20 @@ registerOverlay({
       const p1 = coordinates[0];
       const p2 = coordinates[1];
 
-      // Use a natural half-period if points are vertically stacked or very close in X
+      // Allow very tight periods by removing the 25px restriction
       const rawDx = Math.abs(p2.x - p1.x);
-      const halfPeriod = rawDx > 25 ? rawDx : 140;
-      const fullPeriod = halfPeriod * 2;
+      const halfPeriod = Math.max(rawDx, 4); // Minimum 4px to prevent infinite frequency
 
       const amp = Math.abs(p2.y - p1.y) / 2 || 60;
       const midY = (p1.y + p2.y) / 2;
 
       const sineCoords: { x: number; y: number }[] = [];
-      const startX = p1.x - fullPeriod * 8;
-      const endX = p1.x + fullPeriod * 12;
-      const stepX = 2; // Ultra-smooth 2px step sampling to eliminate sawtooth angles
+      // Extend far enough to cover most screens (4000px in each direction)
+      const startX = p1.x - 4000;
+      const endX = p1.x + 4000;
+
+      // Dynamic step to keep smooth curves even when period is very small
+      const stepX = Math.max(1, Math.min(2, halfPeriod / 4));
 
       for (let x = startX; x <= endX; x += stepX) {
         // cosine wave so peak sits at p1.x, trough at p1.x + halfPeriod
@@ -772,273 +912,9 @@ registerOverlay({
   }
 });
 
-// Đăng ký Long Position (Thế giá lên)
-registerOverlay({
-  name: 'longPosition',
-  totalStep: 2,
-  needDefaultPointFigure: true,
-  needDefaultXAxisFigure: true,
-  needDefaultYAxisFigure: true,
-  createPointFigures: ({ coordinates, yAxis }: any) => {
-    const figures: any[] = [];
-    if (coordinates.length >= 2) {
-      const entry = coordinates[0];
-      const target = coordinates[1];
-      const sl = coordinates[2] || { x: target.x, y: entry.y + (entry.y - target.y) };
 
-      const minX = Math.min(entry.x, target.x);
-      const maxX = Math.max(entry.x, target.x) + 140;
-      const midX = (minX + maxX) / 2;
 
-      // Prices & Calculations
-      const entryPrice = yAxis?.convertFromPixel ? yAxis.convertFromPixel(entry.y) : 0;
-      const targetPrice = yAxis?.convertFromPixel ? yAxis.convertFromPixel(target.y) : 0;
-      const stopPrice = yAxis?.convertFromPixel ? yAxis.convertFromPixel(sl.y) : 0;
 
-      const targetDiff = Math.abs(targetPrice - entryPrice);
-      const targetPct = entryPrice ? (targetDiff / entryPrice) * 100 : 0;
-      const targetVal = Math.round(targetDiff * 100);
-      const targetAmount = Math.round(targetDiff * 10);
-
-      const stopDiff = Math.abs(entryPrice - stopPrice);
-      const stopPct = entryPrice ? (stopDiff / entryPrice) * 100 : 0;
-      const stopVal = Math.round(stopDiff * 100);
-      const stopAmount = Math.round(stopDiff * 10);
-
-      const rrRatio = stopDiff > 0 ? (targetDiff / stopDiff) : 1;
-
-      // 1. Green profit zone
-      figures.push({
-        type: 'polygon',
-        attrs: {
-          coordinates: [
-            { x: minX, y: entry.y },
-            { x: maxX, y: entry.y },
-            { x: maxX, y: target.y },
-            { x: minX, y: target.y }
-          ]
-        },
-        styles: { style: 'stroke_fill', color: 'rgba(8, 153, 129, 0.25)', borderColor: '#089981' }
-      });
-
-      // 2. Red stop loss zone
-      figures.push({
-        type: 'polygon',
-        attrs: {
-          coordinates: [
-            { x: minX, y: entry.y },
-            { x: maxX, y: entry.y },
-            { x: maxX, y: sl.y },
-            { x: minX, y: sl.y }
-          ]
-        },
-        styles: { style: 'stroke_fill', color: 'rgba(242, 54, 69, 0.25)', borderColor: '#f23645' }
-      });
-
-      // 3. Entry line
-      figures.push({
-        type: 'line',
-        attrs: { coordinates: [{ x: minX, y: entry.y }, { x: maxX, y: entry.y }] },
-        styles: { color: '#2196f3', size: 2 }
-      });
-
-      // 4. Target Badge (Top Green Box - Screenshot 1)
-      figures.push({
-        type: 'text',
-        attrs: {
-          x: midX,
-          y: Math.min(entry.y, target.y) - 10,
-          text: `Mục tiêu: ${targetDiff.toFixed(2)} (${targetPct.toFixed(2)}%) ${targetVal.toLocaleString()}, Số tiền: ${targetAmount}`,
-          align: 'center',
-          baseline: 'bottom'
-        },
-        styles: {
-          color: '#ffffff',
-          size: 12,
-          weight: 'bold',
-          backgroundColor: '#089981',
-          paddingLeft: 8, paddingRight: 8, paddingTop: 4, paddingBottom: 4,
-          borderRadius: 12
-        }
-      });
-
-      // 5. Center PnL & Risk/Reward Card (Middle Red Badge - Screenshot 1)
-      figures.push({
-        type: 'text',
-        attrs: {
-          x: midX,
-          y: entry.y,
-          text: `Mở Lợi nhuận & Thua lỗ: -${stopDiff.toFixed(2)}, S.Lg: 0\nTỷ lệ Rủi ro/Lợi nhuận: ${rrRatio.toFixed(2)}`,
-          align: 'center',
-          baseline: 'middle'
-        },
-        styles: {
-          color: '#ffffff',
-          size: 12,
-          weight: 'bold',
-          backgroundColor: '#f23645',
-          paddingLeft: 10, paddingRight: 10, paddingTop: 6, paddingBottom: 6,
-          borderRadius: 14
-        }
-      });
-
-      // 6. Stop Loss Badge (Bottom Red Box - Screenshot 1)
-      figures.push({
-        type: 'text',
-        attrs: {
-          x: midX,
-          y: Math.max(entry.y, sl.y) + 10,
-          text: `Dừng: ${stopDiff.toFixed(2)} (${stopPct.toFixed(2)}%) ${stopVal.toLocaleString()}, Số tiền: ${stopAmount}`,
-          align: 'center',
-          baseline: 'top'
-        },
-        styles: {
-          color: '#ffffff',
-          size: 12,
-          weight: 'bold',
-          backgroundColor: '#f23645',
-          paddingLeft: 8, paddingRight: 8, paddingTop: 4, paddingBottom: 4,
-          borderRadius: 12
-        }
-      });
-    }
-    return figures;
-  }
-});
-
-// Đăng ký Short Position (Thế giá xuống)
-registerOverlay({
-  name: 'shortPosition',
-  totalStep: 2,
-  needDefaultPointFigure: true,
-  needDefaultXAxisFigure: true,
-  needDefaultYAxisFigure: true,
-  createPointFigures: ({ coordinates, yAxis }: any) => {
-    const figures: any[] = [];
-    if (coordinates.length >= 2) {
-      const entry = coordinates[0];
-      const target = coordinates[1];
-      const sl = coordinates[2] || { x: target.x, y: entry.y - (target.y - entry.y) };
-
-      const minX = Math.min(entry.x, target.x);
-      const maxX = Math.max(entry.x, target.x) + 140;
-      const midX = (minX + maxX) / 2;
-
-      // Prices & Calculations
-      const entryPrice = yAxis?.convertFromPixel ? yAxis.convertFromPixel(entry.y) : 0;
-      const targetPrice = yAxis?.convertFromPixel ? yAxis.convertFromPixel(target.y) : 0;
-      const stopPrice = yAxis?.convertFromPixel ? yAxis.convertFromPixel(sl.y) : 0;
-
-      const targetDiff = Math.abs(entryPrice - targetPrice);
-      const targetPct = entryPrice ? (targetDiff / entryPrice) * 100 : 0;
-      const targetVal = Math.round(targetDiff * 100);
-      const targetAmount = Math.round(targetDiff * 10);
-
-      const stopDiff = Math.abs(stopPrice - entryPrice);
-      const stopPct = entryPrice ? (stopDiff / entryPrice) * 100 : 0;
-      const stopVal = Math.round(stopDiff * 100);
-      const stopAmount = Math.round(stopDiff * 10);
-
-      const rrRatio = stopDiff > 0 ? (targetDiff / stopDiff) : 1;
-
-      // 1. Red stop loss zone (above)
-      figures.push({
-        type: 'polygon',
-        attrs: {
-          coordinates: [
-            { x: minX, y: entry.y },
-            { x: maxX, y: entry.y },
-            { x: maxX, y: sl.y },
-            { x: minX, y: sl.y }
-          ]
-        },
-        styles: { style: 'stroke_fill', color: 'rgba(242, 54, 69, 0.25)', borderColor: '#f23645' }
-      });
-
-      // 2. Green profit zone (below)
-      figures.push({
-        type: 'polygon',
-        attrs: {
-          coordinates: [
-            { x: minX, y: entry.y },
-            { x: maxX, y: entry.y },
-            { x: maxX, y: target.y },
-            { x: minX, y: target.y }
-          ]
-        },
-        styles: { style: 'stroke_fill', color: 'rgba(8, 153, 129, 0.25)', borderColor: '#089981' }
-      });
-
-      // 3. Entry line
-      figures.push({
-        type: 'line',
-        attrs: { coordinates: [{ x: minX, y: entry.y }, { x: maxX, y: entry.y }] },
-        styles: { color: '#2196f3', size: 2 }
-      });
-
-      // 4. Stop Loss Badge (Top Red Box - Screenshot 2)
-      figures.push({
-        type: 'text',
-        attrs: {
-          x: midX,
-          y: Math.min(entry.y, sl.y) - 10,
-          text: `Dừng: ${stopDiff.toFixed(2)} (${stopPct.toFixed(2)}%) ${stopVal.toLocaleString()}, Số tiền: ${stopAmount}`,
-          align: 'center',
-          baseline: 'bottom'
-        },
-        styles: {
-          color: '#ffffff',
-          size: 12,
-          weight: 'bold',
-          backgroundColor: '#f23645',
-          paddingLeft: 8, paddingRight: 8, paddingTop: 4, paddingBottom: 4,
-          borderRadius: 12
-        }
-      });
-
-      // 5. Center PnL & Risk/Reward Card (Middle Red Badge - Screenshot 2)
-      figures.push({
-        type: 'text',
-        attrs: {
-          x: midX,
-          y: entry.y,
-          text: `Đóng Lợi nhuận & Thua lỗ: -${stopDiff.toFixed(2)}, S.Lg: 0\nTỷ lệ Rủi ro/Lợi nhuận: ${rrRatio.toFixed(2)}`,
-          align: 'center',
-          baseline: 'middle'
-        },
-        styles: {
-          color: '#ffffff',
-          size: 12,
-          weight: 'bold',
-          backgroundColor: '#f23645',
-          paddingLeft: 10, paddingRight: 10, paddingTop: 6, paddingBottom: 6,
-          borderRadius: 14
-        }
-      });
-
-      // 6. Target Badge (Bottom Green Box - Screenshot 2)
-      figures.push({
-        type: 'text',
-        attrs: {
-          x: midX,
-          y: Math.max(entry.y, target.y) + 10,
-          text: `Mục tiêu: ${targetDiff.toFixed(2)} (${targetPct.toFixed(2)}%) ${targetVal.toLocaleString()}, Số tiền: ${targetAmount}`,
-          align: 'center',
-          baseline: 'top'
-        },
-        styles: {
-          color: '#ffffff',
-          size: 12,
-          weight: 'bold',
-          backgroundColor: '#089981',
-          paddingLeft: 8, paddingRight: 8, paddingTop: 4, paddingBottom: 4,
-          borderRadius: 12
-        }
-      });
-    }
-    return figures;
-  }
-});
 
 // Đăng ký Dự đoán (forecast) - Screenshot 3
 registerOverlay({
@@ -1303,7 +1179,7 @@ registerOverlay({
       const p2 = { x: p1.x, y: p0.y + Math.abs(p0.y - p1.y) }; // SL (đối xứng 1:1)
 
       const rightX = Math.max(p0.x + 80, p1.x);
-      
+
       // Profit Box (Green)
       figures.push({
         type: 'polygon',
@@ -1317,7 +1193,7 @@ registerOverlay({
         },
         styles: { style: 'fill', color: 'rgba(8, 153, 129, 0.25)' }
       });
-      
+
       // Loss Box (Red)
       figures.push({
         type: 'polygon',
@@ -1338,7 +1214,7 @@ registerOverlay({
         attrs: { coordinates: [{ x: p0.x, y: p0.y }, { x: rightX, y: p0.y }] },
         styles: { style: 'dashed', color: '#787b86', size: 1 }
       });
-      
+
       // Calculate real values exactly like TradingView
       let entryPrice = 0, tpPrice = 0, slPrice = 0;
       if (yAxis && yAxis.convertFromPixel) {
@@ -1346,39 +1222,39 @@ registerOverlay({
         tpPrice = yAxis.convertFromPixel(p1.y) || 0;
         slPrice = yAxis.convertFromPixel(p2.y) || 0;
       }
-      
+
       const profitValue = Math.abs(tpPrice - entryPrice);
       const profitPercent = entryPrice > 0 ? (profitValue / entryPrice * 100) : 0;
       const lossValue = Math.abs(entryPrice - slPrice);
       const lossPercent = entryPrice > 0 ? (lossValue / entryPrice * 100) : 0;
       const rr = lossValue > 0 ? (profitValue / lossValue) : 0;
-      
+
       // Simulate position sizing (assuming $1000 risk)
       const qty = lossValue > 0 ? (1000 / lossValue) : 0;
       const profitAmount = qty * profitValue;
       const lossAmount = qty * lossValue;
-      
+
       const targetText = `Mục tiêu: ${profitValue.toFixed(2)} (${profitPercent.toFixed(2)}%) ${tpPrice.toFixed(2)}, Số tiền: ${profitAmount.toFixed(2)}`;
       const stopText = `Dừng: ${lossValue.toFixed(2)} (${lossPercent.toFixed(2)}%) ${slPrice.toFixed(2)}, Số tiền: ${lossAmount.toFixed(2)}`;
       const midText1 = `Mở Lợi nhuận & Thua lỗ: 0.00, S.Lg: ${Math.round(qty)}`;
       const midText2 = `Tỷ lệ Rủi ro/Lợi nhuận: ${rr.toFixed(2)}`;
-      
+
       const centerX = (p0.x + rightX) / 2;
-      
+
       // Target Text Box
       figures.push({
         type: 'text',
         attrs: { x: centerX, y: p1.y, text: targetText, align: 'center', baseline: 'bottom' },
         styles: { color: '#ffffff', size: 12, backgroundColor: '#089981', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4 }
       });
-      
+
       // Stop Text Box
       figures.push({
         type: 'text',
         attrs: { x: centerX, y: p2.y, text: stopText, align: 'center', baseline: 'top' },
         styles: { color: '#ffffff', size: 12, backgroundColor: '#f23645', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4 }
       });
-      
+
       // Middle Text Box (2 lines)
       figures.push({
         type: 'text',
@@ -1410,7 +1286,7 @@ registerOverlay({
       const p2 = { x: p1.x, y: p0.y - Math.abs(p0.y - p1.y) }; // SL (above entry, đối xứng 1:1)
 
       const rightX = Math.max(p0.x + 80, p1.x);
-      
+
       // Profit Box (Green)
       figures.push({
         type: 'polygon',
@@ -1424,7 +1300,7 @@ registerOverlay({
         },
         styles: { style: 'fill', color: 'rgba(8, 153, 129, 0.25)' }
       });
-      
+
       // Loss Box (Red)
       figures.push({
         type: 'polygon',
@@ -1445,7 +1321,7 @@ registerOverlay({
         attrs: { coordinates: [{ x: p0.x, y: p0.y }, { x: rightX, y: p0.y }] },
         styles: { style: 'dashed', color: '#787b86', size: 1 }
       });
-      
+
       // Calculate real values exactly like TradingView
       let entryPrice = 0, tpPrice = 0, slPrice = 0;
       if (yAxis && yAxis.convertFromPixel) {
@@ -1453,40 +1329,40 @@ registerOverlay({
         tpPrice = yAxis.convertFromPixel(p1.y) || 0;
         slPrice = yAxis.convertFromPixel(p2.y) || 0;
       }
-      
+
       // For short, profit is when tp < entry
       const profitValue = Math.abs(entryPrice - tpPrice);
       const profitPercent = entryPrice > 0 ? (profitValue / entryPrice * 100) : 0;
       const lossValue = Math.abs(slPrice - entryPrice);
       const lossPercent = entryPrice > 0 ? (lossValue / entryPrice * 100) : 0;
       const rr = lossValue > 0 ? (profitValue / lossValue) : 0;
-      
+
       // Simulate position sizing (assuming $1000 risk)
       const qty = lossValue > 0 ? (1000 / lossValue) : 0;
       const profitAmount = qty * profitValue;
       const lossAmount = qty * lossValue;
-      
+
       const targetText = `Mục tiêu: ${profitValue.toFixed(2)} (${profitPercent.toFixed(2)}%) ${tpPrice.toFixed(2)}, Số tiền: ${profitAmount.toFixed(2)}`;
       const stopText = `Dừng: ${lossValue.toFixed(2)} (${lossPercent.toFixed(2)}%) ${slPrice.toFixed(2)}, Số tiền: ${lossAmount.toFixed(2)}`;
       const midText1 = `Mở Lợi nhuận & Thua lỗ: 0.00, S.Lg: ${Math.round(qty)}`;
       const midText2 = `Tỷ lệ Rủi ro/Lợi nhuận: ${rr.toFixed(2)}`;
-      
+
       const centerX = (p0.x + rightX) / 2;
-      
+
       // Target Text Box (At bottom for Short)
       figures.push({
         type: 'text',
         attrs: { x: centerX, y: p1.y, text: targetText, align: 'center', baseline: 'top' },
         styles: { color: '#ffffff', size: 12, backgroundColor: '#089981', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4 }
       });
-      
+
       // Stop Text Box (At top for Short)
       figures.push({
         type: 'text',
         attrs: { x: centerX, y: p2.y, text: stopText, align: 'center', baseline: 'bottom' },
         styles: { color: '#ffffff', size: 12, backgroundColor: '#f23645', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4 }
       });
-      
+
       // Middle Text Box (2 lines)
       figures.push({
         type: 'text',
@@ -1512,18 +1388,18 @@ registerOverlay({
     if (!coordinates.length) return [];
     const p = coordinates[0];
     const length = 200;
-    
-    const pts1 = [p, {x: p.x + 30, y: p.y - 15}, {x: p.x + 60, y: p.y + 10}, {x: p.x + 90, y: p.y - 5}, {x: p.x + length, y: p.y - 20}];
-    const pts2 = [{x: p.x, y: p.y - 30}, {x: p.x + 30, y: p.y - 45}, {x: p.x + 60, y: p.y - 20}, {x: p.x + 90, y: p.y - 35}, {x: p.x + length, y: p.y - 50}];
-    const pts3 = [{x: p.x, y: p.y + 30}, {x: p.x + 30, y: p.y + 15}, {x: p.x + 60, y: p.y + 40}, {x: p.x + 90, y: p.y + 25}, {x: p.x + length, y: p.y + 10}];
-    
+
+    const pts1 = [p, { x: p.x + 30, y: p.y - 15 }, { x: p.x + 60, y: p.y + 10 }, { x: p.x + 90, y: p.y - 5 }, { x: p.x + length, y: p.y - 20 }];
+    const pts2 = [{ x: p.x, y: p.y - 30 }, { x: p.x + 30, y: p.y - 45 }, { x: p.x + 60, y: p.y - 20 }, { x: p.x + 90, y: p.y - 35 }, { x: p.x + length, y: p.y - 50 }];
+    const pts3 = [{ x: p.x, y: p.y + 30 }, { x: p.x + 30, y: p.y + 15 }, { x: p.x + 60, y: p.y + 40 }, { x: p.x + 90, y: p.y + 25 }, { x: p.x + length, y: p.y + 10 }];
+
     const figures: any[] = [];
-    for(let i=0; i<pts1.length-1; i++) figures.push({ type: 'line', attrs: { coordinates: [pts1[i], pts1[i+1]] }, styles: { color: '#2962ff', size: 2 } });
-    for(let i=0; i<pts2.length-1; i++) figures.push({ type: 'line', attrs: { coordinates: [pts2[i], pts2[i+1]] }, styles: { color: '#4caf50', size: 1.5 } });
-    for(let i=0; i<pts3.length-1; i++) figures.push({ type: 'line', attrs: { coordinates: [pts3[i], pts3[i+1]] }, styles: { color: '#4caf50', size: 1.5 } });
-    
+    for (let i = 0; i < pts1.length - 1; i++) figures.push({ type: 'line', attrs: { coordinates: [pts1[i], pts1[i + 1]] }, styles: { color: '#2962ff', size: 2 } });
+    for (let i = 0; i < pts2.length - 1; i++) figures.push({ type: 'line', attrs: { coordinates: [pts2[i], pts2[i + 1]] }, styles: { color: '#4caf50', size: 1.5 } });
+    for (let i = 0; i < pts3.length - 1; i++) figures.push({ type: 'line', attrs: { coordinates: [pts3[i], pts3[i + 1]] }, styles: { color: '#4caf50', size: 1.5 } });
+
     figures.push({ type: 'circle', attrs: { x: p.x, y: p.y, r: 6 }, styles: { style: 'stroke_fill', color: '#131722', borderColor: '#2962ff', borderSize: 2 } });
-    
+
     return figures;
   }
 });
@@ -1531,7 +1407,7 @@ registerOverlay({
 // 2. Khối lượng Giao dịch Phạm vi Cố định (fixedRangeVolumeProfile)
 registerOverlay({
   name: 'fixedRangeVolumeProfile',
-  totalStep: 2,
+  totalStep: 3,
   needDefaultPointFigure: true,
   createPointFigures: ({ coordinates }) => {
     if (coordinates.length === 0) return [];
@@ -1542,81 +1418,17 @@ registerOverlay({
     if (coordinates.length >= 2) {
       const p1 = coordinates[1];
       figures.push(
-        { type: 'polygon', attrs: { coordinates: [{x: p0.x, y: p0.y}, {x: p1.x, y: p0.y}, {x: p1.x, y: p1.y}, {x: p0.x, y: p1.y}] }, styles: { style: 'fill', color: 'rgba(33, 150, 243, 0.1)' } },
-        { type: 'line', attrs: { coordinates: [{x: p0.x, y: p0.y + (p1.y - p0.y)*0.3}, {x: p0.x + (p1.x - p0.x)*0.8, y: p0.y + (p1.y - p0.y)*0.3}] }, styles: { color: 'rgba(255, 152, 0, 0.6)', size: 8 } },
-        { type: 'line', attrs: { coordinates: [{x: p0.x, y: p0.y + (p1.y - p0.y)*0.6}, {x: p0.x + (p1.x - p0.x)*0.5, y: p0.y + (p1.y - p0.y)*0.6}] }, styles: { color: 'rgba(33, 150, 243, 0.6)', size: 8 } },
-        { type: 'line', attrs: { coordinates: [{x: p0.x, y: p0.y + (p1.y - p0.y)*0.8}, {x: p0.x + (p1.x - p0.x)*0.3, y: p0.y + (p1.y - p0.y)*0.8}] }, styles: { color: 'rgba(33, 150, 243, 0.6)', size: 8 } }
+        { type: 'polygon', attrs: { coordinates: [{ x: p0.x, y: p0.y }, { x: p1.x, y: p0.y }, { x: p1.x, y: p1.y }, { x: p0.x, y: p1.y }] }, styles: { style: 'fill', color: 'rgba(33, 150, 243, 0.1)' } },
+        { type: 'line', attrs: { coordinates: [{ x: p0.x, y: p0.y + (p1.y - p0.y) * 0.3 }, { x: p0.x + (p1.x - p0.x) * 0.8, y: p0.y + (p1.y - p0.y) * 0.3 }] }, styles: { color: 'rgba(255, 152, 0, 0.6)', size: 8 } },
+        { type: 'line', attrs: { coordinates: [{ x: p0.x, y: p0.y + (p1.y - p0.y) * 0.6 }, { x: p0.x + (p1.x - p0.x) * 0.5, y: p0.y + (p1.y - p0.y) * 0.6 }] }, styles: { color: 'rgba(33, 150, 243, 0.6)', size: 8 } },
+        { type: 'line', attrs: { coordinates: [{ x: p0.x, y: p0.y + (p1.y - p0.y) * 0.8 }, { x: p0.x + (p1.x - p0.x) * 0.3, y: p0.y + (p1.y - p0.y) * 0.8 }] }, styles: { color: 'rgba(33, 150, 243, 0.6)', size: 8 } }
       );
     }
     return figures;
   }
 });
 
-// 3. Khoảng giá (priceRange)
-registerOverlay({
-  name: 'priceRange',
-  totalStep: 2,
-  needDefaultPointFigure: true,
-  createPointFigures: ({ coordinates }) => {
-    if (coordinates.length === 0) return [];
-    const p0 = coordinates[0];
-    const figures: any[] = [
-      { type: 'circle', attrs: { x: p0.x, y: p0.y, r: 4 }, styles: { style: 'fill', color: '#2962ff' } }
-    ];
-    if (coordinates.length >= 2) {
-      const p1 = coordinates[1];
-      figures.push(
-        { type: 'line', attrs: { coordinates: [{x: p0.x, y: p0.y}, {x: p0.x, y: p1.y}] }, styles: { color: '#2962ff' } },
-        { type: 'text', attrs: { x: p0.x + 10, y: (p0.y + p1.y)/2, text: 'Khoảng giá', align: 'left', baseline: 'middle' }, styles: { color: '#ffffff', backgroundColor: '#2962ff', borderRadius: 4, paddingLeft: 4, paddingRight: 4, paddingTop: 4, paddingBottom: 4 } }
-      );
-    }
-    return figures;
-  }
-});
-
-// 4. Phạm vi ngày (dateRange)
-registerOverlay({
-  name: 'dateRange',
-  totalStep: 2,
-  needDefaultPointFigure: true,
-  createPointFigures: ({ coordinates }) => {
-    if (coordinates.length === 0) return [];
-    const p0 = coordinates[0];
-    const figures: any[] = [
-      { type: 'circle', attrs: { x: p0.x, y: p0.y, r: 4 }, styles: { style: 'fill', color: '#2962ff' } }
-    ];
-    if (coordinates.length >= 2) {
-      const p1 = coordinates[1];
-      figures.push(
-        { type: 'line', attrs: { coordinates: [{x: p0.x, y: p0.y}, {x: p1.x, y: p0.y}] }, styles: { color: '#2962ff' } },
-        { type: 'text', attrs: { x: (p0.x + p1.x)/2, y: p0.y - 10, text: 'Phạm vi ngày', align: 'center', baseline: 'bottom' }, styles: { color: '#ffffff', backgroundColor: '#2962ff', borderRadius: 4, paddingLeft: 4, paddingRight: 4, paddingTop: 4, paddingBottom: 4 } }
-      );
-    }
-    return figures;
-  }
-});
-
-// 5. Phạm vi ngày và giá (dateAndPriceRange)
-registerOverlay({
-  name: 'dateAndPriceRange',
-  totalStep: 2,
-  needDefaultPointFigure: true,
-  createPointFigures: ({ coordinates }) => {
-    if (coordinates.length === 0) return [];
-    const p0 = coordinates[0];
-    const figures: any[] = [
-      { type: 'circle', attrs: { x: p0.x, y: p0.y, r: 4 }, styles: { style: 'fill', color: '#2962ff' } }
-    ];
-    if (coordinates.length >= 2) {
-      const p1 = coordinates[1];
-      figures.push(
-        { type: 'polygon', attrs: { coordinates: [{x: p0.x, y: p0.y}, {x: p1.x, y: p0.y}, {x: p1.x, y: p1.y}, {x: p0.x, y: p1.y}] }, styles: { style: 'fill', color: 'rgba(41, 98, 255, 0.2)' } },
-        { type: 'text', attrs: { x: (p0.x + p1.x)/2, y: (p0.y + p1.y)/2, text: 'Ngày & Giá', align: 'center', baseline: 'middle' }, styles: { color: '#ffffff', backgroundColor: '#2962ff', borderRadius: 4, paddingLeft: 4, paddingRight: 4, paddingTop: 4, paddingBottom: 4 } }
-      );
-    }
-    return figures;
-  }
-});
+// Removed duplicate priceRange, dateRange, dateAndPriceRange
 
 // 8. Phép chiếu (projection)
 registerOverlay({
@@ -1626,11 +1438,11 @@ registerOverlay({
   createPointFigures: ({ coordinates }) => {
     if (coordinates.length === 0) return [];
     const figures: any[] = [];
-    
+
     coordinates.forEach((p: any) => {
       figures.push({ type: 'circle', attrs: { x: p.x, y: p.y, r: 5 }, styles: { style: 'stroke_fill', color: '#131722', borderColor: '#2962ff', borderSize: 2 } });
     });
-    
+
     if (coordinates.length >= 2) {
       figures.push({ type: 'line', attrs: { coordinates: [coordinates[0], coordinates[1]] }, styles: { color: '#9c27b0', size: 2 } });
     }
@@ -1644,7 +1456,7 @@ registerOverlay({
       figures.push({ type: 'line', attrs: { coordinates: [p0, p2] }, styles: { color: '#9c27b0', size: 2 } });
       figures.push({ type: 'line', attrs: { coordinates: [p1, p2] }, styles: { color: '#9c27b0', size: 2 } });
     }
-    
+
     return figures;
   }
 });
@@ -1684,90 +1496,6 @@ registerOverlay({
   }
 });
 
-// Đăng ký công cụ Fibonacci Thoái lui (Fibonacci Retracement) chuẩn TradingView
-registerOverlay({
-  name: 'fibonacciLine',
-  totalStep: 3,
-  needDefaultPointFigure: true,
-  needDefaultXAxisFigure: false,
-  needDefaultYAxisFigure: false,
-  createPointFigures: ({ coordinates, bounding, overlay }) => {
-    if (!coordinates || coordinates.length === 0) return [];
-
-    const figures: any[] = [];
-    const config: FibonacciConfig = (overlay.extendData as FibonacciConfig) || DEFAULT_FIBONACCI_CONFIG;
-    const points = overlay.points;
-
-    // 1. Đường xu hướng nối 2 điểm neo dạng nét đứt (Anchor Trendline)
-    if (coordinates.length >= 2) {
-      figures.push({
-        type: 'line',
-        attrs: {
-          coordinates: [
-            { x: coordinates[0].x, y: coordinates[0].y },
-            { x: coordinates[1].x, y: coordinates[1].y }
-          ]
-        },
-        styles: {
-          style: 'dashed',
-          dashedValue: [4, 4],
-          color: '#888888',
-          size: 1
-        }
-      });
-    }
-
-    if (coordinates.length > 1 && typeof points[0]?.value === 'number' && typeof points[1]?.value === 'number') {
-      const activeLevels = [...(config.levels || DEFAULT_FIBONACCI_CONFIG.levels)]
-        .filter(l => l.active)
-        .sort((a, b) => b.level - a.level);
-
-      const yDif = coordinates[0].y - coordinates[1].y;
-      const valDif = points[0].value - points[1].value;
-
-      const p0x = coordinates[0].x;
-      const p1x = coordinates[1].x;
-      const startX = Math.min(p0x, p1x);
-      const endX = config.extendRight ? (bounding?.width || 3000) : Math.max(p0x, p1x);
-
-      // 2. Dải nền màu trong suốt giữa các mức Fibonacci liên tiếp
-      if (config.showBackground && activeLevels.length > 1) {
-        for (let i = 0; i < activeLevels.length - 1; i++) {
-          const topLevel = activeLevels[i];
-          const btmLevel = activeLevels[i + 1];
-          const yTop = coordinates[1].y + yDif * topLevel.level;
-          const yBtm = coordinates[1].y + yDif * btmLevel.level;
-
-          figures.push({
-            type: 'polygon',
-            attrs: {
-              coordinates: [
-                { x: startX, y: yTop },
-                { x: endX, y: yTop },
-                { x: endX, y: yBtm },
-                { x: startX, y: yBtm }
-              ]
-            },
-            styles: {
-              style: 'fill',
-              color: topLevel.fill || 'rgba(33, 150, 243, 0.15)'
-            }
-          });
-        }
-      }
-
-      // Blue Handle Circles at key points (Image 5)
-      coordinates.forEach((pt: { x: number; y: number }) => {
-        figures.push({
-          type: 'circle',
-          attrs: { x: pt.x, y: pt.y, r: 6 },
-          styles: { style: 'stroke_fill', color: '#2962ff', borderColor: '#ffffff', borderSize: 2 }
-        });
-      });
-    }
-    return figures;
-  }
-});
 
 // Đăng ký Đường thông tin (infoLine)
 registerOverlay({
@@ -3357,33 +3085,69 @@ registerOverlay({
   needDefaultPointFigure: false,
   needDefaultXAxisFigure: true,
   needDefaultYAxisFigure: true,
-  createPointFigures: ({ coordinates, points, overlay }: any) => {
+  createPointFigures: ({ coordinates, overlay, yAxis }: any) => {
     const figures: any[] = [];
-    if (coordinates.length >= 2 && points && points.length >= 2) {
-      const config: FibonacciConfig = overlay?.extendData || DEFAULT_FIBONACCI_CONFIG;
-      const startX = Math.min(coordinates[0].x, coordinates[1].x);
-      const endX = Math.max(coordinates[0].x, coordinates[1].x);
+    const points = overlay?.points || [];
+
+    if (coordinates.length >= 2) {
+      const extendData = overlay?.extendData;
+      let config: FibonacciConfig = DEFAULT_FIBONACCI_CONFIG;
+      let textStr = '';
+
+      // Protect against klinecharts overwriting extendData with typed text
+      if (typeof extendData === 'string') {
+        textStr = extendData;
+      } else if (extendData && Array.isArray(extendData.levels)) {
+        config = extendData;
+      }
+      if (typeof overlay?.text === 'string') textStr = overlay.text;
+
       const yDif = coordinates[0].y - coordinates[1].y;
-      const valDif = points[0].value! - points[1].value!;
 
-      const activeLevels = config.levels.filter(l => l.active);
+      let valDif = 0;
+      let price1 = 0;
+      if (points.length >= 2 && typeof points[0]?.value === 'number' && typeof points[1]?.value === 'number') {
+        valDif = points[0].value - points[1].value;
+        price1 = points[1].value;
+      } else if (yAxis?.convertFromPixel) {
+        const val0 = yAxis.convertFromPixel(coordinates[0].y);
+        const val1 = yAxis.convertFromPixel(coordinates[1].y);
+        valDif = val0 - val1;
+        price1 = val1;
+      }
 
-      // 1. Tô nền giữa mức 0 và 1 nếu bật
-      if (config.showBackground) {
-        const y0 = coordinates[1].y + yDif * 0;
-        const y1 = coordinates[1].y + yDif * 1;
-        figures.push({
-          type: 'polygon',
-          attrs: {
-            coordinates: [
-              { x: startX, y: y0 },
-              { x: endX, y: y0 },
-              { x: endX, y: y1 },
-              { x: startX, y: y1 }
-            ]
-          },
-          styles: { style: 'stroke_fill', color: hexToRgba('#2962ff', (config.backgroundOpacity || 15) / 100), borderColor: 'transparent' }
-        });
+      const activeLevels = [...config.levels].filter(l => l.active).sort((a, b) => b.level - a.level);
+
+      // Support Extend Lines Right (TradingView standard)
+      const p0x = coordinates[0].x;
+      const p1x = coordinates[1].x;
+      const startX = Math.min(p0x, p1x);
+      const endX = config.extendRight ? (overlay.bounding?.width || 3000) : Math.max(p0x, p1x);
+
+      // 1. Dải nền màu giữa các mức Fibonacci liên tiếp
+      if (config.showBackground && activeLevels.length > 1) {
+        for (let i = 0; i < activeLevels.length - 1; i++) {
+          const topLevel = activeLevels[i];
+          const btmLevel = activeLevels[i + 1];
+          const yTop = coordinates[1].y + yDif * topLevel.level;
+          const yBtm = coordinates[1].y + yDif * btmLevel.level;
+
+          figures.push({
+            type: 'polygon',
+            attrs: {
+              coordinates: [
+                { x: startX, y: yTop },
+                { x: endX, y: yTop },
+                { x: endX, y: yBtm },
+                { x: startX, y: yBtm }
+              ]
+            },
+            styles: {
+              style: 'fill',
+              color: topLevel.fill || 'rgba(33, 150, 243, 0.15)'
+            }
+          });
+        }
       }
 
       // 2. Đường xu hướng nét đứt
@@ -3396,7 +3160,7 @@ registerOverlay({
       // 3. Đường kẻ ngang mức Fibonacci và Text nhãn hiển thị số liệu
       activeLevels.forEach(item => {
         const y = coordinates[1].y + yDif * item.level;
-        const priceVal = points[1].value! + valDif * item.level;
+        const priceVal = price1 + valDif * item.level;
         const formattedPrice = priceVal >= 100
           ? priceVal.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 2 })
           : priceVal.toFixed(getPricePrecision(priceVal));
@@ -3447,6 +3211,20 @@ registerOverlay({
           });
         }
       });
+
+      // 4. Blue Handle Circles at anchor points (TradingView standard)
+      figures.push({ type: 'circle', attrs: { x: coordinates[0].x, y: coordinates[0].y, r: 6 }, styles: { style: 'stroke_fill', color: '#2962ff', borderColor: '#ffffff', borderSize: 2 } });
+      figures.push({ type: 'circle', attrs: { x: coordinates[1].x, y: coordinates[1].y, r: 6 }, styles: { style: 'stroke_fill', color: '#2962ff', borderColor: '#ffffff', borderSize: 2 } });
+
+      // 5. Render custom user text if they type on the Fibonacci tool
+      if (textStr) {
+        figures.push({
+          type: 'text',
+          attrs: { x: startX + Math.abs(endX - startX) / 2, y: Math.min(coordinates[0].y, coordinates[1].y) - 10, text: textStr, align: 'center', baseline: 'bottom' },
+          styles: { color: '#ffffff', size: 14, family: 'Inter' },
+          ignoreEvent: true
+        });
+      }
     }
     return figures;
   }
@@ -4323,6 +4101,12 @@ export const ChartArea = ({
 
     // Bind double click handler logic
     onOverlayDoubleClickRef.current = (overlay: any, tab: 'style' | 'text' | 'coords' | 'visibility' = 'style') => {
+      if (overlay.name === 'fibonacciLine') {
+        setSelectedOverlayId(overlay.id);
+        setSelectedOverlay(overlay);
+        setIsFibModalOpen(true);
+        return;
+      }
       setSelectedOverlayId(overlay.id);
 
       // Extract current styles and points from overlay
@@ -4594,7 +4378,11 @@ export const ChartArea = ({
         overlayName = 'arrowMarker';
       } else if (activeTool === 'arrow') {
         overlayName = 'arrow';
-      } else if (['rotatedRect', 'ellipse', 'path', 'polyline', 'arc', 'curve', 'doubleCurve', 'cypher', 'threeDrives', 'headAndShoulders', 'longPosition', 'shortPosition', 'ghostFeed', 'rect', 'triangle', 'xabcd', 'abcd', 'elliottImpulse', 'elliottTriangle', 'elliottABCDE', 'elliottWXY', 'elliottTriple', 'cycleLines', 'timeCycles', 'sineLine'].includes(activeTool)) {
+      } else if (activeTool === 'dateRange') {
+        overlayName = 'timeRange';
+      } else if (activeTool === 'dateAndPriceRange') {
+        overlayName = 'timePriceRange';
+      } else if (['rotatedRect', 'ellipse', 'path', 'polyline', 'arc', 'curve', 'doubleCurve', 'cypher', 'threeDrives', 'headAndShoulders', 'longPosition', 'shortPosition', 'priceRange', 'timeRange', 'timePriceRange', 'ghostFeed', 'rect', 'triangle', 'xabcd', 'abcd', 'elliottImpulse', 'elliottTriangle', 'elliottABCDE', 'elliottWXY', 'elliottTriple', 'cycleLines', 'timeCycles', 'sineLine'].includes(activeTool)) {
         overlayName = activeTool;
       } else if (activeTool === 'circle') {
         overlayName = 'circleMark';

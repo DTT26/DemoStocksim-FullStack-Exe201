@@ -10,6 +10,7 @@ import { NotificationDropdown } from './NotificationDropdown';
 
 interface ToolbarNavbarProps {
   balance: number;
+  simulationName?: string;
   onOpenSettings?: () => void;
   onOpenChallenge?: () => void;
   onOpenAiTutor?: () => void;
@@ -22,6 +23,7 @@ interface ToolbarNavbarProps {
 
 export const ToolbarNavbar = ({ 
   balance, 
+  simulationName,
   onOpenSettings,
   onOpenChallenge, 
   onOpenAiTutor,
@@ -70,6 +72,17 @@ export const ToolbarNavbar = ({
           </button>
         </div>
 
+        {/* Simulation Info (Centered) - Chỉ hiển thị khi có thông tin kỳ thi thực tế */}
+        {simulationName && (
+          <div className="hidden lg:flex flex-1 items-center justify-center gap-6 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-[#1e2329] dark:text-white">{simulationName}</span>
+              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> LIVE
+              </span>
+            </div>
+          </div>
+        )}
         {/* Right side controls */}
         <div className="flex items-center gap-2.5">
           {/* Nút AI Trading Tutor */}

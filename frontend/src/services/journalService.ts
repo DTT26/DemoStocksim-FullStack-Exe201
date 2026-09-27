@@ -291,7 +291,6 @@ const SEED_SESSIONS: JournalSession[] = [
     ]
   }
 ];
-
 export const journalService = {
   /**
    * Fetch all journal sessions combining:
@@ -385,18 +384,6 @@ export const journalService = {
       console.warn('Could not read simulator store session:', e);
     }
 
-    // 3. If still empty, use realistic seed sessions so students have an interactive experience
-    if (combinedSessions.length === 0) {
-      combinedSessions = [...SEED_SESSIONS];
-    } else {
-      // Also attach seed sessions if count is low for comprehensive demo
-      SEED_SESSIONS.forEach(demo => {
-        if (!combinedSessions.some(s => s.id === demo.id)) {
-          combinedSessions.push(demo);
-        }
-      });
-    }
-
     return combinedSessions;
   },
 
@@ -446,13 +433,7 @@ export const journalService = {
       };
     }
 
-    // 2. Check seed demo sessions
-    const demo = SEED_SESSIONS.find(s => s.id === sessionId);
-    if (demo) {
-      return demo;
-    }
-
-    // 3. Try to fetch from backend
+    // 2. Try to fetch from backend
     try {
       const details = await getSessionDetails(sessionId);
       if (details && details.session) {

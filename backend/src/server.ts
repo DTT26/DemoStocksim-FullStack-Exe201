@@ -18,19 +18,7 @@ mongoose.connect(MONGO_URI_LOCAL)
   .then(async () => {
     console.log('✅ Connected to MongoDB');
 
-    // Tạo sẵn Ví cho DUMMY_USER_ID để test Frontend
-    const DUMMY_USER_ID = '64f7b1e4a3b9c2d1e8f9a0b1';
-    const existingWallet = await Wallet.findOne({ userId: DUMMY_USER_ID });
-    if (!existingWallet) {
-      await Wallet.create({
-        userId: DUMMY_USER_ID,
-        balance: 10000,
-        availableBalance: 10000
-      });
-      console.log('✅ Created Dummy Wallet for testing');
-    }
-
-    // Auto-seed Simulation and Assignments if none exist
+    // Tự động dọn dẹp các dữ liệu mock/seed cũ nếu còn sót lại trong MongoDB
     try {
       const Simulation = (await import('./models/Simulation')).default;
       const Assignment = (await import('./models/Assignment')).default;
@@ -104,6 +92,7 @@ mongoose.connect(MONGO_URI_LOCAL)
       }
     } catch (seedErr) {
       console.warn('Auto-seed warning:', seedErr);
+
     }
 
     server.listen(PORT, () => {

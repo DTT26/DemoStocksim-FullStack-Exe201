@@ -162,7 +162,7 @@ export const SimulationModal = ({ isOpen, onClose, onSaved, simulationToEdit }: 
                       required
                       value={formData.name}
                       onChange={handleChange}
-                      placeholder="e.g. Vietnam Stock Challenge #01"
+                      placeholder="e.g. Mô phỏng đầu tư chứng khoán HOSE K20"
                       className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#262626] rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:bg-white dark:focus:bg-[#18181b] text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-colors"
                     />
                   </div>
