@@ -46,7 +46,7 @@ export const getChartInstance = () => globalChartInstance;
 registerOverlay({
   name: 'rect',
   totalStep: 3,
-  needDefaultPointFigure: true,
+  needDefaultPointFigure: false,
   needDefaultXAxisFigure: true,
   needDefaultYAxisFigure: true,
   createPointFigures: ({ coordinates }) => {
