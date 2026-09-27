@@ -142,7 +142,7 @@ export const OverlaySettingsModal = ({
       }}
     >
       <div 
-        className="bg-[#1c202b] text-[#d1d4dc] w-[460px] rounded-xl shadow-2xl border border-[#2a2e39] overflow-hidden flex flex-col font-sans"
+        className="bg-white dark:bg-[#1c202b] text-[#1e2329] dark:text-[#d1d4dc] w-[460px] rounded-xl shadow-2xl border border-[#e6e8ea] dark:border-[#2a2e39] overflow-hidden flex flex-col font-sans transition-colors"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -156,14 +156,14 @@ export const OverlaySettingsModal = ({
                 onBlur={() => setIsEditingTitle(false)}
                 onKeyDown={(e) => e.key === 'Enter' && setIsEditingTitle(false)}
                 autoFocus
-                className="bg-[#2a2e39] text-white px-2 py-0.5 rounded text-lg font-bold outline-none border border-blue-500"
+                className="bg-[#f0f1f3] dark:bg-[#2a2e39] text-[#1e2329] dark:text-white px-2 py-0.5 rounded text-lg font-bold outline-none border border-blue-500"
               />
             ) : (
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <h2 className="text-xl font-bold text-[#1e2329] dark:text-white flex items-center gap-2">
                 {settings.title || 'Đường Xu hướng'}
                 <button 
                   onClick={() => setIsEditingTitle(true)}
-                  className="text-[#787b86] hover:text-white transition-colors"
+                  className="text-[#787b86] hover:text-[#1e2329] dark:hover:text-white transition-colors"
                   title="Chỉnh sửa tên"
                 >
                   <Pencil className="w-4 h-4" />
@@ -173,14 +173,14 @@ export const OverlaySettingsModal = ({
           </div>
           <button 
             onClick={onClose}
-            className="text-[#787b86] hover:text-white transition-colors p-1 rounded-md hover:bg-[#2a2e39]"
+            className="text-[#787b86] hover:text-[#1e2329] dark:hover:text-white transition-colors p-1 rounded-md hover:bg-[#f0f1f3] dark:hover:bg-[#2a2e39]"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex items-center px-5 border-b border-[#2a2e39] gap-6 text-sm font-semibold">
+        <div className="flex items-center px-5 border-b border-[#e6e8ea] dark:border-[#2a2e39] gap-6 text-sm font-semibold">
           {[
             { id: 'style', label: 'Định dạng' },
             { id: 'text', label: 'Văn bản' },
@@ -192,33 +192,33 @@ export const OverlaySettingsModal = ({
               onClick={() => setActiveTab(tab.id as any)}
               className={`py-2.5 transition-colors relative ${
                 activeTab === tab.id
-                  ? 'text-white'
-                  : 'text-[#787b86] hover:text-[#d1d4dc]'
+                  ? 'text-blue-600 dark:text-white'
+                  : 'text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'
               }`}
             >
               {tab.label}
               {activeTab === tab.id && (
-                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white rounded-full" />
+                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-600 dark:bg-white rounded-full" />
               )}
             </button>
           ))}
         </div>
 
         {/* Body Content */}
-        <div className="p-5 flex-1 overflow-y-auto max-h-[460px] text-sm text-[#d1d4dc] min-h-[260px]">
+        <div className="p-5 flex-1 overflow-y-auto max-h-[460px] text-sm text-[#1e2329] dark:text-[#d1d4dc] min-h-[260px]">
           
           {/* TAB 1: Định dạng (Style) */}
           {activeTab === 'style' && (
             <div className="flex flex-col gap-5">
               {/* Row 1: Line color swatch + Cap controls */}
               <div className="flex items-center justify-between">
-                <span className="text-[#d1d4dc] font-medium">Đường thẳng</span>
+                <span className="text-[#1e2329] dark:text-[#d1d4dc] font-medium">Đường thẳng</span>
                 <div className="flex items-center gap-2 relative">
                   
                   {/* Color & Line preview button */}
                   <button 
                     onClick={() => setShowColorPicker(prev => prev === 'line' ? null : 'line')}
-                    className="flex items-center gap-2 bg-[#2a2e39] hover:bg-[#363a45] border border-[#363a45] rounded-lg px-2.5 py-1.5 transition-colors"
+                    className="flex items-center gap-2 bg-[#f0f1f3] dark:bg-[#2a2e39] hover:bg-[#e6e8ea] dark:hover:bg-[#363a45] border border-[#e6e8ea] dark:border-[#363a45] rounded-lg px-2.5 py-1.5 transition-colors"
                   >
                     <div className="w-5 h-5 rounded" style={{ backgroundColor: settings.lineColor }} />
                     <div className="w-8 h-[2px]" style={{ backgroundColor: settings.lineColor }} />
@@ -229,8 +229,8 @@ export const OverlaySettingsModal = ({
                     onClick={() => handleChange('leftCap', !settings.leftCap)}
                     className={`p-1.5 rounded-lg border transition-colors ${
                       settings.leftCap 
-                        ? 'bg-blue-600/30 border-blue-500 text-blue-400' 
-                        : 'bg-[#2a2e39] hover:bg-[#363a45] border-[#363a45] text-[#787b86]'
+                        ? 'bg-blue-600/30 border-blue-500 text-blue-500' 
+                        : 'bg-[#f0f1f3] dark:bg-[#2a2e39] hover:bg-[#e6e8ea] dark:hover:bg-[#363a45] border-[#e6e8ea] dark:border-[#363a45] text-[#787b86]'
                     }`}
                     title="Đầu mút trái"
                   >
@@ -245,8 +245,8 @@ export const OverlaySettingsModal = ({
                     onClick={() => handleChange('rightCap', !settings.rightCap)}
                     className={`p-1.5 rounded-lg border transition-colors ${
                       settings.rightCap 
-                        ? 'bg-blue-600/30 border-blue-500 text-blue-400' 
-                        : 'bg-[#2a2e39] hover:bg-[#363a45] border-[#363a45] text-[#787b86]'
+                        ? 'bg-blue-600/30 border-blue-500 text-blue-500' 
+                        : 'bg-[#f0f1f3] dark:bg-[#2a2e39] hover:bg-[#e6e8ea] dark:hover:bg-[#363a45] border-[#e6e8ea] dark:border-[#363a45] text-[#787b86]'
                     }`}
                     title="Đầu mút phải"
                   >
@@ -259,7 +259,7 @@ export const OverlaySettingsModal = ({
                   {/* Color Picker Dropdown */}
                   {showColorPicker === 'line' && (
                     <div 
-                      className="absolute top-full right-0 mt-2 p-3 bg-[#1e222d] border border-[#2a2e39] rounded-xl shadow-2xl z-50 w-64"
+                      className="absolute top-full right-0 mt-2 p-3 bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-xl shadow-2xl z-50 w-64"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="grid grid-cols-8 gap-1.5">
@@ -271,7 +271,7 @@ export const OverlaySettingsModal = ({
                               setShowColorPicker(null);
                             }}
                             className="w-5 h-5 rounded-sm transition-transform hover:scale-110"
-                            style={{ backgroundColor: c, border: c === '#ffffff' ? '1px solid #434651' : 'none' }}
+                            style={{ backgroundColor: c, border: c === '#ffffff' ? '1px solid #d1d4dc' : 'none' }}
                           />
                         ))}
                       </div>
@@ -281,34 +281,34 @@ export const OverlaySettingsModal = ({
               </div>
 
               {/* Checkbox 1: Mở rộng dòng bên trái */}
-              <label className="flex items-center gap-3 cursor-pointer hover:text-white transition-colors">
+              <label className="flex items-center gap-3 cursor-pointer hover:text-[#1e2329] dark:hover:text-white transition-colors">
                 <input 
                   type="checkbox"
                   checked={settings.extendLeft || false}
                   onChange={(e) => handleChange('extendLeft', e.target.checked)}
-                  className="w-4 h-4 rounded border-[#363a45] bg-[#2a2e39] accent-blue-500 cursor-pointer"
+                  className="w-4 h-4 rounded border-[#e6e8ea] dark:border-[#363a45] bg-white dark:bg-[#2a2e39] accent-blue-500 cursor-pointer"
                 />
                 <span>Mở rộng dòng bên trái</span>
               </label>
 
               {/* Checkbox 2: Mở rộng dòng bên phải */}
-              <label className="flex items-center gap-3 cursor-pointer hover:text-white transition-colors">
+              <label className="flex items-center gap-3 cursor-pointer hover:text-[#1e2329] dark:hover:text-white transition-colors">
                 <input 
                   type="checkbox"
                   checked={settings.extendRight || false}
                   onChange={(e) => handleChange('extendRight', e.target.checked)}
-                  className="w-4 h-4 rounded border-[#363a45] bg-[#2a2e39] accent-blue-500 cursor-pointer"
+                  className="w-4 h-4 rounded border-[#e6e8ea] dark:border-[#363a45] bg-white dark:bg-[#2a2e39] accent-blue-500 cursor-pointer"
                 />
                 <span>Mở rộng dòng bên phải</span>
               </label>
 
               {/* Checkbox 3: Điểm giữa */}
-              <label className="flex items-center gap-3 cursor-pointer hover:text-white transition-colors">
+              <label className="flex items-center gap-3 cursor-pointer hover:text-[#1e2329] dark:hover:text-white transition-colors">
                 <input 
                   type="checkbox"
                   checked={settings.showMiddlePoint || false}
                   onChange={(e) => handleChange('showMiddlePoint', e.target.checked)}
-                  className="w-4 h-4 rounded border-[#363a45] bg-[#2a2e39] accent-blue-500 cursor-pointer"
+                  className="w-4 h-4 rounded border-[#e6e8ea] dark:border-[#363a45] bg-white dark:bg-[#2a2e39] accent-blue-500 cursor-pointer"
                 />
                 <span>Điểm giữa</span>
               </label>
@@ -320,12 +320,12 @@ export const OverlaySettingsModal = ({
             <div className="flex flex-col gap-4">
               {/* Row 1: Enable checkbox, Color, Font Size, Bold, Italic */}
               <div className="flex items-center justify-between">
-                <label className="flex items-center gap-3 cursor-pointer hover:text-white transition-colors">
+                <label className="flex items-center gap-3 cursor-pointer hover:text-[#1e2329] dark:hover:text-white transition-colors">
                   <input 
                     type="checkbox"
                     checked={settings.enableText || false}
                     onChange={(e) => handleChange('enableText', e.target.checked)}
-                    className="w-4 h-4 rounded border-[#363a45] bg-[#2a2e39] accent-blue-500 cursor-pointer"
+                    className="w-4 h-4 rounded border-[#e6e8ea] dark:border-[#363a45] bg-white dark:bg-[#2a2e39] accent-blue-500 cursor-pointer"
                   />
                   <span className="font-medium">Văn bản</span>
                 </label>
@@ -334,7 +334,7 @@ export const OverlaySettingsModal = ({
                   {/* Color Picker Box */}
                   <button 
                     onClick={() => setShowColorPicker(prev => prev === 'text' ? null : 'text')}
-                    className="w-7 h-7 rounded-lg border border-[#363a45] bg-[#2a2e39] p-1 flex items-center justify-center"
+                    className="w-7 h-7 rounded-lg border border-[#e6e8ea] dark:border-[#363a45] bg-[#f0f1f3] dark:bg-[#2a2e39] p-1 flex items-center justify-center"
                   >
                     <div className="w-full h-full rounded" style={{ backgroundColor: settings.textColor }} />
                   </button>
@@ -343,7 +343,7 @@ export const OverlaySettingsModal = ({
                   <select 
                     value={settings.textSize}
                     onChange={(e) => handleChange('textSize', Number(e.target.value))}
-                    className="bg-[#2a2e39] border border-[#363a45] text-white rounded-lg px-2.5 py-1 text-xs outline-none focus:border-blue-500"
+                    className="bg-[#f0f1f3] dark:bg-[#2a2e39] border border-[#e6e8ea] dark:border-[#363a45] text-[#1e2329] dark:text-white rounded-lg px-2.5 py-1 text-xs outline-none focus:border-blue-500"
                   >
                     {[10, 12, 14, 16, 20, 24, 28, 32].map(sz => (
                       <option key={sz} value={sz}>{sz}</option>
@@ -354,7 +354,7 @@ export const OverlaySettingsModal = ({
                   <button 
                     onClick={() => handleChange('isBold', !settings.isBold)}
                     className={`w-7 h-7 rounded-lg font-bold border transition-colors ${
-                      settings.isBold ? 'bg-blue-600/30 border-blue-500 text-blue-400' : 'bg-[#2a2e39] border-[#363a45] text-[#787b86]'
+                      settings.isBold ? 'bg-blue-600/30 border-blue-500 text-blue-500' : 'bg-[#f0f1f3] dark:bg-[#2a2e39] border-[#e6e8ea] dark:border-[#363a45] text-[#787b86]'
                     }`}
                   >
                     B
@@ -364,7 +364,7 @@ export const OverlaySettingsModal = ({
                   <button 
                     onClick={() => handleChange('isItalic', !settings.isItalic)}
                     className={`w-7 h-7 rounded-lg italic font-serif border transition-colors ${
-                      settings.isItalic ? 'bg-blue-600/30 border-blue-500 text-blue-400' : 'bg-[#2a2e39] border-[#363a45] text-[#787b86]'
+                      settings.isItalic ? 'bg-blue-600/30 border-blue-500 text-blue-500' : 'bg-[#f0f1f3] dark:bg-[#2a2e39] border-[#e6e8ea] dark:border-[#363a45] text-[#787b86]'
                     }`}
                   >
                     I
@@ -373,7 +373,7 @@ export const OverlaySettingsModal = ({
                   {/* Text Color Picker Dropdown */}
                   {showColorPicker === 'text' && (
                     <div 
-                      className="absolute top-full right-0 mt-2 p-3 bg-[#1e222d] border border-[#2a2e39] rounded-xl shadow-2xl z-50 w-64"
+                      className="absolute top-full right-0 mt-2 p-3 bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-xl shadow-2xl z-50 w-64"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="grid grid-cols-8 gap-1.5">
@@ -385,7 +385,7 @@ export const OverlaySettingsModal = ({
                               setShowColorPicker(null);
                             }}
                             className="w-5 h-5 rounded-sm transition-transform hover:scale-110"
-                            style={{ backgroundColor: c, border: c === '#ffffff' ? '1px solid #434651' : 'none' }}
+                            style={{ backgroundColor: c, border: c === '#ffffff' ? '1px solid #d1d4dc' : 'none' }}
                           />
                         ))}
                       </div>
@@ -407,7 +407,7 @@ export const OverlaySettingsModal = ({
                   }));
                 }}
                 placeholder="Nhập tên / văn bản hiển thị cho đường xu hướng ở đây..."
-                className="w-full bg-[#2a2e39] border border-blue-500/60 focus:border-blue-500 rounded-xl p-3 text-sm text-white placeholder-[#787b86] outline-none resize-none transition-colors"
+                className="w-full bg-[#f0f1f3] dark:bg-[#2a2e39] border border-[#e6e8ea] dark:border-blue-500/60 focus:border-blue-500 rounded-xl p-3 text-sm text-[#1e2329] dark:text-white placeholder-[#787b86] outline-none resize-none transition-colors"
               />
 
               {/* Text Alignment Row */}
@@ -418,7 +418,7 @@ export const OverlaySettingsModal = ({
                   <select 
                     value={settings.vAlign || 'top'}
                     onChange={(e) => handleChange('vAlign', e.target.value)}
-                    className="bg-[#2a2e39] border border-[#363a45] text-white rounded-lg px-3 py-1.5 text-xs outline-none focus:border-blue-500"
+                    className="bg-[#f0f1f3] dark:bg-[#2a2e39] border border-[#e6e8ea] dark:border-[#363a45] text-[#1e2329] dark:text-white rounded-lg px-3 py-1.5 text-xs outline-none focus:border-blue-500"
                   >
                     <option value="top">Trên đầu</option>
                     <option value="middle">Trung tâm</option>
@@ -429,7 +429,7 @@ export const OverlaySettingsModal = ({
                   <select 
                     value={settings.hAlign || 'center'}
                     onChange={(e) => handleChange('hAlign', e.target.value)}
-                    className="bg-[#2a2e39] border border-[#363a45] text-white rounded-lg px-3 py-1.5 text-xs outline-none focus:border-blue-500"
+                    className="bg-[#f0f1f3] dark:bg-[#2a2e39] border border-[#e6e8ea] dark:border-[#363a45] text-[#1e2329] dark:text-white rounded-lg px-3 py-1.5 text-xs outline-none focus:border-blue-500"
                   >
                     <option value="left">Bên trái</option>
                     <option value="center">Trung tâm</option>
@@ -445,40 +445,40 @@ export const OverlaySettingsModal = ({
             <div className="flex flex-col gap-4">
               {/* Point #1 */}
               <div className="flex items-center justify-between">
-                <span className="text-[#d1d4dc] font-medium">#1 (giá, thanh)</span>
+                <span className="text-[#1e2329] dark:text-[#d1d4dc] font-medium">#1 (giá, thanh)</span>
                 <div className="flex items-center gap-2">
                   <input 
                     type="number"
                     step="0.001"
                     value={settings.point1Price ?? 278.784}
                     onChange={(e) => handleChange('point1Price', parseFloat(e.target.value))}
-                    className="w-28 bg-[#2a2e39] border border-blue-500 text-white rounded-lg px-2.5 py-1.5 text-sm outline-none font-mono focus:ring-1 focus:ring-blue-500"
+                    className="w-28 bg-[#f0f1f3] dark:bg-[#2a2e39] border border-blue-500 text-[#1e2329] dark:text-white rounded-lg px-2.5 py-1.5 text-sm outline-none font-mono focus:ring-1 focus:ring-blue-500"
                   />
                   <input 
                     type="number"
                     value={settings.point1Bar ?? 260}
                     onChange={(e) => handleChange('point1Bar', parseInt(e.target.value))}
-                    className="w-24 bg-[#2a2e39] border border-[#363a45] text-white rounded-lg px-2.5 py-1.5 text-sm outline-none font-mono focus:border-blue-500"
+                    className="w-24 bg-[#f0f1f3] dark:bg-[#2a2e39] border border-[#e6e8ea] dark:border-[#363a45] text-[#1e2329] dark:text-white rounded-lg px-2.5 py-1.5 text-sm outline-none font-mono focus:border-blue-500"
                   />
                 </div>
               </div>
 
               {/* Point #2 */}
               <div className="flex items-center justify-between">
-                <span className="text-[#d1d4dc] font-medium">#2 (giá, thanh)</span>
+                <span className="text-[#1e2329] dark:text-[#d1d4dc] font-medium">#2 (giá, thanh)</span>
                 <div className="flex items-center gap-2">
                   <input 
                     type="number"
                     step="0.001"
                     value={settings.point2Price ?? 291.970}
                     onChange={(e) => handleChange('point2Price', parseFloat(e.target.value))}
-                    className="w-28 bg-[#2a2e39] border border-[#363a45] text-white rounded-lg px-2.5 py-1.5 text-sm outline-none font-mono focus:border-blue-500"
+                    className="w-28 bg-[#f0f1f3] dark:bg-[#2a2e39] border border-[#e6e8ea] dark:border-[#363a45] text-[#1e2329] dark:text-white rounded-lg px-2.5 py-1.5 text-sm outline-none font-mono focus:border-blue-500"
                   />
                   <input 
                     type="number"
                     value={settings.point2Bar ?? 291}
                     onChange={(e) => handleChange('point2Bar', parseInt(e.target.value))}
-                    className="w-24 bg-[#2a2e39] border border-[#363a45] text-white rounded-lg px-2.5 py-1.5 text-sm outline-none focus:border-blue-500"
+                    className="w-24 bg-[#f0f1f3] dark:bg-[#2a2e39] border border-[#e6e8ea] dark:border-[#363a45] text-[#1e2329] dark:text-white rounded-lg px-2.5 py-1.5 text-sm outline-none font-mono focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -497,12 +497,12 @@ export const OverlaySettingsModal = ({
                 { key: 'visMonths', minKey: 'monthMin', maxKey: 'monthMax', label: 'Tháng', defMin: 1, defMax: 12, maxLimit: 12 },
               ].map(tf => (
                 <div key={tf.key} className="flex items-center gap-3 text-xs">
-                  <label className="flex items-center gap-2.5 w-24 cursor-pointer shrink-0 hover:text-white transition-colors">
+                  <label className="flex items-center gap-2.5 w-24 cursor-pointer shrink-0 hover:text-[#1e2329] dark:hover:text-white transition-colors">
                     <input 
                       type="checkbox"
                       checked={(settings as any)[tf.key] ?? true}
                       onChange={(e) => handleChange(tf.key as any, e.target.checked)}
-                      className="w-4 h-4 rounded border-[#363a45] bg-[#2a2e39] accent-blue-500 cursor-pointer"
+                      className="w-4 h-4 rounded border-[#e6e8ea] dark:border-[#363a45] bg-white dark:bg-[#2a2e39] accent-blue-500 cursor-pointer"
                     />
                     <span className="font-medium text-sm">{tf.label}</span>
                   </label>
@@ -511,7 +511,7 @@ export const OverlaySettingsModal = ({
                     type="number"
                     value={(settings as any)[tf.minKey] ?? tf.defMin}
                     onChange={(e) => handleChange(tf.minKey as any, parseInt(e.target.value) || 1)}
-                    className="w-14 bg-[#2a2e39] border border-[#363a45] text-white rounded-lg px-2 py-1 text-center font-mono outline-none focus:border-blue-500"
+                    className="w-14 bg-[#f0f1f3] dark:bg-[#2a2e39] border border-[#e6e8ea] dark:border-[#363a45] text-[#1e2329] dark:text-white rounded-lg px-2 py-1 text-center font-mono outline-none focus:border-blue-500"
                   />
 
                   <div className="flex-1 flex items-center px-1">
@@ -521,7 +521,7 @@ export const OverlaySettingsModal = ({
                       max={tf.maxLimit}
                       value={(settings as any)[tf.maxKey] ?? tf.defMax}
                       onChange={(e) => handleChange(tf.maxKey as any, parseInt(e.target.value))}
-                      className="w-full h-1.5 bg-[#2a2e39] rounded-lg appearance-none cursor-pointer accent-[#d1d4dc]"
+                      className="w-full h-1.5 bg-[#e6e8ea] dark:bg-[#2a2e39] rounded-lg appearance-none cursor-pointer accent-[#787b86]"
                     />
                   </div>
 
@@ -529,7 +529,7 @@ export const OverlaySettingsModal = ({
                     type="number"
                     value={(settings as any)[tf.maxKey] ?? tf.defMax}
                     onChange={(e) => handleChange(tf.maxKey as any, parseInt(e.target.value) || tf.maxLimit)}
-                    className="w-14 bg-[#2a2e39] border border-[#363a45] text-white rounded-lg px-2 py-1 text-center font-mono outline-none focus:border-blue-500"
+                    className="w-14 bg-[#f0f1f3] dark:bg-[#2a2e39] border border-[#e6e8ea] dark:border-[#363a45] text-[#1e2329] dark:text-white rounded-lg px-2 py-1 text-center font-mono outline-none focus:border-blue-500"
                   />
                 </div>
               ))}
@@ -539,13 +539,13 @@ export const OverlaySettingsModal = ({
         </div>
 
         {/* Footer Bar */}
-        <div className="px-5 py-3 border-t border-[#2a2e39] flex items-center justify-between bg-[#1c202b] relative">
+        <div className="px-5 py-3 border-t border-[#e6e8ea] dark:border-[#2a2e39] flex items-center justify-between bg-[#f8f9fa] dark:bg-[#1c202b] relative">
           
           {/* Templates Dropdown Button */}
           <div className="relative">
             <button 
               onClick={() => setShowTemplateDropdown(prev => !prev)}
-              className="flex items-center gap-2 bg-[#2a2e39] hover:bg-[#363a45] border border-[#363a45] text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors"
+              className="flex items-center gap-2 bg-[#f0f1f3] dark:bg-[#2a2e39] hover:bg-[#e6e8ea] dark:hover:bg-[#363a45] border border-[#e6e8ea] dark:border-[#363a45] text-[#1e2329] dark:text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors"
             >
               <span>Bản mẫu</span>
               <ChevronDown className="w-3.5 h-3.5 text-[#787b86]" />
@@ -553,7 +553,7 @@ export const OverlaySettingsModal = ({
 
             {showTemplateDropdown && (
               <div 
-                className="absolute bottom-full left-0 mb-2 w-48 bg-[#1e222d] border border-[#2a2e39] rounded-xl shadow-2xl py-1 z-50 text-xs text-[#d1d4dc]"
+                className="absolute bottom-full left-0 mb-2 w-48 bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-xl shadow-2xl py-1 z-50 text-xs text-[#1e2329] dark:text-[#d1d4dc]"
                 onClick={(e) => e.stopPropagation()}
               >
                 <button 
@@ -569,13 +569,13 @@ export const OverlaySettingsModal = ({
                     }));
                     setShowTemplateDropdown(false);
                   }}
-                  className="w-full text-left px-4 py-2 hover:bg-[#2a2e39] transition-colors"
+                  className="w-full text-left px-4 py-2 hover:bg-[#f0f1f3] dark:hover:bg-[#2a2e39] transition-colors"
                 >
                   Áp dụng Mặc định
                 </button>
                 <button 
                   onClick={() => setShowTemplateDropdown(false)}
-                  className="w-full text-left px-4 py-2 hover:bg-[#2a2e39] transition-colors"
+                  className="w-full text-left px-4 py-2 hover:bg-[#f0f1f3] dark:hover:bg-[#2a2e39] transition-colors"
                 >
                   Lưu dạng...
                 </button>
@@ -587,7 +587,7 @@ export const OverlaySettingsModal = ({
           <div className="flex items-center gap-2.5">
             <button 
               onClick={onClose}
-              className="px-5 py-1.5 rounded-lg border border-[#363a45] text-white hover:bg-[#2a2e39] text-sm font-semibold transition-colors"
+              className="px-5 py-1.5 rounded-lg border border-[#e6e8ea] dark:border-[#363a45] text-[#1e2329] dark:text-white hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39] text-sm font-semibold transition-colors"
             >
               Hủy bỏ
             </button>

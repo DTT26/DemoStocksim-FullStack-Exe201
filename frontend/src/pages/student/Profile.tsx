@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Mail, CheckCircle2, Save, X, Edit3, User, Phone, BookOpen, GraduationCap, FileText, Loader2, Camera } from 'lucide-react';
-import { MOCK_STUDENT_PORTFOLIO } from '../../data/mockStudentData';
 import { ChangePasswordCard } from '../../components/ChangePasswordCard';
 import { AvatarChangeModal } from '../../components/AvatarChangeModal';
 import { UserAvatar } from '../../components/UserAvatar';
@@ -13,6 +12,12 @@ export const StudentProfile = () => {
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [toastMsg, setToastMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [stats, setStats] = useState({
+    participationsCount: 0,
+    submissionsCount: 0,
+    tradesCount: 0,
+    winRate: 0,
+  });
 
   const [formData, setFormData] = useState({
     name: '',
@@ -29,12 +34,50 @@ export const StudentProfile = () => {
       setFormData({
         name: user.name || '',
         email: user.email || '',
-        studentId: user.studentId || 'SE150123',
-        university: user.university || 'FPT University',
-        class: user.class || 'SE1501',
-        phone: user.phone || '0987654321',
-        bio: user.bio || 'Học viên đam mê giao dịch chứng khoán, đầu tư giá trị và phân tích kỹ thuật.'
+        studentId: user.studentId || '',
+        university: user.university || '',
+        class: user.class || '',
+        phone: user.phone || '',
+        bio: user.bio || ''
       });
+
+      // Lấy số liệu thực tế của sinh viên
+      const fetchStudentStats = async () => {
+        try {
+          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+          const token = localStorage.getItem('token');
+          const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
+          const [partRes, assRes] = await Promise.all([
+            fetch(`${apiUrl}/simulations/participations/me`, { credentials: 'include', headers }).catch(() => null),
+            fetch(`${apiUrl}/assignments/my`, { credentials: 'include', headers }).catch(() => null)
+          ]);
+
+          let pCount = 0;
+          let sCount = 0;
+          if (partRes && partRes.ok) {
+            const pData = await partRes.json();
+            if (Array.isArray(pData)) pCount = pData.length;
+          }
+          if (assRes && assRes.ok) {
+            const aData = await assRes.json();
+            if (Array.isArray(aData)) {
+              sCount = aData.filter((a: any) => a.studentStatus === 'SUBMITTED' || a.studentStatus === 'GRADED' || a.mySubmission).length;
+            }
+          }
+
+          setStats({
+            participationsCount: pCount,
+            submissionsCount: sCount,
+            tradesCount: 0,
+            winRate: 0,
+          });
+        } catch (e) {
+          // ignore
+        }
+      };
+
+      fetchStudentStats();
     }
   }, [user]);
 
@@ -164,19 +207,19 @@ export const StudentProfile = () => {
             <div className="space-y-3.5 text-xs">
               <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-[#253047]/50">
                 <span className="text-slate-500 dark:text-slate-400">Kỳ thi tham gia:</span>
-                <span className="font-bold text-slate-900 dark:text-white font-mono">1</span>
+                <span className="font-bold text-slate-900 dark:text-white font-mono">{stats.participationsCount}</span>
               </div>
               <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-[#253047]/50">
                 <span className="text-slate-500 dark:text-slate-400">Bài tập đã nộp:</span>
-                <span className="font-bold text-indigo-600 dark:text-indigo-400 font-mono">2</span>
+                <span className="font-bold text-indigo-600 dark:text-indigo-400 font-mono">{stats.submissionsCount}</span>
               </div>
               <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-[#253047]/50">
                 <span className="text-slate-500 dark:text-slate-400">Tổng số lệnh trade:</span>
-                <span className="font-bold text-slate-900 dark:text-white font-mono">{MOCK_STUDENT_PORTFOLIO.totalTrades}</span>
+                <span className="font-bold text-slate-900 dark:text-white font-mono">{stats.tradesCount}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-500 dark:text-slate-400">Tỷ lệ thắng (Win Rate):</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">{MOCK_STUDENT_PORTFOLIO.winRate}%</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">{stats.winRate}%</span>
               </div>
             </div>
           </div>

@@ -100,17 +100,20 @@ export const FibonacciSettingsModal = ({ isOpen, onClose, config, onSave }: Fibo
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-[#1e222d] border border-[#2a2e39] rounded-xl shadow-2xl w-full max-w-[540px] flex flex-col max-h-[85vh] overflow-hidden text-[#d1d4dc]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={onClose}>
+      <div 
+        className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-xl shadow-2xl w-full max-w-[540px] flex flex-col max-h-[85vh] overflow-hidden text-[#1e2329] dark:text-[#d1d4dc] transition-colors"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#2a2e39]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e6e8ea] dark:border-[#2a2e39]">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-            <h3 className="font-semibold text-white text-base">Cài đặt Fibonacci Thoái lui</h3>
+            <h3 className="font-semibold text-[#1e2329] dark:text-white text-base">Cài đặt Fibonacci Thoái lui</h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-[#787b86] hover:text-white hover:bg-[#2a2e39] transition-colors"
+            className="p-1 rounded-lg text-[#787b86] hover:text-[#1e2329] dark:hover:text-white hover:bg-[#f0f1f3] dark:hover:bg-[#2a2e39] transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -119,43 +122,43 @@ export const FibonacciSettingsModal = ({ isOpen, onClose, config, onSave }: Fibo
         {/* Content Body */}
         <div className="p-5 overflow-y-auto flex-1 flex flex-col gap-5 text-xs">
           {/* General Display Options */}
-          <div className="grid grid-cols-2 gap-3 bg-[#131722] p-3 rounded-lg border border-[#2a2e39]">
-            <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
+          <div className="grid grid-cols-2 gap-3 bg-[#f8f9fa] dark:bg-[#131722] p-3 rounded-lg border border-[#e6e8ea] dark:border-[#2a2e39]">
+            <label className="flex items-center gap-2 cursor-pointer hover:text-[#1e2329] dark:hover:text-white transition-colors">
               <input
                 type="checkbox"
                 checked={localConfig.showBackground}
                 onChange={(e) => setLocalConfig(prev => ({ ...prev, showBackground: e.target.checked }))}
-                className="rounded border-[#2a2e39] text-blue-600 focus:ring-0 focus:ring-offset-0 bg-[#2a2e39] cursor-pointer"
+                className="rounded border-[#e6e8ea] dark:border-[#2a2e39] text-blue-600 focus:ring-0 focus:ring-offset-0 bg-white dark:bg-[#2a2e39] cursor-pointer"
               />
               <span>Tô màu vùng nền (Background)</span>
             </label>
 
-            <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
+            <label className="flex items-center gap-2 cursor-pointer hover:text-[#1e2329] dark:hover:text-white transition-colors">
               <input
                 type="checkbox"
                 checked={localConfig.extendRight}
                 onChange={(e) => setLocalConfig(prev => ({ ...prev, extendRight: e.target.checked }))}
-                className="rounded border-[#2a2e39] text-blue-600 focus:ring-0 focus:ring-offset-0 bg-[#2a2e39] cursor-pointer"
+                className="rounded border-[#e6e8ea] dark:border-[#2a2e39] text-blue-600 focus:ring-0 focus:ring-offset-0 bg-white dark:bg-[#2a2e39] cursor-pointer"
               />
               <span>Kéo dài đường sang phải</span>
             </label>
 
-            <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
+            <label className="flex items-center gap-2 cursor-pointer hover:text-[#1e2329] dark:hover:text-white transition-colors">
               <input
                 type="checkbox"
                 checked={localConfig.showPrices}
                 onChange={(e) => setLocalConfig(prev => ({ ...prev, showPrices: e.target.checked }))}
-                className="rounded border-[#2a2e39] text-blue-600 focus:ring-0 focus:ring-offset-0 bg-[#2a2e39] cursor-pointer"
+                className="rounded border-[#e6e8ea] dark:border-[#2a2e39] text-blue-600 focus:ring-0 focus:ring-offset-0 bg-white dark:bg-[#2a2e39] cursor-pointer"
               />
               <span>Hiển thị giá trị (Prices)</span>
             </label>
 
-            <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
+            <label className="flex items-center gap-2 cursor-pointer hover:text-[#1e2329] dark:hover:text-white transition-colors">
               <input
                 type="checkbox"
                 checked={localConfig.showLabels}
                 onChange={(e) => setLocalConfig(prev => ({ ...prev, showLabels: e.target.checked }))}
-                className="rounded border-[#2a2e39] text-blue-600 focus:ring-0 focus:ring-offset-0 bg-[#2a2e39] cursor-pointer"
+                className="rounded border-[#e6e8ea] dark:border-[#2a2e39] text-blue-600 focus:ring-0 focus:ring-offset-0 bg-white dark:bg-[#2a2e39] cursor-pointer"
               />
               <span>Hiển thị tỷ lệ (Levels)</span>
             </label>
@@ -168,17 +171,17 @@ export const FibonacciSettingsModal = ({ isOpen, onClose, config, onSave }: Fibo
               <span>Độ dày nét: {localConfig.lineWidth}px</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 bg-[#131722] p-3 rounded-lg border border-[#2a2e39] max-h-[300px] overflow-y-auto">
+            <div className="grid grid-cols-2 gap-2 bg-[#f8f9fa] dark:bg-[#131722] p-3 rounded-lg border border-[#e6e8ea] dark:border-[#2a2e39] max-h-[300px] overflow-y-auto">
               {localConfig.levels.map((item, index) => (
                 <div
                   key={item.id || index}
-                  className="flex items-center gap-2 bg-[#1e222d] p-1.5 rounded border border-[#2a2e39] hover:border-[#363a45] transition-colors"
+                  className="flex items-center gap-2 bg-white dark:bg-[#1e222d] p-1.5 rounded border border-[#e6e8ea] dark:border-[#2a2e39] hover:border-[#b2b5be] dark:hover:border-[#363a45] transition-colors"
                 >
                   <input
                     type="checkbox"
                     checked={item.active}
                     onChange={(e) => handleLevelChange(index, 'active', e.target.checked)}
-                    className="rounded border-[#2a2e39] text-blue-600 bg-[#2a2e39] cursor-pointer"
+                    className="rounded border-[#e6e8ea] dark:border-[#2a2e39] text-blue-600 bg-white dark:bg-[#2a2e39] cursor-pointer"
                   />
 
                   {/* Level Number Input */}
@@ -187,7 +190,7 @@ export const FibonacciSettingsModal = ({ isOpen, onClose, config, onSave }: Fibo
                     step="0.001"
                     value={item.level}
                     onChange={(e) => handleLevelChange(index, 'level', parseFloat(e.target.value) || 0)}
-                    className="w-16 bg-[#131722] border border-[#2a2e39] rounded px-1.5 py-0.5 text-white font-mono text-xs focus:outline-none focus:border-blue-500"
+                    className="w-16 bg-[#f0f1f3] dark:bg-[#131722] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-1.5 py-0.5 text-[#1e2329] dark:text-white font-mono text-xs focus:outline-none focus:border-blue-500"
                   />
 
                   {/* Color Picker */}
@@ -204,7 +207,7 @@ export const FibonacciSettingsModal = ({ isOpen, onClose, config, onSave }: Fibo
                   {localConfig.levels.length > 2 && (
                     <button
                       onClick={() => handleDeleteLevel(index)}
-                      className="text-[#787b86] hover:text-red-400 p-1 rounded transition-colors ml-auto"
+                      className="text-[#787b86] hover:text-red-500 p-1 rounded transition-colors ml-auto"
                       title="Xóa mức này"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -216,7 +219,7 @@ export const FibonacciSettingsModal = ({ isOpen, onClose, config, onSave }: Fibo
 
             <button
               onClick={handleAddLevel}
-              className="flex items-center justify-center gap-1.5 w-full py-2 bg-[#2a2e39]/50 hover:bg-[#2a2e39] text-blue-400 rounded-lg font-medium transition-colors border border-dashed border-[#363a45]"
+              className="flex items-center justify-center gap-1.5 w-full py-2 bg-[#f0f1f3] dark:bg-[#2a2e39]/50 hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39] text-blue-600 dark:text-blue-400 rounded-lg font-medium transition-colors border border-dashed border-[#e6e8ea] dark:border-[#363a45]"
             >
               <Plus className="w-4 h-4" />
               <span>Thêm mức Fibonacci mới</span>
@@ -225,10 +228,10 @@ export const FibonacciSettingsModal = ({ isOpen, onClose, config, onSave }: Fibo
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-t border-[#2a2e39] bg-[#161a25]">
+        <div className="flex items-center justify-between px-5 py-3.5 border-t border-[#e6e8ea] dark:border-[#2a2e39] bg-[#f8f9fa] dark:bg-[#161a25]">
           <button
             onClick={handleResetDefaults}
-            className="flex items-center gap-1.5 text-[#787b86] hover:text-white px-3 py-1.5 rounded-lg transition-colors text-xs"
+            className="flex items-center gap-1.5 text-[#787b86] hover:text-[#1e2329] dark:hover:text-white px-3 py-1.5 rounded-lg transition-colors text-xs"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Mặc định</span>
@@ -237,7 +240,7 @@ export const FibonacciSettingsModal = ({ isOpen, onClose, config, onSave }: Fibo
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-1.5 rounded-lg border border-[#2a2e39] hover:bg-[#2a2e39] text-[#d1d4dc] text-xs font-medium transition-colors"
+              className="px-4 py-1.5 rounded-lg border border-[#e6e8ea] dark:border-[#2a2e39] hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc] text-xs font-medium transition-colors"
             >
               Hủy
             </button>

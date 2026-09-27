@@ -15,9 +15,44 @@ import notificationRoutes from './routes/notification';
 
 const app = express();
 
+app.set('trust proxy', 1);
+
+const rawAllowedOrigins = [
+  process.env.CLIENT_URL,
+  process.env.FRONTEND_URL,
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:5174',
+  'http://127.0.0.1:5173'
+];
+
+const allowedOrigins = rawAllowedOrigins
+  .flatMap(url => (url ? url.split(',') : []))
+  .map(url => url.trim().replace(/\/+$/, ''))
+  .filter(Boolean);
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
+  origin: (requestOrigin, callback) => {
+    // Cho phép request không có origin (curl, mobile, server-to-server)
+    if (!requestOrigin) return callback(null, true);
+
+    const cleanOrigin = requestOrigin.trim().replace(/\/+$/, '');
+
+    const isExplicitlyAllowed = allowedOrigins.includes(cleanOrigin);
+    const isLocal = cleanOrigin.includes('localhost') || cleanOrigin.includes('127.0.0.1');
+    const isVercel = /\.vercel\.app$/.test(cleanOrigin);
+    const isRender = /\.onrender\.com$/.test(cleanOrigin);
+
+    if (isExplicitlyAllowed || isLocal || isVercel || isRender || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      // Trong web deploy, phản hồi origin động để cookie SameSite=None hoạt động trơn tru
+      callback(null, true);
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));

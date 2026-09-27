@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, FileText, Clock, CheckCircle2, AlertCircle, Award, ArrowRight } from 'lucide-react';
-import { MOCK_ASSIGNMENTS } from '../../data/mockStudentData';
-
 export const StudentAssignments = () => {
   const [assignments, setAssignments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,16 +20,15 @@ export const StudentAssignments = () => {
       });
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           setAssignments(data);
           return;
         }
       }
-      // Fallback sang mock nếu chưa có dữ liệu backend
-      setAssignments(MOCK_ASSIGNMENTS);
+      setAssignments([]);
     } catch (err) {
-      console.warn('Lỗi lấy bài tập từ backend, sử dụng mock:', err);
-      setAssignments(MOCK_ASSIGNMENTS);
+      console.warn('Lỗi lấy bài tập từ backend:', err);
+      setAssignments([]);
     } finally {
       setLoading(false);
     }
@@ -184,7 +181,7 @@ export const StudentAssignments = () => {
                   const id = assignment._id || assignment.id;
                   const status = getStatus(assignment);
                   const progress = assignment.progress !== undefined ? assignment.progress : (status === 'Submitted' || status === 'Graded' ? 100 : 0);
-                  const simName = assignment.simulationId?.name || assignment.simulation || 'Vietnam Stock Challenge';
+                  const simName = assignment.simulationId?.name || assignment.simulation || '—';
                   const score = assignment.mySubmission?.score;
 
                   return (
@@ -278,7 +275,7 @@ export const StudentAssignments = () => {
                       const id = assignment._id || assignment.id;
                       const status = getStatus(assignment);
                       const progress = assignment.progress !== undefined ? assignment.progress : (status === 'Submitted' || status === 'Graded' ? 100 : 0);
-                      const simName = assignment.simulationId?.name || assignment.simulation || 'Vietnam Stock Challenge';
+                      const simName = assignment.simulationId?.name || assignment.simulation || '—';
                       const score = assignment.mySubmission?.score;
 
                       return (

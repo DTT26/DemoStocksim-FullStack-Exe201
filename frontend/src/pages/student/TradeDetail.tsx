@@ -1,7 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
-import { MOCK_TRADES } from '../../data/mockStudentData';
 import { tradingApi } from '../../services/tradingApi';
 import { useSimulatorStore } from '../../features/market/engine/useSimulatorStore';
 import { useAuth } from '../../contexts/AuthContext';
@@ -14,13 +13,6 @@ export const StudentTradeDetail = () => {
 
   useEffect(() => {
     const findTrade = async () => {
-      // 1. Check mock trades
-      const mock = MOCK_TRADES.find(t => t.id === tradeId);
-      if (mock) {
-        setTrade(mock);
-        setLoading(false);
-        return;
-      }
 
       // 2. Check simulator history
       const simHist = useSimulatorStore.getState().history.find(h => h.id === tradeId);
