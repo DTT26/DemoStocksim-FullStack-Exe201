@@ -326,20 +326,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     const token = localStorage.getItem('token');
 
-    // 1. Gửi yêu cầu đăng xuất lên backend để hủy cookies HttpOnly trên mọi domain trước
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-      await fetch(`${apiUrl}/auth/logout`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        }
-      });
-    } catch (err) {
-      console.error('Failed to logout on backend', err);
-    }
+    // 1. Xóa state ngay lập tức để UI phản hồi tức thì (xóa lịch sử vị thế ngay)
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('userId');
+    setUser(null);
 
     // 2. Hủy phiên Google nếu có
     try {
@@ -348,11 +339,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.warn('googleLogout error:', e);
     }
 
-    // 3. Xóa sạch token, userId và set user null (đảm bảo cookie đã bị server xóa trước khi trigger re-render)
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('userId');
-    setUser(null);
+    // 3. Gửi yêu cầu đăng xuất lên backend ngầm (không dùng await để tránh block UI trên server production)
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      fetch(`${apiUrl}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        }
+      }).catch(err => console.error('Failed to logout on backend', err));
+    } catch (err) {
+      console.error('Failed to logout on backend', err);
+    }
   };
 
   return (
