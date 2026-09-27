@@ -179,69 +179,12 @@ export const sendOtpEmail = async (email: string, otp: string, name: string): Pr
     </html>
   `;
 
-<<<<<<< HEAD
-  try {
-    const resendKey = process.env.RESEND_API_KEY;
-    const resendFrom = process.env.RESEND_FROM || '"StockSim Platform" <no-reply@stocksim.vn>';
-    const subject = `[StockSim] ${otp} là mã xác thực đăng ký tài khoản của bạn`;
-    
-    // 1. Thử gửi qua Resend API trước nếu có cấu hình
-    if (resendKey) {
-      try {
-        const res = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${resendKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            from: resendFrom,
-            to: [email],
-            subject: subject,
-            html: htmlContent
-          })
-        });
-        
-        if (res.ok) {
-          const data = await res.json();
-          console.log(`✅ [RESEND] Gửi thành công tới: ${email} | ID: ${data.id}`);
-          return true;
-        } else {
-          console.warn('⚠️ [RESEND] Gửi thất bại, chuyển sang SMTP dự phòng...', await res.text());
-        }
-      } catch (resendErr) {
-        console.warn('⚠️ [RESEND] Lỗi kết nối, chuyển sang SMTP dự phòng...', resendErr);
-      }
-    }
-
-    // 2. Chuyển sang SMTP dự phòng (Fallback)
-    if (!transporter) {
-      console.warn('⚠️ Không có cấu hình SMTP dự phòng hợp lệ, nuốt lỗi để tiếp tục!');
-      return true;
-    }
-
-    const sender = (process.env.SMTP_USER || '').trim();
-    const fromAddress = process.env.SMTP_FROM || (sender ? `"StockSim Platform" <${sender}>` : '"StockSim Platform" <no-reply@stocksim.vn>');
-    const info = await transporter.sendMail({
-      from: fromAddress,
-      to: email,
-      subject: subject,
-      html: htmlContent,
-    });
-    console.log(`✅ [SMTP FALLBACK] Gửi thành công tới: ${email} | MessageId: ${info.messageId}`);
-    return true;
-  } catch (err) {
-    console.error('❌ Lỗi cuối cùng khi gửi email:', err);
-    return true; // Vẫn nuốt lỗi để dev test cho dễ
-  }
-=======
   return sendMailMessage({
     to: email,
     subject: `[StockSim] ${otp} là mã xác thực đăng ký tài khoản của bạn`,
     html: htmlContent,
     fromTitle: 'StockSim Platform',
   });
->>>>>>> 6d6f9b07c316bcc3eb6f9a1a1c54bed57fff37eb
 };
 
 /**
@@ -304,67 +247,10 @@ export const sendForgotPasswordEmail = async (email: string, otp: string, name: 
     </html>
   `;
 
-<<<<<<< HEAD
-  try {
-    const resendKey = process.env.RESEND_API_KEY;
-    const resendFrom = process.env.RESEND_FROM || '"StockSim Security" <no-reply@stocksim.vn>';
-    const subject = `[StockSim] ${otp} là mã xác nhận đặt lại mật khẩu của bạn`;
-    
-    // 1. Thử gửi qua Resend API trước nếu có cấu hình
-    if (resendKey) {
-      try {
-        const res = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${resendKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            from: resendFrom,
-            to: [email],
-            subject: subject,
-            html: htmlContent
-          })
-        });
-        
-        if (res.ok) {
-          const data = await res.json();
-          console.log(`✅ [RESEND] Gửi thành công tới: ${email} | ID: ${data.id}`);
-          return true;
-        } else {
-          console.warn('⚠️ [RESEND] Gửi thất bại, chuyển sang SMTP dự phòng...', await res.text());
-        }
-      } catch (resendErr) {
-        console.warn('⚠️ [RESEND] Lỗi kết nối, chuyển sang SMTP dự phòng...', resendErr);
-      }
-    }
-
-    // 2. Chuyển sang SMTP dự phòng (Fallback)
-    if (!transporter) {
-      console.warn('⚠️ Không có cấu hình SMTP dự phòng hợp lệ, nuốt lỗi để tiếp tục!');
-      return true;
-    }
-
-    const sender = (process.env.SMTP_USER || '').trim();
-    const fromAddress = process.env.SMTP_FROM || (sender ? `"StockSim Security" <${sender}>` : '"StockSim Security" <no-reply@stocksim.vn>');
-    const info = await transporter.sendMail({
-      from: fromAddress,
-      to: email,
-      subject: subject,
-      html: htmlContent,
-    });
-    console.log(`✅ [SMTP FALLBACK] Gửi thành công tới: ${email} | MessageId: ${info.messageId}`);
-    return true;
-  } catch (err) {
-    console.error('❌ Lỗi cuối cùng khi gửi email:', err);
-    return true; // Nuốt lỗi
-  }
-=======
   return sendMailMessage({
     to: email,
     subject: `[StockSim] ${otp} là mã xác nhận đặt lại mật khẩu của bạn`,
     html: htmlContent,
     fromTitle: 'StockSim Security',
   });
->>>>>>> 6d6f9b07c316bcc3eb6f9a1a1c54bed57fff37eb
 };
