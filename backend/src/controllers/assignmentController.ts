@@ -30,7 +30,7 @@ export const createAssignment = async (req: AuthRequest, res: Response) => {
 
     // Notify enrolled students in background
     if (simulationId) {
-      SimulationParticipant.find({ simulationId, status: 'APPROVED' }).select('userId').then((participants) => {
+      SimulationParticipant.find({ simulationId, status: { $in: ['ACTIVE', 'APPROVED'] } }).select('userId').then((participants) => {
         participants.forEach((p) => {
           createNotification(p.userId, {
             title: 'Bài tập mới được giao',
@@ -61,6 +61,7 @@ export const getAssignments = async (req: AuthRequest, res: Response) => {
     const assignments = await Assignment.find(filter)
       .populate('createdBy', 'name email picture')
       .populate('simulationId', 'name')
+      .populate('assignedTo', 'name email')
       .sort({ createdAt: -1 });
 
     // Đếm số bài nộp cho mỗi assignment
@@ -88,11 +89,37 @@ export const getAssignmentById = async (req: AuthRequest, res: Response) => {
   try {
     const assignment = await Assignment.findById(req.params.id)
       .populate('createdBy', 'name email picture')
-      .populate('simulationId', 'name');
+      .populate('simulationId', 'name')
+      .populate('assignedTo', 'name email');
 
     if (!assignment) {
       return res.status(404).json({ message: 'Assignment not found' });
     }
+
+    // Nếu là sinh viên, kiểm tra xem đã tham gia simulation và có được chỉ định bài tập không
+    if (req.user && req.user.role === 'student') {
+      const simId = (assignment.simulationId as any)?._id || assignment.simulationId;
+      const isParticipant = await SimulationParticipant.findOne({
+        simulationId: simId,
+        userId: req.user._id,
+        status: { $in: ['ACTIVE', 'APPROVED'] }
+      });
+
+      if (!isParticipant) {
+        return res.status(403).json({ message: 'Bạn chưa tham gia kỳ thi mô phỏng này' });
+      }
+
+      if (assignment.assignedTo && assignment.assignedTo.length > 0) {
+        const isAssigned = assignment.assignedTo.some((item: any) => {
+          const id = item?._id || item;
+          return id?.toString() === req.user._id.toString();
+        });
+        if (!isAssigned) {
+          return res.status(403).json({ message: 'Bạn không được chỉ định làm bài tập này' });
+        }
+      }
+    }
+
     res.json(assignment);
   } catch (error) {
     console.error('getAssignmentById error:', error);
@@ -183,25 +210,28 @@ export const assignToStudents = async (req: AuthRequest, res: Response) => {
 // GET /api/assignments/my (Student)
 export const getMyAssignments = async (req: AuthRequest, res: Response) => {
   try {
-    // 1. Tìm các cuộc thi mà sinh viên đang tham gia
-    const participations = await SimulationParticipant.find({ userId: req.user._id });
+    // 1. Chỉ tìm các cuộc thi mà sinh viên đã tham gia và đang có trạng thái ACTIVE/APPROVED
+    const participations = await SimulationParticipant.find({
+      userId: req.user._id,
+      status: { $in: ['ACTIVE', 'APPROVED'] }
+    });
     const simulationIds = participations.map(p => p.simulationId);
 
-    // 2. Lấy tất cả bài tập:
-    // - Được gán trực tiếp cho sinh viên này
-    // - Thuộc cuộc thi sinh viên tham gia (nếu assignedTo trống)
-    // - Hoặc tất cả bài tập OPEN (để sinh viên dễ dàng thấy và làm bài thực hành)
+    // Nếu chưa tham gia bất kỳ kỳ thi mô phỏng nào, trả về rỗng ngay lập tức
+    if (simulationIds.length === 0) {
+      return res.json([]);
+    }
+
+    // 2. Lấy các bài tập:
+    // - BẮT BUỘC phải thuộc các cuộc thi sinh viên đã tham gia (simulationId in simulationIds)
+    // - VÀ: Hoặc được chỉ định trực tiếp cho sinh viên này (assignedTo chứa req.user._id)
+    // - Hoặc không chỉ định riêng sinh viên nào (assignedTo rỗng), dành cho toàn bộ người tham gia
     const assignments = await Assignment.find({
+      simulationId: { $in: simulationIds },
       $or: [
         { assignedTo: req.user._id },
-        { 
-          simulationId: { $in: simulationIds }, 
-          $or: [
-            { assignedTo: { $exists: false } },
-            { assignedTo: { $size: 0 } }
-          ]
-        },
-        { status: 'OPEN' }
+        { assignedTo: { $exists: false } },
+        { assignedTo: { $size: 0 } }
       ]
     })
       .populate('simulationId', 'name')
@@ -283,6 +313,30 @@ export const submitAssignment = async (req: AuthRequest, res: Response) => {
 
     if (assignment.status === 'CLOSED') {
       return res.status(400).json({ message: 'Bài tập này đã đóng, không thể nộp thêm' });
+    }
+
+    // Kiểm tra quyền nộp bài nếu là sinh viên
+    if (req.user && req.user.role === 'student') {
+      const simId = (assignment.simulationId as any)?._id || assignment.simulationId;
+      const isParticipant = await SimulationParticipant.findOne({
+        simulationId: simId,
+        userId: req.user._id,
+        status: { $in: ['ACTIVE', 'APPROVED'] }
+      });
+
+      if (!isParticipant) {
+        return res.status(403).json({ message: 'Bạn chưa tham gia kỳ thi mô phỏng này' });
+      }
+
+      if (assignment.assignedTo && assignment.assignedTo.length > 0) {
+        const isAssigned = assignment.assignedTo.some((item: any) => {
+          const id = item?._id || item;
+          return id?.toString() === req.user._id.toString();
+        });
+        if (!isAssigned) {
+          return res.status(403).json({ message: 'Bạn không được chỉ định làm bài tập này' });
+        }
+      }
     }
 
     // Upsert bài nộp của sinh viên

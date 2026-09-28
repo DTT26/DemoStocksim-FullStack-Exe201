@@ -39,6 +39,29 @@ export const AssignStudentsModal = ({ isOpen, onClose, assignment, onSaved }: As
     setLoading(true);
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const simId = assignment?.simulationId?._id || assignment?.simulationId;
+      
+      if (simId) {
+        const simRes = await fetch(`${apiUrl}/simulations/${simId}/participants`, { credentials: 'include' });
+        if (simRes.ok) {
+          const parts = await simRes.json();
+          if (Array.isArray(parts) && parts.length > 0) {
+            const enrolled = parts
+              .filter((p: any) => p.userId && (p.status === 'ACTIVE' || p.status === 'APPROVED'))
+              .map((p: any) => ({
+                _id: p.userId._id || p.userId,
+                name: p.userId.name || 'Học viên',
+                email: p.userId.email || '',
+                studentId: p.userId.studentId || ''
+              }));
+            if (enrolled.length > 0) {
+              setStudents(enrolled);
+              return;
+            }
+          }
+        }
+      }
+
       const response = await fetch(`${apiUrl}/users?role=student`, { credentials: 'include' });
       if (response.ok) {
         setStudents(await response.json());

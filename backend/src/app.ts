@@ -12,6 +12,7 @@ import challengeRoutes from './routes/challengeRoutes';
 import walletRoutes from './routes/walletRoutes';
 import aiRoutes from './routes/aiRoutes';
 import notificationRoutes from './routes/notification';
+import lecturerApplicationRoutes from './routes/lecturerApplication';
 
 const app = express();
 
@@ -76,5 +77,6 @@ app.use('/api/challenge', challengeRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/lecturer-applications', lecturerApplicationRoutes);
 
 export default app;

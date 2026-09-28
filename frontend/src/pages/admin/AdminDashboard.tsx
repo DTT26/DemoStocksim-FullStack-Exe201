@@ -23,6 +23,7 @@ export const AdminDashboard = () => {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<UserData[]>([]);
   const [simulations, setSimulations] = useState<SimulationData[]>([]);
+  const [pendingAppsCount, setPendingAppsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -30,13 +31,18 @@ export const AdminDashboard = () => {
     const fetchData = async () => {
       try {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-        const [usersRes, simsRes] = await Promise.all([
+        const [usersRes, simsRes, appsRes] = await Promise.all([
           fetch(`${apiUrl}/users`, { credentials: 'include' }),
           fetch(`${apiUrl}/simulations`, { credentials: 'include' }),
+          fetch(`${apiUrl}/lecturer-applications?status=PENDING`, { credentials: 'include' }).catch(() => null),
         ]);
 
         if (usersRes.ok) setUsers(await usersRes.json());
         if (simsRes.ok) setSimulations(await simsRes.json());
+        if (appsRes && appsRes.ok) {
+          const aData = await appsRes.json();
+          if (Array.isArray(aData)) setPendingAppsCount(aData.length);
+        }
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
         setError('Unable to load dashboard data.');
@@ -133,6 +139,35 @@ export const AdminDashboard = () => {
           Welcome back, <span className="text-blue-600 dark:text-blue-400 font-medium">{currentUser?.name || 'Admin'}</span>. Here's what's happening with StockSim.
         </p>
       </div>
+
+      {/* Pending Lecturer Applications Alert */}
+      {pendingAppsCount > 0 && (
+        <div className="bg-gradient-to-r from-purple-500/15 via-indigo-500/10 to-transparent border border-purple-500/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 animate-in fade-in duration-300">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-purple-600/30">
+              <GraduationCap className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                Có {pendingAppsCount} yêu cầu đăng ký làm Giảng viên đang chờ duyệt!
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                  Cần xử lý
+                </span>
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Các học viên đã nộp hồ sơ xin cấp quyền Giảng viên để tổ chức kỳ thi và giao bài tập.
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/admin/users?tab=requests"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-purple-600/20 whitespace-nowrap cursor-pointer"
+          >
+            <span>Xem và phê duyệt ngay</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
