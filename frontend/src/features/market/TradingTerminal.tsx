@@ -22,6 +22,7 @@ import { CoinInfoPanel } from './components/CoinInfoPanel';
 import { ContractInfoPanel } from './components/ContractInfoPanel';
 import { tradingApi } from '../../services/tradingApi';
 import { fetchAllMarketLivePrices, syncLiveMarketData } from '../../services/marketDataService';
+import { useMarketStore } from '../../stores/useMarketStore';
 import { PositionsManager } from './components/PositionsManager';
 import { useSimulatorStore } from './engine/useSimulatorStore';
 import { useNotificationStore } from '../../stores/useNotificationStore';
@@ -81,6 +82,14 @@ export const TradingTerminal = () => {
 
   const { user, login } = useAuth();
   const { addNotification } = useNotificationStore();
+  const fetchMarketData = useMarketStore(state => state.fetchMarketData);
+
+  // Khởi động polling live market data (Binance + BingX) mỗi 3 giây
+  useEffect(() => {
+    fetchMarketData(); // gọi ngay lần đầu
+    const interval = setInterval(fetchMarketData, 3000);
+    return () => clearInterval(interval);
+  }, [fetchMarketData]);
 
   const [watchlists, setWatchlists] = useState<Watchlist[]>(() => {
     try {
