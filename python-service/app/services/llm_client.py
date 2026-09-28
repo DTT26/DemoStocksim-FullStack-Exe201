@@ -37,7 +37,7 @@ class LLMClient:
         if not self.is_configured():
             return None
 
-        # Priority 1: Google Gemini (Fast, active models in environment)
+        # Priority 1: Google Gemini (Fast, active models)
         if self.gemini_key:
             try:
                 res = self._call_gemini(system_prompt, user_prompt, max_tokens)
@@ -64,12 +64,20 @@ class LLMClient:
     def _call_gemini(self, system_prompt: str, user_prompt: str, max_tokens: int = 1500) -> Optional[str]:
         # Models in order of current available quota & speed
         models = [
-            "gemini-3.5-flash-lite", 
-            "gemini-3.1-flash-lite", 
-            "gemini-3.6-flash", 
+            "gemini-3.6-flash",
+            "gemini-3.8-flash",
             "gemini-3.5-flash",
-            "gemini-3-flash-preview"
+            "gemini-flash-latest",
+            "gemini-3.1-flash-lite",
+            "gemini-3.5-flash-lite",
+            "gemini-flash-lite-latest",
+            "gemini-2.5-flash-lite",
+            "gemini-pro-latest",
+            "gemini-3.1-flash-lite-preview"
         ]
+
+        contents_parts: List[Dict[str, Any]] = [{"text": user_prompt}]
+
         for model in models:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={self.gemini_key}"
             payload = {
@@ -78,7 +86,7 @@ class LLMClient:
                 },
                 "contents": [
                     {
-                        "parts": [{"text": user_prompt}]
+                        "parts": contents_parts
                     }
                 ],
                 "generationConfig": {
@@ -88,7 +96,7 @@ class LLMClient:
                 }
             }
             try:
-                with httpx.Client(timeout=8.0) as client:
+                with httpx.Client(timeout=15.0) as client:
                     resp = client.post(url, json=payload)
                     if resp.status_code == 200:
                         data = resp.json()
@@ -100,9 +108,8 @@ class LLMClient:
                             if full_text:
                                 self.last_error = None
                                 return full_text
-                    elif resp.status_code == 429:
-                        # Rate limit on this specific model, proceed to next model immediately
-                        print(f"Gemini ({model}) Rate Limited (429), trying next model...")
+                    elif resp.status_code in [429, 503, 500, 502, 504, 404]:
+                        print(f"Gemini ({model}) HTTP {resp.status_code}, trying next model...")
                         continue
                     else:
                         err_json = resp.json() if "application/json" in resp.headers.get("content-type", "") else {}
@@ -111,6 +118,7 @@ class LLMClient:
                         print(f"Gemini ({model}) HTTP {resp.status_code}: {err_msg}")
                         if resp.status_code in [400, 401, 403]:
                             break
+                        continue
             except Exception as ex:
                 self.last_error = str(ex)
                 print(f"Error calling {model}: {ex}")
@@ -123,6 +131,7 @@ class LLMClient:
             "Authorization": f"Bearer {self.openai_key}",
             "Content-Type": "application/json"
         }
+
         payload = {
             "model": "gpt-4o-mini",
             "messages": [
@@ -133,7 +142,7 @@ class LLMClient:
             "max_tokens": max_tokens
         }
         try:
-            with httpx.Client(timeout=5.0) as client:
+            with httpx.Client(timeout=15.0) as client:
                 resp = client.post(url, headers=headers, json=payload)
                 if resp.status_code == 200:
                     data = resp.json()

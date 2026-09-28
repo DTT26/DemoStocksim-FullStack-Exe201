@@ -2,30 +2,57 @@ import type { KLineData } from 'klinecharts';
 import { fetchBinanceKlines, mapTimeframeToBinance, subscribeBinanceKline } from './binanceApi';
 
 export const BINGX_SYMBOL_MAP: Record<string, string> = {
-  // Hàng hóa (Commodities)
+  // Hàng hóa & Năng lượng (Commodities & Energy)
   'XAUUSD': 'NCCOGOLD2USD-USDT',
   'XAGUSD': 'NCCOXAG2USD-USDT',
   'USOIL': 'NCCO1OILWTI2USD-USDT',
+  'BRENT': 'NCCO1OILBRENT2USD-USDT',
+  'NGAS': 'NCCO7241NATGAS2USD-USDT',
+  'COPPER': 'NCCO724COPPER2USD-USDT',
+  'PLATINUM': 'NCCOXPT2USD-USDT',
 
-  // Ngoại hối (Forex)
+  // Ngoại hối chính & chéo (Forex Majors & Crosses)
   'EURUSD': 'NCFXEUR2USD-USDT',
   'GBPUSD': 'NCFXGBP2USD-USDT',
   'USDJPY': 'NCFXUSD2JPY-USDT',
   'AUDUSD': 'NCFXAUD2USD-USDT',
   'USDCAD': 'NCFXUSD2CAD-USDT',
+  'USDCHF': 'NCFXUSD2CHF-USDT',
+  'NZDUSD': 'NCFXNZD2USD-USDT',
+  'GBPJPY': 'NCFXGBP2JPY-USDT',
+  'EURJPY': 'NCFXEUR2JPY-USDT',
+  'EURGBP': 'NCFXEUR2GBP-USDT',
+  'AUDJPY': 'NCFXAUD2JPY-USDT',
+  'CHFJPY': 'NCFXCHF2JPY-USDT',
+  'CADJPY': 'NCFXCAD2JPY-USDT',
 
-  // Cổ phiếu Mỹ (US Stocks)
+  // Cổ phiếu Mỹ Big Tech & Bluechips (US Stocks)
   'AAPL': 'NCSKAAPL2USD-USDT',
   'MSFT': 'NCSKMSFT2USD-USDT',
   'TSLA': 'NCSKTSLA2USD-USDT',
   'NVDA': 'NCSKNVDA2USD-USDT',
+  'GOOGL': 'NCSKGOOGL2USD-USDT',
+  'AMZN': 'NCSKAMZN2USD-USDT',
+  'META': 'NCSKMETA2USD-USDT',
+  'AMD': 'NCSKAMD2USD-USDT',
+  'INTC': 'NCSKINTC2USD-USDT',
+  'BABA': 'NCSKBABA2USD-USDT',
+  'DIS': 'NCSKDIS2USD-USDT',
+  'COIN': 'NCSKCOIN2USD-USDT',
+  'UBER': 'NCSKUBER2USD-USDT',
+  'ORCL': 'NCSKORCL2USD-USDT',
   'KO': 'NCSKKO2USD-USDT',
   'JNJ': 'NCSKJNJ2USD-USDT',
 
-  // Chỉ số (Indices)
+  // Chỉ số toàn cầu & Sức mạnh USD (Global Indices & DXY)
   'SPX': 'NCSISP5002USD-USDT',
   'NDX': 'NCSINASDAQ1002USD-USDT',
   'DJI': 'NCSIDOWJONES2USD-USDT',
+  'DXY': 'NCSIDXY2USD-USDT',
+  'JP225': 'NCSINIKKEI2252USD-USDT',
+  'UK100': 'NCSIUK2USD-USDT',
+  'EU50': 'NCSIEUSTX2USD-USDT',
+  'US2000': 'NCSIRUSSELL20002USD-USDT',
 };
 
 // Bản đồ ngược từ mã BingX sang mã chuẩn của hệ thống

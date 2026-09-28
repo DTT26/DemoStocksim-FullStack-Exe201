@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { 
-  X, Sparkles, BookOpen, Layers, GitCompare, Compass, 
+  X, Sparkles, BookOpen, Layers, GitCompare, 
   Send, ExternalLink, HelpCircle, CheckCircle2, AlertTriangle, ShieldCheck, User,
   MessageSquare, Scale, Copy, Check, ChevronRight, Bot, Trash2, RefreshCw,
-  PlayCircle, Target, TrendingUp, Lightbulb, Play, CheckSquare, Square, ArrowRight
+  PlayCircle, Target, TrendingUp, Lightbulb
 } from 'lucide-react';
 import { aiService, type AskResponse, type StrategyComparisonData } from '../../services/aiService';
 import { STOCKS } from '../market/data';
@@ -153,10 +153,9 @@ export const AiTutorDrawer = ({
   currentPrice = 64200,
   timeframe = '15m',
   marketContext,
-  topOffset = 48,
-  onStartBacktestReplay
+  topOffset = 48
 }: AiTutorDrawerProps) => {
-  const [activeTab, setActiveTab] = useState<'tutor' | 'compare' | 'backtest'>('tutor');
+  const [activeTab, setActiveTab] = useState<'tutor' | 'compare'>('tutor');
   
   // Chat Q&A State
   const [query, setQuery] = useState('');
@@ -251,45 +250,6 @@ export const AiTutorDrawer = ({
   const [compareLoading, setCompareLoading] = useState(false);
   const [compareError, setCompareError] = useState<string | null>(null);
   const [compareData, setCompareData] = useState<StrategyComparisonData | null>(null);
-
-  // Backtest State
-  const [backtestLoading, setBacktestLoading] = useState(false);
-  const [backtestSpec, setBacktestSpec] = useState<any | null>(null);
-  const [btStrategy, setBtStrategy] = useState('FVG Rebalance (ICT)');
-  const [btTimeframe, setBtTimeframe] = useState('15m');
-  const [checkedChecklist, setCheckedChecklist] = useState<Record<number, boolean>>({});
-  const [copiedBacktestSpec, setCopiedBacktestSpec] = useState(false);
-
-  const toggleChecklistItem = (idx: number) => {
-    setCheckedChecklist(prev => ({
-      ...prev,
-      [idx]: !prev[idx]
-    }));
-  };
-
-  const handleCopyBacktestSpec = () => {
-    if (!backtestSpec) return;
-    const spec = backtestSpec.specification;
-    const text = `[KẾ HOẠCH BACKTEST: ${spec.strategy.toUpperCase()}]
-• Thị trường: ${activeSymbol} | Timeframe: ${btTimeframe}
-• Quản trị rủi ro: ${spec.riskPerTrade} | Giới hạn: ${spec.maxTradesPerDay} lệnh/ngày
-
-1. QUY TẮC VÀO LỆNH (ENTRY):
-${spec.entryRule}
-
-2. ĐIỂM DỪNG LỖ (STOP LOSS):
-${spec.stopLossRule}
-
-3. CHỐT LỜI (TAKE PROFIT):
-${spec.takeProfitRule}
-
-4. ĐIỀU KIỆN HỦY SETUP (INVALIDATION):
-${spec.invalidationRule}`;
-
-    navigator.clipboard.writeText(text);
-    setCopiedBacktestSpec(true);
-    setTimeout(() => setCopiedBacktestSpec(false), 2000);
-  };
 
   const handleAsk = async (questionText?: string) => {
     const q = (questionText || query).trim();
@@ -386,40 +346,12 @@ ${spec.invalidationRule}`;
     }
   };
 
-  const handleGenerateBacktest = async (symOverride?: string) => {
-    setBacktestLoading(true);
-    setCheckedChecklist({});
-    try {
-      const res = await aiService.getBacktestSpec({
-        strategy: btStrategy,
-        symbol: symOverride || activeSymbol,
-        timeframe: btTimeframe,
-        period: '2024'
-      });
-      setBacktestSpec(res);
-    } catch (err: any) {
-      console.error(err);
-    } finally {
-      setBacktestLoading(false);
-    }
-  };
-
   // Auto-run comparison when switching to compare tab or changing asset
   useEffect(() => {
     if (!isOpen) return;
     if (activeTab === 'compare') {
       if (!compareData || compareData.symbol !== activeSymbol) {
         handleRunComparison(activeSymbol, activePrice);
-      }
-    }
-  }, [isOpen, activeTab, activeSymbol]);
-
-  // Auto-run backtest when switching to backtest tab if not loaded
-  useEffect(() => {
-    if (!isOpen) return;
-    if (activeTab === 'backtest') {
-      if (!backtestSpec || backtestSpec.specification?.market !== activeSymbol) {
-        handleGenerateBacktest(activeSymbol);
       }
     }
   }, [isOpen, activeTab, activeSymbol]);
@@ -505,20 +437,6 @@ ${spec.invalidationRule}`;
         >
           <Scale className="w-3.5 h-3.5" />
           So sánh Chiến lược
-        </button>
-        <button
-          onClick={() => {
-            setActiveTab('backtest');
-            if (!backtestSpec) handleGenerateBacktest();
-          }}
-          className={`flex items-center gap-1.5 px-4 py-2.5 border-b-2 transition-colors ${
-            activeTab === 'backtest' 
-              ? 'border-amber-500 text-amber-600 dark:text-amber-400 font-semibold' 
-              : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-[#1e2329] dark:hover:text-slate-200'
-          }`}
-        >
-          <Compass className="w-3.5 h-3.5" />
-          Kế hoạch Backtest
         </button>
       </div>
 
@@ -1118,278 +1036,6 @@ ${spec.invalidationRule}`;
             )}
           </div>
         )}
-
-        {/* TAB 3: BACKTEST ASSISTANT */}
-        {activeTab === 'backtest' && (
-          <div className="space-y-3.5">
-            {/* 4-Step Educational Workflow Banner */}
-            <div className="p-3.5 rounded-xl bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-blue-500/10 border border-amber-500/25 space-y-2">
-              <div className="text-xs font-bold text-[#1e2329] dark:text-white flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  Quy Trình Kiểm Định Chiến Lược Khoa Học (4 Bước)
-                </span>
-                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-mono">
-                  Zero Look-Ahead Bias
-                </span>
-              </div>
-              
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[11px]">
-                <div className="p-2 rounded-lg bg-white/80 dark:bg-[#1a1e2b] border border-amber-500/20 space-y-0.5">
-                  <div className="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                    <span className="w-4 h-4 rounded-full bg-amber-500/20 text-center text-[10px] leading-4 font-mono">1</span>
-                    Lập Quy Tắc
-                  </div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400">AI thiết kế Entry, SL, TP cố định</div>
-                </div>
-
-                <div className="p-2 rounded-lg bg-white/80 dark:bg-[#1a1e2b] border border-blue-500/20 space-y-0.5">
-                  <div className="font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                    <span className="w-4 h-4 rounded-full bg-blue-500/20 text-center text-[10px] leading-4 font-mono">2</span>
-                    Mở Bar Replay
-                  </div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400">Cắt nến biểu đồ về quá khứ</div>
-                </div>
-
-                <div className="p-2 rounded-lg bg-white/80 dark:bg-[#1a1e2b] border border-emerald-500/20 space-y-0.5">
-                  <div className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                    <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-center text-[10px] leading-4 font-mono">3</span>
-                    Step Từng Cây
-                  </div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400">Tua nến và vào lệnh đúng setup</div>
-                </div>
-
-                <div className="p-2 rounded-lg bg-white/80 dark:bg-[#1a1e2b] border border-purple-500/20 space-y-0.5">
-                  <div className="font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1">
-                    <span className="w-4 h-4 rounded-full bg-purple-500/20 text-center text-[10px] leading-4 font-mono">4</span>
-                    Ghi Nhật Ký
-                  </div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400">Đánh giá 30-50 trade qua AI</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Backtest Strategy Configuration Card */}
-            <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#181b24] border border-[#e6e8ea] dark:border-[#2a2e39] space-y-3">
-              <div className="text-xs font-bold text-[#1e2329] dark:text-white flex items-center justify-between">
-                <span>Cấu hình Chiến lược &amp; Thị trường:</span>
-                <span className="text-[10px] text-slate-400 font-mono">Bước 1/4</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                <div>
-                  <label className="text-[10px] text-slate-500 dark:text-slate-400 block mb-1 font-semibold">Cặp Coin &amp; Sàn:</label>
-                  <select 
-                    value={activeSymbol}
-                    onChange={(e) => {
-                      const sym = e.target.value;
-                      setActiveSymbol(sym);
-                      const s = STOCKS.find(item => item.symbol === sym);
-                      if (s) setActivePrice(s.price);
-                    }}
-                    className="w-full bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-lg px-2.5 py-1.5 text-xs text-[#1e2329] dark:text-slate-200 focus:outline-none focus:border-amber-500"
-                  >
-                    {STOCKS.map(s => (
-                      <option key={s.symbol} value={s.symbol}>
-                        {s.symbol} ({s.exchange})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] text-slate-500 dark:text-slate-400 block mb-1 font-semibold">Chiến lược:</label>
-                  <select 
-                    value={btStrategy} 
-                    onChange={e => setBtStrategy(e.target.value)}
-                    className="w-full bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-lg px-2.5 py-1.5 text-xs text-[#1e2329] dark:text-slate-200 focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="FVG Rebalance (ICT)">FVG Rebalance (ICT)</option>
-                    <option value="Order Block & MSS (ICT)">Order Block &amp; MSS (ICT)</option>
-                    <option value="Breakout Retest (Price Action)">Breakout Retest (Price Action)</option>
-                    <option value="Pinbar Rejection at Support">Pinbar Rejection at Support</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] text-slate-500 dark:text-slate-400 block mb-1 font-semibold">Khung thời gian (TF):</label>
-                  <select 
-                    value={btTimeframe} 
-                    onChange={e => setBtTimeframe(e.target.value)}
-                    className="w-full bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-lg px-2.5 py-1.5 text-xs text-[#1e2329] dark:text-slate-200 focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="5m">5 Phút (M5 - Scalp)</option>
-                    <option value="15m">15 Phút (M15 - Day Trade)</option>
-                    <option value="1H">1 Giờ (H1 - Swing)</option>
-                    <option value="D">1 Ngày (Daily - Trend)</option>
-                  </select>
-                </div>
-              </div>
-              <button
-                onClick={() => handleGenerateBacktest()}
-                disabled={backtestLoading}
-                className="w-full py-2.5 rounded-lg bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
-              >
-                <Compass className={`w-3.5 h-3.5 ${backtestLoading ? 'animate-spin' : ''}`} />
-                {backtestLoading ? 'Đang thiết kế bộ đặc tả quy tắc...' : 'Thiết Kế Đặc Tả Quy Tắc Backtest'}
-              </button>
-            </div>
-
-            {/* Backtest Specification Results */}
-            {backtestSpec && (
-              <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#181b24] border border-[#e6e8ea] dark:border-[#2a2e39] space-y-3.5">
-                {/* Header */}
-                <div className="flex items-center justify-between pb-2 border-b border-[#e6e8ea] dark:border-[#2a2e39]">
-                  <div>
-                    <div className="text-xs font-bold text-[#1e2329] dark:text-white flex items-center gap-1.5">
-                      <Scale className="w-3.5 h-3.5 text-amber-500" />
-                      Bảng Đặc Tả Quy Tắc Giao Dịch
-                    </div>
-                    <div className="text-[10px] text-slate-400">
-                      Chiến lược: <strong className="text-slate-700 dark:text-slate-200">{backtestSpec.specification.strategy}</strong> • Cặp: <strong className="text-amber-500">{activeSymbol}</strong>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono font-semibold border border-emerald-500/20">
-                      Rủi ro: {backtestSpec.specification.riskPerTrade}
-                    </span>
-                    <button
-                      onClick={handleCopyBacktestSpec}
-                      className="px-2 py-0.5 rounded text-[10px] bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors flex items-center gap-1 cursor-pointer"
-                      title="Sao chép toàn bộ bộ quy tắc"
-                    >
-                      {copiedBacktestSpec ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
-                      <span>{copiedBacktestSpec ? 'Đã chép' : 'Sao chép'}</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Primary Action Button: Launch Bar Replay */}
-                <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-cyan-500/15 border border-emerald-500/30 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
-                      <Play className="w-3.5 h-3.5 fill-current text-emerald-500" />
-                      Sẵn Sàng Kiểm Định Thực Tế (Bước 2 &amp; 3)
-                    </span>
-                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">
-                      Khuyến nghị: 30 - 50 mẫu lệnh
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
-                    Nhấp nút bên dưới để hệ thống tự động đưa bạn về biểu đồ <strong>{activeSymbol}</strong> (Khung <strong>{btTimeframe}</strong>) và bật chế độ <strong>Bar Replay</strong>. Bạn chỉ cần bấm chọn một cây nến trong quá khứ để bắt đầu tua nến kiểm định!
-                  </p>
-                  <button
-                    onClick={() => {
-                      if (onStartBacktestReplay) {
-                        onStartBacktestReplay(
-                          activeSymbol,
-                          btTimeframe,
-                          backtestSpec?.specification
-                        );
-                      }
-                    }}
-                    className="w-full py-2.5 px-3 rounded-lg bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
-                  >
-                    <Play className="w-3.5 h-3.5 fill-current text-slate-950" />
-                    <span>Kích Hoạt Bar Replay Trên Biểu Đồ Ngay ({activeSymbol} - {btTimeframe})</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                
-                {/* 4 Rules Sections */}
-                <div className="space-y-2 text-[11px] text-slate-600 dark:text-slate-300">
-                  <div className="p-2.5 rounded-lg bg-white dark:bg-[#1e222d] border border-amber-500/20 space-y-1">
-                    <strong className="text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      1. Quy tắc Vào lệnh (Entry Rules):
-                    </strong>
-                    <div className="whitespace-pre-line leading-relaxed pl-5 font-mono text-[11px] text-slate-700 dark:text-slate-300">
-                      {backtestSpec.specification.entryRule}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div className="p-2.5 rounded-lg bg-white dark:bg-[#1e222d] border border-red-500/20 space-y-1">
-                      <strong className="text-red-600 dark:text-red-400 flex items-center gap-1.5">
-                        <AlertTriangle className="w-3.5 h-3.5" />
-                        2. Điểm Dừng Lỗ (Stop Loss):
-                      </strong>
-                      <div className="leading-relaxed pl-5 text-[11px]">
-                        {backtestSpec.specification.stopLossRule}
-                      </div>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg bg-white dark:bg-[#1e222d] border border-emerald-500/20 space-y-1">
-                      <strong className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                        <Target className="w-3.5 h-3.5" />
-                        3. Chốt Lời (Take Profit Target):
-                      </strong>
-                      <div className="leading-relaxed pl-5 text-[11px]">
-                        {backtestSpec.specification.takeProfitRule}
-                      </div>
-                    </div>
-                  </div>
-
-                  {backtestSpec.specification.invalidationRule && (
-                    <div className="p-2 rounded-lg bg-red-500/5 border border-red-500/20 text-[11px]">
-                      <strong className="text-red-500 font-semibold block mb-0.5">🛑 Điều kiện Hủy Bỏ Setup (Invalidation):</strong>
-                      <p className="text-slate-600 dark:text-slate-300">{backtestSpec.specification.invalidationRule}</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Interactive Checklist */}
-                <div className="pt-2 border-t border-[#e6e8ea] dark:border-[#2a2e39] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="text-[11px] font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                      <CheckSquare className="w-3.5 h-3.5 text-amber-500" />
-                      Checklist Kiểm Định Khách Quan (Bấm để đánh dấu):
-                    </div>
-                    <span className="text-[10px] text-amber-500 font-mono font-semibold">
-                      {Object.values(checkedChecklist).filter(Boolean).length}/{backtestSpec.checklist.length} tiêu chuẩn đã sẵn sàng
-                    </span>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                    <div 
-                      className="bg-amber-500 h-1.5 rounded-full transition-all duration-300"
-                      style={{ 
-                        width: `${(Object.values(checkedChecklist).filter(Boolean).length / Math.max(backtestSpec.checklist.length, 1)) * 100}%` 
-                      }}
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    {backtestSpec.checklist.map((c: string, idx: number) => {
-                      const isChecked = !!checkedChecklist[idx];
-                      return (
-                        <div 
-                          key={idx} 
-                          onClick={() => toggleChecklistItem(idx)}
-                          className={`flex items-start gap-2 p-1.5 rounded-lg text-[11px] transition-colors cursor-pointer select-none border ${
-                            isChecked 
-                              ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-700 dark:text-emerald-300' 
-                              : 'bg-white dark:bg-[#1e222d] border-[#e6e8ea] dark:border-[#2a2e39] text-slate-600 dark:text-slate-400 hover:border-amber-500/40'
-                          }`}
-                        >
-                          <span className={`shrink-0 mt-0.5 ${isChecked ? 'text-emerald-500' : 'text-slate-400'}`}>
-                            {isChecked ? <CheckSquare className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
-                          </span>
-                          <span className={isChecked ? 'line-through opacity-80' : ''}>
-                            {c}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Scientific Note */}
-                <div className="text-[10px] text-amber-800 dark:text-amber-300/80 bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20 leading-relaxed">
-                  {backtestSpec.note}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Footer / Input (For Tutor Tab) */}
@@ -1406,13 +1052,13 @@ ${spec.invalidationRule}`;
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Nhập câu hỏi bất kỳ (ví dụ: FVG là gì?, phân tích tâm lý FOMO, review lệnh...)..."
+              placeholder="Nhập câu hỏi bất kỳ (ví dụ: FVG là gì?, tính rủi ro lệnh, review vị thế...)..."
               className="w-full bg-[#f0f3fa] dark:bg-[#10141f] border border-[#e6e8ea] dark:border-[#2b3347] focus:border-amber-500/70 focus:ring-2 focus:ring-amber-500/20 rounded-xl pl-3.5 pr-10 py-2.5 text-xs text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none transition-all shadow-inner"
             />
             <button
               type="submit"
               disabled={loading || !query.trim()}
-              className="absolute right-1.5 p-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-20 disabled:pointer-events-none text-slate-950 transition-all shadow-sm"
+              className="absolute right-1.5 p-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-20 disabled:pointer-events-none text-slate-950 transition-all shadow-sm cursor-pointer"
               title="Gửi câu hỏi (Nhấn Enter)"
             >
               <Send className="w-3.5 h-3.5" />
