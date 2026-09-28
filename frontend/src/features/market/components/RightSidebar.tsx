@@ -681,9 +681,11 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
 
           {/* Custom Leverage Slider Inline OR Spot Mode Notification */}
           {isSpot ? (
-            <div className="flex items-center justify-between px-2.5 py-1.5 rounded bg-[#f0f3fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] text-xs">
-              <span className="text-[10px] text-[#787b86] uppercase tracking-wider font-semibold">Chế độ giao dịch</span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+            <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded bg-[#f0f3fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] text-xs">
+              <span className="text-[10px] text-[#787b86] uppercase font-semibold whitespace-nowrap shrink-0">
+                Chế độ giao dịch
+              </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 whitespace-nowrap shrink-0">
                 Spot (1X · Không đòn bẩy)
               </span>
             </div>
