@@ -528,6 +528,7 @@ export const TradingTerminal = () => {
           if (res && res.processed > 0) {
             fetchPortfolio(user._id);
             setTradeCount(c => c + 1);
+            useNotificationStore.getState().fetchNotifications();
             if (res.messages && Array.isArray(res.messages)) {
               res.messages.forEach((msg: string, i: number) => {
                 setTimeout(() => showToast(msg, 'success'), i * 800);
@@ -999,24 +1000,26 @@ export const TradingTerminal = () => {
               {/* Target */}
               <div className="flex items-center gap-1">
                 <span className="text-slate-400">Mục tiêu:</span>
-                <span className="font-bold text-emerald-400 font-mono">
-                  {challengeState.totalProfitUSD >= 0 ? '+' : ''}${challengeState.totalProfitUSD.toLocaleString('en-US', { maximumFractionDigits: 0 })} / +${((currentChallengeLevel.capitalUSD * currentChallengeLevel.profitTargetPercent) / 100).toLocaleString('en-US')}
+                <span className={`font-bold font-mono ${challengeState.totalProfitUSD > 0 ? 'text-emerald-400' : 'text-slate-400'}`}>
+                  {challengeState.totalProfitUSD > 0 
+                    ? `+$${challengeState.totalProfitUSD.toLocaleString('en-US', { maximumFractionDigits: 0 })}` 
+                    : '$0'} / +${((currentChallengeLevel.capitalUSD * currentChallengeLevel.profitTargetPercent) / 100).toLocaleString('en-US')}
                 </span>
               </div>
 
               {/* Daily Loss */}
               <div className="flex items-center gap-1">
                 <span className="text-slate-400">Lỗ ngày:</span>
-                <span className="font-bold text-amber-400 font-mono">
-                  -${challengeState.dailyLossUSD.toLocaleString('en-US', { maximumFractionDigits: 0 })} / -${((currentChallengeLevel.capitalUSD * currentChallengeLevel.dailyLossLimitPercent) / 100).toLocaleString('en-US')}
+                <span className={`font-bold font-mono ${challengeState.dailyLossUSD > 0 ? 'text-amber-400' : 'text-slate-400'}`}>
+                  {challengeState.dailyLossUSD > 0 ? `-$${challengeState.dailyLossUSD.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '$0'} / -${((currentChallengeLevel.capitalUSD * currentChallengeLevel.dailyLossLimitPercent) / 100).toLocaleString('en-US')}
                 </span>
               </div>
 
               {/* Max Drawdown */}
               <div className="flex items-center gap-1">
                 <span className="text-slate-400">Sụt giảm tối đa:</span>
-                <span className="font-bold text-rose-400 font-mono">
-                  -${challengeState.maxLossUSD.toLocaleString('en-US', { maximumFractionDigits: 0 })} / -${((currentChallengeLevel.capitalUSD * currentChallengeLevel.maxDrawdownPercent) / 100).toLocaleString('en-US')}
+                <span className={`font-bold font-mono ${challengeState.maxLossUSD > 0 ? 'text-rose-400' : 'text-slate-400'}`}>
+                  {challengeState.maxLossUSD > 0 ? `-$${challengeState.maxLossUSD.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '$0'} / -${((currentChallengeLevel.capitalUSD * currentChallengeLevel.maxDrawdownPercent) / 100).toLocaleString('en-US')}
                 </span>
               </div>
 

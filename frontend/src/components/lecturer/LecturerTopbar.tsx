@@ -29,12 +29,19 @@ export const LecturerTopbar = ({ mobileOpen, setMobileOpen }: LecturerTopbarProp
   const { notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead } = useNotificationStore();
 
   useEffect(() => {
+    if (!user?._id) {
+      useNotificationStore.getState().reset();
+      return;
+    }
+
     fetchNotifications();
     const interval = setInterval(() => {
-      fetchNotifications();
-    }, 30000);
+      if (document.visibilityState === 'visible') {
+        fetchNotifications();
+      }
+    }, 6000);
     return () => clearInterval(interval);
-  }, [fetchNotifications]);
+  }, [user?._id, fetchNotifications]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

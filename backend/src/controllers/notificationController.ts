@@ -176,3 +176,31 @@ export const clearMyNotifications = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Server Error' });
   }
 };
+
+/**
+ * POST /api/notifications
+ * Create custom notification for current user
+ */
+export const createCustomNotification = async (req: AuthRequest, res: Response) => {
+  try {
+    const { title, message, type, link } = req.body;
+    if (!title || !message) {
+      return res.status(400).json({ message: 'Title and message are required' });
+    }
+
+    const notification = await Notification.create({
+      userId: req.user._id,
+      title,
+      message,
+      type: type || 'TRADE',
+      link: link || '',
+      read: false
+    });
+
+    res.status(201).json({ success: true, notification });
+  } catch (error) {
+    console.error('createCustomNotification error:', error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+

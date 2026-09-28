@@ -6,6 +6,7 @@ import Transaction, { TransactionType } from '../models/Transaction';
 import Challenge from '../models/Challenge';
 import { WalletService } from './walletService';
 import { CHALLENGE_LEVELS } from './challengeService';
+import { createNotification } from '../controllers/notificationController';
 
 export class TradingService {
   static async getOrCreateWallet(userId: string) {
@@ -537,7 +538,13 @@ export class TradingService {
       if (isLiquidated || triggered) {
         processedCount++;
         await this.closePosition(userId, h.symbol, h.side, px);
-        messages.push(`Vị thế ${h.side} ${h.symbol} đã tự động đóng do ${triggerReason} tại giá ${px}`);
+        const msg = `Vị thế ${h.side} ${h.symbol} đã tự động đóng do ${triggerReason} tại giá ${px}`;
+        messages.push(msg);
+        await createNotification(userId, {
+          title: isLiquidated ? '⚠️ Thanh lý vị thế' : '🎯 Khớp lệnh tự động',
+          message: msg,
+          type: 'TRADE'
+        });
       }
     }
 
@@ -572,6 +579,11 @@ export class TradingService {
             amount: ord.margin,
             accountType: ctx.accountType,
             description: `Hủy lệnh chờ ${ord.side} ${ord.type} ${ord.symbol} do có vị thế ${oppositeSide} ngược chiều. Hoàn ký quỹ ${ord.margin >= 100 ? ord.margin.toLocaleString('vi-VN') : ord.margin.toFixed(2)}`
+          });
+          await createNotification(userId, {
+            title: 'Hủy lệnh chờ đối ứng',
+            message: `Hủy lệnh chờ ${ord.side} ${ord.type} ${ord.symbol} do có vị thế ngược chiều. Hoàn ký quỹ $${ord.margin.toFixed(2)}`,
+            type: 'TRADE'
           });
           continue;
         }
@@ -615,6 +627,11 @@ export class TradingService {
           description: `Khớp lệnh chờ ${ord.type} ${ord.side} ${ord.symbol} ở giá ${fillPrice >= 100 ? fillPrice.toLocaleString('vi-VN') : fillPrice.toFixed(2)} | Qty: ${ord.quantity.toFixed(4)}`
         });
         messages.push(`Lệnh chờ ${ord.type} ${ord.side} ${ord.symbol} đã khớp tại giá ${fillPrice}`);
+        await createNotification(userId, {
+          title: 'Khớp lệnh chờ',
+          message: `Lệnh chờ ${ord.type} ${ord.side} ${ord.symbol} đã khớp tại giá ${fillPrice >= 100 ? fillPrice.toLocaleString('vi-VN') : fillPrice.toFixed(2)}`,
+          type: 'TRADE'
+        });
       }
     }
 

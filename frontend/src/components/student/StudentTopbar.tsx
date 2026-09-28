@@ -29,16 +29,22 @@ export const StudentTopbar = ({ mobileOpen, setMobileOpen }: StudentTopbarProps)
   const { notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead } = useNotificationStore();
 
   useEffect(() => {
-    // Initial fetch
+    if (!user?._id) {
+      useNotificationStore.getState().reset();
+      return;
+    }
+
     fetchNotifications();
 
-    // Auto poll every 30 seconds
+    // Auto poll every 6 seconds
     const interval = setInterval(() => {
-      fetchNotifications();
-    }, 30000);
+      if (document.visibilityState === 'visible') {
+        fetchNotifications();
+      }
+    }, 6000);
 
     return () => clearInterval(interval);
-  }, [fetchNotifications]);
+  }, [user?._id, fetchNotifications]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

@@ -3,6 +3,7 @@ import Wallet, { IWallet } from '../models/Wallet';
 import Holding from '../models/Holding';
 import Order, { OrderStatus } from '../models/Order';
 import Transaction, { TransactionType } from '../models/Transaction';
+import { createNotification } from '../controllers/notificationController';
 
 export const MAX_NORMAL_RESETS_PER_DAY = 1;
 export const MAX_NORMAL_RESETS_PER_WEEK = 4;
@@ -178,6 +179,12 @@ export class WalletService {
       type: TransactionType.DEPOSIT,
       amount: DEFAULT_NORMAL_BALANCE,
       description: `Khôi phục số dư tài khoản về $${DEFAULT_NORMAL_BALANCE.toLocaleString('en-US')} USD (Lần ${wallet.resetsUsedThisWeek}/${MAX_NORMAL_RESETS_PER_WEEK} trong tuần)`
+    });
+
+    await createNotification(userId, {
+      title: 'Khôi phục số dư $100,000 USD',
+      message: `Đã khôi phục số dư tài khoản về $${DEFAULT_NORMAL_BALANCE.toLocaleString('en-US')} USD thành công (Lần ${wallet.resetsUsedThisWeek}/${MAX_NORMAL_RESETS_PER_WEEK} trong tuần).`,
+      type: 'SYSTEM'
     });
 
     const remainingResets = MAX_NORMAL_RESETS_PER_WEEK - wallet.resetsUsedThisWeek;
