@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { X, Search } from 'lucide-react';
-import { STOCKS, type Stock, type MarketCategory, formatVolume } from '../data';
+import { type Stock, type MarketCategory, formatVolume } from '../data';
 import { AssetAvatar, ExchangeBadge } from './AssetAvatar';
+import { useMarketStore } from '../../../stores/useMarketStore';
 
 interface SymbolSearchModalProps {
   isOpen: boolean;
@@ -22,12 +23,21 @@ const CATEGORIES: ('Tất cả' | MarketCategory)[] = [
 ];
 
 export const SymbolSearchModal = ({ isOpen, onClose, onSelect, watchlistMode, activeWatchlistSymbols = [], onToggleWatchlist }: SymbolSearchModalProps) => {
+  const stocks = useMarketStore(state => state.stocks);
+  const fetchMarketData = useMarketStore(state => state.fetchMarketData);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<'Tất cả' | MarketCategory>('Tất cả');
   const [activeExchange, setActiveExchange] = useState<string>('Tất cả');
   const [activeType, setActiveType] = useState<'Tất cả' | 'Spot' | 'Futures'>('Tất cả');
   const [volatilityFilter, setVolatilityFilter] = useState<'all' | 'gainers' | 'losers' | 'volatile'>('all');
   const [volumeFilter, setVolumeFilter] = useState<'all' | 'vol_desc' | 'vol_over_1b'>('all');
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchMarketData();
+    }
+  }, [isOpen, fetchMarketData]);
 
   // Reset sub-filters when category changes
   const handleCategoryChange = (cat: 'Tất cả' | MarketCategory) => {
@@ -38,16 +48,16 @@ export const SymbolSearchModal = ({ isOpen, onClose, onSelect, watchlistMode, ac
 
   const availableExchanges = useMemo(() => {
     const exchanges = new Set<string>();
-    STOCKS.forEach(stock => {
+    stocks.forEach(stock => {
       if (activeCategory === 'Tất cả' || stock.market === activeCategory) {
         exchanges.add(stock.exchange);
       }
     });
     return ['Tất cả', ...Array.from(exchanges)];
-  }, [activeCategory]);
+  }, [activeCategory, stocks]);
 
   const filteredStocks = useMemo(() => {
-    let list = STOCKS.filter((stock) => {
+    let list = stocks.filter((stock) => {
       const matchesSearch =
         stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
         stock.name.toLowerCase().includes(searchQuery.toLowerCase());

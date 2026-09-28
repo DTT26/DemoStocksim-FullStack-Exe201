@@ -3,6 +3,7 @@ import { Search, BarChart2, Play, Pause, Square, ChevronRight, CandlestickChart,
 import { TIMEFRAMES, getPricePrecision, type Stock } from '../data';
 import { AssetAvatar } from './AssetAvatar';
 import { useI18n } from '../../../contexts/I18nContext';
+import { useMarketStore } from '../../../stores/useMarketStore';
 
 interface TickerHeaderProps {
   stock: Stock;
@@ -68,10 +69,16 @@ export const TickerHeader = ({
   const precision = getPricePrecision(stock.price);
   const markPrice = (stock.price * 1.0002).toFixed(precision);
   const indexPrice = (stock.price * 1.0001).toFixed(precision);
-  const high24h = stock.price * 1.022;
-  const low24h = stock.price * 0.978;
-  const vol24h = stock.price > 1000 ? 158.49 : 15849.2;
-  const volUSDT = stock.price > 1000 ? 396.55 : 39.65;
+
+  const ticker = useMarketStore(state => state.tickers[stock.symbol]);
+  const high24h = ticker?.high24h || stock.price * 1.022;
+  const low24h = ticker?.low24h || stock.price * 0.978;
+  const vol24h = ticker?.volume24h
+    ? (ticker.volume24h >= 1000 ? ticker.volume24h / 1000 : ticker.volume24h)
+    : (stock.price > 1000 ? 158.49 : 15849.2);
+  const volUSDT = ticker?.quoteVolume24h
+    ? (ticker.quoteVolume24h >= 1_000_000 ? ticker.quoteVolume24h / 1_000_000 : ticker.quoteVolume24h)
+    : (stock.price > 1000 ? 396.55 : 39.65);
   const isUp = stock.type === 'up';
 
   return (

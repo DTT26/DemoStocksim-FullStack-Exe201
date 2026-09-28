@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Plus, MoreHorizontal, ChevronDown, Check, List, Trash2, Edit2, Copy, Share2 } from 'lucide-react';
 import { STOCKS, type Stock } from '../data';
+import { useMarketStore } from '../../../stores/useMarketStore';
 import { SymbolSearchModal } from './SymbolSearchModal';
 import { AuthOverlay } from './AuthOverlay';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -38,6 +39,7 @@ export const WatchlistPanel = ({
 }: WatchlistPanelProps) => {
   const { user } = useAuth();
   const { t } = useI18n();
+  const stocks = useMarketStore(state => state.stocks);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -233,7 +235,7 @@ export const WatchlistPanel = ({
               </div>
             ) : (
               activeWatchlist?.symbols.map(symbol => {
-                const stock = STOCKS.find(s => s.symbol === symbol);
+                const stock = stocks.find(s => s.symbol === symbol);
                 if (!stock) return null;
                 
                 const isSelected = currentSymbol === symbol;

@@ -21,6 +21,7 @@ import { TickerHeader } from './components/TickerHeader';
 import { CoinInfoPanel } from './components/CoinInfoPanel';
 import { ContractInfoPanel } from './components/ContractInfoPanel';
 import { tradingApi } from '../../services/tradingApi';
+import { fetchAllMarketLivePrices, syncLiveMarketData } from '../../services/marketDataService';
 import { PositionsManager } from './components/PositionsManager';
 import { useSimulatorStore } from './engine/useSimulatorStore';
 import { useNotificationStore } from '../../stores/useNotificationStore';
@@ -488,31 +489,25 @@ export const TradingTerminal = () => {
       });
 
       try {
-        if (Date.now() - (window as any).lastBinanceFetchTime > 3000 || !(window as any).lastBinanceFetchTime) {
-          (window as any).lastBinanceFetchTime = Date.now();
-          const [spotRes, futRes] = await Promise.all([
-            fetch('https://api.binance.com/api/v3/ticker/price').catch(() => null),
-            fetch('https://fapi.binance.com/fapi/v1/ticker/price').catch(() => null)
-          ]);
-          if (!(window as any).cachedBinancePrices) (window as any).cachedBinancePrices = {};
-
-          if (spotRes) {
-            const spotData = await spotRes.json();
-            spotData.forEach((item: any) => (window as any).cachedBinancePrices[item.symbol] = parseFloat(item.price));
-          }
-          if (futRes) {
-            const futData = await futRes.json();
-            futData.forEach((item: any) => (window as any).cachedBinancePrices[item.symbol + '.P'] = parseFloat(item.price));
-          }
+        if (Date.now() - (window as any).lastMarketFetchTime > 3000 || !(window as any).lastMarketFetchTime) {
+          (window as any).lastMarketFetchTime = Date.now();
+          const livePrices = await fetchAllMarketLivePrices();
+          (window as any).cachedMarketPrices = livePrices;
+          syncLiveMarketData(STOCKS);
         }
       } catch (err) { }
 
-      // Ghi đè toàn bộ giá Live từ Binance để tránh việc gửi giá ảo (mặc định) lên server gây cắt lỗ oan
-      if ((window as any).cachedBinancePrices) {
+      // Ghi đè toàn bộ giá Live đa sàn (Binance, BingX) để tránh việc gửi giá cũ lên server gây cắt lỗ oan
+      if ((window as any).cachedMarketPrices) {
+        const cached = (window as any).cachedMarketPrices;
         Object.keys(priceMap).forEach(sym => {
-          if ((window as any).cachedBinancePrices[sym]) {
-            priceMap[sym] = (window as any).cachedBinancePrices[sym];
-          }
+          if (cached[sym]) priceMap[sym] = cached[sym];
+        });
+        Object.keys(positions).forEach(sym => {
+          if (cached[sym]) priceMap[sym] = cached[sym];
+        });
+        pendingOrders.forEach(o => {
+          if (cached[o.symbol]) priceMap[o.symbol] = cached[o.symbol];
         });
       }
 
