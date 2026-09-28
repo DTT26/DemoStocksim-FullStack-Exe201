@@ -5,9 +5,9 @@ import User from '../models/User';
 export interface AuthRequest extends Request {
   user?: any;
 }
-
 export const protect = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const jwtSecret = process.env.JWT_ACCESS_SECRET || 'fallback_secret_key_change_this_in_production';
+  const tokensToTry: string[] = [];
   // Prioritize Authorization Bearer header from active client session
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     const bearer = req.headers.authorization.split(' ')[1];
@@ -64,14 +64,14 @@ export const optionalProtect = async (req: AuthRequest, res: Response, next: Nex
   const jwtSecret = process.env.JWT_ACCESS_SECRET || 'fallback_secret_key_change_this_in_production';
   const tokensToTry: string[] = [];
 
-  if (req.cookies && req.cookies.token) {
-    tokensToTry.push(req.cookies.token);
-  }
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     const bearer = req.headers.authorization.split(' ')[1];
     if (bearer && !tokensToTry.includes(bearer)) {
       tokensToTry.push(bearer);
     }
+  }
+  if (req.cookies && req.cookies.token) {
+    tokensToTry.push(req.cookies.token);
   }
 
   for (const token of tokensToTry) {
