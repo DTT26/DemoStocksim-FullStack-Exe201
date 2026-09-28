@@ -299,9 +299,22 @@ export class ChallengeService {
     if (challenge.status !== 'ACTIVE') return challenge;
 
     const levelConfig = CHALLENGE_LEVELS.find(l => l.id === challenge.currentLevel) || CHALLENGE_LEVELS[0];
-    // Luôn lấy số dư độc lập của bài thi Cấp Vốn, tuyệt đối không lấy số dư của ví thường
+    
+    // Tính tổng tiền ký quỹ đang nằm trong các vị thế mở và lệnh chờ của bài thi
+    const challengeHoldings = await Holding.find({ userId, accountType: 'CHALLENGE' });
+    let totalPositionMargin = 0;
+    for (const h of challengeHoldings) {
+      totalPositionMargin += (h.averagePrice * h.quantity) / (h.leverage || 1);
+    }
+    const challengePendingOrders = await Order.find({ userId, status: OrderStatus.PENDING, accountType: 'CHALLENGE' });
+    let totalPendingMargin = 0;
+    for (const ord of challengePendingOrders) {
+      totalPendingMargin += (ord.margin || 0);
+    }
+
+    // Luôn tính Equity chuẩn = Tiền mặt khả dụng + Ký quỹ vị thế + Ký quỹ lệnh chờ + Lãi/lỗ tạm tính
     const balanceUSD = challenge.currentBalanceUSD;
-    const currentEquity = balanceUSD + unrealizedPnLUSD;
+    const currentEquity = balanceUSD + totalPositionMargin + totalPendingMargin + unrealizedPnLUSD;
     const startingCapital = challenge.startingCapitalUSD;
 
     const totalProfit = currentEquity - startingCapital;
