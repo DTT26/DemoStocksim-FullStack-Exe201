@@ -138,23 +138,56 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     }
   },
 
-  addNotification: (notification) => {
-    const id = notification._id || Math.random().toString(36).substring(7);
+  addNotification: async (notification) => {
+    const tempId = notification._id || Math.random().toString(36).substring(7);
     const newNotif: AppNotification = {
-      _id: id,
-      id: id,
+      _id: tempId,
+      id: tempId,
       title: notification.title,
       message: notification.message || notification.description || '',
       description: notification.message || notification.description || '',
-      type: notification.type || 'SYSTEM',
+      type: notification.type || 'TRADE',
       link: notification.link,
       read: false,
       createdAt: new Date().toISOString(),
       timestamp: Date.now(),
     };
+
+    // 1. Cập nhật giao diện ngay lập tức
     set((state) => ({
       notifications: [newNotif, ...state.notifications].slice(0, 50),
       unreadCount: state.unreadCount + 1,
     }));
+
+    // 2. Lưu trực tiếp vào Database MongoDB để không bị mất khi logout/login lại
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const res = await fetch(`${getApiUrl()}/notifications`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            title: newNotif.title,
+            message: newNotif.message,
+            type: newNotif.type,
+            link: newNotif.link,
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.notification?._id) {
+            set((state) => ({
+              notifications: state.notifications.map((n) =>
+                n._id === tempId ? { ...n, _id: data.notification._id, id: data.notification._id } : n
+              )
+            }));
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to persist notification to MongoDB:', err);
+    }
   },
 }));

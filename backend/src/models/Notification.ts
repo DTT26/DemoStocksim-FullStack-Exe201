@@ -13,7 +13,13 @@ export interface INotification extends Document {
     | 'ASSIGNMENT_DUE' 
     | 'ASSIGNMENT_SUBMITTED' 
     | 'ASSIGNMENT_GRADED' 
-    | 'SYSTEM';
+    | 'TRADE'
+    | 'SYSTEM'
+    | 'info'
+    | 'success'
+    | 'warning'
+    | 'error'
+    | string;
   read: boolean;
   link?: string;
   createdAt: Date;
@@ -27,17 +33,6 @@ const NotificationSchema: Schema = new Schema(
     message: { type: String, required: true },
     type: {
       type: String,
-      enum: [
-        'SIMULATION_JOIN',
-        'SIMULATION_APPROVED',
-        'SIMULATION_REJECTED',
-        'SIMULATION_KICKED',
-        'ASSIGNMENT_NEW',
-        'ASSIGNMENT_DUE',
-        'ASSIGNMENT_SUBMITTED',
-        'ASSIGNMENT_GRADED',
-        'SYSTEM'
-      ],
       default: 'SYSTEM'
     },
     read: { type: Boolean, default: false, index: true },
