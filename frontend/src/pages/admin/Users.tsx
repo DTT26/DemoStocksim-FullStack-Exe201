@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Filter, MoreVertical, UserX, UserCheck, Shield, ChevronLeft, ChevronRight, AlertTriangle, Users, X, ArrowUpDown } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Search, Filter, MoreVertical, UserX, UserCheck, Shield, ChevronLeft, ChevronRight, AlertTriangle, Users, X, ArrowUpDown, GraduationCap } from 'lucide-react';
+import { LecturerRequestsTab } from './components/LecturerRequestsTab';
 
 interface UserData {
   _id: string;
@@ -116,6 +118,11 @@ const SuspendModal = ({ user, onClose, onConfirm }: { user: UserData; onClose: (
 
 // --- Main Page ---
 export const AdminUsers = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') === 'requests' ? 'requests' : 'users';
+  const [activeTab, setActiveTab] = useState<'users' | 'requests'>(initialTab);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -129,6 +136,31 @@ export const AdminUsers = () => {
   const [editRoleUser, setEditRoleUser] = useState<UserData | null>(null);
   const [suspendUser, setSuspendUser] = useState<UserData | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'requests') {
+      setActiveTab('requests');
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const fetchPendingCount = async () => {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+        const res = await fetch(`${apiUrl}/lecturer-applications?status=PENDING`, { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setPendingRequestsCount(data.length);
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    fetchPendingCount();
+  }, []);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -243,8 +275,46 @@ export const AdminUsers = () => {
         <p className="text-slate-500 dark:text-slate-400 mt-1 sm:mt-2 text-sm sm:text-base">View, search, filter and manage users in the system.</p>
       </div>
 
-      {/* Toolbar & Table Card */}
-      <div className="bg-white dark:bg-[#09090b] rounded-2xl border border-slate-200 dark:border-[#262626] shadow-sm dark:shadow-lg overflow-hidden">
+      {/* Tab Switcher */}
+      <div className="flex border-b border-slate-200 dark:border-[#262626] gap-2">
+        <button
+          onClick={() => { setActiveTab('users'); setSearchParams({}); }}
+          className={`flex items-center gap-2 py-3 px-4 font-semibold text-sm border-b-2 transition-all cursor-pointer ${
+            activeTab === 'users'
+              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>Tất cả người dùng ({users.length})</span>
+        </button>
+
+        <button
+          onClick={() => { setActiveTab('requests'); setSearchParams({ tab: 'requests' }); }}
+          className={`flex items-center gap-2 py-3 px-4 font-semibold text-sm border-b-2 transition-all cursor-pointer ${
+            activeTab === 'requests'
+              ? 'border-purple-600 text-purple-600 dark:text-purple-400'
+              : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+          }`}
+        >
+          <GraduationCap className="w-4 h-4" />
+          <span>Đăng ký Giảng viên</span>
+          {pendingRequestsCount > 0 && (
+            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-white animate-pulse">
+              {pendingRequestsCount} chờ duyệt
+            </span>
+          )}
+        </button>
+      </div>
+
+      {activeTab === 'requests' ? (
+        <LecturerRequestsTab 
+          onRoleChanged={fetchUsers} 
+          onPendingCountChange={setPendingRequestsCount} 
+        />
+      ) : (
+        /* Toolbar & Table Card */
+        <div className="bg-white dark:bg-[#09090b] rounded-2xl border border-slate-200 dark:border-[#262626] shadow-sm dark:shadow-lg overflow-hidden">
         <div className="p-4 flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
           {/* Search */}
           <div className="relative w-full lg:max-w-sm">
@@ -512,6 +582,7 @@ export const AdminUsers = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* Modals */}
       {editRoleUser && (

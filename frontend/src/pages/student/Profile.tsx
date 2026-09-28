@@ -4,6 +4,7 @@ import { Mail, CheckCircle2, Save, X, Edit3, User, Phone, BookOpen, GraduationCa
 import { ChangePasswordCard } from '../../components/ChangePasswordCard';
 import { AvatarChangeModal } from '../../components/AvatarChangeModal';
 import { UserAvatar } from '../../components/UserAvatar';
+import { LecturerRegistrationCard } from '../../components/student/LecturerRegistrationCard';
 
 export const StudentProfile = () => {
   const { user, refreshUser } = useAuth();
@@ -390,6 +391,9 @@ export const StudentProfile = () => {
               </div>
             </div>
           </div>
+
+          {/* Đăng ký làm Giảng viên (Lecturer Registration) */}
+          <LecturerRegistrationCard user={user} onRefreshUser={refreshUser} />
 
           {/* Đổi mật khẩu */}
           <ChangePasswordCard />

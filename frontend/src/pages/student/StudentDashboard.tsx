@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { TrendingUp, Target, Activity, BookOpen, Clock, ArrowRight, Trophy } from 'lucide-react';
+import { TrendingUp, Target, Activity, BookOpen, Clock, ArrowRight, Trophy, GraduationCap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -42,7 +42,7 @@ export const StudentDashboard = () => {
           const pData = await partRes.json();
           if (Array.isArray(pData)) {
             setParticipations(pData);
-            const approved = pData.find(p => p.status === 'APPROVED');
+            const approved = pData.find(p => p.status === 'APPROVED' || p.status === 'ACTIVE');
             if (approved && approved.simulationId) {
               setActiveSimulation(approved.simulationId);
             }
@@ -305,6 +305,32 @@ export const StudentDashboard = () => {
               )}
             </div>
           </div>
+
+          {/* CTA: Register as Lecturer */}
+          {user?.role === 'student' && (
+            <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-blue-500/10 dark:from-indigo-950/40 dark:via-purple-950/30 dark:to-blue-950/30 border border-indigo-200 dark:border-indigo-500/30 rounded-2xl p-5 shadow-sm transition-all">
+              <div className="flex items-start gap-3.5">
+                <div className="p-2.5 rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-600/30 shrink-0">
+                  <GraduationCap className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Trở thành Giảng viên StockSim
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                    Bạn muốn tạo kỳ thi mô phỏng, giao đề bài và chấm điểm học viên? Đăng ký ngay để Admin xét duyệt.
+                  </p>
+                  <Link
+                    to="/student/profile#lecturer-registration"
+                    className="inline-flex items-center gap-1.5 mt-3 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+                  >
+                    <span>Đăng ký làm Giảng viên trong Hồ sơ</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
