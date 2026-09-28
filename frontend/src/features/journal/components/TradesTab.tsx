@@ -157,6 +157,15 @@ export const TradesTab: React.FC<TradesTabProps> = ({ session }) => {
                           {isLong ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                           {trade.side}
                         </span>
+                        <span
+                          className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${
+                            trade.status === 'OPEN'
+                              ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                          }`}
+                        >
+                          {trade.status || 'CLOSED'}
+                        </span>
                       </div>
 
                       <div className="text-right">
@@ -308,20 +317,26 @@ export const TradesTab: React.FC<TradesTabProps> = ({ session }) => {
                                 : 'text-slate-500'
                             }
                           >
-                            {formatMoneyVND(trade.pnl, true)}
+                            {trade.status === 'OPEN' && (!trade.pnl || trade.pnl === 0) ? '$0.00' : formatMoneyVND(trade.pnl, true)}
                           </span>
                         </td>
 
                         <td className="py-3.5 px-3 text-right font-semibold text-xs">
                           {trade.returnRate !== undefined ? (
-                            <span className={trade.returnRate >= 0 ? 'text-emerald-500' : 'text-rose-500'}>
+                            <span className={trade.returnRate > 0 ? 'text-emerald-500' : trade.returnRate < 0 ? 'text-rose-500' : 'text-slate-500'}>
                               {formatPercent(trade.returnRate, true)}
                             </span>
                           ) : '-'}
                         </td>
 
                         <td className="py-3.5 px-3 text-center">
-                          <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                          <span
+                            className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                              trade.status === 'OPEN'
+                                ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                            }`}
+                          >
                             {trade.status || 'CLOSED'}
                           </span>
                         </td>

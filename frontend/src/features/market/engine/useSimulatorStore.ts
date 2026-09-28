@@ -37,6 +37,67 @@ interface SimulatorState {
   reset: () => void;
 }
 
+let syncTimeout: any = null;
+const debouncedSyncToBackend = () => {
+  if (syncTimeout) clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(async () => {
+    const state = useSimulatorStore.getState();
+    if (!state.session?._id) return;
+
+    try {
+      const { updateSession } = await import('../../../services/marketApi');
+      const history = state.history || [];
+      const positions = state.positions || [];
+      const totalTrades = history.length + positions.length;
+      const winningTrades = history.filter(h => h.netPnL > 0);
+      const losingTrades = history.filter(h => h.netPnL <= 0);
+      const wins = winningTrades.length;
+      const losses = losingTrades.length;
+      const winRate = history.length > 0 ? parseFloat(((wins / history.length) * 100).toFixed(1)) : 0;
+      const grossProfit = winningTrades.reduce((sum, h) => sum + h.netPnL, 0);
+      const grossLoss = losingTrades.reduce((sum, h) => sum + Math.abs(h.netPnL), 0);
+      const netPnL = grossProfit - grossLoss;
+
+      const statistics = {
+        totalTrades,
+        wins,
+        losses,
+        winRate,
+        grossProfit,
+        grossLoss,
+        netPnL,
+        averageWin: wins > 0 ? grossProfit / wins : 0,
+        averageLoss: losses > 0 ? grossLoss / losses : 0,
+        largestWin: wins > 0 ? Math.max(...winningTrades.map(h => h.netPnL)) : 0,
+        largestLoss: losses > 0 ? Math.max(...losingTrades.map(h => Math.abs(h.netPnL))) : 0,
+        maxDrawdown: 0,
+        averageRR: 0
+      };
+
+      const sessionData = {
+        balance: state.session.balance,
+        equity: state.session.equity,
+        usedMargin: state.session.usedMargin,
+        freeMargin: state.session.freeMargin,
+        replayCurrentTime: state.session.replayCurrentTime || state.currentTime,
+        statistics,
+        status: state.session.status || 'running'
+      };
+
+      await updateSession(state.session._id, {
+        sessionData,
+        positions: state.positions,
+        orders: state.orders,
+        history: state.history
+      });
+
+      window.dispatchEvent(new Event('simulator-session-updated'));
+    } catch (err) {
+      console.warn('Auto-sync simulator session failed:', err);
+    }
+  }, 200);
+};
+
 export const useSimulatorStore = create<SimulatorState>((set, get) => ({
   isActive: false,
   session: null,
@@ -77,6 +138,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       currentAsk: initP > 0 ? initP + spread : 0,
       currentTime: session.replayStartTime,
     });
+    debouncedSyncToBackend();
   },
 
   loadSession: (session, positions, orders, history, initialPrice) => {
@@ -96,6 +158,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
   },
 
   endSession: async () => {
+    if (syncTimeout) clearTimeout(syncTimeout);
     const state = get();
     if (!state.session) return;
     
@@ -156,10 +219,11 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       await updateSession(finalSession._id, {
         sessionData: payload,
         positions: [], // all closed
-        orders: finalState.orders, // could cancel pending too, but backend will just store them or delete them
+        orders: finalState.orders,
         history: finalState.history
       });
-      // Fire a custom event to notify TradingTerminal to refresh sessions
+      // Fire custom events to notify views to refresh
+      window.dispatchEvent(new Event('simulator-session-updated'));
       window.dispatchEvent(new Event('simulator-session-ended'));
     } catch (e) {
       console.error('Failed to sync completed session to backend', e);
@@ -354,6 +418,11 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       // Update state
       const finalEquity = balance + floatingPnL;
       
+      const hasTradesChanged = history.length !== draft.history.length || positions.length !== draft.positions.length || orders.length !== draft.orders.length;
+      if (hasTradesChanged) {
+        debouncedSyncToBackend();
+      }
+
       return {
         currentPrice: price,
         currentBid: bid,
@@ -429,6 +498,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
         }
       };
     });
+    debouncedSyncToBackend();
   },
 
   placePendingOrder: (type, side, price, lot, sl, tp, setupTag) => {
@@ -451,6 +521,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
     set(draft => ({
       orders: [...draft.orders, newOrder]
     }));
+    debouncedSyncToBackend();
   },
 
   closePosition: (positionId, reason = 'MANUAL') => {
@@ -522,18 +593,21 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
         }
       };
     });
+    debouncedSyncToBackend();
   },
 
   cancelOrder: (orderId) => {
     set(draft => ({
       orders: draft.orders.filter(o => o.id !== orderId)
     }));
+    debouncedSyncToBackend();
   },
 
   updateTPSL: (positionId, sl, tp) => {
     set(draft => ({
       positions: draft.positions.map(p => p.id === positionId ? { ...p, sl, tp } : p)
     }));
+    debouncedSyncToBackend();
   },
 
   setLeverage: (leverage) => {

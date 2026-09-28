@@ -30,22 +30,33 @@ export const StudentJournal: React.FC = () => {
     simulation: 'ALL'
   });
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     setError(false);
     try {
       const data = await journalService.getSessions(user?._id);
       setSessions(data);
     } catch (e) {
       console.error('Failed to load trading journal sessions', e);
-      setError(true);
+      if (showLoading) setError(true);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    loadData(true);
+
+    const handleUpdate = () => {
+      loadData(false);
+    };
+
+    window.addEventListener('simulator-session-updated', handleUpdate);
+    window.addEventListener('simulator-session-ended', handleUpdate);
+    return () => {
+      window.removeEventListener('simulator-session-updated', handleUpdate);
+      window.removeEventListener('simulator-session-ended', handleUpdate);
+    };
   }, [user?._id]);
 
   // Extract distinct simulations for the top selector dropdown

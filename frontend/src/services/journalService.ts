@@ -291,11 +291,13 @@ const SEED_SESSIONS: JournalSession[] = [
     ]
   }
 ];
+import { getContractMultiplier } from '../features/market/data';
+
 export const journalService = {
   /**
    * Fetch all journal sessions combining:
    * 1. Backend Paper Trading Sessions (`/api/paper-trading`)
-   * 2. Active simulator store session
+   * 2. Active simulator store session (with open positions & closed trades)
    * 3. Fallback seeds if no sessions exist
    */
   async getSessions(userId?: string): Promise<JournalSession[]> {
@@ -314,7 +316,7 @@ export const journalService = {
           return {
             id: s._id,
             name: s.name || `${s.symbol} Session`,
-            simulationName: 'Simulator Paper Session',
+            simulationName: 'Live Market Replay',
             simulationId: s._id,
             symbol: s.symbol,
             timeframe: s.timeframe || '15m',
@@ -340,8 +342,41 @@ export const journalService = {
     // 2. Fetch from Simulator Zustand store if active session exists
     try {
       const state = useSimulatorStore.getState();
-      if (state.session && !combinedSessions.some(s => s.id === state.session?._id)) {
+      if (state.session) {
         const storeSession = state.session;
+
+        // Open positions
+        const openTrades: JournalTrade[] = (state.positions || []).map(p => {
+          const currentExecPrice = p.side === 'LONG' ? (state.currentBid || p.entryPrice) : (state.currentAsk || p.entryPrice);
+          const actualQty = p.lot * getContractMultiplier(p.symbol);
+          const rawPnL = p.side === 'LONG' 
+            ? (currentExecPrice - p.entryPrice) * actualQty 
+            : (p.entryPrice - currentExecPrice) * actualQty;
+          const netPnL = rawPnL - (p.commission || 0) + (p.accumulatedSwap || 0);
+          const returnRate = p.entryPrice > 0 ? parseFloat((((currentExecPrice - p.entryPrice) / p.entryPrice) * (p.side === 'LONG' ? 100 : -100)).toFixed(2)) : 0;
+
+          return {
+            id: p.id,
+            symbol: p.symbol,
+            side: p.side,
+            entryPrice: p.entryPrice,
+            exitPrice: undefined,
+            quantity: p.lot,
+            lot: p.lot,
+            pnl: netPnL,
+            returnRate,
+            entryTime: p.createdAt,
+            exitTime: undefined,
+            openTime: p.createdAt,
+            closeTime: undefined,
+            status: 'OPEN',
+            sl: p.sl,
+            tp: p.tp,
+            setupTag: p.setupTag
+          };
+        });
+
+        // Closed trades
         const storeTrades: JournalTrade[] = (state.history || []).map(h => ({
           id: h.id,
           symbol: h.symbol,
@@ -361,24 +396,35 @@ export const journalService = {
           setupTag: h.setupTag
         }));
 
-        combinedSessions.unshift({
+        const allStoreTrades = [...openTrades, ...storeTrades];
+        const storeSessionItem: JournalSession = {
           id: storeSession._id,
-          name: storeSession.name || `${storeSession.symbol} Active Session`,
+          name: storeSession.name || `${storeSession.symbol} Session`,
           simulationName: 'Live Market Replay',
           simulationId: storeSession._id,
           symbol: storeSession.symbol,
           timeframe: storeSession.timeframe || '15m',
           status: storeSession.status === 'completed' ? 'COMPLETED' : 'ACTIVE',
           startedAt: storeSession.replayStartTime || new Date().toISOString(),
-          initialBalance: storeSession.config.initialBalance || 100000000,
+          initialBalance: storeSession.config?.initialBalance || 100000000,
           endingBalance: storeSession.equity || storeSession.balance,
           balance: storeSession.balance,
           equity: storeSession.equity,
-          tradesCount: storeTrades.length,
+          tradesCount: allStoreTrades.length,
           winRate: calculateWinRate(storeTrades),
           netPnL: calculateNetPnL(storeTrades),
-          trades: storeTrades
-        });
+          trades: allStoreTrades
+        };
+
+        const existingIdx = combinedSessions.findIndex(s => s.id === storeSession._id);
+        if (existingIdx >= 0) {
+          combinedSessions[existingIdx] = {
+            ...combinedSessions[existingIdx],
+            ...storeSessionItem
+          };
+        } else {
+          combinedSessions.unshift(storeSessionItem);
+        }
       }
     } catch (e) {
       console.warn('Could not read simulator store session:', e);
@@ -394,6 +440,36 @@ export const journalService = {
     // 1. Check in Simulator Store
     const state = useSimulatorStore.getState();
     if (state.session && state.session._id === sessionId) {
+      const openTrades: JournalTrade[] = (state.positions || []).map(p => {
+        const currentExecPrice = p.side === 'LONG' ? (state.currentBid || p.entryPrice) : (state.currentAsk || p.entryPrice);
+        const actualQty = p.lot * getContractMultiplier(p.symbol);
+        const rawPnL = p.side === 'LONG' 
+          ? (currentExecPrice - p.entryPrice) * actualQty 
+          : (p.entryPrice - currentExecPrice) * actualQty;
+        const netPnL = rawPnL - (p.commission || 0) + (p.accumulatedSwap || 0);
+        const returnRate = p.entryPrice > 0 ? parseFloat((((currentExecPrice - p.entryPrice) / p.entryPrice) * (p.side === 'LONG' ? 100 : -100)).toFixed(2)) : 0;
+
+        return {
+          id: p.id,
+          symbol: p.symbol,
+          side: p.side,
+          entryPrice: p.entryPrice,
+          exitPrice: undefined,
+          quantity: p.lot,
+          lot: p.lot,
+          pnl: netPnL,
+          returnRate,
+          entryTime: p.createdAt,
+          exitTime: undefined,
+          openTime: p.createdAt,
+          closeTime: undefined,
+          status: 'OPEN',
+          sl: p.sl,
+          tp: p.tp,
+          setupTag: p.setupTag
+        };
+      });
+
       const storeTrades: JournalTrade[] = (state.history || []).map(h => ({
         id: h.id,
         symbol: h.symbol,
@@ -413,6 +489,8 @@ export const journalService = {
         setupTag: h.setupTag
       }));
 
+      const allTrades = [...openTrades, ...storeTrades];
+
       return {
         id: state.session._id,
         name: state.session.name || `${state.session.symbol} Active Session`,
@@ -422,14 +500,14 @@ export const journalService = {
         timeframe: state.session.timeframe || '15m',
         status: state.session.status === 'completed' ? 'COMPLETED' : 'ACTIVE',
         startedAt: state.session.replayStartTime || new Date().toISOString(),
-        initialBalance: state.session.config.initialBalance || 100000000,
+        initialBalance: state.session.config?.initialBalance || 100000000,
         endingBalance: state.session.equity || state.session.balance,
         balance: state.session.balance,
         equity: state.session.equity,
-        tradesCount: storeTrades.length,
+        tradesCount: allTrades.length,
         winRate: calculateWinRate(storeTrades),
         netPnL: calculateNetPnL(storeTrades),
-        trades: storeTrades
+        trades: allTrades
       };
     }
 
@@ -438,7 +516,28 @@ export const journalService = {
       const details = await getSessionDetails(sessionId);
       if (details && details.session) {
         const s = details.session;
-        const trades: JournalTrade[] = (details.history || []).map((h: any) => ({
+
+        const openTrades: JournalTrade[] = (details.positions || []).map((p: any) => ({
+          id: p._id || p.id,
+          symbol: p.symbol,
+          side: p.side,
+          entryPrice: p.entryPrice,
+          exitPrice: undefined,
+          quantity: p.lot,
+          lot: p.lot,
+          pnl: p.floatingPnL || 0,
+          returnRate: 0,
+          entryTime: p.createdAt,
+          exitTime: undefined,
+          openTime: p.createdAt,
+          closeTime: undefined,
+          status: 'OPEN',
+          sl: p.sl,
+          tp: p.tp,
+          setupTag: p.setupTag
+        }));
+
+        const closedTrades: JournalTrade[] = (details.history || []).map((h: any) => ({
           id: h._id || h.id,
           symbol: h.symbol,
           side: h.side,
@@ -457,10 +556,12 @@ export const journalService = {
           setupTag: h.setupTag
         }));
 
+        const allTrades = [...openTrades, ...closedTrades];
+
         return {
           id: s._id,
           name: s.name || `${s.symbol} Session`,
-          simulationName: 'Simulator Paper Session',
+          simulationName: 'Live Market Replay',
           simulationId: s._id,
           symbol: s.symbol,
           timeframe: s.timeframe || '15m',
@@ -471,10 +572,10 @@ export const journalService = {
           endingBalance: s.balance || s.equity || s.initialBalance,
           balance: s.balance || s.initialBalance,
           equity: s.equity || s.initialBalance,
-          tradesCount: trades.length,
-          winRate: calculateWinRate(trades),
-          netPnL: calculateNetPnL(trades),
-          trades
+          tradesCount: allTrades.length,
+          winRate: calculateWinRate(closedTrades),
+          netPnL: calculateNetPnL(closedTrades),
+          trades: allTrades
         };
       }
     } catch (e) {
