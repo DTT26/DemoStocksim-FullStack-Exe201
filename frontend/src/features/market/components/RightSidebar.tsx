@@ -253,10 +253,10 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
     }
 
     if (requiredMargin > balance) {
-      showAlert({ 
-        title: 'Số dư không đủ', 
-        message: `Ký quỹ yêu cầu ($${requiredMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) vượt quá số dư khả dụng ($${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})!`, 
-        type: 'warning' 
+      showAlert({
+        title: 'Số dư không đủ',
+        message: `Ký quỹ yêu cầu ($${requiredMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) vượt quá số dư khả dụng ($${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})!`,
+        type: 'warning'
       });
       return;
     }
@@ -391,11 +391,11 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
       </div>
 
       {activeSidebarTab === 'orderbook' ? (
-        <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="flex-1 overflow-y-auto min-h-[120px]">
           <OrderBook symbol={selectedStock.symbol} currentPrice={selectedStock.price} isUp={selectedStock.type === 'up'} />
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="flex-1 overflow-y-auto min-h-[120px]">
           <div className="flex items-center px-2 py-2 border-b border-[#e6e8ea] dark:border-[#2a2e39] text-[10px] uppercase tracking-wider text-[#787b86] font-semibold">
             <div className="flex-1 ml-1">Symbol</div>
             <div className="w-20 text-right">Price</div>
@@ -429,7 +429,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
 
       {/* Order Entry */}
       {user ? (
-        <div className="border-t border-[#e6e8ea] dark:border-[#2a2e39] p-3 flex flex-col gap-2.5 shrink-0 bg-[#f8f9fa] dark:bg-[#131722]">
+        <div className="border-t border-[#e6e8ea] dark:border-[#2a2e39] p-3 flex flex-col gap-2.5 shrink overflow-y-auto max-h-[55vh] lg:max-h-[60vh] bg-[#f8f9fa] dark:bg-[#131722]">
           {/* Balance row */}
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-1 text-[#787b86]">
@@ -473,8 +473,8 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
             <button
               onClick={() => { if (!isEditing) setOrderType('market'); }}
               className={`flex-1 py-1.5 rounded uppercase transition-colors ${orderType === 'market'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]')
+                ? 'bg-blue-600 text-white'
+                : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]')
                 }`}
             >
               {t('order.market', 'Thị trường')}
@@ -489,8 +489,8 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
                 }
               }}
               className={`flex-1 py-1.5 rounded uppercase transition-colors ${orderType === 'limit'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]')
+                ? 'bg-blue-600 text-white'
+                : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]')
                 }`}
             >
               {t('order.limit', 'Limit')}
@@ -505,8 +505,8 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
                 }
               }}
               className={`flex-1 py-1.5 rounded uppercase transition-colors ${orderType === 'stop'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]')
+                ? 'bg-blue-600 text-white'
+                : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]')
                 }`}
             >
               {t('order.stop', 'Stop')}
@@ -531,16 +531,15 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
               </button>
 
               {sizingDropdownOpen && (
-                <div 
+                <div
                   className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-lg shadow-xl z-50 py-1 text-xs"
                   onClick={() => setSizingDropdownOpen(false)}
                 >
                   <button
                     type="button"
                     onClick={() => setSizingMode('qty')}
-                    className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-[#2a2e39] transition-colors cursor-pointer ${
-                      sizingMode === 'qty' ? 'text-blue-600 font-bold bg-blue-50/50 dark:bg-blue-900/20' : 'text-[#1e2329] dark:text-[#d1d4dc]'
-                    }`}
+                    className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-[#2a2e39] transition-colors cursor-pointer ${sizingMode === 'qty' ? 'text-blue-600 font-bold bg-blue-50/50 dark:bg-blue-900/20' : 'text-[#1e2329] dark:text-[#d1d4dc]'
+                      }`}
                   >
                     <span>{t('order.qty', 'Khối lượng')}</span>
                     {sizingMode === 'qty' && <Check className="w-3.5 h-3.5 text-blue-600" />}
@@ -548,9 +547,8 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
                   <button
                     type="button"
                     onClick={() => setSizingMode('amount')}
-                    className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-[#2a2e39] transition-colors cursor-pointer ${
-                      sizingMode === 'amount' ? 'text-blue-600 font-bold bg-blue-50/50 dark:bg-blue-900/20' : 'text-[#1e2329] dark:text-[#d1d4dc]'
-                    }`}
+                    className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-[#2a2e39] transition-colors cursor-pointer ${sizingMode === 'amount' ? 'text-blue-600 font-bold bg-blue-50/50 dark:bg-blue-900/20' : 'text-[#1e2329] dark:text-[#d1d4dc]'
+                      }`}
                   >
                     <span>{t('order.amount', 'Số tiền')}</span>
                     {sizingMode === 'amount' && <Check className="w-3.5 h-3.5 text-blue-600" />}
@@ -558,9 +556,8 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
                   <button
                     type="button"
                     onClick={() => setSizingMode('percent')}
-                    className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-[#2a2e39] transition-colors cursor-pointer ${
-                      sizingMode === 'percent' ? 'text-blue-600 font-bold bg-blue-50/50 dark:bg-blue-900/20' : 'text-[#1e2329] dark:text-[#d1d4dc]'
-                    }`}
+                    className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-[#2a2e39] transition-colors cursor-pointer ${sizingMode === 'percent' ? 'text-blue-600 font-bold bg-blue-50/50 dark:bg-blue-900/20' : 'text-[#1e2329] dark:text-[#d1d4dc]'
+                      }`}
                   >
                     <span>{t('order.percentBalance', '% số dư')}</span>
                     {sizingMode === 'percent' && <Check className="w-3.5 h-3.5 text-blue-600" />}
@@ -647,11 +644,10 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
                 key={pct}
                 type="button"
                 onClick={() => handleQuickPercent(pct)}
-                className={`py-1 rounded text-xs font-semibold font-mono transition-all cursor-pointer ${
-                  percentVal === pct
+                className={`py-1 rounded text-xs font-semibold font-mono transition-all cursor-pointer ${percentVal === pct
                     ? 'bg-blue-600 text-white shadow-xs'
                     : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] hover:text-[#1e2329] dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#2a2e39]'
-                }`}
+                  }`}
               >
                 {pct}%
               </button>
@@ -758,8 +754,8 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
                 const isChecked = e.target.checked;
                 setShowTPSL(isChecked);
                 if (isChecked) {
-                  const refPrice = orderType === 'limit' && parseFloat(limitPriceStr) > 0 
-                    ? parseFloat(limitPriceStr) 
+                  const refPrice = orderType === 'limit' && parseFloat(limitPriceStr) > 0
+                    ? parseFloat(limitPriceStr)
                     : (held > 0 && avgPrice > 0 ? avgPrice : selectedStock.price);
                   const precision = getPricePrecision(refPrice);
                   const currentSide = held > 0 && side ? side : 'LONG';
