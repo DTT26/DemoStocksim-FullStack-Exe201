@@ -14,6 +14,7 @@ export interface LiveTickerData {
   low24h: number;
   volume24h: number;
   quoteVolume24h: number;
+  openPrice?: number;
 }
 
 interface MarketState {
@@ -49,6 +50,7 @@ export const useMarketStore = create<MarketState>((set, get) => ({
             const price = parseFloat(item.lastPrice);
             const change = parseFloat(item.priceChange);
             const percent = parseFloat(item.priceChangePercent);
+            const openPrice = parseFloat(item.openPrice);
             if (!isNaN(price) && price > 0) {
               tickerMap[item.symbol] = {
                 symbol: item.symbol,
@@ -60,6 +62,7 @@ export const useMarketStore = create<MarketState>((set, get) => ({
                 low24h: parseFloat(item.lowPrice) || price,
                 volume24h: parseFloat(item.volume) || 0,
                 quoteVolume24h: parseFloat(item.quoteVolume) || 0,
+                openPrice: !isNaN(openPrice) && openPrice > 0 ? openPrice : undefined,
               };
             }
           });
@@ -74,6 +77,7 @@ export const useMarketStore = create<MarketState>((set, get) => ({
             const price = parseFloat(item.lastPrice);
             const change = parseFloat(item.priceChange);
             const percent = parseFloat(item.priceChangePercent);
+            const openPrice = parseFloat(item.openPrice);
             if (!isNaN(price) && price > 0) {
               const tickerObj: LiveTickerData = {
                 symbol: `${item.symbol}.P`,
@@ -85,8 +89,10 @@ export const useMarketStore = create<MarketState>((set, get) => ({
                 low24h: parseFloat(item.lowPrice) || price,
                 volume24h: parseFloat(item.volume) || 0,
                 quoteVolume24h: parseFloat(item.quoteVolume) || 0,
+                openPrice: !isNaN(openPrice) && openPrice > 0 ? openPrice : undefined,
               };
               tickerMap[`${item.symbol}.P`] = tickerObj;
+              tickerMap[`${item.symbol}.SWAP`] = { ...tickerObj, symbol: `${item.symbol}.SWAP` };
               if (!tickerMap[item.symbol]) {
                 tickerMap[item.symbol] = { ...tickerObj, symbol: item.symbol };
               }
@@ -96,14 +102,14 @@ export const useMarketStore = create<MarketState>((set, get) => ({
       }
 
       // 3. Parse BingX (TradFi: Vàng XAUUSD, Dầu, Forex, Cổ phiếu Mỹ, Chỉ số)
-      // BingX fields: lastPrice, priceChange (string), priceChangePercent (string)
       if (bingxRes && bingxRes.ok) {
         const json = await bingxRes.json();
         if (json.code === 0 && Array.isArray(json.data)) {
           json.data.forEach((item: any) => {
             const price = parseFloat(item.lastPrice);
-            const change = parseFloat(item.priceChange);       // BingX: "priceChange"
-            const percent = parseFloat(item.priceChangePercent); // BingX: "priceChangePercent"
+            const change = parseFloat(item.priceChange);
+            const percent = parseFloat(item.priceChangePercent);
+            const openPrice = parseFloat(item.openPrice);
             if (!isNaN(price) && price > 0) {
               const bingxSym = item.symbol;
               const stdSym = BINGX_REVERSE_MAP[bingxSym] || bingxSym;
@@ -118,10 +124,11 @@ export const useMarketStore = create<MarketState>((set, get) => ({
                 low24h: parseFloat(item.lowPrice) || price,
                 volume24h: parseFloat(item.volume) || 0,
                 quoteVolume24h: parseFloat(item.quoteVolume) || 0,
+                openPrice: !isNaN(openPrice) && openPrice > 0 ? openPrice : undefined,
               };
 
               tickerMap[stdSym] = tickerObj;
-              tickerMap[bingxSym] = tickerObj; // lưu cả symbol gốc BingX
+              tickerMap[bingxSym] = tickerObj;
             }
           });
         }
@@ -133,7 +140,6 @@ export const useMarketStore = create<MarketState>((set, get) => ({
       const updatedStocks: Stock[] = currentStocks.map(stock => {
         const t = tickerMap[stock.symbol];
         if (t && t.price > 0) {
-          // Trả về object HOÀN TOÀN MỚI
           return {
             ...stock,
             price: t.price,
@@ -143,8 +149,19 @@ export const useMarketStore = create<MarketState>((set, get) => ({
             volume24h: t.quoteVolume24h > 0 ? t.quoteVolume24h : stock.volume24h,
           };
         }
-        // Không có data mới → vẫn trả về spread mới để tránh stale reference
         return { ...stock };
+      });
+
+      // Cập nhật STOCKS array nền để bất kỳ component cũ nào dùng STOCKS cũng có dữ liệu chính xác
+      updatedStocks.forEach(s => {
+        const defaultItem = STOCKS.find(orig => orig.symbol === s.symbol);
+        if (defaultItem) {
+          defaultItem.price = s.price;
+          defaultItem.change = s.change;
+          defaultItem.percent = s.percent;
+          defaultItem.type = s.type;
+          if (s.volume24h) defaultItem.volume24h = s.volume24h;
+        }
       });
 
       set({

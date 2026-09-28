@@ -66,20 +66,36 @@ export const TickerHeader = ({
     return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   };
 
-  const precision = getPricePrecision(stock.price);
-  const markPrice = (stock.price * 1.0002).toFixed(precision);
-  const indexPrice = (stock.price * 1.0001).toFixed(precision);
-
   const ticker = useMarketStore(state => state.tickers[stock.symbol]);
-  const high24h = ticker?.high24h || stock.price * 1.022;
-  const low24h = ticker?.low24h || stock.price * 0.978;
+  const currentPrice = stock.price || ticker?.price || 0;
+  const precision = getPricePrecision(currentPrice);
+  const markPrice = (currentPrice * 1.0002).toFixed(precision);
+  const indexPrice = (currentPrice * 1.0001).toFixed(precision);
+
+  const high24h = ticker?.high24h || currentPrice * 1.022;
+  const low24h = ticker?.low24h || currentPrice * 0.978;
   const vol24h = ticker?.volume24h
     ? (ticker.volume24h >= 1000 ? ticker.volume24h / 1000 : ticker.volume24h)
-    : (stock.price > 1000 ? 158.49 : 15849.2);
+    : (currentPrice > 1000 ? 158.49 : 15849.2);
   const volUSDT = ticker?.quoteVolume24h
     ? (ticker.quoteVolume24h >= 1_000_000 ? ticker.quoteVolume24h / 1_000_000 : ticker.quoteVolume24h)
-    : (stock.price > 1000 ? 396.55 : 39.65);
-  const isUp = stock.type === 'up';
+    : (currentPrice > 1000 ? 396.55 : 39.65);
+
+  let displayChange = stock.change;
+  let displayPercent = stock.percent;
+  let isUp = stock.type === 'up';
+
+  if (ticker) {
+    if (ticker.openPrice && ticker.openPrice > 0 && currentPrice > 0) {
+      displayChange = currentPrice - ticker.openPrice;
+      displayPercent = (displayChange / ticker.openPrice) * 100;
+      isUp = displayChange >= 0;
+    } else if (ticker.change !== undefined && ticker.percent !== undefined) {
+      displayChange = ticker.change;
+      displayPercent = ticker.percent;
+      isUp = ticker.type === 'up';
+    }
+  }
 
   return (
     <div className="flex flex-col bg-white dark:bg-[#131722] border-b border-[#e6e8ea] dark:border-[#2a2e39] text-xs shrink-0 w-full transition-colors">
@@ -103,10 +119,10 @@ export const TickerHeader = ({
           </div>
           <div className="flex flex-col items-end pl-2 sm:pl-4">
             <span className={`text-base sm:text-lg font-bold font-mono leading-tight ${isUp ? 'text-[#089981]' : 'text-[#f23645]'}`}>
-              {stock.price.toLocaleString('vi-VN', { minimumFractionDigits: Math.min(2, precision), maximumFractionDigits: precision })}
+              {currentPrice.toLocaleString('vi-VN', { minimumFractionDigits: Math.min(2, precision), maximumFractionDigits: precision })}
             </span>
             <span className={`font-mono text-[10px] sm:text-[11px] ${isUp ? 'text-[#089981]' : 'text-[#f23645]'}`}>
-              {stock.change > 0 ? '+' : ''}{stock.change.toFixed(precision)} ({stock.percent > 0 ? '+' : ''}{stock.percent.toFixed(2)}%)
+              {displayChange > 0 ? '+' : ''}{displayChange.toFixed(precision)} ({displayPercent > 0 ? '+' : ''}{displayPercent.toFixed(2)}%)
             </span>
           </div>
         </div>

@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
-import { fetchAllMarketLivePrices } from '../../../services/marketDataService';
-import { STOCKS } from '../data';
+import { useMarketStore } from '../../../stores/useMarketStore';
+import { formatVolume } from '../data';
 
 interface IndexItem {
   name: string;
@@ -14,51 +14,36 @@ interface IndexItem {
 }
 
 const DEFAULT_INDICES: IndexItem[] = [
-  { name: 'S&P 500', symbol: 'SPX', value: 7711.70, change: 35.4, percent: 0.46, volume: '45B', color: 'up' },
-  { name: 'NASDAQ 100', symbol: 'NDX', value: 30355.49, change: 180.5, percent: 0.60, volume: '38B', color: 'up' },
-  { name: 'DOW JONES', symbol: 'DJI', value: 51632.40, change: 120.2, percent: 0.23, volume: '22B', color: 'up' },
-  { name: 'GOLD SPOT', symbol: 'XAUUSD', value: 4182.00, change: -93.4, percent: -2.18, volume: '35B', color: 'down' },
+  { name: 'S&P 500', symbol: 'SPX', value: 7682.20, change: -50.2, percent: -0.65, volume: '45B', color: 'down' },
+  { name: 'NASDAQ 100', symbol: 'NDX', value: 30205.54, change: -403.5, percent: -1.32, volume: '38B', color: 'down' },
+  { name: 'DOW JONES', symbol: 'DJI', value: 51474.30, change: -253.2, percent: -0.49, volume: '22B', color: 'down' },
+  { name: 'GOLD SPOT', symbol: 'XAUUSD', value: 4124.46, change: -160.8, percent: -3.75, volume: '35B', color: 'down' },
 ];
 
 export const MarketIndices = () => {
-  const [indices, setIndices] = useState<IndexItem[]>(DEFAULT_INDICES);
+  const tickers = useMarketStore(state => state.tickers);
+  const fetchMarketData = useMarketStore(state => state.fetchMarketData);
 
   useEffect(() => {
-    let isMounted = true;
-    const fetchLive = async () => {
-      try {
-        const livePrices = await fetchAllMarketLivePrices();
-        if (!isMounted) return;
+    fetchMarketData();
+    const timer = setInterval(fetchMarketData, 3000);
+    return () => clearInterval(timer);
+  }, [fetchMarketData]);
 
-        setIndices(prev =>
-          prev.map(idx => {
-            const livePrice = livePrices[idx.symbol];
-            if (!livePrice || livePrice === idx.value) return idx;
-            const stockBase = STOCKS.find(s => s.symbol === idx.symbol);
-            const basePrice = stockBase ? stockBase.price : idx.value;
-            const change = livePrice - basePrice;
-            const percent = (change / basePrice) * 100;
-            return {
-              ...idx,
-              value: livePrice,
-              change: parseFloat(change.toFixed(2)),
-              percent: parseFloat(percent.toFixed(2)),
-              color: change >= 0 ? 'up' : 'down',
-            };
-          })
-        );
-      } catch (err) {
-        // bỏ qua
-      }
-    };
-
-    fetchLive();
-    const timer = setInterval(fetchLive, 3000);
-    return () => {
-      isMounted = false;
-      clearInterval(timer);
-    };
-  }, []);
+  const indices: IndexItem[] = DEFAULT_INDICES.map(idx => {
+    const t = tickers[idx.symbol];
+    if (t && t.price > 0) {
+      return {
+        ...idx,
+        value: t.price,
+        change: t.change,
+        percent: t.percent,
+        volume: t.quoteVolume24h ? formatVolume(t.quoteVolume24h) : idx.volume,
+        color: t.type,
+      };
+    }
+    return idx;
+  });
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

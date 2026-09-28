@@ -83,6 +83,7 @@ export const TradingTerminal = () => {
   const { user, login } = useAuth();
   const { addNotification } = useNotificationStore();
   const fetchMarketData = useMarketStore(state => state.fetchMarketData);
+  const currentTicker = useMarketStore(state => state.tickers[selectedStock.symbol]);
 
   // Khởi động polling live market data (Binance + BingX) mỗi 3 giây
   useEffect(() => {
@@ -90,6 +91,26 @@ export const TradingTerminal = () => {
     const interval = setInterval(fetchMarketData, 3000);
     return () => clearInterval(interval);
   }, [fetchMarketData]);
+
+  // Luôn đồng bộ selectedStock với ticker 24h thực tế từ các sàn
+  useEffect(() => {
+    if (currentTicker && currentTicker.price > 0) {
+      setSelectedStock(prev => {
+        if (prev.symbol !== currentTicker.symbol && `${prev.symbol}.P` !== currentTicker.symbol) return prev;
+        const currentP = prev.price || currentTicker.price;
+        const chg = currentTicker.openPrice ? (currentP - currentTicker.openPrice) : currentTicker.change;
+        const pct = currentTicker.openPrice ? ((currentP - currentTicker.openPrice) / currentTicker.openPrice) * 100 : currentTicker.percent;
+        return {
+          ...prev,
+          price: currentP,
+          change: chg,
+          percent: pct,
+          type: chg >= 0 ? 'up' : 'down',
+          volume24h: currentTicker.quoteVolume24h || prev.volume24h,
+        };
+      });
+    }
+  }, [currentTicker]);
 
   const [watchlists, setWatchlists] = useState<Watchlist[]>(() => {
     try {
@@ -360,7 +381,8 @@ export const TradingTerminal = () => {
   }, [selectedStock]);
 
   const handleStockSelect = (stock: Stock) => {
-    setSelectedStock(stock);
+    const liveStock = useMarketStore.getState().stocks.find(s => s.symbol.toUpperCase() === stock.symbol.toUpperCase()) || stock;
+    setSelectedStock(liveStock);
     setPreviewTPSL(null);
     setDraggedTPSL(null);
     localStorage.setItem('lastSelectedStock', stock.symbol.toLowerCase());
@@ -1165,9 +1187,10 @@ export const TradingTerminal = () => {
                   onPriceUpdate={(price, timestamp) => {
                     setSelectedStock(prev => {
                       if (prev.price === price) return prev;
-                      const basePrice = STOCKS.find(s => s.symbol === prev.symbol)?.price || prev.price;
-                      const change = price - basePrice;
-                      const percent = (change / basePrice) * 100;
+                      const curTicker = useMarketStore.getState().tickers[prev.symbol];
+                      const openPrice = curTicker?.openPrice;
+                      const change = openPrice ? (price - openPrice) : (curTicker ? curTicker.change : prev.change);
+                      const percent = openPrice ? ((price - openPrice) / openPrice) * 100 : (curTicker ? curTicker.percent : prev.percent);
                       return { ...prev, price, change, percent, type: change >= 0 ? 'up' : 'down' };
                     });
                     handlePriceChange(price);
