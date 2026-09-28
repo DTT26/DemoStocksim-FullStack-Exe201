@@ -3988,8 +3988,8 @@ export const ChartArea = ({
           showRule: 'always',
           showType: 'standard',
           title: {
-            show: true,
-            template: '{ticker} · {period}'
+            show: false,
+            template: ''
           },
           legend: {
             template: [
@@ -4564,7 +4564,7 @@ export const ChartArea = ({
 
       const precision = getPricePrecision(selectedStock.price);
       chart.setSymbol({
-        ticker: `${selectedStock.exchange} • ${selectedStock.symbol}`,
+        ticker: selectedStock.symbol,
         name: selectedStock.name,
         shortName: selectedStock.symbol,
         pricePrecision: precision,
