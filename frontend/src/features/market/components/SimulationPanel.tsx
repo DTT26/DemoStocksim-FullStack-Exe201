@@ -12,6 +12,7 @@ import {
   type PaperSession 
 } from '../../../services/marketApi';
 import { useSimulatorStore } from '../engine/useSimulatorStore';
+import { useI18n } from '../../../contexts/I18nContext';
 import { CustomDatePicker } from '../../../components/CustomDatePicker';
 import { SimulatorTradingPanel } from './SimulatorTradingPanel';
 
@@ -63,6 +64,7 @@ export const SimulationPanel = ({
   draggedTPSL
 }: SimulationPanelProps) => {
   const { user } = useAuth();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'running' | 'completed'>('running');
   const [currentView, setCurrentView] = useState<'list' | 'trading'>('list');
@@ -549,7 +551,7 @@ export const SimulationPanel = ({
       {!user ? (
         <AuthOverlay
           icon={<BarChart2 className="w-8 h-8" />}
-          title="Mô phỏng Giao dịch"
+          title={t('sim.title', 'Mô phỏng Giao dịch')}
           subtitle="Thực hành giao dịch không rủi ro bằng dữ liệu thực tế"
           features={[
             "Tua lại biểu đồ để kiểm tra chiến lược",
@@ -561,7 +563,7 @@ export const SimulationPanel = ({
         <>
           {/* Header */}
           <div className="flex items-center gap-2 p-4 shrink-0">
-            <h2 className="text-lg font-bold text-[#1e2329] dark:text-white">Mô phỏng Giao dịch</h2>
+            <h2 className="text-lg font-bold text-[#1e2329] dark:text-white">{t('sim.title', 'Mô phỏng Giao dịch')}</h2>
             <button className="w-6 h-6 rounded-full bg-[#f0f1f3] dark:bg-[#1e222d] hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39] flex items-center justify-center text-[#787b86] transition-colors">
               <HelpCircle className="w-4 h-4" />
             </button>
@@ -577,7 +579,7 @@ export const SimulationPanel = ({
               : 'bg-[#f0f1f3] dark:bg-[#1e222d] text-[#787b86] hover:text-[#1e2329] dark:hover:text-white'
           }`}
         >
-          Đang chạy
+          {t('sim.running', 'Đang chạy')}
         </button>
         <button
           onClick={() => setActiveTab('completed')}
@@ -587,7 +589,7 @@ export const SimulationPanel = ({
               : 'bg-[#f0f1f3] dark:bg-[#1e222d] text-[#787b86] hover:text-[#1e2329] dark:hover:text-white'
           }`}
         >
-          Đã xong
+          {t('sim.completed', 'Đã xong')}
         </button>
       </div>
 
@@ -604,7 +606,7 @@ export const SimulationPanel = ({
             className="w-full bg-[#089981] hover:bg-[#089981]/90 text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 transition-colors shrink-0 uppercase text-sm mb-4 shadow-lg shadow-[#089981]/20"
           >
             <PlayCircle className="w-5 h-5 fill-white/20 stroke-white" />
-            BẮT ĐẦU PHIÊN MỚI
+            {t('sim.startNew', 'BẮT ĐẦU PHIÊN MỚI')}
           </button>
           
           {activeSessions.length === 0 ? (

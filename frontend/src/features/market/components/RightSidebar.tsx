@@ -457,13 +457,13 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
           {/* Cảnh báo khi tổng tài sản thực tế dưới $5,000 */}
           {((totalEquity !== undefined ? totalEquity : balance) < 5000) && onResetWallet && (
             <div className="px-2.5 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-[11px] text-rose-600 dark:text-rose-400 flex items-center justify-between gap-2">
-              <span className="leading-tight">⚠️ Tổng tài sản còn dưới $5,000 USD! Bạn có thể khôi phục lại $100,000 USD (Tối đa 1 lần/ngày, 4 lần/tuần).</span>
+              <span className="leading-tight">{t('order.restoreDesc', '⚠️ Tổng tài sản còn dưới $5,000 USD! Bạn có thể khôi phục lại $100,000 USD (Tối đa 1 lần/ngày, 4 lần/tuần).')}</span>
               <button
                 type="button"
                 onClick={onResetWallet}
                 className="shrink-0 px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white font-bold text-[10px] transition-colors cursor-pointer"
               >
-                Khôi phục
+                {t('order.restore', 'Khôi phục')}
               </button>
             </div>
           )}
@@ -516,7 +516,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
           {/* QUY MÔ LỆNH - Sizing Mode Selector */}
           <div className="flex items-center justify-between relative mt-0.5">
             <span className="text-[10px] text-[#787b86] uppercase tracking-wider font-semibold">
-              QUY MÔ LỆNH
+              {t('order.orderSize', 'QUY MÔ LỆNH')}
             </span>
             <div className="relative">
               <button
@@ -525,7 +525,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
                 className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-white dark:bg-[#1e222d] hover:bg-slate-100 dark:hover:bg-[#2a2e39] text-xs font-semibold text-[#1e2329] dark:text-[#d1d4dc] border border-[#e6e8ea] dark:border-[#2a2e39] transition-all cursor-pointer shadow-xs"
               >
                 <span>
-                  {sizingMode === 'qty' ? 'Khối lượng' : sizingMode === 'amount' ? 'Số tiền' : '% số dư'}
+                  {sizingMode === 'qty' ? t('order.qty', 'Khối lượng') : sizingMode === 'amount' ? t('order.amount', 'Số tiền') : t('order.percentBalance', '% số dư')}
                 </span>
                 <ChevronDown className={`w-3.5 h-3.5 text-[#787b86] transition-transform ${sizingDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
@@ -542,7 +542,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
                       sizingMode === 'qty' ? 'text-blue-600 font-bold bg-blue-50/50 dark:bg-blue-900/20' : 'text-[#1e2329] dark:text-[#d1d4dc]'
                     }`}
                   >
-                    <span>Khối lượng</span>
+                    <span>{t('order.qty', 'Khối lượng')}</span>
                     {sizingMode === 'qty' && <Check className="w-3.5 h-3.5 text-blue-600" />}
                   </button>
                   <button
@@ -552,7 +552,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
                       sizingMode === 'amount' ? 'text-blue-600 font-bold bg-blue-50/50 dark:bg-blue-900/20' : 'text-[#1e2329] dark:text-[#d1d4dc]'
                     }`}
                   >
-                    <span>Số tiền</span>
+                    <span>{t('order.amount', 'Số tiền')}</span>
                     {sizingMode === 'amount' && <Check className="w-3.5 h-3.5 text-blue-600" />}
                   </button>
                   <button
@@ -562,7 +562,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
                       sizingMode === 'percent' ? 'text-blue-600 font-bold bg-blue-50/50 dark:bg-blue-900/20' : 'text-[#1e2329] dark:text-[#d1d4dc]'
                     }`}
                   >
-                    <span>% số dư</span>
+                    <span>{t('order.percentBalance', '% số dư')}</span>
                     {sizingMode === 'percent' && <Check className="w-3.5 h-3.5 text-blue-600" />}
                   </button>
                 </div>
@@ -598,7 +598,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
 
             <div className="flex flex-col gap-1 flex-1">
               <label className="text-[10px] text-[#787b86] uppercase tracking-wider font-medium">
-                {sizingMode === 'qty' ? lotInputLabel : sizingMode === 'amount' ? 'Số tiền ($ USD)' : '% Số dư'}
+                {sizingMode === 'qty' ? lotInputLabel : sizingMode === 'amount' ? `${t('order.amount', 'Số tiền')} ($ USD)` : t('order.percentBalance', '% Số dư')}
               </label>
               {isEditing ? (
                 <div className="bg-[#f0f3fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
@@ -661,14 +661,14 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
           {/* Estimated helper info row */}
           {sizingMode !== 'qty' ? (
             <div className="flex items-center justify-between text-[11px] bg-blue-500/5 dark:bg-blue-500/10 px-2.5 py-1 rounded border border-blue-500/20">
-              <span className="text-[#787b86]">Khối lượng dự kiến:</span>
+              <span className="text-[#787b86]">{t('order.estQty', 'Khối lượng dự kiến:')}</span>
               <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
                 {actualQty.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {assetUnit}
               </span>
             </div>
           ) : (
             <div className="flex items-center justify-between text-[11px] bg-[#f0f3fa] dark:bg-[#1e222d] px-2.5 py-1 rounded border border-[#e6e8ea] dark:border-[#2a2e39]">
-              <span className="text-[#787b86]">Dùng vốn (Ký quỹ):</span>
+              <span className="text-[#787b86]">{t('order.marginUsed', 'Dùng vốn (Ký quỹ):')}</span>
               <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
                 ${requiredMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
@@ -679,10 +679,10 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
           {isSpot ? (
             <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded bg-[#f0f3fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] text-xs">
               <span className="text-[10px] text-[#787b86] uppercase font-semibold whitespace-nowrap shrink-0">
-                Chế độ giao dịch
+                {t('order.tradingMode', 'Chế độ giao dịch')}
               </span>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 whitespace-nowrap shrink-0">
-                Spot (1X · Không đòn bẩy)
+                {t('order.spotMode', 'Spot (1X · Không đòn bẩy)')}
               </span>
             </div>
           ) : (
@@ -906,21 +906,21 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
           {/* Summary Box */}
           <div className="bg-[#f0f3fa] dark:bg-[#1a1e29] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-lg p-2.5 flex flex-col gap-1.5 text-xs">
             <div className="flex items-center justify-between text-[#787b86]">
-              <span>Số dư</span>
+              <span>{t('order.balance', 'Số dư')}</span>
               <span className="font-mono font-medium text-[#1e2329] dark:text-[#d1d4dc]">
                 ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
 
             <div className="flex items-center justify-between text-[#787b86]">
-              <span>Sử dụng vốn</span>
+              <span>{t('order.marginUsed', 'Sử dụng vốn').replace(' (Ký quỹ):', '')}</span>
               <span className="font-mono font-medium text-[#1e2329] dark:text-[#d1d4dc]">
                 {balance > 0 ? ((requiredMargin / balance) * 100).toFixed(1) : 0}%
               </span>
             </div>
 
             <div className="flex items-center justify-between text-[#787b86]">
-              <span>Đòn bẩy</span>
+              <span>{t('order.leverage', 'Đòn bẩy')}</span>
               <span className="font-mono font-medium text-[#1e2329] dark:text-[#d1d4dc]">
                 {isSpot ? 'Spot (1X)' : `${currentLeverage}X`}
               </span>
@@ -929,21 +929,21 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
             <div className="h-px bg-[#e6e8ea] dark:bg-[#2a2e39] my-0.5" />
 
             <div className="flex items-center justify-between font-bold">
-              <span className="text-[#1e2329] dark:text-white">Ký quỹ</span>
+              <span className="text-[#1e2329] dark:text-white">{t('order.margin', 'Ký quỹ')}</span>
               <span className="font-mono text-blue-600 dark:text-blue-400">
                 ${requiredMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
 
             <div className="flex items-center justify-between font-semibold">
-              <span className="text-[#787b86]">Giá trị vị thế</span>
+              <span className="text-[#787b86]">{t('order.positionValue', 'Giá trị vị thế')}</span>
               <span className="font-mono text-[#1e2329] dark:text-white">
                 ${(actualQty * pTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
 
             <div className="flex items-center justify-between text-[11px] text-[#787b86] pt-0.5">
-              <span>Khối lượng thực tế</span>
+              <span>{t('order.actualQty', 'Khối lượng thực tế')}</span>
               <span className="font-mono font-medium text-emerald-600 dark:text-emerald-400">
                 {actualQty.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {assetUnit}
               </span>

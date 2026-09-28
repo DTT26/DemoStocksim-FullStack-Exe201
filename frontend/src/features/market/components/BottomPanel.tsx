@@ -168,7 +168,7 @@ export const BottomPanel = ({
               checked={currentPairOnly} 
               onChange={() => setCurrentPairOnly(!currentPairOnly)}
             />
-            <span className="text-[11px] hidden xl:inline">Cặp hiện tại</span>
+            <span className="text-[11px] hidden xl:inline">{t('panel.currentPairOnly', 'Cặp hiện tại')}</span>
           </label>
           <button className="hover:text-[#1e2329] dark:hover:text-white transition-colors" title="Cài đặt">
             <Settings2 className="w-4 h-4" />
@@ -184,8 +184,8 @@ export const BottomPanel = ({
             className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-white px-2 sm:px-2.5 py-1 rounded text-[11px] font-medium transition-colors whitespace-nowrap"
             title="Đóng toàn bộ vị thế"
           >
-            <span className="hidden xl:inline">Đóng toàn bộ</span>
-            <span className="xl:hidden">Đóng hết</span>
+            <span className="hidden xl:inline">{t('panel.closeAll', 'Đóng toàn bộ')}</span>
+            <span className="xl:hidden">{t('panel.closeAllShort', 'Đóng hết')}</span>
           </button>
           <button 
             onClick={() => setIsExpanded(!isExpanded)}
@@ -311,7 +311,7 @@ export const BottomPanel = ({
                           }}
                           className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-[#d1d4dc] dark:hover:text-white px-2 py-1 rounded text-[11px] font-medium transition-colors whitespace-nowrap"
                         >
-                          Đóng lệnh
+                          {t('panel.closeOrder', 'Đóng lệnh')}
                         </button>
                       </td>
                     </tr>
@@ -328,16 +328,16 @@ export const BottomPanel = ({
           <table className="w-full min-w-[500px] text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
             <thead className="sticky top-0 bg-[#f8f9fa] dark:bg-[#0b0e11] text-[#787b86] font-normal text-[11px] border-b border-[#e6e8ea] dark:border-[#2a2e39] transition-colors">
               <tr>
-                <th className="px-4 py-2 font-medium">Mã</th>
-                <th className="px-4 py-2 font-medium">Loại lệnh</th>
-                <th className="px-4 py-2 font-medium">Giá đặt</th>
-                <th className="px-4 py-2 font-medium">Khối lượng</th>
-                <th className="px-4 py-2 font-medium text-right">Thao tác</th>
+                <th className="px-4 py-2 font-medium">{t('table.symbol', 'Mã')}</th>
+                <th className="px-4 py-2 font-medium">{t('table.orderType', 'Loại lệnh')}</th>
+                <th className="px-4 py-2 font-medium">{t('table.orderPrice', 'Giá đặt')}</th>
+                <th className="px-4 py-2 font-medium">{t('table.qty', 'Khối lượng')}</th>
+                <th className="px-4 py-2 font-medium text-right">{t('table.action', 'Thao tác')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e6e8ea] dark:divide-[#2a2e39]/50">
               {displayPendingOrders.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-[#787b86]">Không có lệnh chờ nào</td></tr>
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-[#787b86]">{t('table.noPendingOrders', 'Không có lệnh chờ nào')}</td></tr>
               ) : (
                 displayPendingOrders.map(order => (
                   <tr key={order._id} className="hover:bg-[#f5f5f5] dark:hover:bg-[#1e222d] transition-colors">
@@ -349,7 +349,7 @@ export const BottomPanel = ({
                     <td className="px-4 py-2 font-mono">{order.price >= 100 ? order.price.toLocaleString('vi-VN') : order.price?.toFixed(2)}</td>
                     <td className="px-4 py-2 font-mono">{order.quantity?.toFixed(4)} Lot</td>
                     <td className="px-4 py-2 text-right">
-                      <button onClick={() => onCancelOrder(order._id)} className="text-red-500 hover:text-red-400 font-bold px-3 py-1 cursor-pointer">Hủy</button>
+                      <button onClick={() => onCancelOrder(order._id)} className="text-red-500 hover:text-red-400 font-bold px-3 py-1 cursor-pointer">{t('panel.cancelOrder', 'Hủy')}</button>
                     </td>
                   </tr>
                 ))
@@ -395,7 +395,7 @@ export const BottomPanel = ({
                       displayAmount = profitNumber;
                       isPositive = !isNeg;
                       if (tx.amount > 0 && Math.abs(tx.amount - profitNumber) > 1) {
-                        walletReturnNote = `Hoàn gốc+lãi: $${tx.amount.toLocaleString('vi-VN')}`;
+                        walletReturnNote = `${t('panel.refundNote', 'Hoàn gốc+lãi:')} $${tx.amount.toLocaleString('vi-VN')}`;
                       }
                     }
                   }
@@ -404,15 +404,15 @@ export const BottomPanel = ({
                   // Format badges for transaction types
                   const renderTypeBadge = (type: string) => {
                     if (type === 'BUY_STOCK') {
-                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#089981]/20 text-[#089981] whitespace-nowrap">MỞ LONG</span>;
+                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#089981]/20 text-[#089981] whitespace-nowrap">{t('panel.typeOpenLong', 'MỞ LONG')}</span>;
                     } else if (type === 'SELL_STOCK') {
-                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#f23645]/20 text-[#f23645] whitespace-nowrap">MỞ SHORT</span>;
+                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#f23645]/20 text-[#f23645] whitespace-nowrap">{t('panel.typeOpenShort', 'MỞ SHORT')}</span>;
                     } else if (type === 'CLOSE_POSITION') {
-                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-400 whitespace-nowrap">ĐÓNG VỊ THẾ</span>;
+                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-400 whitespace-nowrap">{t('panel.typeClosePos', 'ĐÓNG VỊ THẾ')}</span>;
                     } else if (type === 'DEPOSIT') {
-                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400 whitespace-nowrap">NẠP / HOÀN TIỀN</span>;
+                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400 whitespace-nowrap">{t('panel.typeDeposit', 'NẠP / HOÀN TIỀN')}</span>;
                     } else if (type === 'WITHDRAWAL') {
-                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 whitespace-nowrap">RÚT TIỀN</span>;
+                      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 whitespace-nowrap">{t('panel.typeWithdraw', 'RÚT TIỀN')}</span>;
                     }
                     return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-500/20 text-gray-400 whitespace-nowrap">{type}</span>;
                   };
@@ -429,9 +429,9 @@ export const BottomPanel = ({
                           {parts.slice(1).map((part, idx) => {
                             let displayText = part;
                             if (/^qty/i.test(displayText)) {
-                              displayText = displayText.replace(/^qty/i, 'KL');
+                              displayText = displayText.replace(/^qty/i, t('panel.qtyShort', 'KL'));
                             } else if (/^margin/i.test(displayText)) {
-                              displayText = displayText.replace(/^margin/i, 'Ký quỹ');
+                              displayText = displayText.replace(/^margin/i, t('panel.marginShort', 'Ký quỹ'));
                             }
 
                             if (/^x\d+$/i.test(displayText)) {
@@ -481,8 +481,8 @@ export const BottomPanel = ({
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-semibold text-[#1e2329] dark:text-white">{action} {symbol}</span>
                           <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${side === 'LONG' ? 'bg-[#089981]/20 text-[#089981]' : 'bg-[#f23645]/20 text-[#f23645]'}`}>{side}</span>
-                          <span className="text-[#787b86]">KL: <span className="text-[#1e2329] dark:text-[#d1d4dc]">{parseFloat(qty).toLocaleString('vi-VN')}</span></span>
-                          {price && <span className="text-[#787b86]">Giá: <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono">${price}</span></span>}
+                          <span className="text-[#787b86]">{t('panel.qtyShort', 'KL')}: <span className="text-[#1e2329] dark:text-[#d1d4dc]">{parseFloat(qty).toLocaleString('vi-VN')}</span></span>
+                          {price && <span className="text-[#787b86]">{t('order.price', 'Giá')}: <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono">${price}</span></span>}
                         </div>
                       );
                     }
@@ -703,13 +703,13 @@ export const BottomPanel = ({
                             return (
                               <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 inline-flex items-center gap-1 whitespace-nowrap">
                                 <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
-                                Đang mở
+                                {t('panel.statusOpen', 'Đang mở')}
                               </span>
                             );
                           }
                           return (
                             <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-700/30 text-slate-400 border border-slate-600/30 inline-block whitespace-nowrap">
-                              Đã đóng
+                              {t('panel.statusClosed', 'Đã đóng')}
                             </span>
                           );
                         })()}

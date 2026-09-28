@@ -5,6 +5,7 @@ import { SymbolSearchModal } from './SymbolSearchModal';
 import { AuthOverlay } from './AuthOverlay';
 import { useAuth } from '../../../contexts/AuthContext';
 import { ConfirmModal } from '../../../components/ConfirmModal';
+import { useI18n } from '../../../contexts/I18nContext';
 
 export interface Watchlist {
   id: string;
@@ -36,6 +37,7 @@ export const WatchlistPanel = ({
   currentSymbol
 }: WatchlistPanelProps) => {
   const { user } = useAuth();
+  const { t } = useI18n();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -119,7 +121,7 @@ export const WatchlistPanel = ({
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="flex items-center gap-1.5 hover:bg-[#f0f1f3] dark:hover:bg-[#2a2e39] py-1.5 px-2 rounded transition-colors font-bold text-lg text-[#1e2329] dark:text-white"
               >
-                {activeWatchlist?.name || 'Danh sách'}
+                {(activeWatchlist?.name === 'Danh sách của tôi' || activeWatchlist?.name === 'My Watchlist') ? t('watchlist.myList', 'Danh sách của tôi') : (activeWatchlist?.name || 'Danh sách')}
                 <ChevronDown className="w-4 h-4 text-[#787b86]" />
               </button>
 
@@ -144,7 +146,9 @@ export const WatchlistPanel = ({
                     >
                       <span className="flex items-center gap-2">
                         {activeWatchlist?.id === w.id && <Check className="w-4 h-4" />}
-                        <span className={activeWatchlist?.id !== w.id ? 'pl-6' : ''}>{w.name}</span>
+                        <span className={activeWatchlist?.id !== w.id ? 'pl-6' : ''}>
+                          {(w.name === 'Danh sách của tôi' || w.name === 'My Watchlist') ? t('watchlist.myList', 'Danh sách của tôi') : w.name}
+                        </span>
                       </span>
                     </button>
                   ))}
@@ -209,9 +213,9 @@ export const WatchlistPanel = ({
           <div className="flex-1 overflow-y-auto custom-scrollbar py-1">
             {/* Table Header */}
             <div className="flex items-center px-4 py-2 text-[10px] font-bold text-[#787b86] uppercase">
-              <div className="w-[120px]">Mã giao dịch</div>
-              <div className="flex-1 text-right">Giá</div>
-              <div className="w-16 text-right">Thay đổi</div>
+              <div className="w-[120px]">{t('watchlist.symbol', 'Mã giao dịch')}</div>
+              <div className="flex-1 text-right">{t('watchlist.price', 'Giá')}</div>
+              <div className="w-16 text-right">{t('watchlist.change', 'Thay đổi')}</div>
             </div>
             
             {activeWatchlist?.symbols.length === 0 ? (
@@ -247,7 +251,7 @@ export const WatchlistPanel = ({
                   >
                     <div className="w-[120px] flex flex-col">
                       <span className="font-bold text-[#1e2329] dark:text-[#d1d4dc] text-sm">{stock.symbol}</span>
-                      <span className="text-[10px] text-[#787b86] truncate max-w-full">{stock.market}</span>
+                      <span className="text-[10px] text-[#787b86] truncate max-w-full">{stock.market === 'Tiền điện tử (Crypto)' ? t('market.crypto', 'Tiền điện tử (Crypto)') : stock.market}</span>
                     </div>
                     <div className="flex-1 text-right font-mono text-sm font-medium text-[#1e2329] dark:text-[#d1d4dc]">
                       {stock.price.toLocaleString('vi-VN', { maximumFractionDigits: stock.price < 10 ? 4 : 2 })}

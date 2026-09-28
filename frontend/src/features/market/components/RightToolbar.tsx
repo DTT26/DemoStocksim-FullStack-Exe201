@@ -1,4 +1,5 @@
 import { List, ArrowLeftRight, BarChart2, Calculator, BookOpen } from 'lucide-react';
+import { useI18n } from '../../../contexts/I18nContext';
 
 interface RightToolbarProps {
   activePanel: 'watchlist' | 'order' | 'simulation' | 'calculator' | 'journal' | null;
@@ -6,6 +7,7 @@ interface RightToolbarProps {
 }
 
 export const RightToolbar = ({ activePanel, onChangePanel }: RightToolbarProps) => {
+  const { t } = useI18n();
   return (
     <div className="w-12 border-l border-[#e6e8ea] dark:border-[#2a2e39] bg-white dark:bg-[#131722] shrink-0 flex flex-col items-center py-2 gap-2 h-full">
       <button
@@ -15,7 +17,7 @@ export const RightToolbar = ({ activePanel, onChangePanel }: RightToolbarProps) 
             ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' 
             : 'text-[#787b86] hover:bg-[#f5f5f5] dark:hover:bg-[#2a2e39]/50 hover:text-[#1e2329] dark:hover:text-white'
         }`}
-        title="Danh sách theo dõi"
+        title={t('watchlist.myList', 'Danh sách theo dõi')}
       >
         <List className="w-[22px] h-[22px] stroke-[1.5]" />
       </button>
@@ -27,7 +29,7 @@ export const RightToolbar = ({ activePanel, onChangePanel }: RightToolbarProps) 
             ? 'bg-[#089981] text-white dark:bg-[#089981] dark:text-white' 
             : 'text-[#787b86] hover:bg-[#f5f5f5] dark:hover:bg-[#2a2e39]/50 hover:text-[#1e2329] dark:hover:text-white'
         }`}
-        title="Mô phỏng Giao dịch"
+        title={t('sim.title', 'Mô phỏng Giao dịch')}
       >
         <BarChart2 className="w-[22px] h-[22px] stroke-[1.5]" />
       </button>
