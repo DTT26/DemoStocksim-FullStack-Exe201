@@ -312,13 +312,13 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
             onClick={() => setActiveSidebarTab('orderbook')}
             className={`flex-1 py-3 text-xs font-semibold transition-colors ${activeSidebarTab === 'orderbook' ? 'text-blue-600 dark:text-white border-b-2 border-blue-500' : 'text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
           >
-            Sổ lệnh
+            {t('panel.orderBook', 'Sổ lệnh')}
           </button>
           <button
             onClick={() => setActiveSidebarTab('trade')}
             className={`flex-1 py-3 text-xs font-semibold transition-colors ${activeSidebarTab === 'trade' ? 'text-blue-600 dark:text-white border-b-2 border-blue-500' : 'text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
           >
-            Giao dịch
+            {t('panel.trade', 'Giao dịch')}
           </button>
         </div>
         <button className="p-3 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] hover:bg-[#f0f3fa] dark:hover:bg-[#1e222d] transition-colors">
@@ -708,14 +708,14 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
                 disabled={isSubmitting}
                 className="flex-1 bg-[#2a2e39] hover:bg-[#363a45] text-white font-bold py-2.5 rounded text-sm transition-all"
               >
-                HỦY SỬA
+                {t('order.cancelEdit', 'HỦY SỬA')}
               </button>
               <button
                 onClick={handleUpdateTPSL}
                 disabled={isSubmitting}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold py-2.5 rounded text-sm transition-all"
               >
-                LƯU CẬP NHẬT
+                {t('order.saveUpdate', 'LƯU CẬP NHẬT')}
               </button>
             </div>
           ) : (

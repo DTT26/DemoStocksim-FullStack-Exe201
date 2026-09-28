@@ -507,18 +507,21 @@ export const TradingTerminal = () => {
         }
       } catch (err) { }
 
-      // Ghi đè giá Live từ Binance cho các vị thế & lệnh chờ không nằm trên chart hiện tại
+      // Ghi đè toàn bộ giá Live từ Binance để tránh việc gửi giá ảo (mặc định) lên server gây cắt lỗ oan
       if ((window as any).cachedBinancePrices) {
-        Object.keys(positions).forEach(sym => {
-          if ((window as any).cachedBinancePrices[sym]) priceMap[sym] = (window as any).cachedBinancePrices[sym];
-        });
-        pendingOrders.forEach(o => {
-          if ((window as any).cachedBinancePrices[o.symbol]) priceMap[o.symbol] = (window as any).cachedBinancePrices[o.symbol];
+        Object.keys(priceMap).forEach(sym => {
+          if ((window as any).cachedBinancePrices[sym]) {
+            priceMap[sym] = (window as any).cachedBinancePrices[sym];
+          }
         });
       }
 
-      // Đảm bảo giá của mã đang xem luôn chính xác nhất từng tick
-      priceMap[selectedStock.symbol] = selectedStock.price;
+      // Đảm bảo giá của mã đang xem luôn chính xác nhất từng tick (từ WebSocket)
+      // TUY NHIÊN: Chỉ lấy nếu giá đã được WebSocket cập nhật (khác với giá ảo ban đầu 64200.5)
+      const defaultStock = STOCKS.find(s => s.symbol === selectedStock.symbol);
+      if (defaultStock && selectedStock.price !== defaultStock.price) {
+        priceMap[selectedStock.symbol] = selectedStock.price;
+      }
 
       tradingApi.checkTriggers(priceMap, user._id)
         .then(res => {

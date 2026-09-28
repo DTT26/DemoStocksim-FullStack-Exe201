@@ -107,8 +107,12 @@ const translations: Translations = {
     'order.requiredMargin': 'Required Margin',
     'order.actualQty': 'Actual Quantity',
     'order.ratioRR': 'R:R Ratio (Risk/Reward)',
+    'order.cancelEdit': 'CANCEL EDIT',
+    'order.saveUpdate': 'SAVE UPDATE',
     
     // BottomPanel
+    'panel.orderBook': 'Order Book',
+    'panel.trade': 'Trade',
     'panel.positions': 'Positions',
     'panel.orders': 'Pending Orders',
     'panel.positionHistory': 'Position History',
