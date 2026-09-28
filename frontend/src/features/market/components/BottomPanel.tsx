@@ -224,7 +224,7 @@ export const BottomPanel = ({
                   // Giá thanh lý (Liquidation Price) theo chuẩn Binance Isolated Futures (MMR = 0.4%)
                   const mmr = 0.004;
                   let liqPrice: number | null = null;
-                  if (p.leverage > 1 && p.averagePrice > 0 && p.quantity > 0) {
+                  if (p.averagePrice > 0 && p.quantity > 0) {
                     const marginPerUnit = margin / p.quantity;
                     const mmPerUnit = p.averagePrice * mmr;
                     if (p.side === 'LONG') {
