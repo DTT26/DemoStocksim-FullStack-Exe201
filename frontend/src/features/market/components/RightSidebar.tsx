@@ -166,13 +166,8 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
     }
   }, [effectiveLeverageInfo.max, leverage]);
 
-  // Spot vs Margin / Futures check
-  const isSpot = selectedStock.market === 'Cổ phiếu' || (
-    !selectedStock.isFutures && 
-    selectedStock.market !== 'Ngoại hối (Forex)' && 
-    selectedStock.market !== 'Hàng hóa' && 
-    selectedStock.market !== 'Chỉ số'
-  );
+  // Spot vs Margin / Futures check: Chỉ khoá Spot khi đòn bẩy tối đa là 1X (hoặc bị giới hạn bởi challenge)
+  const isSpot = effectiveLeverageInfo.max <= 1;
 
   const held = positions[selectedStock.symbol]?.quantity || 0;
   const avgPrice = positions[selectedStock.symbol]?.averagePrice || 0;
