@@ -13,7 +13,20 @@ export const NotificationDropdown = () => {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   useEffect(() => {
+    if (!user?._id) {
+      useNotificationStore.getState().reset();
+      return;
+    }
+
     fetchNotifications();
+
+    // Polling định kỳ mỗi 5s để cập nhật thông báo realtime tức thì mà không cần F5
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchNotifications();
+      }
+    }, 5000);
+
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
@@ -21,8 +34,11 @@ export const NotificationDropdown = () => {
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [fetchNotifications]);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [user?._id, fetchNotifications]);
 
   if (!user) return null;
 
@@ -61,7 +77,11 @@ export const NotificationDropdown = () => {
   return (
     <div className="relative" ref={dropdownRef}>
       <button 
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          const next = !isOpen;
+          setIsOpen(next);
+          if (next) fetchNotifications();
+        }}
         className={`relative p-1.5 rounded transition-colors shrink-0 cursor-pointer ${
           isOpen 
             ? 'bg-[#f0f3fa] dark:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]' 

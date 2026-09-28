@@ -36,6 +36,7 @@ interface NotificationStore {
   markAllAsRead: () => Promise<void>;
   clearNotifications: () => Promise<void>;
   addNotification?: (notification: any) => void;
+  reset: () => void;
 }
 
 const getApiUrl = () => import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -52,11 +53,16 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   unreadCount: 0,
   loading: false,
 
+  reset: () => set({ notifications: [], unreadCount: 0, loading: false }),
+
   fetchNotifications: async () => {
     try {
       const token = localStorage.getItem('token');
-      // If no token or not logged in, don't attempt
-      if (!token) return;
+      // If no token or not logged in, clear store immediately
+      if (!token) {
+        set({ notifications: [], unreadCount: 0, loading: false });
+        return;
+      }
 
       const res = await fetch(`${getApiUrl()}/notifications`, {
         credentials: 'include',

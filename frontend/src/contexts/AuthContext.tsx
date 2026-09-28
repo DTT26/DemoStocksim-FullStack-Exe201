@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef, type ReactNode 
 import { useGoogleLogin, googleLogout } from '@react-oauth/google';
 import { LoginModal } from '../components/LoginModal';
 import { SuspendedModal } from '../components/SuspendedModal';
+import { useNotificationStore } from '../stores/useNotificationStore';
 
 export interface User {
   _id: string;
@@ -331,6 +332,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('userId');
     setUser(null);
+    useNotificationStore.getState().reset();
 
     // 2. Hủy phiên Google nếu có
     try {
@@ -354,6 +356,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error('Failed to logout on backend', err);
     }
   };
+
+  // Đồng bộ thông báo thời gian thực theo đúng tài khoản đang đăng nhập
+  useEffect(() => {
+    if (user?._id) {
+      useNotificationStore.getState().fetchNotifications();
+    } else {
+      useNotificationStore.getState().reset();
+    }
+  }, [user?._id]);
 
   return (
     <AuthContext.Provider value={{ 
