@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChartArea } from './components/ChartArea';
 import { RightSidebar } from './components/RightSidebar';
@@ -24,7 +24,7 @@ import { tradingApi } from '../../services/tradingApi';
 import { PositionsManager } from './components/PositionsManager';
 import { useSimulatorStore } from './engine/useSimulatorStore';
 import { useNotificationStore } from '../../stores/useNotificationStore';
-import { Trophy, RefreshCw, ChevronRight, Pause, Play, Square } from 'lucide-react';
+import { Trophy, RefreshCw, ChevronRight, Pause, Play, Square, X, List, ArrowLeftRight, BarChart2, Calculator, BookOpen } from 'lucide-react';
 import { challengeApi } from '../../services/challengeApi';
 import type { UserChallengeState, ChallengeLevelConfig } from '../challenge/types';
 import { ChallengeModal } from '../challenge/ChallengeModal';
@@ -820,15 +820,61 @@ export const TradingTerminal = () => {
     }
   };
 
+  // Tính tổng tài sản thực tế (Total Equity) = Tiền mặt khả dụng + Ký quỹ vị thế mở + Ký quỹ lệnh chờ
+  const totalOpenPositionMargin = useMemo(() => {
+    return Object.values(positions || {}).reduce((sum: number, p: any) => {
+      const lev = p.leverage || 1;
+      return sum + ((p.averagePrice * p.quantity) / lev);
+    }, 0);
+  }, [positions]);
+
+  const totalPendingOrderMargin = useMemo(() => {
+    return (pendingOrders || []).reduce((sum: number, ord: any) => {
+      return sum + (ord.margin || 0);
+    }, 0);
+  }, [pendingOrders]);
+
+  const totalEquity = balance + totalOpenPositionMargin + totalPendingOrderMargin;
+
   const handleResetWallet = async () => {
+    if (totalEquity >= 5000) {
+      const inTrades = totalOpenPositionMargin + totalPendingOrderMargin;
+      let msg = `Tài khoản của bạn hiện vẫn còn $${balance.toLocaleString('en-US')} USD tiền mặt.`;
+      if (inTrades > 0) {
+        msg = `Tổng tài sản thực tế của bạn hiện là $${totalEquity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD (gồm $${balance.toLocaleString('en-US')} tiền mặt khả dụng + $${inTrades.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ký quỹ đang nằm trong vị thế và lệnh chờ).\n\nBạn không thể khôi phục tài khoản khi vẫn còn tiền đang rải trong các lệnh! Hệ thống chỉ cho phép khôi phục khi tổng tài sản thực tế dưới $5,000 USD.`;
+      } else {
+        msg = `Tài khoản của bạn hiện đang có $${balance.toLocaleString('en-US')} USD. Hệ thống chỉ cho phép khôi phục lại $100k vốn khi tổng tài sản còn dưới $5,000 USD!`;
+      }
+
+      showAlert({
+        title: 'Chưa đủ điều kiện khôi phục',
+        message: msg,
+        type: 'warning'
+      });
+      return;
+    }
+
+    const confirmed = await showConfirm({
+      title: 'Khôi phục số dư về $100,000 USD',
+      message: 'Bạn có chắc muốn khôi phục số dư tài khoản về $100,000 USD không?\n\n• Điều kiện: Tổng tài sản thực tế dưới $5,000 USD.\n• Quy định: Tối đa 1 lần trong ngày, 4 lần trong 1 tuần.\n• Lưu ý: Các vị thế đang mở và lệnh chờ sẽ được đóng để làm sạch tài sản.',
+      confirmText: 'Xác nhận khôi phục',
+      cancelText: 'Hủy'
+    });
+
+    if (!confirmed) return;
+
     try {
       const res = await tradingApi.resetWallet(100000);
       if (res.success) {
         await fetchPortfolio();
-        showToast('✅ Đã nạp / reset số dư về $100,000 USD thành công!', 'info');
+        showToast(res.message || '✅ Đã khôi phục số dư về $100,000 USD thành công!', 'info');
       }
     } catch (e: any) {
-      showToast(`❌ ${e.message}`, 'warning');
+      showAlert({
+        title: 'Không thể khôi phục',
+        message: e.message || 'Đã có lỗi xảy ra',
+        type: 'warning'
+      });
     }
   };
 
@@ -1041,7 +1087,7 @@ export const TradingTerminal = () => {
           hideDrawing={hideDrawing}
           onToggleHide={() => setHideDrawing(!hideDrawing)}
         />
-        <div className="flex flex-col flex-1 overflow-visible lg:overflow-hidden min-h-[600px] lg:min-h-0">
+        <div className="flex flex-col flex-1 overflow-visible lg:overflow-hidden min-h-[500px] lg:min-h-0 pb-16 lg:pb-0">
           <TickerHeader
             stock={selectedStock}
             activeTab={activeTab}
@@ -1186,7 +1232,8 @@ export const TradingTerminal = () => {
             <ContractInfoPanel stock={selectedStock} />
           )}
         </div>
-        <div className="flex flex-col lg:flex-row shrink-0 w-full lg:w-auto border-t lg:border-t-0 border-[#2a2e39]">
+        {/* Desktop Right Panels & Toolbar */}
+        <div className="hidden lg:flex flex-row shrink-0 h-full border-l border-[#e6e8ea] dark:border-[#2a2e39]">
           {activeRightPanel === 'watchlist' && (
             <WatchlistPanel
               watchlists={watchlists}
@@ -1206,6 +1253,7 @@ export const TradingTerminal = () => {
               selectedStock={selectedStock}
               positions={positions as any}
               balance={balance}
+              totalEquity={totalEquity}
               maxAllowedLeverage={isChallengeActive ? (currentChallengeLevel.id === 6 ? undefined : currentChallengeLevel.maxLeverage) : undefined}
               challengeBadge={isChallengeActive ? (currentChallengeLevel.id === 6 ? `${currentChallengeLevel.badge} (${currentChallengeLevel.levelName}) · Tối đa theo sàn` : `${currentChallengeLevel.badge} (${currentChallengeLevel.levelName})`) : undefined}
               onStockSelect={(stock) => {
@@ -1257,6 +1305,179 @@ export const TradingTerminal = () => {
             onChangePanel={setActiveRightPanel}
           />
         </div>
+      </div>
+
+      {/* ─── Mobile Active Panel Drawer (Slide-up modal on mobile) ─── */}
+      {activeRightPanel && (
+        <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div 
+            className="absolute inset-0" 
+            onClick={() => setActiveRightPanel(null)} 
+          />
+          <div className="relative bg-white dark:bg-[#131722] rounded-t-2xl shadow-2xl max-h-[85vh] h-[82vh] flex flex-col border-t border-[#e6e8ea] dark:border-[#2a2e39] z-10 animate-in slide-in-from-bottom duration-200">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#e6e8ea] dark:border-[#2a2e39] shrink-0 bg-[#f8f9fa] dark:bg-[#181c27] rounded-t-2xl">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-blue-500" />
+                <span className="font-bold text-sm text-[#1e2329] dark:text-white">
+                  {activeRightPanel === 'watchlist' && 'Danh Sách Theo Dõi'}
+                  {activeRightPanel === 'order' && `Đặt Lệnh & Sổ Lệnh (${selectedStock.symbol})`}
+                  {activeRightPanel === 'simulation' && 'Mô Phỏng Giao Dịch'}
+                  {activeRightPanel === 'calculator' && 'Tính Khối Lượng Vị Thế'}
+                  {activeRightPanel === 'journal' && 'Nhật Ký Giao Dịch'}
+                </span>
+              </div>
+              <button
+                onClick={() => setActiveRightPanel(null)}
+                className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-[#2a2e39] text-[#787b86] hover:text-[#1e2329] dark:hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Panel Content (Full width inside drawer) */}
+            <div className="flex-1 overflow-hidden flex flex-col w-full [&>div]:w-full [&>div]:border-l-0">
+              {activeRightPanel === 'watchlist' && (
+                <WatchlistPanel
+                  watchlists={watchlists}
+                  activeWatchlistId={activeWatchlistId}
+                  onWatchlistChange={setActiveWatchlistId}
+                  onUpdateWatchlist={handleUpdateWatchlist}
+                  onCreateWatchlist={handleCreateWatchlist}
+                  onDeleteWatchlist={handleDeleteWatchlist}
+                  onRenameWatchlist={handleRenameWatchlist}
+                  onSelectStock={(s) => {
+                    handleStockSelect(s);
+                    setActiveRightPanel(null);
+                  }}
+                  currentSymbol={selectedStock.symbol}
+                />
+              )}
+
+              {activeRightPanel === 'order' && (
+                <RightSidebar
+                  selectedStock={selectedStock}
+                  positions={positions as any}
+                  balance={balance}
+                  totalEquity={totalEquity}
+                  maxAllowedLeverage={isChallengeActive ? (currentChallengeLevel.id === 6 ? undefined : currentChallengeLevel.maxLeverage) : undefined}
+                  challengeBadge={isChallengeActive ? (currentChallengeLevel.id === 6 ? `${currentChallengeLevel.badge} (${currentChallengeLevel.levelName}) · Tối đa theo sàn` : `${currentChallengeLevel.badge} (${currentChallengeLevel.levelName})`) : undefined}
+                  onStockSelect={(stock) => {
+                    handleStockSelect(stock);
+                    setEditingSymbol(null);
+                  }}
+                  onTrade={handleTrade}
+                  onUpdateTPSL={async (symbol, side, tp, sl) => {
+                    const res = await handleUpdateTPSL(tp, sl);
+                    if (res.success) setEditingSymbol(null);
+                    return res;
+                  }}
+                  onAddMargin={handleAddMargin}
+                  isEditing={editingSymbol === selectedStock.symbol}
+                  onCancelEdit={() => setEditingSymbol(null)}
+                  onPreviewTPSLChange={setPreviewTPSL}
+                  draggedTPSL={draggedTPSL}
+                  onResetWallet={handleResetWallet}
+                />
+              )}
+
+              {activeRightPanel === 'simulation' && (
+                <SimulationPanel
+                  currentSymbol={selectedStock.symbol}
+                  selectedStock={selectedStock}
+                  currentPrice={selectedStock.price}
+                  isReplaying={isReplaying}
+                  onStartSimulation={handleStartSimulation}
+                  onStartReplay={handleStartReplaySelection}
+                  onSelectStock={handleStockSelect}
+                  onPreviewTPSLChange={setPreviewTPSL}
+                  draggedTPSL={draggedTPSL}
+                />
+              )}
+
+              {activeRightPanel === 'calculator' && (
+                <CalculatorPanel
+                  initialBalance={balance}
+                  currentStock={selectedStock}
+                />
+              )}
+
+              {activeRightPanel === 'journal' && (
+                <TradingJournalPanel />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Mobile Bottom Navigation Bar (Fixed) ─── */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-[#131722] border-t border-[#e6e8ea] dark:border-[#2a2e39] h-14 px-2 flex items-center justify-around shadow-lg">
+        <button
+          onClick={() => setActiveRightPanel(activeRightPanel === 'watchlist' ? null : 'watchlist')}
+          className={`flex flex-col items-center justify-center flex-1 py-1 rounded transition-colors ${
+            activeRightPanel === 'watchlist'
+              ? 'text-blue-600 dark:text-blue-400 font-semibold'
+              : 'text-[#787b86] hover:text-[#1e2329] dark:hover:text-white'
+          }`}
+        >
+          <List className="w-5 h-5 stroke-[1.8]" />
+          <span className="text-[10px] mt-0.5">Theo dõi</span>
+        </button>
+
+        <button
+          onClick={() => setActiveRightPanel(activeRightPanel === 'simulation' ? null : 'simulation')}
+          className={`flex flex-col items-center justify-center flex-1 py-1 rounded transition-colors ${
+            activeRightPanel === 'simulation'
+              ? 'text-[#089981] font-semibold'
+              : 'text-[#787b86] hover:text-[#1e2329] dark:hover:text-white'
+          }`}
+        >
+          <BarChart2 className="w-5 h-5 stroke-[1.8]" />
+          <span className="text-[10px] mt-0.5">Mô phỏng</span>
+        </button>
+
+        {/* Primary Action Button: Đặt Lệnh */}
+        <button
+          onClick={() => setActiveRightPanel(activeRightPanel === 'order' ? null : 'order')}
+          className={`flex flex-col items-center justify-center flex-1 py-1 rounded transition-all ${
+            activeRightPanel === 'order'
+              ? 'text-white'
+              : 'text-[#787b86] hover:text-[#1e2329] dark:hover:text-white'
+          }`}
+        >
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center -mt-2 shadow-md transition-transform ${
+            activeRightPanel === 'order'
+              ? 'bg-blue-600 text-white scale-110 ring-2 ring-blue-400'
+              : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+          }`}>
+            <ArrowLeftRight className="w-4 h-4 stroke-[2]" />
+          </div>
+          <span className="text-[10px] mt-0.5 font-bold">Đặt lệnh</span>
+        </button>
+
+        <button
+          onClick={() => setActiveRightPanel(activeRightPanel === 'journal' ? null : 'journal')}
+          className={`flex flex-col items-center justify-center flex-1 py-1 rounded transition-colors ${
+            activeRightPanel === 'journal'
+              ? 'text-blue-600 dark:text-blue-400 font-semibold'
+              : 'text-[#787b86] hover:text-[#1e2329] dark:hover:text-white'
+          }`}
+        >
+          <BookOpen className="w-5 h-5 stroke-[1.8]" />
+          <span className="text-[10px] mt-0.5">Nhật ký</span>
+        </button>
+
+        <button
+          onClick={() => setActiveRightPanel(activeRightPanel === 'calculator' ? null : 'calculator')}
+          className={`flex flex-col items-center justify-center flex-1 py-1 rounded transition-colors ${
+            activeRightPanel === 'calculator'
+              ? 'text-[#089981] font-semibold'
+              : 'text-[#787b86] hover:text-[#1e2329] dark:hover:text-white'
+          }`}
+        >
+          <Calculator className="w-5 h-5 stroke-[1.8]" />
+          <span className="text-[10px] mt-0.5">Máy tính</span>
+        </button>
       </div>
 
       {toast && (

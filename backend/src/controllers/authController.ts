@@ -2,6 +2,7 @@ import { Request, Response, CookieOptions } from 'express';
 import bcrypt from 'bcrypt';
 import User from '../models/User';
 import Wallet from '../models/Wallet';
+import { WalletService } from '../services/walletService';
 import Otp from '../models/Otp';
 import jwt from 'jsonwebtoken';
 import { sendOtpEmail, sendForgotPasswordEmail } from '../services/emailService';
@@ -211,12 +212,8 @@ export const verifyOtp = async (req: Request, res: Response) => {
       });
       await user.save();
 
-      // Khởi tạo ví giao dịch mô phỏng 100.000.000 VNĐ
-      await Wallet.create({
-        userId: user._id,
-        balance: 100000000,
-        availableBalance: 100000000,
-      });
+      // Khởi tạo ví giao dịch mô phỏng chuẩn $100,000 USD
+      await WalletService.getOrCreateWallet(user._id.toString());
     }
 
     // Xoá các OTP đã sử dụng
@@ -412,11 +409,8 @@ export const googleLogin = async (req: Request, res: Response) => {
       });
       await user.save();
 
-      await Wallet.create({
-        userId: user._id,
-        balance: 100000000,
-        availableBalance: 100000000,
-      });
+      // Khởi tạo ví giao dịch mô phỏng chuẩn $100,000 USD
+      await WalletService.getOrCreateWallet(user._id.toString());
     } else {
       // Cập nhật thông tin nếu cần thiết
       let updated = false;

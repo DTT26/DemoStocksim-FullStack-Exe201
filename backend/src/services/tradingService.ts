@@ -499,19 +499,45 @@ export class TradingService {
       if (!px) continue;
 
       let triggered = false;
+      let triggerReason = '';
+
+      // Kiểm tra thanh lý (Liquidation: MMR = 0.4%)
+      const mmr = 0.004;
+      const margin = (h.averagePrice * h.quantity) / (h.leverage || 1);
+      const marginPerUnit = margin / h.quantity;
+      const mmPerUnit = h.averagePrice * mmr;
+      let isLiquidated = false;
 
       if (h.side === 'LONG') {
-        if (h.tp && px >= h.tp) { triggered = true; }
-        else if (h.sl && px <= h.sl) { triggered = true; }
+        const rawLiq = h.averagePrice - marginPerUnit + mmPerUnit;
+        if (rawLiq > 0 && px <= rawLiq) {
+          isLiquidated = true;
+          triggerReason = `THANH LÝ (chạm giá thanh lý ${rawLiq.toFixed(2)})`;
+        } else if (h.tp && px >= h.tp) { 
+          triggered = true; 
+          triggerReason = 'Chốt lời (TP)';
+        } else if (h.sl && px <= h.sl) { 
+          triggered = true; 
+          triggerReason = 'Cắt lỗ (SL)';
+        }
       } else if (h.side === 'SHORT') {
-        if (h.tp && px <= h.tp) { triggered = true; }
-        else if (h.sl && px >= h.sl) { triggered = true; }
+        const rawLiq = h.averagePrice + marginPerUnit - mmPerUnit;
+        if (rawLiq > 0 && px >= rawLiq) {
+          isLiquidated = true;
+          triggerReason = `THANH LÝ (chạm giá thanh lý ${rawLiq.toFixed(2)})`;
+        } else if (h.tp && px <= h.tp) { 
+          triggered = true; 
+          triggerReason = 'Chốt lời (TP)';
+        } else if (h.sl && px >= h.sl) { 
+          triggered = true; 
+          triggerReason = 'Cắt lỗ (SL)';
+        }
       }
 
-      if (triggered) {
+      if (isLiquidated || triggered) {
         processedCount++;
-        const closeRes = await this.closePosition(userId, h.symbol, h.side, px);
-        messages.push(`Vị thế ${h.side} ${h.symbol} đã tự động đóng do chạm ${h.tp && px >= h.tp ? 'Chốt lời (TP)' : 'Cắt lỗ (SL)'} tại giá ${px}`);
+        await this.closePosition(userId, h.symbol, h.side, px);
+        messages.push(`Vị thế ${h.side} ${h.symbol} đã tự động đóng do ${triggerReason} tại giá ${px}`);
       }
     }
 

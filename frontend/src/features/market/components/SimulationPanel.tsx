@@ -365,7 +365,7 @@ export const SimulationPanel = ({
 
   if (isCreating) {
     return (
-      <div className="w-[320px] border-l border-[#e6e8ea] dark:border-[#2a2e39] bg-white dark:bg-[#131722] shrink-0 h-full flex flex-col text-[#1e2329] dark:text-[#d1d4dc] font-sans">
+      <div className="w-full lg:w-[320px] lg:border-l border-[#e6e8ea] dark:border-[#2a2e39] bg-white dark:bg-[#131722] shrink-0 h-full flex flex-col text-[#1e2329] dark:text-[#d1d4dc] font-sans">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[#e6e8ea] dark:border-[#2a2e39] shrink-0">
           <h2 className="text-lg font-bold text-[#1e2329] dark:text-white">Bắt đầu phiên giao dịch</h2>
@@ -533,7 +533,7 @@ export const SimulationPanel = ({
   if (currentView === 'trading' && store.isActive && store.session) {
     const sessionStock = STOCKS.find(s => s.symbol === store.session!.symbol) || selectedStock || STOCKS[0];
     return (
-      <div className="w-[320px] border-l border-[#e6e8ea] dark:border-[#2a2e39] bg-white dark:bg-[#131722] shrink-0 h-full flex flex-col text-[#1e2329] dark:text-[#d1d4dc] font-sans">
+      <div className="w-full lg:w-[320px] lg:border-l border-[#e6e8ea] dark:border-[#2a2e39] bg-white dark:bg-[#131722] shrink-0 h-full flex flex-col text-[#1e2329] dark:text-[#d1d4dc] font-sans">
         <SimulatorTradingPanel
           selectedStock={sessionStock}
           onBack={() => setCurrentView('list')}
@@ -545,7 +545,7 @@ export const SimulationPanel = ({
   }
 
   return (
-    <div className="w-[320px] border-l border-[#e6e8ea] dark:border-[#2a2e39] bg-white dark:bg-[#131722] shrink-0 h-full flex flex-col text-[#1e2329] dark:text-[#d1d4dc] font-sans relative">
+    <div className="w-full lg:w-[320px] lg:border-l border-[#e6e8ea] dark:border-[#2a2e39] bg-white dark:bg-[#131722] shrink-0 h-full flex flex-col text-[#1e2329] dark:text-[#d1d4dc] font-sans relative">
       {!user ? (
         <AuthOverlay
           icon={<BarChart2 className="w-8 h-8" />}

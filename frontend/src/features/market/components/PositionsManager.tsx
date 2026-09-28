@@ -38,8 +38,8 @@ export const PositionsManager = ({ currentPrice }: PositionsManagerProps) => {
   return (
     <div className={`border-t border-[#e6e8ea] dark:border-[#2a2e39] bg-white dark:bg-[#0b0e11] flex flex-col shrink-0 overflow-hidden text-xs text-[#787b86] transition-all duration-300 ${isExpanded ? 'h-64' : 'h-10'}`}>
       {/* Header Tabs */}
-      <div className="flex items-center justify-between border-b border-[#e6e8ea] dark:border-[#2a2e39] px-2 h-10 shrink-0 bg-[#f8f9fa] dark:bg-[#131722]">
-        <div className="flex items-center gap-6 h-full">
+      <div className="flex items-center justify-between border-b border-[#e6e8ea] dark:border-[#2a2e39] px-2 h-10 shrink-0 bg-[#f8f9fa] dark:bg-[#131722] gap-2">
+        <div className="flex items-center gap-3 sm:gap-6 h-full overflow-x-auto no-scrollbar shrink-0 min-w-0 flex-1">
           {tabs.map(tab => (
             <button
               key={tab.id}
@@ -51,9 +51,9 @@ export const PositionsManager = ({ currentPrice }: PositionsManagerProps) => {
                   setIsExpanded(true);
                 }
               }}
-              className={`h-full relative font-medium transition-colors px-1 ${
+              className={`h-full relative font-medium transition-colors px-1 whitespace-nowrap shrink-0 ${
                 activeTab === tab.id && isExpanded
-                  ? 'text-[#1e2329] dark:text-white' 
+                  ? 'text-[#1e2329] dark:text-white font-semibold' 
                   : 'hover:text-[#1e2329] dark:hover:text-white text-[#787b86]'
               }`}
             >
@@ -65,20 +65,20 @@ export const PositionsManager = ({ currentPrice }: PositionsManagerProps) => {
           ))}
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 shrink-0">
           <button 
             onClick={() => setIsExpanded(!isExpanded)}
-            className="hover:text-[#1e2329] dark:hover:text-white transition-colors border-l border-[#e6e8ea] dark:border-[#2a2e39] pl-4 py-1"
+            className="hover:text-[#1e2329] dark:hover:text-white transition-colors border-l border-[#e6e8ea] dark:border-[#2a2e39] pl-2 sm:pl-4 py-1"
           >
             {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
           </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar relative">
+      <div className="flex-1 overflow-auto custom-scrollbar relative">
         {activeTab === 'positions' && (
           positions.length > 0 ? (
-            <table className="w-full text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
+            <table className="w-full min-w-[760px] text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
               <thead className="sticky top-0 bg-[#f8f9fa] dark:bg-[#0b0e11] text-[#787b86] font-normal text-[11px] border-b border-[#e6e8ea] dark:border-transparent z-10">
                 <tr>
                   <th className="px-4 py-2">Symbol</th>
@@ -130,7 +130,7 @@ export const PositionsManager = ({ currentPrice }: PositionsManagerProps) => {
         )}
 
         {activeTab === 'orders' && (
-          <table className="w-full text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
+          <table className="w-full min-w-[500px] text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
             <thead className="sticky top-0 bg-[#f8f9fa] dark:bg-[#0b0e11] text-[#787b86] font-normal text-[11px] border-b border-[#e6e8ea] dark:border-transparent z-10">
               <tr>
                 <th className="px-4 py-2 font-medium">Mã</th>
@@ -164,7 +164,7 @@ export const PositionsManager = ({ currentPrice }: PositionsManagerProps) => {
         )}
 
         {activeTab === 'history' && (
-          <table className="w-full text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
+          <table className="w-full min-w-[750px] text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
             <thead className="sticky top-0 bg-[#f8f9fa] dark:bg-[#0b0e11] text-[#787b86] font-normal text-[11px] border-b border-[#e6e8ea] dark:border-transparent z-10">
               <tr>
                 <th className="px-4 py-2 font-medium">Thời gian mở</th>

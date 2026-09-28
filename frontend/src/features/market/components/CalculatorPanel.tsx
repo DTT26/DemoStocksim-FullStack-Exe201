@@ -99,7 +99,7 @@ export const CalculatorPanel = ({ initialBalance, currentStock }: CalculatorPane
   }, [entryPrice, stopLoss, riskAmount, marketType]);
 
   return (
-    <div className="w-[320px] border-l border-[#e6e8ea] dark:border-[#2a2e39] bg-white dark:bg-[#131722] shrink-0 h-full flex flex-col text-[#1e2329] dark:text-[#d1d4dc] font-sans">
+    <div className="w-full lg:w-[320px] lg:border-l border-[#e6e8ea] dark:border-[#2a2e39] bg-white dark:bg-[#131722] shrink-0 h-full flex flex-col text-[#1e2329] dark:text-[#d1d4dc] font-sans">
       
       {/* Header */}
       <div className="flex items-center gap-2 p-4 shrink-0 border-b border-[#e6e8ea] dark:border-[#2a2e39]">
