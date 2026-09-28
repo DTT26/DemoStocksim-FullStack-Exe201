@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChartArea } from './components/ChartArea';
 import { RightSidebar } from './components/RightSidebar';
@@ -817,19 +817,43 @@ export const TradingTerminal = () => {
     }
   };
 
+  // Tính tổng tài sản thực tế (Total Equity) = Tiền mặt khả dụng + Ký quỹ vị thế mở + Ký quỹ lệnh chờ
+  const totalOpenPositionMargin = useMemo(() => {
+    return Object.values(positions || {}).reduce((sum: number, p: any) => {
+      const lev = p.leverage || 1;
+      return sum + ((p.averagePrice * p.quantity) / lev);
+    }, 0);
+  }, [positions]);
+
+  const totalPendingOrderMargin = useMemo(() => {
+    return (pendingOrders || []).reduce((sum: number, ord: any) => {
+      return sum + (ord.margin || 0);
+    }, 0);
+  }, [pendingOrders]);
+
+  const totalEquity = balance + totalOpenPositionMargin + totalPendingOrderMargin;
+
   const handleResetWallet = async () => {
-    if (balance >= 5000) {
+    if (totalEquity >= 5000) {
+      const inTrades = totalOpenPositionMargin + totalPendingOrderMargin;
+      let msg = `Tài khoản của bạn hiện vẫn còn $${balance.toLocaleString('en-US')} USD tiền mặt.`;
+      if (inTrades > 0) {
+        msg = `Tổng tài sản thực tế của bạn hiện là $${totalEquity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD (gồm $${balance.toLocaleString('en-US')} tiền mặt khả dụng + $${inTrades.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ký quỹ đang nằm trong vị thế và lệnh chờ).\n\nBạn không thể khôi phục tài khoản khi vẫn còn tiền đang rải trong các lệnh! Hệ thống chỉ cho phép khôi phục khi tổng tài sản thực tế dưới $5,000 USD.`;
+      } else {
+        msg = `Tài khoản của bạn hiện đang có $${balance.toLocaleString('en-US')} USD. Hệ thống chỉ cho phép khôi phục lại $100k vốn khi tổng tài sản còn dưới $5,000 USD!`;
+      }
+
       showAlert({
         title: 'Chưa đủ điều kiện khôi phục',
-        message: `Tài khoản của bạn hiện đang có $${balance.toLocaleString('en-US')} USD. Hệ thống chỉ cho phép khôi phục lại $100k vốn khi số dư còn dưới $5,000 USD!`,
-        type: 'info'
+        message: msg,
+        type: 'warning'
       });
       return;
     }
 
     const confirmed = await showConfirm({
       title: 'Khôi phục số dư về $100,000 USD',
-      message: 'Bạn có chắc muốn khôi phục số dư tài khoản về $100,000 USD không?\n\n• Điều kiện: Số dư dưới $5,000 USD.\n• Quy định: Tối đa 1 lần trong ngày, 4 lần trong 1 tuần.\n• Lưu ý: Các vị thế đang mở và lệnh chờ sẽ được đóng để làm sạch tài sản.',
+      message: 'Bạn có chắc muốn khôi phục số dư tài khoản về $100,000 USD không?\n\n• Điều kiện: Tổng tài sản thực tế dưới $5,000 USD.\n• Quy định: Tối đa 1 lần trong ngày, 4 lần trong 1 tuần.\n• Lưu ý: Các vị thế đang mở và lệnh chờ sẽ được đóng để làm sạch tài sản.',
       confirmText: 'Xác nhận khôi phục',
       cancelText: 'Hủy'
     });
@@ -1226,6 +1250,7 @@ export const TradingTerminal = () => {
               selectedStock={selectedStock}
               positions={positions as any}
               balance={balance}
+              totalEquity={totalEquity}
               maxAllowedLeverage={isChallengeActive ? (currentChallengeLevel.id === 6 ? undefined : currentChallengeLevel.maxLeverage) : undefined}
               challengeBadge={isChallengeActive ? (currentChallengeLevel.id === 6 ? `${currentChallengeLevel.badge} (${currentChallengeLevel.levelName}) · Tối đa theo sàn` : `${currentChallengeLevel.badge} (${currentChallengeLevel.levelName})`) : undefined}
               onStockSelect={(stock) => {
@@ -1331,6 +1356,7 @@ export const TradingTerminal = () => {
                   selectedStock={selectedStock}
                   positions={positions as any}
                   balance={balance}
+                  totalEquity={totalEquity}
                   maxAllowedLeverage={isChallengeActive ? (currentChallengeLevel.id === 6 ? undefined : currentChallengeLevel.maxLeverage) : undefined}
                   challengeBadge={isChallengeActive ? (currentChallengeLevel.id === 6 ? `${currentChallengeLevel.badge} (${currentChallengeLevel.levelName}) · Tối đa theo sàn` : `${currentChallengeLevel.badge} (${currentChallengeLevel.levelName})`) : undefined}
                   onStockSelect={(stock) => {

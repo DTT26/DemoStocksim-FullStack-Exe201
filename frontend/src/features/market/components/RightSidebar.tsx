@@ -59,9 +59,10 @@ interface RightSidebarProps {
   onPreviewTPSLChange?: (tpsl: { tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean; orderPrice?: number; orderType?: 'LIMIT' | 'STOP' } | null) => void;
   draggedTPSL?: { tp?: number; sl?: number; orderPrice?: number } | null;
   onResetWallet?: () => void;
+  totalEquity?: number;
 }
 
-export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeverage, challengeBadge, onStockSelect, onTrade, onUpdateTPSL, onAddMargin, isEditing, onCancelEdit, onPreviewTPSLChange, draggedTPSL, onResetWallet }: RightSidebarProps) => {
+export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, maxAllowedLeverage, challengeBadge, onStockSelect, onTrade, onUpdateTPSL, onAddMargin, isEditing, onCancelEdit, onPreviewTPSLChange, draggedTPSL, onResetWallet }: RightSidebarProps) => {
   const { user, login } = useAuth();
   const { showAlert } = useModal();
   const { t } = useI18n();
@@ -443,7 +444,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
                 <button
                   type="button"
                   onClick={onResetWallet}
-                  title="Khôi phục lại $100,000 USD khi số dư dưới $5,000 USD (Tối đa 1 lần/ngày, 4 lần/tuần)"
+                  title="Khôi phục lại $100,000 USD khi tổng tài sản (tiền mặt + lệnh mở) dưới $5,000 USD (Tối đa 1 lần/ngày, 4 lần/tuần)"
                   className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 transition-all cursor-pointer hover:scale-105 active:scale-95"
                 >
                   <RotateCcw className="w-2.5 h-2.5" />
@@ -453,10 +454,10 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
             </div>
           </div>
 
-          {/* Cảnh báo khi số dư dưới $5,000 */}
-          {balance < 5000 && onResetWallet && (
+          {/* Cảnh báo khi tổng tài sản thực tế dưới $5,000 */}
+          {((totalEquity !== undefined ? totalEquity : balance) < 5000) && onResetWallet && (
             <div className="px-2.5 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-[11px] text-rose-600 dark:text-rose-400 flex items-center justify-between gap-2">
-              <span className="leading-tight">⚠️ Số dư còn dưới $5,000 USD! Bạn có thể khôi phục lại $100,000 USD (Tối đa 1 lần/ngày, 4 lần/tuần).</span>
+              <span className="leading-tight">⚠️ Tổng tài sản còn dưới $5,000 USD! Bạn có thể khôi phục lại $100,000 USD (Tối đa 1 lần/ngày, 4 lần/tuần).</span>
               <button
                 type="button"
                 onClick={onResetWallet}
