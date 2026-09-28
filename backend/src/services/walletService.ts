@@ -7,6 +7,7 @@ import Transaction, { TransactionType } from '../models/Transaction';
 export const MAX_NORMAL_RESETS_PER_DAY = 1;
 export const MAX_NORMAL_RESETS_PER_WEEK = 4;
 export const DEFAULT_NORMAL_BALANCE = 100_000; // $100,000 USD chuẩn mực trading simulator
+export const RESET_ELIGIBILITY_THRESHOLD = 5_000; // Chỉ cho phép khôi phục khi số dư còn dưới $5,000 USD
 
 export class WalletService {
   /**
@@ -61,6 +62,7 @@ export class WalletService {
     remainingResetsThisWeek: number;
     currentBalance: number;
     defaultBalance: number;
+    resetEligibilityThreshold: number;
   }> {
     const wallet = await this.getOrCreateWallet(userId);
     const now = Date.now();
@@ -83,9 +85,9 @@ export class WalletService {
     let canReset = true;
     let reason = '';
 
-    if (wallet.availableBalance >= DEFAULT_NORMAL_BALANCE) {
+    if (wallet.availableBalance >= RESET_ELIGIBILITY_THRESHOLD) {
       canReset = false;
-      reason = `Tài khoản của bạn hiện vẫn còn đủ $${wallet.availableBalance.toLocaleString('en-US')} USD, chỉ có thể khôi phục lại khi đã giao dịch cạn vốn hoặc thua lỗ.`;
+      reason = `Tài khoản của bạn hiện vẫn còn $${wallet.availableBalance.toLocaleString('en-US')} USD. Chỉ được phép khôi phục khi số dư còn dưới $${RESET_ELIGIBILITY_THRESHOLD.toLocaleString('en-US')} USD!`;
     } else if (hasResetToday) {
       canReset = false;
       reason = 'Bạn đã sử dụng lượt reset hôm nay (Tối đa 1 lần / ngày). Vui lòng quay lại vào ngày mai!';
@@ -106,6 +108,7 @@ export class WalletService {
       remainingResetsThisWeek,
       currentBalance: wallet.availableBalance,
       defaultBalance: DEFAULT_NORMAL_BALANCE,
+      resetEligibilityThreshold: RESET_ELIGIBILITY_THRESHOLD,
     };
   }
 

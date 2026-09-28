@@ -818,10 +818,10 @@ export const TradingTerminal = () => {
   };
 
   const handleResetWallet = async () => {
-    if (balance >= 100000) {
+    if (balance >= 5000) {
       showAlert({
-        title: 'Số dư vẫn còn nguyên',
-        message: `Tài khoản của bạn hiện vẫn còn $${balance.toLocaleString('en-US')} USD (chưa hết 100k vốn ban đầu). Bạn chỉ có thể khôi phục tài khoản khi đã giao dịch cạn vốn hoặc thua lỗ!`,
+        title: 'Chưa đủ điều kiện khôi phục',
+        message: `Tài khoản của bạn hiện đang có $${balance.toLocaleString('en-US')} USD. Hệ thống chỉ cho phép khôi phục lại $100k vốn khi số dư còn dưới $5,000 USD!`,
         type: 'info'
       });
       return;
@@ -829,7 +829,7 @@ export const TradingTerminal = () => {
 
     const confirmed = await showConfirm({
       title: 'Khôi phục số dư về $100,000 USD',
-      message: 'Bạn có chắc muốn khôi phục số dư tài khoản về $100,000 USD không?\n\n• Quy định: Tối đa 1 lần trong ngày, 4 lần trong 1 tuần.\n• Lưu ý: Các vị thế đang mở và lệnh chờ sẽ được đóng để làm sạch tài sản.',
+      message: 'Bạn có chắc muốn khôi phục số dư tài khoản về $100,000 USD không?\n\n• Điều kiện: Số dư dưới $5,000 USD.\n• Quy định: Tối đa 1 lần trong ngày, 4 lần trong 1 tuần.\n• Lưu ý: Các vị thế đang mở và lệnh chờ sẽ được đóng để làm sạch tài sản.',
       confirmText: 'Xác nhận khôi phục',
       cancelText: 'Hủy'
     });
