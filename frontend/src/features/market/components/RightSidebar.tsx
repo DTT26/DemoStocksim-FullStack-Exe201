@@ -1,31 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Wallet, ChevronRight, ChevronLeft, Settings2, RotateCcw, ChevronDown, Check } from 'lucide-react';
-import { STOCKS, type Stock, generateOHLCV, getPricePrecision } from '../data';
+import { STOCKS, type Stock, generateOHLCV, getPricePrecision, getContractMultiplier, getAssetUnit } from '../data';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useModal } from '../../../contexts/ModalContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { OrderBook } from './OrderBook';
 
 export const getLotMultiplier = (stock: Stock): number => {
-  if (stock.market === 'Ngoại hối (Forex)') return 100000;
-  if (stock.symbol === 'XAUUSD') return 100;
-  if (stock.symbol === 'XAGUSD') return 5000;
-  if (stock.symbol === 'USOIL') return 1000;
-  // Crypto, Stocks, Indices: 1 unit per lot/contract
-  return 1;
+  return getContractMultiplier(stock);
 };
 
-export const getAssetUnit = (stock: Stock): string => {
-  if (stock.market === 'Tiền điện tử (Crypto)') {
-    return stock.symbol.replace('.SWAP', '').replace('.P', '').replace('USDT', '').replace('USD', '');
-  }
-  if (stock.market === 'Cổ phiếu') return 'CP';
-  if (stock.market === 'Chỉ số') return 'HĐ';
-  if (stock.market === 'Ngoại hối (Forex)') return 'Lot';
-  if (stock.symbol === 'XAUUSD' || stock.symbol === 'XAGUSD') return 'oz';
-  if (stock.symbol === 'USOIL') return 'thùng';
-  return 'Đơn vị';
-};
+export { getAssetUnit };
 
 export const getLotInputLabel = (stock: Stock, t: any): string => {
   if (stock.market === 'Ngoại hối (Forex)' || stock.market === 'Hàng hóa') {

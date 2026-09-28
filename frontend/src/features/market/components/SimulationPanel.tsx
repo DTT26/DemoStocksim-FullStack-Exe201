@@ -4,7 +4,7 @@ import {
   HelpCircle, Play, PlayCircle, ChevronDown, ChevronLeft, Calendar, ArrowRight, Edit3, 
   BarChart2, Eye, Trash2, Trophy, Target, Activity, Clock, Check, X 
 } from 'lucide-react';
-import { type Stock, STOCKS } from '../data';
+import { type Stock, STOCKS, getContractMultiplier, getAssetUnit } from '../data';
 import { AuthOverlay } from './AuthOverlay';
 import { useAuth } from '../../../contexts/AuthContext';
 import { 
@@ -850,7 +850,13 @@ export const SimulationPanel = ({
                                     </span>
                                     <span className="font-bold text-[#1e2329] dark:text-white">{tx.symbol}</span>
                                     <span className="text-[#787b86] text-[10px]">
-                                      {(tx.lot * 100000).toLocaleString('vi-VN')} CP ({tx.lot} Lot)
+                                      {(() => {
+                                        const mult = getContractMultiplier(tx.symbol);
+                                        const qty = tx.lot * mult;
+                                        const unit = getAssetUnit(tx.symbol);
+                                        const formatted = qty < 1 ? Number(qty.toFixed(6)).toString() : qty.toLocaleString('vi-VN');
+                                        return `${formatted} ${unit} (${tx.lot} Lot)`;
+                                      })()}
                                     </span>
                                   </div>
                                   <span className={`font-mono font-bold ${isWin ? 'text-[#089981]' : 'text-[#f23645]'}`}>

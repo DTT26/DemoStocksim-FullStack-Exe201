@@ -1,11 +1,6 @@
 import { create } from 'zustand';
 import type { SimSession, SimPosition, SimOrder, SimHistory, SimConfig } from './simulatorTypes';
-
-// Point value multiplier (e.g. 1 lot of EURUSD = 100,000, 1 lot of BTC = 1, etc.)
-// For simplicity in this demo, let's assume contract size = 100000 for everything,
-// or we make position value = lot * currentPrice * contractSize.
-// Let's assume standard forex lot size: 100,000 units.
-const CONTRACT_SIZE = 100000;
+import { getContractMultiplier } from '../data';
 
 interface SimulatorState {
   isActive: boolean;
@@ -212,7 +207,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
         
         // PnL Calculation
         const currentExecPrice = pos.side === 'LONG' ? bid : ask;
-        const actualQty = pos.lot * CONTRACT_SIZE;
+        const actualQty = pos.lot * getContractMultiplier(pos.symbol);
         const rawPnL = pos.side === 'LONG' 
           ? (currentExecPrice - pos.entryPrice) * actualQty
           : (pos.entryPrice - currentExecPrice) * actualQty;
@@ -272,7 +267,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
           for (let k = 0; k < positions.length; k++) {
             const p = positions[k];
             const pExecPrice = p.side === 'LONG' ? bid : ask;
-            const pQty = p.lot * CONTRACT_SIZE;
+            const pQty = p.lot * getContractMultiplier(p.symbol);
             const pPnL = p.side === 'LONG' 
               ? (pExecPrice - p.entryPrice) * pQty 
               : (p.entryPrice - pExecPrice) * pQty;
@@ -285,7 +280,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
           if (worstPosIndex !== -1) {
             const forcePos = positions[worstPosIndex];
             const forceExecPrice = forcePos.side === 'LONG' ? bid : ask;
-            const forceQty = forcePos.lot * CONTRACT_SIZE;
+            const forceQty = forcePos.lot * getContractMultiplier(forcePos.symbol);
             const forceRawPnL = forcePos.side === 'LONG'
               ? (forceExecPrice - forcePos.entryPrice) * forceQty
               : (forcePos.entryPrice - forceExecPrice) * forceQty;
@@ -327,7 +322,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
 
         if (triggered) {
           // Open position
-          const ordActualQty = ord.lot * CONTRACT_SIZE;
+          const ordActualQty = ord.lot * getContractMultiplier(ord.symbol);
           const reqMargin = (execPrice * ordActualQty) / config.leverage;
           const comm = config.commission * ord.lot;
           
@@ -395,7 +390,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
     }
 
     const execPrice = side === 'LONG' ? ask : bid;
-    const actualQty = lot * CONTRACT_SIZE;
+    const actualQty = lot * getContractMultiplier(session.symbol);
     const margin = (execPrice * actualQty) / config.leverage;
     const commission = config.commission * lot;
 
@@ -480,7 +475,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       }
 
       const currentExecPrice = pos.side === 'LONG' ? bid : ask;
-      const actualQty = pos.lot * CONTRACT_SIZE;
+      const actualQty = pos.lot * getContractMultiplier(pos.symbol);
       const rawPnL = pos.side === 'LONG' 
         ? (currentExecPrice - pos.entryPrice) * actualQty
         : (pos.entryPrice - currentExecPrice) * actualQty;
@@ -509,7 +504,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       const usedMargin = positions.reduce((sum, p) => sum + p.margin, 0);
       const remainingFloatingPnL = positions.reduce((sum, p) => {
         const pExecPrice = p.side === 'LONG' ? bid : ask;
-        const pQty = p.lot * CONTRACT_SIZE;
+        const pQty = p.lot * getContractMultiplier(p.symbol);
         const pRaw = p.side === 'LONG' ? (pExecPrice - p.entryPrice) * pQty : (p.entryPrice - pExecPrice) * pQty;
         return sum + (pRaw - p.commission + p.accumulatedSwap);
       }, 0);

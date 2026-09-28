@@ -193,3 +193,78 @@ export const generateOHLCV = (basePrice: number, count = 200, timeframe = 'D', e
 
   return data;
 };
+
+/**
+ * Trả về hệ số quy đổi 1 lot sang số lượng đơn vị cơ sở thực tế:
+ * - Forex chuẩn (EURUSD, GBPUSD...): 100,000 đơn vị tiền tệ
+ * - XAUUSD (Vàng): 100 oz / lot
+ * - XAGUSD (Bạc): 5,000 oz / lot
+ * - USOIL (Dầu): 1,000 thùng / lot
+ * - Crypto (BTC, ETH...): 1 coin / lot
+ * - Cổ phiếu / Chỉ số: 1 CP / HĐ / lot
+ */
+export const getContractMultiplier = (symbolOrStock?: string | Stock): number => {
+  if (!symbolOrStock) return 1;
+
+  if (typeof symbolOrStock !== 'string') {
+    const stock = symbolOrStock;
+    if (stock.market === 'Ngoại hối (Forex)') return 100000;
+    if (stock.symbol === 'XAUUSD') return 100;
+    if (stock.symbol === 'XAGUSD') return 5000;
+    if (stock.symbol === 'USOIL') return 1000;
+    if (stock.market === 'Tiền điện tử (Crypto)') return 1;
+    if (stock.market === 'Cổ phiếu') return 1;
+    if (stock.market === 'Chỉ số') return 1;
+    return 1;
+  }
+
+  const sym = symbolOrStock.toUpperCase().trim();
+  if (sym === 'XAUUSD') return 100;
+  if (sym === 'XAGUSD') return 5000;
+  if (sym === 'USOIL') return 1000;
+
+  const found = STOCKS.find(s => s.symbol.toUpperCase() === sym);
+  if (found) {
+    if (found.market === 'Ngoại hối (Forex)') return 100000;
+    if (found.symbol === 'XAUUSD') return 100;
+    if (found.symbol === 'XAGUSD') return 5000;
+    if (found.symbol === 'USOIL') return 1000;
+    return 1;
+  }
+
+  // Heuristic cho các cặp Forex 6 ký tự
+  const forexPairs = [
+    'EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCHF', 'NZDUSD', 'USDCAD',
+    'EURJPY', 'GBPJPY', 'EURGBP', 'EURCAD', 'AUDJPY', 'EURAUD', 'CADJPY'
+  ];
+  if (forexPairs.includes(sym)) return 100000;
+
+  return 1;
+};
+
+/**
+ * Trả về đơn vị của tài sản tương ứng:
+ * - Crypto: BTC, ETH, SOL...
+ * - Vàng/Bạc: oz
+ * - Dầu: thùng
+ * - Forex: Lot
+ * - Cổ phiếu: CP
+ * - Chỉ số: HĐ
+ */
+export const getAssetUnit = (symbolOrStock?: string | Stock): string => {
+  if (!symbolOrStock) return '';
+  const sym = typeof symbolOrStock === 'string' ? symbolOrStock.toUpperCase().trim() : symbolOrStock.symbol.toUpperCase().trim();
+  const market = typeof symbolOrStock !== 'string' ? symbolOrStock.market : STOCKS.find(s => s.symbol.toUpperCase() === sym)?.market;
+
+  if (sym === 'XAUUSD' || sym === 'XAGUSD') return 'oz';
+  if (sym === 'USOIL') return 'thùng';
+  if (market === 'Ngoại hối (Forex)' || ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCHF', 'NZDUSD', 'USDCAD', 'EURJPY', 'GBPJPY'].includes(sym)) {
+    return 'Lot';
+  }
+  if (sym.includes('USDT') || sym.includes('USD') || sym.includes('.P') || sym.includes('.SWAP')) {
+    return sym.replace('.SWAP', '').replace('.P', '').replace('USDT', '').replace('USD', '');
+  }
+  if (market === 'Cổ phiếu') return 'CP';
+  if (market === 'Chỉ số') return 'HĐ';
+  return 'Đơn vị';
+};

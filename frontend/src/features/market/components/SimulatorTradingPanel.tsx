@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { type Stock, getPricePrecision } from '../data';
+import { type Stock, getPricePrecision, getContractMultiplier, getAssetUnit } from '../data';
 import { useSimulatorStore } from '../engine/useSimulatorStore';
 import { ArrowUp, ArrowDown, Wallet, ChevronLeft } from 'lucide-react';
 
@@ -47,7 +47,9 @@ export const SimulatorTradingPanel = ({
   const currentExecAsk = store.currentAsk > 0 ? store.currentAsk : (effectivePrice + spreadValue);
 
   const priceNum = parseFloat(priceStr) || effectivePrice;
-  const actualQty = lot * 100000;
+  const multiplier = getContractMultiplier(selectedStock);
+  const assetUnit = getAssetUnit(selectedStock);
+  const actualQty = lot * multiplier;
   
   const marginRequired = orderType === 'MARKET' 
     ? (currentExecAsk * actualQty) / leverage 
@@ -143,6 +145,8 @@ export const SimulatorTradingPanel = ({
       }
     }
 
+    const formattedQty = actualQty < 1 ? Number(actualQty.toFixed(6)).toString() : actualQty.toLocaleString('vi-VN');
+
     if (orderType === 'MARKET') {
       store.executeMarketOrder(
         side, 
@@ -151,7 +155,7 @@ export const SimulatorTradingPanel = ({
         tpVal, 
         setupTag || undefined
       );
-      showToast(`Đã mở lệnh ${side} ${lot} lot thành công!`, true);
+      showToast(`Đã mở lệnh ${side} ${lot} lot (${formattedQty} ${assetUnit}) thành công!`, true);
     } else {
       if (priceNum <= 0) {
         showToast('Giá đặt lệnh không hợp lệ!', false);
@@ -166,7 +170,7 @@ export const SimulatorTradingPanel = ({
         tpVal, 
         setupTag || undefined
       );
-      showToast(`Đã đặt lệnh chờ ${side} ${orderType} thành công!`, true);
+      showToast(`Đã đặt lệnh chờ ${side} ${orderType} ${lot} lot (${formattedQty} ${assetUnit}) thành công!`, true);
     }
     setSetupTag('');
   };
@@ -447,7 +451,9 @@ export const SimulatorTradingPanel = ({
           </div>
           <div className="flex items-center justify-between text-[11px]">
             <span className="text-[#787b86]">Khối lượng thực tế</span>
-            <span className="font-mono text-[#787b86]">{actualQty.toLocaleString('vi-VN')}</span>
+            <span className="font-mono text-[#787b86]">
+              {actualQty < 1 ? Number(actualQty.toFixed(6)).toString() : actualQty.toLocaleString('vi-VN')} {assetUnit}
+            </span>
           </div>
           <div className="flex items-center justify-between text-[11px]">
             <span className="text-[#787b86]">Spread Mua/Bán</span>
