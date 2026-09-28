@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { TrendingUp, TrendingDown, Wallet, ChevronRight, ChevronLeft, Settings2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, ChevronRight, ChevronLeft, Settings2, RotateCcw } from 'lucide-react';
 import { STOCKS, type Stock, generateOHLCV, getPricePrecision } from '../data';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useModal } from '../../../contexts/ModalContext';
@@ -369,13 +369,40 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
           {/* Balance row */}
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-1 text-[#787b86]">
-              <Wallet className="w-3 h-3" />
+              <Wallet className="w-3.5 h-3.5" />
               <span>{t('order.balance', 'Số dư')}</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-mono text-green-600 dark:text-green-400 font-semibold">${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <div className="flex items-center gap-2">
+              <span className={`font-mono font-bold ${balance <= 0 ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              {onResetWallet && (
+                <button
+                  type="button"
+                  onClick={onResetWallet}
+                  title="Khôi phục lại $100,000 USD khi cạn tiền (Tối đa 1 lần/ngày, 4 lần/tuần)"
+                  className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 transition-all cursor-pointer hover:scale-105 active:scale-95"
+                >
+                  <RotateCcw className="w-2.5 h-2.5" />
+                  <span>Reset $100k</span>
+                </button>
+              )}
             </div>
           </div>
+
+          {/* Cảnh báo khi cháy tài khoản hoặc vốn cạn kiệt */}
+          {balance < 1000 && onResetWallet && (
+            <div className="px-2.5 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-[11px] text-rose-600 dark:text-rose-400 flex items-center justify-between gap-2">
+              <span className="leading-tight">⚠️ Đã hết vốn giao dịch! Bạn có thể khôi phục lại $100,000 USD (Tối đa 1 lần/ngày, 4 lần/tuần).</span>
+              <button
+                type="button"
+                onClick={onResetWallet}
+                className="shrink-0 px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white font-bold text-[10px] transition-colors cursor-pointer"
+              >
+                Khôi phục
+              </button>
+            </div>
+          )}
 
           {/* Order type */}
           <div className="flex gap-1.5 text-xs font-semibold pb-1">

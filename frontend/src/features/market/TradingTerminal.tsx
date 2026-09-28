@@ -818,14 +818,36 @@ export const TradingTerminal = () => {
   };
 
   const handleResetWallet = async () => {
+    if (balance >= 100000) {
+      showAlert({
+        title: 'Số dư vẫn còn nguyên',
+        message: `Tài khoản của bạn hiện vẫn còn $${balance.toLocaleString('en-US')} USD (chưa hết 100k vốn ban đầu). Bạn chỉ có thể khôi phục tài khoản khi đã giao dịch cạn vốn hoặc thua lỗ!`,
+        type: 'info'
+      });
+      return;
+    }
+
+    const confirmed = await showConfirm({
+      title: 'Khôi phục số dư về $100,000 USD',
+      message: 'Bạn có chắc muốn khôi phục số dư tài khoản về $100,000 USD không?\n\n• Quy định: Tối đa 1 lần trong ngày, 4 lần trong 1 tuần.\n• Lưu ý: Các vị thế đang mở và lệnh chờ sẽ được đóng để làm sạch tài sản.',
+      confirmText: 'Xác nhận khôi phục',
+      cancelText: 'Hủy'
+    });
+
+    if (!confirmed) return;
+
     try {
       const res = await tradingApi.resetWallet(100000);
       if (res.success) {
         await fetchPortfolio();
-        showToast('✅ Đã nạp / reset số dư về $100,000 USD thành công!', 'info');
+        showToast(res.message || '✅ Đã khôi phục số dư về $100,000 USD thành công!', 'info');
       }
     } catch (e: any) {
-      showToast(`❌ ${e.message}`, 'warning');
+      showAlert({
+        title: 'Không thể khôi phục',
+        message: e.message || 'Đã có lỗi xảy ra',
+        type: 'warning'
+      });
     }
   };
 

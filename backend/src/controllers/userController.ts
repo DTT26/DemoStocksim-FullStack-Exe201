@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import { AuthRequest } from '../middleware/authMiddleware';
 import User from '../models/User';
 import Wallet from '../models/Wallet';
+import { WalletService } from '../services/walletService';
 import SimulationParticipant from '../models/SimulationParticipant';
 
 // GET /api/users/me
@@ -16,15 +17,8 @@ export const getMyProfile = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ message: 'Tài khoản của bạn đã bị khóa hoặc tạm ngưng (Suspended)' });
     }
 
-    // Lấy thông tin Ví của User
-    let wallet = await Wallet.findOne({ userId: req.user._id });
-    if (!wallet) {
-      wallet = await Wallet.create({
-        userId: req.user._id,
-        balance: 100000000,
-        availableBalance: 100000000
-      });
-    }
+    // Lấy thông tin Ví của User qua WalletService (Chuẩn $100,000 USD)
+    const wallet = await WalletService.getOrCreateWallet(req.user._id.toString());
 
     // Lấy thêm thông tin về các cuộc thi đã tham gia
     const participations = await SimulationParticipant.find({ userId: req.user._id }).populate('simulationId', 'name status');

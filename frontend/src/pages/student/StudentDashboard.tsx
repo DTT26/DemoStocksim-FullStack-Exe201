@@ -65,7 +65,7 @@ export const StudentDashboard = () => {
     fetchDashboardData();
   }, []);
 
-  const currentBalance = wallet?.availableBalance ?? wallet?.balance ?? user?.balance ?? 100000000;
+  const currentBalance = wallet?.availableBalance ?? wallet?.balance ?? user?.balance ?? 100000;
   const upcomingAssignments = assignments.filter(
     a => a.studentStatus === 'NOT_STARTED' || a.studentStatus === 'IN_PROGRESS' || a.status === 'OPEN'
   ).slice(0, 3);
@@ -98,7 +98,7 @@ export const StudentDashboard = () => {
           </div>
           <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mb-1 relative z-10">Tài sản mô phỏng</p>
           <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white relative z-10 break-words font-mono">
-            {Number(currentBalance).toLocaleString('vi-VN')} đ
+            ${Number(currentBalance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </h3>
           <div className="mt-3 sm:mt-4 flex items-center gap-2 relative z-10">
             <span className="flex items-center text-xs font-semibold text-emerald-600 dark:text-emerald-500 bg-emerald-500/10 px-2 py-0.5 sm:py-1 rounded">
@@ -243,7 +243,7 @@ export const StudentDashboard = () => {
                     fontSize={11}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(val) => `${(val / 1000000).toFixed(0)}Tr`}
+                    tickFormatter={(val) => val >= 1000 ? `$${(val / 1000).toFixed(0)}k` : `$${val}`}
                   />
                   <Tooltip
                     contentStyle={{
@@ -255,7 +255,7 @@ export const StudentDashboard = () => {
                       fontSize: '12px'
                     }}
                     itemStyle={{ color: '#6366F1' }}
-                    formatter={(value: any) => [`${Number(value).toLocaleString('vi-VN')} đ`, 'Giá trị tài sản']}
+                    formatter={(value: any) => [`$${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Giá trị tài sản']}
                     labelFormatter={(label: any) => new Date(label).toLocaleDateString('vi-VN')}
                   />
                   <Area type="monotone" dataKey="value" stroke="#6366F1" strokeWidth={2.5} fillOpacity={1} fill="url(#colorValue)" />
