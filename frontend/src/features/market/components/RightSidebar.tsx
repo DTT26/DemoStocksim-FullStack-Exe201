@@ -44,9 +44,10 @@ interface RightSidebarProps {
   onPreviewTPSLChange?: (tpsl: { tp?: number; sl?: number; side?: 'LONG' | 'SHORT'; enabled: boolean; orderPrice?: number; orderType?: 'LIMIT' | 'STOP' } | null) => void;
   draggedTPSL?: { tp?: number; sl?: number; orderPrice?: number } | null;
   onResetWallet?: () => void;
+  totalEquity?: number;
 }
 
-export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeverage, challengeBadge, onStockSelect, onTrade, onUpdateTPSL, onAddMargin, isEditing, onCancelEdit, onPreviewTPSLChange, draggedTPSL, onResetWallet }: RightSidebarProps) => {
+export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, maxAllowedLeverage, challengeBadge, onStockSelect, onTrade, onUpdateTPSL, onAddMargin, isEditing, onCancelEdit, onPreviewTPSLChange, draggedTPSL, onResetWallet }: RightSidebarProps) => {
   const { user, login } = useAuth();
   const { showAlert } = useModal();
   const { t } = useI18n();
@@ -237,10 +238,10 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
     }
 
     if (requiredMargin > balance) {
-      showAlert({ 
-        title: 'Số dư không đủ', 
-        message: `Ký quỹ yêu cầu ($${requiredMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) vượt quá số dư khả dụng ($${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})!`, 
-        type: 'warning' 
+      showAlert({
+        title: 'Số dư không đủ',
+        message: `Ký quỹ yêu cầu ($${requiredMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) vượt quá số dư khả dụng ($${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})!`,
+        type: 'warning'
       });
       return;
     }
@@ -360,13 +361,13 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
             onClick={() => setActiveSidebarTab('orderbook')}
             className={`flex-1 py-3 text-xs font-semibold transition-colors ${activeSidebarTab === 'orderbook' ? 'text-blue-600 dark:text-white border-b-2 border-blue-500' : 'text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
           >
-            Sổ lệnh
+            {t('panel.orderBook', 'Sổ lệnh')}
           </button>
           <button
             onClick={() => setActiveSidebarTab('trade')}
             className={`flex-1 py-3 text-xs font-semibold transition-colors ${activeSidebarTab === 'trade' ? 'text-blue-600 dark:text-white border-b-2 border-blue-500' : 'text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
           >
-            Giao dịch
+            {t('panel.trade', 'Giao dịch')}
           </button>
         </div>
         <button className="p-3 text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc] hover:bg-[#f0f3fa] dark:hover:bg-[#1e222d] transition-colors">
@@ -375,11 +376,11 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
       </div>
 
       {activeSidebarTab === 'orderbook' ? (
-        <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="flex-1 overflow-y-auto min-h-[120px]">
           <OrderBook symbol={selectedStock.symbol} currentPrice={selectedStock.price} isUp={selectedStock.type === 'up'} />
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="flex-1 overflow-y-auto min-h-[120px]">
           <div className="flex items-center px-2 py-2 border-b border-[#e6e8ea] dark:border-[#2a2e39] text-[10px] uppercase tracking-wider text-[#787b86] font-semibold">
             <div className="flex-1 ml-1">Symbol</div>
             <div className="w-20 text-right">Price</div>
@@ -413,7 +414,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
 
       {/* Order Entry */}
       {user ? (
-        <div className="border-t border-[#e6e8ea] dark:border-[#2a2e39] p-3 flex flex-col gap-2.5 shrink-0 bg-[#f8f9fa] dark:bg-[#131722]">
+        <div className="border-t border-[#e6e8ea] dark:border-[#2a2e39] p-3 flex flex-col gap-2.5 shrink overflow-y-auto max-h-[55vh] lg:max-h-[60vh] bg-[#f8f9fa] dark:bg-[#131722]">
           {/* Balance row */}
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-1 text-[#787b86]">
@@ -428,7 +429,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
                 <button
                   type="button"
                   onClick={onResetWallet}
-                  title="Khôi phục lại $100,000 USD khi số dư dưới $5,000 USD (Tối đa 1 lần/ngày, 4 lần/tuần)"
+                  title="Khôi phục lại $100,000 USD khi tổng tài sản (tiền mặt + lệnh mở) dưới $5,000 USD (Tối đa 1 lần/ngày, 4 lần/tuần)"
                   className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 transition-all cursor-pointer hover:scale-105 active:scale-95"
                 >
                   <RotateCcw className="w-2.5 h-2.5" />
@@ -438,16 +439,16 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
             </div>
           </div>
 
-          {/* Cảnh báo khi số dư dưới $5,000 */}
-          {balance < 5000 && onResetWallet && (
+          {/* Cảnh báo khi tổng tài sản thực tế dưới $5,000 */}
+          {((totalEquity !== undefined ? totalEquity : balance) < 5000) && onResetWallet && (
             <div className="px-2.5 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-[11px] text-rose-600 dark:text-rose-400 flex items-center justify-between gap-2">
-              <span className="leading-tight">⚠️ Số dư còn dưới $5,000 USD! Bạn có thể khôi phục lại $100,000 USD (Tối đa 1 lần/ngày, 4 lần/tuần).</span>
+              <span className="leading-tight">{t('order.restoreDesc', '⚠️ Tổng tài sản còn dưới $5,000 USD! Bạn có thể khôi phục lại $100,000 USD (Tối đa 1 lần/ngày, 4 lần/tuần).')}</span>
               <button
                 type="button"
                 onClick={onResetWallet}
                 className="shrink-0 px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white font-bold text-[10px] transition-colors cursor-pointer"
               >
-                Khôi phục
+                {t('order.restore', 'Khôi phục')}
               </button>
             </div>
           )}
@@ -457,8 +458,8 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
             <button
               onClick={() => { if (!isEditing) setOrderType('market'); }}
               className={`flex-1 py-1.5 rounded uppercase transition-colors ${orderType === 'market'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]')
+                ? 'bg-blue-600 text-white'
+                : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]')
                 }`}
             >
               {t('order.market', 'Thị trường')}
@@ -473,8 +474,8 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
                 }
               }}
               className={`flex-1 py-1.5 rounded uppercase transition-colors ${orderType === 'limit'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]')
+                ? 'bg-blue-600 text-white'
+                : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]')
                 }`}
             >
               {t('order.limit', 'Limit')}
@@ -489,8 +490,8 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
                 }
               }}
               className={`flex-1 py-1.5 rounded uppercase transition-colors ${orderType === 'stop'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]')
+                ? 'bg-blue-600 text-white'
+                : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] ' + (isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc]')
                 }`}
             >
               {t('order.stop', 'Stop')}
@@ -500,7 +501,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
           {/* QUY MÔ LỆNH - Sizing Mode Selector */}
           <div className="flex items-center justify-between relative mt-0.5">
             <span className="text-[10px] text-[#787b86] uppercase tracking-wider font-semibold">
-              QUY MÔ LỆNH
+              {t('order.orderSize', 'QUY MÔ LỆNH')}
             </span>
             <div className="relative">
               <button
@@ -509,44 +510,41 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
                 className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-white dark:bg-[#1e222d] hover:bg-slate-100 dark:hover:bg-[#2a2e39] text-xs font-semibold text-[#1e2329] dark:text-[#d1d4dc] border border-[#e6e8ea] dark:border-[#2a2e39] transition-all cursor-pointer shadow-xs"
               >
                 <span>
-                  {sizingMode === 'qty' ? 'Khối lượng' : sizingMode === 'amount' ? 'Số tiền' : '% số dư'}
+                  {sizingMode === 'qty' ? t('order.qty', 'Khối lượng') : sizingMode === 'amount' ? t('order.amount', 'Số tiền') : t('order.percentBalance', '% số dư')}
                 </span>
                 <ChevronDown className={`w-3.5 h-3.5 text-[#787b86] transition-transform ${sizingDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {sizingDropdownOpen && (
-                <div 
+                <div
                   className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-lg shadow-xl z-50 py-1 text-xs"
                   onClick={() => setSizingDropdownOpen(false)}
                 >
                   <button
                     type="button"
                     onClick={() => setSizingMode('qty')}
-                    className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-[#2a2e39] transition-colors cursor-pointer ${
-                      sizingMode === 'qty' ? 'text-blue-600 font-bold bg-blue-50/50 dark:bg-blue-900/20' : 'text-[#1e2329] dark:text-[#d1d4dc]'
-                    }`}
+                    className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-[#2a2e39] transition-colors cursor-pointer ${sizingMode === 'qty' ? 'text-blue-600 font-bold bg-blue-50/50 dark:bg-blue-900/20' : 'text-[#1e2329] dark:text-[#d1d4dc]'
+                      }`}
                   >
-                    <span>Khối lượng</span>
+                    <span>{t('order.qty', 'Khối lượng')}</span>
                     {sizingMode === 'qty' && <Check className="w-3.5 h-3.5 text-blue-600" />}
                   </button>
                   <button
                     type="button"
                     onClick={() => setSizingMode('amount')}
-                    className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-[#2a2e39] transition-colors cursor-pointer ${
-                      sizingMode === 'amount' ? 'text-blue-600 font-bold bg-blue-50/50 dark:bg-blue-900/20' : 'text-[#1e2329] dark:text-[#d1d4dc]'
-                    }`}
+                    className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-[#2a2e39] transition-colors cursor-pointer ${sizingMode === 'amount' ? 'text-blue-600 font-bold bg-blue-50/50 dark:bg-blue-900/20' : 'text-[#1e2329] dark:text-[#d1d4dc]'
+                      }`}
                   >
-                    <span>Số tiền</span>
+                    <span>{t('order.amount', 'Số tiền')}</span>
                     {sizingMode === 'amount' && <Check className="w-3.5 h-3.5 text-blue-600" />}
                   </button>
                   <button
                     type="button"
                     onClick={() => setSizingMode('percent')}
-                    className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-[#2a2e39] transition-colors cursor-pointer ${
-                      sizingMode === 'percent' ? 'text-blue-600 font-bold bg-blue-50/50 dark:bg-blue-900/20' : 'text-[#1e2329] dark:text-[#d1d4dc]'
-                    }`}
+                    className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-[#2a2e39] transition-colors cursor-pointer ${sizingMode === 'percent' ? 'text-blue-600 font-bold bg-blue-50/50 dark:bg-blue-900/20' : 'text-[#1e2329] dark:text-[#d1d4dc]'
+                      }`}
                   >
-                    <span>% số dư</span>
+                    <span>{t('order.percentBalance', '% số dư')}</span>
                     {sizingMode === 'percent' && <Check className="w-3.5 h-3.5 text-blue-600" />}
                   </button>
                 </div>
@@ -582,7 +580,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
 
             <div className="flex flex-col gap-1 flex-1">
               <label className="text-[10px] text-[#787b86] uppercase tracking-wider font-medium">
-                {sizingMode === 'qty' ? lotInputLabel : sizingMode === 'amount' ? 'Số tiền ($ USD)' : '% Số dư'}
+                {sizingMode === 'qty' ? lotInputLabel : sizingMode === 'amount' ? `${t('order.amount', 'Số tiền')} ($ USD)` : t('order.percentBalance', '% Số dư')}
               </label>
               {isEditing ? (
                 <div className="bg-[#f0f3fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
@@ -631,11 +629,10 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
                 key={pct}
                 type="button"
                 onClick={() => handleQuickPercent(pct)}
-                className={`py-1 rounded text-xs font-semibold font-mono transition-all cursor-pointer ${
-                  percentVal === pct
+                className={`py-1 rounded text-xs font-semibold font-mono transition-all cursor-pointer ${percentVal === pct
                     ? 'bg-blue-600 text-white shadow-xs'
                     : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] hover:text-[#1e2329] dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#2a2e39]'
-                }`}
+                  }`}
               >
                 {pct}%
               </button>
@@ -645,14 +642,14 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
           {/* Estimated helper info row */}
           {sizingMode !== 'qty' ? (
             <div className="flex items-center justify-between text-[11px] bg-blue-500/5 dark:bg-blue-500/10 px-2.5 py-1 rounded border border-blue-500/20">
-              <span className="text-[#787b86]">Khối lượng dự kiến:</span>
+              <span className="text-[#787b86]">{t('order.estQty', 'Khối lượng dự kiến:')}</span>
               <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
                 {actualQty.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {assetUnit}
               </span>
             </div>
           ) : (
             <div className="flex items-center justify-between text-[11px] bg-[#f0f3fa] dark:bg-[#1e222d] px-2.5 py-1 rounded border border-[#e6e8ea] dark:border-[#2a2e39]">
-              <span className="text-[#787b86]">Dùng vốn (Ký quỹ):</span>
+              <span className="text-[#787b86]">{t('order.marginUsed', 'Dùng vốn (Ký quỹ):')}</span>
               <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
                 ${requiredMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
@@ -663,10 +660,10 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
           {isSpot ? (
             <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded bg-[#f0f3fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] text-xs">
               <span className="text-[10px] text-[#787b86] uppercase font-semibold whitespace-nowrap shrink-0">
-                Chế độ giao dịch
+                {t('order.tradingMode', 'Chế độ giao dịch')}
               </span>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 whitespace-nowrap shrink-0">
-                Spot (1X · Không đòn bẩy)
+                {t('order.spotMode', 'Spot (1X · Không đòn bẩy)')}
               </span>
             </div>
           ) : (
@@ -742,8 +739,8 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
                 const isChecked = e.target.checked;
                 setShowTPSL(isChecked);
                 if (isChecked) {
-                  const refPrice = orderType === 'limit' && parseFloat(limitPriceStr) > 0 
-                    ? parseFloat(limitPriceStr) 
+                  const refPrice = orderType === 'limit' && parseFloat(limitPriceStr) > 0
+                    ? parseFloat(limitPriceStr)
                     : (held > 0 && avgPrice > 0 ? avgPrice : selectedStock.price);
                   const precision = getPricePrecision(refPrice);
                   const currentSide = held > 0 && side ? side : 'LONG';
@@ -890,21 +887,21 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
           {/* Summary Box */}
           <div className="bg-[#f0f3fa] dark:bg-[#1a1e29] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-lg p-2.5 flex flex-col gap-1.5 text-xs">
             <div className="flex items-center justify-between text-[#787b86]">
-              <span>Số dư</span>
+              <span>{t('order.balance', 'Số dư')}</span>
               <span className="font-mono font-medium text-[#1e2329] dark:text-[#d1d4dc]">
                 ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
 
             <div className="flex items-center justify-between text-[#787b86]">
-              <span>Sử dụng vốn</span>
+              <span>{t('order.marginUsed', 'Sử dụng vốn').replace(' (Ký quỹ):', '')}</span>
               <span className="font-mono font-medium text-[#1e2329] dark:text-[#d1d4dc]">
                 {balance > 0 ? ((requiredMargin / balance) * 100).toFixed(1) : 0}%
               </span>
             </div>
 
             <div className="flex items-center justify-between text-[#787b86]">
-              <span>Đòn bẩy</span>
+              <span>{t('order.leverage', 'Đòn bẩy')}</span>
               <span className="font-mono font-medium text-[#1e2329] dark:text-[#d1d4dc]">
                 {isSpot ? 'Spot (1X)' : `${currentLeverage}X`}
               </span>
@@ -913,21 +910,21 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
             <div className="h-px bg-[#e6e8ea] dark:bg-[#2a2e39] my-0.5" />
 
             <div className="flex items-center justify-between font-bold">
-              <span className="text-[#1e2329] dark:text-white">Ký quỹ</span>
+              <span className="text-[#1e2329] dark:text-white">{t('order.margin', 'Ký quỹ')}</span>
               <span className="font-mono text-blue-600 dark:text-blue-400">
                 ${requiredMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
 
             <div className="flex items-center justify-between font-semibold">
-              <span className="text-[#787b86]">Giá trị vị thế</span>
+              <span className="text-[#787b86]">{t('order.positionValue', 'Giá trị vị thế')}</span>
               <span className="font-mono text-[#1e2329] dark:text-white">
                 ${(actualQty * pTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
 
             <div className="flex items-center justify-between text-[11px] text-[#787b86] pt-0.5">
-              <span>Khối lượng thực tế</span>
+              <span>{t('order.actualQty', 'Khối lượng thực tế')}</span>
               <span className="font-mono font-medium text-emerald-600 dark:text-emerald-400">
                 {actualQty.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {assetUnit}
               </span>
@@ -942,14 +939,14 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
                 disabled={isSubmitting}
                 className="flex-1 bg-[#2a2e39] hover:bg-[#363a45] text-white font-bold py-2.5 rounded text-sm transition-all"
               >
-                HỦY SỬA
+                {t('order.cancelEdit', 'HỦY SỬA')}
               </button>
               <button
                 onClick={handleUpdateTPSL}
                 disabled={isSubmitting}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold py-2.5 rounded text-sm transition-all"
               >
-                LƯU CẬP NHẬT
+                {t('order.saveUpdate', 'LƯU CẬP NHẬT')}
               </button>
             </div>
           ) : (

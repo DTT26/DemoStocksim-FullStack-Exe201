@@ -38,7 +38,7 @@ export const ToolbarNavbar = ({
   const { theme, toggleTheme } = useTheme();
   const { showAlert } = useModal();
   const isDarkMode = theme === 'dark';
-  const { lang: language, setLang: setLanguage } = useI18n();
+  const { lang: language, setLang: setLanguage, t } = useI18n();
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
 
   return (
@@ -56,10 +56,10 @@ export const ToolbarNavbar = ({
           <button
             onClick={onOpenChallenge}
             className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-yellow-500/20 hover:from-amber-500/30 hover:to-yellow-500/30 border border-amber-500/40 text-amber-600 dark:text-amber-400 font-bold text-xs transition-all shadow-sm shadow-amber-500/10 hover:scale-[1.02]"
-            title={`Thử Thách Cấp Vốn Quỹ • Hạng tài khoản: ${accountRankName || 'Cấp 1'}`}
+            title={`${t('nav.challengeTitle', 'Thử Thách Cấp Vốn Quỹ')} • ${t('nav.accountRank', 'Hạng tài khoản:')} ${accountRankName ? accountRankName.replace(/Cấp/g, t('nav.phaseBadge', 'Cấp')) : t('nav.level1', 'Cấp 1')}`}
           >
             <Trophy className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
-            <span className="hidden sm:inline">Thử Thách Quỹ</span>
+            <span className="hidden sm:inline">{t('nav.challenge', 'Thử Thách Quỹ')}</span>
             {challengeStatus === 'ACTIVE' ? (
               <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -71,7 +71,7 @@ export const ToolbarNavbar = ({
               </span>
             ) : (
               <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-[10px] font-extrabold text-amber-700 dark:text-amber-300 border border-amber-500/30" title="Cấp bậc cao nhất tài khoản đã đạt được">
-                {accountRankBadge || 'Cấp 1'}
+                {accountRankBadge ? accountRankBadge.replace(/Cấp/g, t('nav.phaseBadge', 'Cấp')) : t('nav.level1', 'Cấp 1')}
               </span>
             )}
           </button>

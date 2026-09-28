@@ -3,6 +3,7 @@ import Wallet, { IWallet } from '../models/Wallet';
 import Holding from '../models/Holding';
 import Order, { OrderStatus } from '../models/Order';
 import Transaction, { TransactionType } from '../models/Transaction';
+import { createNotification } from '../controllers/notificationController';
 
 export const MAX_NORMAL_RESETS_PER_DAY = 1;
 export const MAX_NORMAL_RESETS_PER_WEEK = 4;
@@ -61,6 +62,9 @@ export class WalletService {
     maxResetsPerWeek: number;
     remainingResetsThisWeek: number;
     currentBalance: number;
+    totalEquity?: number;
+    totalPositionMargin?: number;
+    totalPendingMargin?: number;
     defaultBalance: number;
     resetEligibilityThreshold: number;
   }> {
@@ -82,12 +86,35 @@ export class WalletService {
     const remainingResetsThisWeek = Math.max(0, MAX_NORMAL_RESETS_PER_WEEK - (wallet.resetsUsedThisWeek || 0));
     const remainingResetsToday = hasResetToday ? 0 : 1;
 
+    // 1. Tính tổng ký quỹ trong các vị thế đang mở của tài khoản thường
+    const openHoldings = await Holding.find({ userId, accountType: { $ne: 'CHALLENGE' } });
+    let totalPositionMargin = 0;
+    for (const h of openHoldings) {
+      const posMargin = (h.averagePrice * h.quantity) / (h.leverage || 1);
+      totalPositionMargin += posMargin;
+    }
+
+    // 2. Tính tổng ký quỹ trong các lệnh chờ đang PENDING
+    const pendingOrders = await Order.find({ userId, status: OrderStatus.PENDING, accountType: { $ne: 'CHALLENGE' } });
+    let totalPendingMargin = 0;
+    for (const ord of pendingOrders) {
+      totalPendingMargin += (ord.margin || 0);
+    }
+
+    // 3. Tổng tài sản thực (Equity) = Tiền mặt khả dụng + Ký quỹ vị thế + Ký quỹ lệnh chờ
+    const totalEquity = wallet.availableBalance + totalPositionMargin + totalPendingMargin;
+    const inTrades = totalPositionMargin + totalPendingMargin;
+
     let canReset = true;
     let reason = '';
 
-    if (wallet.availableBalance >= RESET_ELIGIBILITY_THRESHOLD) {
+    if (totalEquity >= RESET_ELIGIBILITY_THRESHOLD) {
       canReset = false;
-      reason = `Tài khoản của bạn hiện vẫn còn $${wallet.availableBalance.toLocaleString('en-US')} USD. Chỉ được phép khôi phục khi số dư còn dưới $${RESET_ELIGIBILITY_THRESHOLD.toLocaleString('en-US')} USD!`;
+      if (inTrades > 0) {
+        reason = `Tổng tài sản của bạn hiện vẫn còn $${totalEquity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD (Tiền mặt: $${wallet.availableBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} + Ký quỹ ${openHoldings.length} vị thế & ${pendingOrders.length} lệnh chờ: $${inTrades.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}). Bạn không thể khôi phục khi vẫn còn tài sản đang mở lệnh!`;
+      } else {
+        reason = `Tài khoản của bạn hiện vẫn còn $${wallet.availableBalance.toLocaleString('en-US')} USD. Chỉ được phép khôi phục khi tổng tài sản còn dưới $${RESET_ELIGIBILITY_THRESHOLD.toLocaleString('en-US')} USD!`;
+      }
     } else if (hasResetToday) {
       canReset = false;
       reason = 'Bạn đã sử dụng lượt reset hôm nay (Tối đa 1 lần / ngày). Vui lòng quay lại vào ngày mai!';
@@ -107,6 +134,9 @@ export class WalletService {
       maxResetsPerWeek: MAX_NORMAL_RESETS_PER_WEEK,
       remainingResetsThisWeek,
       currentBalance: wallet.availableBalance,
+      totalEquity,
+      totalPositionMargin,
+      totalPendingMargin,
       defaultBalance: DEFAULT_NORMAL_BALANCE,
       resetEligibilityThreshold: RESET_ELIGIBILITY_THRESHOLD,
     };
@@ -149,6 +179,12 @@ export class WalletService {
       type: TransactionType.DEPOSIT,
       amount: DEFAULT_NORMAL_BALANCE,
       description: `Khôi phục số dư tài khoản về $${DEFAULT_NORMAL_BALANCE.toLocaleString('en-US')} USD (Lần ${wallet.resetsUsedThisWeek}/${MAX_NORMAL_RESETS_PER_WEEK} trong tuần)`
+    });
+
+    await createNotification(userId, {
+      title: 'Khôi phục số dư $100,000 USD',
+      message: `Đã khôi phục số dư tài khoản về $${DEFAULT_NORMAL_BALANCE.toLocaleString('en-US')} USD thành công (Lần ${wallet.resetsUsedThisWeek}/${MAX_NORMAL_RESETS_PER_WEEK} trong tuần).`,
+      type: 'SYSTEM'
     });
 
     const remainingResets = MAX_NORMAL_RESETS_PER_WEEK - wallet.resetsUsedThisWeek;

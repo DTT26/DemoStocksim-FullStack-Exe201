@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChartArea } from './components/ChartArea';
 import { RightSidebar } from './components/RightSidebar';
@@ -21,6 +21,7 @@ import { TickerHeader } from './components/TickerHeader';
 import { CoinInfoPanel } from './components/CoinInfoPanel';
 import { ContractInfoPanel } from './components/ContractInfoPanel';
 import { tradingApi } from '../../services/tradingApi';
+import { fetchAllMarketLivePrices, syncLiveMarketData } from '../../services/marketDataService';
 import { PositionsManager } from './components/PositionsManager';
 import { useSimulatorStore } from './engine/useSimulatorStore';
 import { useNotificationStore } from '../../stores/useNotificationStore';
@@ -488,43 +489,41 @@ export const TradingTerminal = () => {
       });
 
       try {
-        if (Date.now() - (window as any).lastBinanceFetchTime > 3000 || !(window as any).lastBinanceFetchTime) {
-          (window as any).lastBinanceFetchTime = Date.now();
-          const [spotRes, futRes] = await Promise.all([
-            fetch('https://api.binance.com/api/v3/ticker/price').catch(() => null),
-            fetch('https://fapi.binance.com/fapi/v1/ticker/price').catch(() => null)
-          ]);
-          if (!(window as any).cachedBinancePrices) (window as any).cachedBinancePrices = {};
-
-          if (spotRes) {
-            const spotData = await spotRes.json();
-            spotData.forEach((item: any) => (window as any).cachedBinancePrices[item.symbol] = parseFloat(item.price));
-          }
-          if (futRes) {
-            const futData = await futRes.json();
-            futData.forEach((item: any) => (window as any).cachedBinancePrices[item.symbol + '.P'] = parseFloat(item.price));
-          }
+        if (Date.now() - (window as any).lastMarketFetchTime > 3000 || !(window as any).lastMarketFetchTime) {
+          (window as any).lastMarketFetchTime = Date.now();
+          const livePrices = await fetchAllMarketLivePrices();
+          (window as any).cachedMarketPrices = livePrices;
+          syncLiveMarketData(STOCKS);
         }
       } catch (err) { }
 
-      // Ghi đè giá Live từ Binance cho các vị thế & lệnh chờ không nằm trên chart hiện tại
-      if ((window as any).cachedBinancePrices) {
+      // Ghi đè toàn bộ giá Live đa sàn (Binance, BingX) để tránh việc gửi giá cũ lên server gây cắt lỗ oan
+      if ((window as any).cachedMarketPrices) {
+        const cached = (window as any).cachedMarketPrices;
+        Object.keys(priceMap).forEach(sym => {
+          if (cached[sym]) priceMap[sym] = cached[sym];
+        });
         Object.keys(positions).forEach(sym => {
-          if ((window as any).cachedBinancePrices[sym]) priceMap[sym] = (window as any).cachedBinancePrices[sym];
+          if (cached[sym]) priceMap[sym] = cached[sym];
         });
         pendingOrders.forEach(o => {
-          if ((window as any).cachedBinancePrices[o.symbol]) priceMap[o.symbol] = (window as any).cachedBinancePrices[o.symbol];
+          if (cached[o.symbol]) priceMap[o.symbol] = cached[o.symbol];
         });
       }
 
-      // Đảm bảo giá của mã đang xem luôn chính xác nhất từng tick
-      priceMap[selectedStock.symbol] = selectedStock.price;
+      // Đảm bảo giá của mã đang xem luôn chính xác nhất từng tick (từ WebSocket)
+      // TUY NHIÊN: Chỉ lấy nếu giá đã được WebSocket cập nhật (khác với giá ảo ban đầu 64200.5)
+      const defaultStock = STOCKS.find(s => s.symbol === selectedStock.symbol);
+      if (defaultStock && selectedStock.price !== defaultStock.price) {
+        priceMap[selectedStock.symbol] = selectedStock.price;
+      }
 
       tradingApi.checkTriggers(priceMap, user._id)
         .then(res => {
           if (res && res.processed > 0) {
             fetchPortfolio(user._id);
             setTradeCount(c => c + 1);
+            useNotificationStore.getState().fetchNotifications();
             if (res.messages && Array.isArray(res.messages)) {
               res.messages.forEach((msg: string, i: number) => {
                 setTimeout(() => showToast(msg, 'success'), i * 800);
@@ -817,19 +816,43 @@ export const TradingTerminal = () => {
     }
   };
 
+  // Tính tổng tài sản thực tế (Total Equity) = Tiền mặt khả dụng + Ký quỹ vị thế mở + Ký quỹ lệnh chờ
+  const totalOpenPositionMargin = useMemo(() => {
+    return Object.values(positions || {}).reduce((sum: number, p: any) => {
+      const lev = p.leverage || 1;
+      return sum + ((p.averagePrice * p.quantity) / lev);
+    }, 0);
+  }, [positions]);
+
+  const totalPendingOrderMargin = useMemo(() => {
+    return (pendingOrders || []).reduce((sum: number, ord: any) => {
+      return sum + (ord.margin || 0);
+    }, 0);
+  }, [pendingOrders]);
+
+  const totalEquity = balance + totalOpenPositionMargin + totalPendingOrderMargin;
+
   const handleResetWallet = async () => {
-    if (balance >= 5000) {
+    if (totalEquity >= 5000) {
+      const inTrades = totalOpenPositionMargin + totalPendingOrderMargin;
+      let msg = `Tài khoản của bạn hiện vẫn còn $${balance.toLocaleString('en-US')} USD tiền mặt.`;
+      if (inTrades > 0) {
+        msg = `Tổng tài sản thực tế của bạn hiện là $${totalEquity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD (gồm $${balance.toLocaleString('en-US')} tiền mặt khả dụng + $${inTrades.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ký quỹ đang nằm trong vị thế và lệnh chờ).\n\nBạn không thể khôi phục tài khoản khi vẫn còn tiền đang rải trong các lệnh! Hệ thống chỉ cho phép khôi phục khi tổng tài sản thực tế dưới $5,000 USD.`;
+      } else {
+        msg = `Tài khoản của bạn hiện đang có $${balance.toLocaleString('en-US')} USD. Hệ thống chỉ cho phép khôi phục lại $100k vốn khi tổng tài sản còn dưới $5,000 USD!`;
+      }
+
       showAlert({
         title: 'Chưa đủ điều kiện khôi phục',
-        message: `Tài khoản của bạn hiện đang có $${balance.toLocaleString('en-US')} USD. Hệ thống chỉ cho phép khôi phục lại $100k vốn khi số dư còn dưới $5,000 USD!`,
-        type: 'info'
+        message: msg,
+        type: 'warning'
       });
       return;
     }
 
     const confirmed = await showConfirm({
       title: 'Khôi phục số dư về $100,000 USD',
-      message: 'Bạn có chắc muốn khôi phục số dư tài khoản về $100,000 USD không?\n\n• Điều kiện: Số dư dưới $5,000 USD.\n• Quy định: Tối đa 1 lần trong ngày, 4 lần trong 1 tuần.\n• Lưu ý: Các vị thế đang mở và lệnh chờ sẽ được đóng để làm sạch tài sản.',
+      message: 'Bạn có chắc muốn khôi phục số dư tài khoản về $100,000 USD không?\n\n• Điều kiện: Tổng tài sản thực tế dưới $5,000 USD.\n• Quy định: Tối đa 1 lần trong ngày, 4 lần trong 1 tuần.\n• Lưu ý: Các vị thế đang mở và lệnh chờ sẽ được đóng để làm sạch tài sản.',
       confirmText: 'Xác nhận khôi phục',
       cancelText: 'Hủy'
     });
@@ -972,24 +995,26 @@ export const TradingTerminal = () => {
               {/* Target */}
               <div className="flex items-center gap-1">
                 <span className="text-slate-400">Mục tiêu:</span>
-                <span className="font-bold text-emerald-400 font-mono">
-                  {challengeState.totalProfitUSD >= 0 ? '+' : ''}${challengeState.totalProfitUSD.toLocaleString('en-US', { maximumFractionDigits: 0 })} / +${((currentChallengeLevel.capitalUSD * currentChallengeLevel.profitTargetPercent) / 100).toLocaleString('en-US')}
+                <span className={`font-bold font-mono ${challengeState.totalProfitUSD > 0 ? 'text-emerald-400' : 'text-slate-400'}`}>
+                  {challengeState.totalProfitUSD > 0 
+                    ? `+$${challengeState.totalProfitUSD.toLocaleString('en-US', { maximumFractionDigits: 0 })}` 
+                    : '$0'} / +${((currentChallengeLevel.capitalUSD * currentChallengeLevel.profitTargetPercent) / 100).toLocaleString('en-US')}
                 </span>
               </div>
 
               {/* Daily Loss */}
               <div className="flex items-center gap-1">
                 <span className="text-slate-400">Lỗ ngày:</span>
-                <span className="font-bold text-amber-400 font-mono">
-                  -${challengeState.dailyLossUSD.toLocaleString('en-US', { maximumFractionDigits: 0 })} / -${((currentChallengeLevel.capitalUSD * currentChallengeLevel.dailyLossLimitPercent) / 100).toLocaleString('en-US')}
+                <span className={`font-bold font-mono ${challengeState.dailyLossUSD > 0 ? 'text-amber-400' : 'text-slate-400'}`}>
+                  {challengeState.dailyLossUSD > 0 ? `-$${challengeState.dailyLossUSD.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '$0'} / -${((currentChallengeLevel.capitalUSD * currentChallengeLevel.dailyLossLimitPercent) / 100).toLocaleString('en-US')}
                 </span>
               </div>
 
               {/* Max Drawdown */}
               <div className="flex items-center gap-1">
                 <span className="text-slate-400">Sụt giảm tối đa:</span>
-                <span className="font-bold text-rose-400 font-mono">
-                  -${challengeState.maxLossUSD.toLocaleString('en-US', { maximumFractionDigits: 0 })} / -${((currentChallengeLevel.capitalUSD * currentChallengeLevel.maxDrawdownPercent) / 100).toLocaleString('en-US')}
+                <span className={`font-bold font-mono ${challengeState.maxLossUSD > 0 ? 'text-rose-400' : 'text-slate-400'}`}>
+                  {challengeState.maxLossUSD > 0 ? `-$${challengeState.maxLossUSD.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '$0'} / -${((currentChallengeLevel.capitalUSD * currentChallengeLevel.maxDrawdownPercent) / 100).toLocaleString('en-US')}
                 </span>
               </div>
 
@@ -1226,6 +1251,7 @@ export const TradingTerminal = () => {
               selectedStock={selectedStock}
               positions={positions as any}
               balance={balance}
+              totalEquity={totalEquity}
               maxAllowedLeverage={isChallengeActive ? (currentChallengeLevel.id === 6 ? undefined : currentChallengeLevel.maxLeverage) : undefined}
               challengeBadge={isChallengeActive ? (currentChallengeLevel.id === 6 ? `${currentChallengeLevel.badge} (${currentChallengeLevel.levelName}) · Tối đa theo sàn` : `${currentChallengeLevel.badge} (${currentChallengeLevel.levelName})`) : undefined}
               onStockSelect={(stock) => {
@@ -1331,6 +1357,7 @@ export const TradingTerminal = () => {
                   selectedStock={selectedStock}
                   positions={positions as any}
                   balance={balance}
+                  totalEquity={totalEquity}
                   maxAllowedLeverage={isChallengeActive ? (currentChallengeLevel.id === 6 ? undefined : currentChallengeLevel.maxLeverage) : undefined}
                   challengeBadge={isChallengeActive ? (currentChallengeLevel.id === 6 ? `${currentChallengeLevel.badge} (${currentChallengeLevel.levelName}) · Tối đa theo sàn` : `${currentChallengeLevel.badge} (${currentChallengeLevel.levelName})`) : undefined}
                   onStockSelect={(stock) => {

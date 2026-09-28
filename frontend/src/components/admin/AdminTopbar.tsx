@@ -21,11 +21,21 @@ export const AdminTopbar = ({ mobileOpen, setMobileOpen }: AdminTopbarProps) => 
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
-  const { notifications, unreadCount, fetchNotifications, markAllAsRead } = useNotificationStore();
+  const { notifications, unreadCount, fetchNotifications, markAllAsRead, reset } = useNotificationStore();
 
   useEffect(() => {
+    if (!user?._id) {
+      reset();
+      return;
+    }
     fetchNotifications();
-  }, [fetchNotifications]);
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchNotifications();
+      }
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [user?._id, fetchNotifications, reset]);
 
   // Close dropdowns on outside click
   useEffect(() => {

@@ -4,6 +4,7 @@ import type { Chart, KLineData, DataLoaderGetBarsParams, DataLoaderSubscribeBarP
 import { Settings2, Trash2, Edit2, Type, Minus, MoreHorizontal, Lock, Unlock, GripVertical, LayoutGrid, Pencil, Plus, ChevronRight, Copy, Settings, X, Layers } from 'lucide-react';
 import { generateOHLCV, getPricePrecision, timeframeToMs, type Stock } from '../data';
 import { fetchBinanceKlines, mapTimeframeToBinance, subscribeBinanceKline } from '../../../services/binanceApi';
+import { fetchUnifiedKlines, subscribeUnifiedBar } from '../../../services/marketDataService';
 import type { TradeOrder } from '../TradingTerminal';
 import type { ChartSettings } from '../chartSettings';
 import { INDICATOR_LIST } from './IndicatorModal';
@@ -4475,7 +4476,7 @@ export const ChartArea = ({
     if (!chart) return;
 
     let isMounted = true;
-    let tickerInterval: ReturnType<typeof setInterval>;
+    let tickerInterval: any = null;
     let wsUnsubscribe: (() => void) | null = null;
 
     // Map activeTimeframe to klinecharts period
@@ -4501,32 +4502,27 @@ export const ChartArea = ({
 
       let allData: KLineData[] = [];
 
-      // Phân loại data source
-      if (selectedStock.market === 'Tiền điện tử (Crypto)') {
-        // Lấy dữ liệu thật từ Binance
-        const binanceInterval = mapTimeframeToBinance(activeTimeframe);
-        try {
-          if (isReplaying && currentReplayTime) {
-            // Lấy nến bao quanh mốc replayTime: dự trù 300 nến phía sau để bước tiếp
-            const targetEndTime = Math.min(Date.now(), currentReplayTime + 300 * intervalMs);
-            allData = await fetchBinanceKlines({
-              symbol: selectedStock.symbol,
-              interval: binanceInterval,
-              limit: 1000,
-              isFutures: selectedStock.isFutures,
-              endTime: targetEndTime
-            });
-          } else {
-            allData = await fetchBinanceKlines({
-              symbol: selectedStock.symbol,
-              interval: binanceInterval,
-              limit: 1000,
-              isFutures: selectedStock.isFutures
-            });
-          }
-        } catch (error) {
-          allData = [];
+      // Lấy dữ liệu nến thật từ tất cả các sàn (BingX cho Vàng/Forex/Hàng hóa/Cổ phiếu, Binance cho Crypto)
+      try {
+        if (isReplaying && currentReplayTime) {
+          const targetEndTime = Math.min(Date.now(), currentReplayTime + 300 * intervalMs);
+          allData = await fetchUnifiedKlines({
+            symbol: selectedStock.symbol,
+            timeframe: activeTimeframe,
+            limit: 1000,
+            isFutures: selectedStock.isFutures,
+            endTime: targetEndTime,
+          });
+        } else {
+          allData = await fetchUnifiedKlines({
+            symbol: selectedStock.symbol,
+            timeframe: activeTimeframe,
+            limit: 1000,
+            isFutures: selectedStock.isFutures,
+          });
         }
+      } catch (error) {
+        allData = [];
       }
 
       // NẾU allData rỗng (hoặc thị trường không phải Crypto, hoặc API lỗi)
@@ -4579,59 +4575,41 @@ export const ChartArea = ({
 
             // Lấy nến cũ hơn dựa vào timestamp của nến đầu tiên hiện tại
             const oldestTime = params.timestamp;
-            if (selectedStock.market === 'Tiền điện tử (Crypto)') {
-              const binanceInterval = mapTimeframeToBinance(activeTimeframe);
+            try {
+              let olderData = await fetchUnifiedKlines({
+                symbol: selectedStock.symbol,
+                timeframe: activeTimeframe,
+                limit: 1000,
+                isFutures: selectedStock.isFutures,
+                endTime: oldestTime - 1, // Tránh lấy trùng nến đầu tiên
+              });
 
-              try {
-                let olderData = await fetchBinanceKlines({
-                  symbol: selectedStock.symbol,
-                  interval: binanceInterval,
-                  limit: 1000,
-                  isFutures: selectedStock.isFutures,
-                  endTime: oldestTime - 1, // Tránh lấy trùng nến đầu tiên
-                });
-
-                olderData = olderData.filter(d => d.timestamp < oldestTime);
-                if (olderData.length > 0) {
-                  // Nối dữ liệu cũ vào mảng allData
-                  allData = [...olderData, ...allData];
-                  dataCache.set(cacheKey, allData);
-                  onDataLoaded?.(allData.length);
-                  params.callback(olderData, true); // Luôn cho phép cuộn tiếp
-                  return;
-                }
-              } catch (err) {
-                // Fake data fallback nếu lỗi hoặc hết data Binance
-              }
-
-              const oldestCandle = allData[0];
-              const basePrice = oldestCandle ? oldestCandle.open : selectedStock.price;
-              const olderData = generateOHLCV(basePrice, 500, activeTimeframe, oldestTime - 1).filter(d => d.timestamp < oldestTime);
+              olderData = olderData.filter(d => d.timestamp < oldestTime);
               if (olderData.length > 0) {
+                // Nối dữ liệu cũ vào mảng allData
                 allData = [...olderData, ...allData];
                 dataCache.set(cacheKey, allData);
                 onDataLoaded?.(allData.length);
-                params.callback(olderData, true);
-              } else {
-                params.callback([], true);
+                params.callback(olderData, true); // Luôn cho phép cuộn tiếp
+                return;
               }
-              return;
-            } else {
-              // Fake data cho thị trường khác
-              const oldestCandle = allData[0];
-              const basePrice = oldestCandle ? oldestCandle.open : selectedStock.price;
-              const olderData = generateOHLCV(basePrice, 1000, activeTimeframe, oldestTime - 1).filter(d => d.timestamp < oldestTime);
-
-              if (olderData.length > 0) {
-                allData = [...olderData, ...allData];
-                dataCache.set(cacheKey, allData);
-                onDataLoaded?.(allData.length);
-                params.callback(olderData, true);
-              } else {
-                params.callback([], true);
-              }
-              return;
+            } catch (err) {
+              // Fallback nếu lỗi kết nối
             }
+
+            const oldestCandle = allData[0];
+            const basePrice = oldestCandle ? oldestCandle.open : selectedStock.price;
+            const olderData = generateOHLCV(basePrice, 500, activeTimeframe, oldestTime - 1).filter(d => d.timestamp < oldestTime);
+
+            if (olderData.length > 0) {
+              allData = [...olderData, ...allData];
+              dataCache.set(cacheKey, allData);
+              onDataLoaded?.(allData.length);
+              params.callback(olderData, true);
+            } else {
+              params.callback([], true);
+            }
+            return;
           }
 
           // Khi người dùng cuộn sang phải (về tương lai)
@@ -4647,70 +4625,20 @@ export const ChartArea = ({
           subscriberCallbackRef.current = params.callback;
           if (isReplaying) return;
 
-          if (selectedStock.market === 'Tiền điện tử (Crypto)') {
-            // Lấy dữ liệu thật realtime qua WebSocket
-            const binanceInterval = mapTimeframeToBinance(activeTimeframe);
-            wsUnsubscribe = subscribeBinanceKline(
-              selectedStock.symbol,
-              binanceInterval,
-              !!selectedStock.isFutures,
-              (newCandle) => {
-                params.callback(newCandle);
-                const chart = chartRef.current;
-                if (chart && typeof (chart as any).updateData === 'function') {
-                  (chart as any).updateData(newCandle);
-                }
-                if (onPriceUpdate) onPriceUpdate(newCandle.close);
+          // Lấy dữ liệu thật realtime cho TẤT CẢ các sàn (Binance WebSocket cho Crypto, BingX Polling cho Vàng, Hàng hóa, Forex, Cổ phiếu...)
+          wsUnsubscribe = subscribeUnifiedBar(
+            selectedStock.symbol,
+            activeTimeframe,
+            !!selectedStock.isFutures,
+            (newCandle) => {
+              params.callback(newCandle);
+              const chart = chartRef.current;
+              if (chart && typeof (chart as any).updateData === 'function') {
+                (chart as any).updateData(newCandle);
               }
-            );
-          } else {
-            // Simulate live market ticking cho các thị trường khác (Vàng, Dầu, Forex, ...)
-            tickerInterval = setInterval(() => {
-              if (allData.length === 0) return;
-              const now = Date.now();
-              const currentBucket = now - (now % intervalMs);
-              const lastCandle = allData[allData.length - 1];
-              const tickPrecision = getPricePrecision(lastCandle.close);
-              // Dao động giá vi mô thực tế từng giây (~0.015% / tick thay vì 0.5% làm vỡ nến)
-              const swing = (Math.random() - 0.495) * lastCandle.close * 0.00015;
-              const newPrice = parseFloat(Math.max(0.0001, lastCandle.close + swing).toFixed(tickPrecision));
-
-              if (now >= lastCandle.timestamp + intervalMs) {
-                // Đã hết chu kỳ nến hiện tại (VD: đã sang phút tiếp theo): Đóng nến cũ và mở nến mới
-                const newCandle: KLineData = {
-                  timestamp: currentBucket,
-                  open: lastCandle.close,
-                  high: Math.max(lastCandle.close, newPrice),
-                  low: Math.min(lastCandle.close, newPrice),
-                  close: newPrice,
-                  volume: Math.round(50 + Math.random() * 200),
-                };
-                allData.push(newCandle);
-                params.callback(newCandle);
-                const chart = chartRef.current;
-                if (chart && typeof (chart as any).updateData === 'function') {
-                  (chart as any).updateData(newCandle);
-                }
-              } else {
-                // Vẫn trong chu kỳ nến: Cập nhật giá High, Low, Close và Volume của nến hiện tại
-                const updatedCandle: KLineData = {
-                  ...lastCandle,
-                  close: newPrice,
-                  high: parseFloat(Math.max(lastCandle.high, newPrice).toFixed(tickPrecision)),
-                  low: parseFloat(Math.min(lastCandle.low, newPrice).toFixed(tickPrecision)),
-                  volume: (lastCandle.volume || 0) + Math.round(Math.random() * 20),
-                };
-                allData[allData.length - 1] = updatedCandle;
-                params.callback(updatedCandle);
-                const chart = chartRef.current;
-                if (chart && typeof (chart as any).updateData === 'function') {
-                  (chart as any).updateData(updatedCandle);
-                }
-              }
-
-              if (onPriceUpdate) onPriceUpdate(newPrice);
-            }, 1000);
-          }
+              if (onPriceUpdate) onPriceUpdate(newCandle.close);
+            }
+          );
         },
         unsubscribeBar: () => {
           subscriberCallbackRef.current = null;

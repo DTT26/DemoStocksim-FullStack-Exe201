@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { type Stock, getPricePrecision, getContractMultiplier, getAssetUnit } from '../data';
 import { useSimulatorStore } from '../engine/useSimulatorStore';
 import { ArrowUp, ArrowDown, Wallet, ChevronLeft } from 'lucide-react';
+import { useI18n } from '../../../contexts/I18nContext';
 
 interface SimulatorTradingPanelProps {
   selectedStock: Stock;
@@ -17,6 +18,7 @@ export const SimulatorTradingPanel = ({
   draggedTPSL
 }: SimulatorTradingPanelProps) => {
   const store = useSimulatorStore();
+  const { t } = useI18n();
   const [orderType, setOrderType] = useState<'MARKET' | 'LIMIT' | 'STOP'>('MARKET');
   const [lot, setLot] = useState<number>(store.session?.config.minLot || 0.1);
   const [priceStr, setPriceStr] = useState<string>('');
@@ -190,7 +192,7 @@ export const SimulatorTradingPanel = ({
             </button>
           )}
           <div>
-            <div className="text-xs font-bold text-[#1e2329] dark:text-white uppercase tracking-wider">Mô phỏng Giao dịch</div>
+            <div className="text-xs font-bold text-[#1e2329] dark:text-white uppercase tracking-wider">{t('sim.title', 'Mô phỏng Giao dịch')}</div>
             <div className="text-[11px] text-[#787b86]">
               {selectedStock.symbol} &middot; Đòn bẩy {leverage}X
             </div>

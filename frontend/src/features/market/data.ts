@@ -29,52 +29,52 @@ export const formatVolume = (vol?: number): string => {
 export const STOCKS: Stock[] = [
 
   // Crypto Spot (Binance)
-  { symbol: 'BTCUSDT', name: 'Bitcoin', price: 64200.50, change: 1200.50, percent: 1.90, type: 'up', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE', leverageInfo: { max: 125, marks: [25, 50, 75, 100, 125] }, volume24h: 28_540_000_000 },
-  { symbol: 'ETHUSDT', name: 'Ethereum', price: 3450.20, change: -25.30, percent: -0.73, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 14_210_000_000 },
-  { symbol: 'BNBUSDT', name: 'BNB', price: 590.10, change: 5.40, percent: 0.92, type: 'up', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE', leverageInfo: { max: 75, marks: [25, 50, 75] }, volume24h: 1_250_000_000 },
-  { symbol: 'SOLUSDT', name: 'Solana', price: 145.30, change: -3.20, percent: -2.15, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE', leverageInfo: { max: 75, marks: [25, 50, 75] }, volume24h: 4_850_000_000 },
-  { symbol: 'XRPUSDT', name: 'Ripple', price: 0.58, change: 0.01, percent: 1.75, type: 'up', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE', leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 1_850_000_000 },
-  { symbol: 'ADAUSDT', name: 'Cardano', price: 0.45, change: -0.01, percent: -2.17, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE', leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 640_000_000 },
+  { symbol: 'BTCUSDT', name: 'Bitcoin', price: 83244.00, change: -1316.00, percent: -1.56, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE', leverageInfo: { max: 125, marks: [25, 50, 75, 100, 125] }, volume24h: 28_540_000_000 },
+  { symbol: 'ETHUSDT', name: 'Ethereum', price: 2653.95, change: -53.90, percent: -1.99, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 14_210_000_000 },
+  { symbol: 'BNBUSDT', name: 'BNB', price: 765.57, change: -8.75, percent: -1.13, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE', leverageInfo: { max: 75, marks: [25, 50, 75] }, volume24h: 1_250_000_000 },
+  { symbol: 'SOLUSDT', name: 'Solana', price: 119.20, change: -2.19, percent: -1.80, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE', leverageInfo: { max: 75, marks: [25, 50, 75] }, volume24h: 4_850_000_000 },
+  { symbol: 'XRPUSDT', name: 'Ripple', price: 1.4883, change: -0.0346, percent: -2.27, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE', leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 1_850_000_000 },
+  { symbol: 'ADAUSDT', name: 'Cardano', price: 0.2472, change: -0.0074, percent: -2.91, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE', leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 640_000_000 },
   
   // Crypto Spot (Other Exchanges)
-  { symbol: 'DOGEUSDT', name: 'Dogecoin', price: 0.15, change: 0.02, percent: 15.3, type: 'up', market: 'Tiền điện tử (Crypto)', exchange: 'OKX', leverageInfo: { max: 75, marks: [25, 50, 75] }, volume24h: 2_150_000_000 },
-  { symbol: 'DOTUSDT', name: 'Polkadot', price: 7.20, change: -0.15, percent: -2.04, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BYBIT', leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 320_000_000 },
-  { symbol: 'LINKUSD', name: 'Chainlink', price: 18.50, change: 0.80, percent: 4.51, type: 'up', market: 'Tiền điện tử (Crypto)', exchange: 'COINBASE', leverageInfo: { max: 10, marks: [2, 5, 10] }, volume24h: 510_000_000 },
-  { symbol: 'MATICUSDT', name: 'Polygon', price: 0.75, change: 0.05, percent: 7.14, type: 'up', market: 'Tiền điện tử (Crypto)', exchange: 'KRAKEN', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 420_000_000 },
-  { symbol: 'LDOUSDT', name: 'Lido DAO', price: 2.10, change: -0.12, percent: -5.40, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'KUCOIN', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 230_000_000 },
-  { symbol: 'SHIBUSDT', name: 'Shiba Inu', price: 0.000015, change: 0.000001, percent: 5.5, type: 'up', market: 'Tiền điện tử (Crypto)', exchange: 'HTX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 890_000_000 },
-  { symbol: 'TRXUSDT', name: 'TRON', price: 0.12, change: 0.01, percent: 9.09, type: 'up', market: 'Tiền điện tử (Crypto)', exchange: 'HTX', leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 670_000_000 },
+  { symbol: 'DOGEUSDT', name: 'Dogecoin', price: 0.09357, change: -0.00325, percent: -3.36, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'OKX / BINANCE', leverageInfo: { max: 75, marks: [25, 50, 75] }, volume24h: 2_150_000_000 },
+  { symbol: 'DOTUSDT', name: 'Polkadot', price: 1.237, change: -0.002, percent: -0.16, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BYBIT / BINANCE', leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 320_000_000 },
+  { symbol: 'LINKUSD', name: 'Chainlink', price: 13.90, change: -0.336, percent: -2.36, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'COINBASE / BINANCE', leverageInfo: { max: 10, marks: [2, 5, 10] }, volume24h: 510_000_000 },
+  { symbol: 'MATICUSDT', name: 'Polygon', price: 0.3794, change: -0.0011, percent: -0.29, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'KRAKEN / BINANCE', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 420_000_000 },
+  { symbol: 'LDOUSDT', name: 'Lido DAO', price: 0.4712, change: -0.0134, percent: -2.76, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'KUCOIN / BINANCE', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 230_000_000 },
+  { symbol: 'SHIBUSDT', name: 'Shiba Inu', price: 0.0000057, change: -0.0000002, percent: -3.39, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'HTX / BINANCE', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 890_000_000 },
+  { symbol: 'TRXUSDT', name: 'TRON', price: 0.3336, change: 0.0002, percent: 0.06, type: 'up', market: 'Tiền điện tử (Crypto)', exchange: 'HTX / BINANCE', leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 670_000_000 },
   
   // Crypto Futures (Binance & Others)
-  { symbol: 'BTCUSDT.P', name: 'Bitcoin Perp', price: 64210.00, change: 1205.00, percent: 1.91, type: 'up', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE FUTURES', isFutures: true, leverageInfo: { max: 125, marks: [25, 50, 75, 100, 125] }, volume24h: 42_500_000_000 },
-  { symbol: 'ETHUSDT.P', name: 'Ethereum Perp', price: 3451.50, change: -24.00, percent: -0.69, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE FUTURES', isFutures: true, leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 21_800_000_000 },
-  { symbol: 'SOLUSDT.P', name: 'Solana Perp', price: 145.40, change: -3.10, percent: -2.09, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE FUTURES', isFutures: true, leverageInfo: { max: 75, marks: [25, 50, 75] }, volume24h: 7_600_000_000 },
-  { symbol: '1000PEPEUSDT.P', name: 'Pepe Perp', price: 0.0085, change: 0.0012, percent: 16.4, type: 'up', market: 'Tiền điện tử (Crypto)', exchange: 'BYBIT FUTURES', isFutures: true, leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 3_450_000_000 },
-  { symbol: 'AVAXUSDT.SWAP', name: 'Avalanche Swap', price: 35.80, change: -1.20, percent: -3.24, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'OKX FUTURES', isFutures: true, leverageInfo: { max: 75, marks: [25, 50, 75] }, volume24h: 1_120_000_000 },
-  { symbol: 'XRPUSDT.P', name: 'Ripple Perp', price: 0.585, change: 0.015, percent: 2.63, type: 'up', market: 'Tiền điện tử (Crypto)', exchange: 'KUCOIN', isFutures: true, leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 2_340_000_000 },
+  { symbol: 'BTCUSDT.P', name: 'Bitcoin Perp', price: 83250.00, change: -1310.00, percent: -1.55, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE FUTURES', isFutures: true, leverageInfo: { max: 125, marks: [25, 50, 75, 100, 125] }, volume24h: 42_500_000_000 },
+  { symbol: 'ETHUSDT.P', name: 'Ethereum Perp', price: 2654.50, change: -53.50, percent: -1.98, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE FUTURES', isFutures: true, leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 21_800_000_000 },
+  { symbol: 'SOLUSDT.P', name: 'Solana Perp', price: 119.25, change: -2.15, percent: -1.77, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BINANCE FUTURES', isFutures: true, leverageInfo: { max: 75, marks: [25, 50, 75] }, volume24h: 7_600_000_000 },
+  { symbol: '1000PEPEUSDT.P', name: 'Pepe Perp', price: 0.0035, change: -0.0001, percent: -2.78, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'BYBIT / BINANCE FUTURES', isFutures: true, leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 3_450_000_000 },
+  { symbol: 'AVAXUSDT.SWAP', name: 'Avalanche Swap', price: 10.62, change: -0.29, percent: -2.66, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'OKX / BINANCE FUTURES', isFutures: true, leverageInfo: { max: 75, marks: [25, 50, 75] }, volume24h: 1_120_000_000 },
+  { symbol: 'XRPUSDT.P', name: 'Ripple Perp', price: 1.4890, change: -0.0340, percent: -2.23, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'KUCOIN / BINANCE FUTURES', isFutures: true, leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 2_340_000_000 },
   
-  // Forex & Hàng hóa (Tượng trưng)
-  { symbol: 'XAUUSD', name: 'Gold / US Dollar', price: 2350.50, change: 15.20, percent: 0.65, type: 'up', market: 'Hàng hóa', exchange: 'OANDA', leverageInfo: { max: 200, marks: [50, 100, 150, 200] }, volume24h: 35_000_000_000 },
-  { symbol: 'XAGUSD', name: 'Silver / US Dollar', price: 31.20, change: 0.45, percent: 1.46, type: 'up', market: 'Hàng hóa', exchange: 'OANDA', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 8_500_000_000 },
-  { symbol: 'USOIL', name: 'WTI Crude Oil', price: 82.50, change: -1.10, percent: -1.31, type: 'down', market: 'Hàng hóa', exchange: 'NYMEX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 18_000_000_000 },
-  { symbol: 'EURUSD', name: 'Euro / US Dollar', price: 1.0850, change: -0.0020, percent: -0.18, type: 'down', market: 'Ngoại hối (Forex)', exchange: 'OANDA', leverageInfo: { max: 500, marks: [100, 200, 300, 400, 500] }, volume24h: 85_000_000_000 },
-  { symbol: 'GBPUSD', name: 'British Pound / USD', price: 1.2640, change: 0.0015, percent: 0.12, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'OANDA', leverageInfo: { max: 500, marks: [100, 200, 300, 400, 500] }, volume24h: 42_000_000_000 },
-  { symbol: 'USDJPY', name: 'US Dollar / Yen', price: 151.20, change: 0.85, percent: 0.56, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'OANDA', leverageInfo: { max: 500, marks: [100, 200, 300, 400, 500] }, volume24h: 55_000_000_000 },
-  { symbol: 'AUDUSD', name: 'Australian Dollar / USD', price: 0.6540, change: -0.0030, percent: -0.46, type: 'down', market: 'Ngoại hối (Forex)', exchange: 'FOREX.COM', leverageInfo: { max: 400, marks: [50, 100, 200, 400] }, volume24h: 19_000_000_000 },
-  { symbol: 'USDCAD', name: 'US Dollar / Canadian', price: 1.3520, change: 0.0010, percent: 0.07, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'FOREX.COM', leverageInfo: { max: 400, marks: [50, 100, 200, 400] }, volume24h: 14_000_000_000 },
+  // Forex & Hàng hóa (Thực tế BingX & Global)
+  { symbol: 'XAUUSD', name: 'Gold / US Dollar', price: 4182.00, change: -93.40, percent: -2.18, type: 'down', market: 'Hàng hóa', exchange: 'BINGX / OANDA', leverageInfo: { max: 200, marks: [50, 100, 150, 200] }, volume24h: 35_000_000_000 },
+  { symbol: 'XAGUSD', name: 'Silver / US Dollar', price: 61.68, change: 0.85, percent: 1.40, type: 'up', market: 'Hàng hóa', exchange: 'BINGX / OANDA', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 8_500_000_000 },
+  { symbol: 'USOIL', name: 'WTI Crude Oil', price: 94.40, change: -1.10, percent: -1.15, type: 'down', market: 'Hàng hóa', exchange: 'BINGX / NYMEX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 18_000_000_000 },
+  { symbol: 'EURUSD', name: 'Euro / US Dollar', price: 1.1378, change: 0.0012, percent: 0.11, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'BINGX / OANDA', leverageInfo: { max: 500, marks: [100, 200, 300, 400, 500] }, volume24h: 85_000_000_000 },
+  { symbol: 'GBPUSD', name: 'British Pound / USD', price: 1.3236, change: 0.0025, percent: 0.19, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'BINGX / OANDA', leverageInfo: { max: 500, marks: [100, 200, 300, 400, 500] }, volume24h: 42_000_000_000 },
+  { symbol: 'USDJPY', name: 'US Dollar / Yen', price: 157.76, change: 0.85, percent: 0.54, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'BINGX / OANDA', leverageInfo: { max: 500, marks: [100, 200, 300, 400, 500] }, volume24h: 55_000_000_000 },
+  { symbol: 'AUDUSD', name: 'Australian Dollar / USD', price: 0.7019, change: -0.0018, percent: -0.26, type: 'down', market: 'Ngoại hối (Forex)', exchange: 'BINGX / FOREX.COM', leverageInfo: { max: 400, marks: [50, 100, 200, 400] }, volume24h: 19_000_000_000 },
+  { symbol: 'USDCAD', name: 'US Dollar / Canadian', price: 1.4154, change: 0.0010, percent: 0.07, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'BINGX / FOREX.COM', leverageInfo: { max: 400, marks: [50, 100, 200, 400] }, volume24h: 14_000_000_000 },
 
   // Cổ phiếu Mỹ (US Stocks)
-  { symbol: 'AAPL', name: 'Apple Inc.', price: 175.50, change: 2.10, percent: 1.21, type: 'up', market: 'Cổ phiếu', exchange: 'NASDAQ', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 8_500_000_000 },
-  { symbol: 'MSFT', name: 'Microsoft Corp.', price: 420.30, change: 5.40, percent: 1.30, type: 'up', market: 'Cổ phiếu', exchange: 'NASDAQ', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 6_800_000_000 },
-  { symbol: 'TSLA', name: 'Tesla Inc.', price: 190.20, change: -4.50, percent: -2.31, type: 'down', market: 'Cổ phiếu', exchange: 'NASDAQ', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 12_400_000_000 },
-  { symbol: 'NVDA', name: 'NVIDIA Corp.', price: 880.50, change: 15.20, percent: 1.76, type: 'up', market: 'Cổ phiếu', exchange: 'NASDAQ', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 15_200_000_000 },
-  { symbol: 'KO', name: 'Coca-Cola Co.', price: 59.80, change: 0.45, percent: 0.76, type: 'up', market: 'Cổ phiếu', exchange: 'NYSE', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 1_200_000_000 },
-  { symbol: 'JNJ', name: 'Johnson & Johnson', price: 155.30, change: -1.20, percent: -0.77, type: 'down', market: 'Cổ phiếu', exchange: 'NYSE', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 980_000_000 },
+  { symbol: 'AAPL', name: 'Apple Inc.', price: 340.62, change: 3.50, percent: 1.04, type: 'up', market: 'Cổ phiếu', exchange: 'NASDAQ / BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 8_500_000_000 },
+  { symbol: 'MSFT', name: 'Microsoft Corp.', price: 517.07, change: 6.20, percent: 1.21, type: 'up', market: 'Cổ phiếu', exchange: 'NASDAQ / BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 6_800_000_000 },
+  { symbol: 'TSLA', name: 'Tesla Inc.', price: 370.11, change: -4.50, percent: -1.20, type: 'down', market: 'Cổ phiếu', exchange: 'NASDAQ / BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 12_400_000_000 },
+  { symbol: 'NVDA', name: 'NVIDIA Corp.', price: 224.08, change: 5.20, percent: 2.38, type: 'up', market: 'Cổ phiếu', exchange: 'NASDAQ / BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 15_200_000_000 },
+  { symbol: 'KO', name: 'Coca-Cola Co.', price: 88.11, change: 0.45, percent: 0.51, type: 'up', market: 'Cổ phiếu', exchange: 'NYSE / BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 1_200_000_000 },
+  { symbol: 'JNJ', name: 'Johnson & Johnson', price: 272.40, change: -1.20, percent: -0.44, type: 'down', market: 'Cổ phiếu', exchange: 'NYSE / BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 980_000_000 },
 
   // Chỉ số (Indices)
-  { symbol: 'SPX', name: 'S&P 500', price: 5120.50, change: 25.40, percent: 0.50, type: 'up', market: 'Chỉ số', exchange: 'CME', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 45_000_000_000 },
-  { symbol: 'NDX', name: 'Nasdaq 100', price: 18050.20, change: 110.50, percent: 0.62, type: 'up', market: 'Chỉ số', exchange: 'CME', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 38_000_000_000 },
-  { symbol: 'DJI', name: 'Dow Jones', price: 39100.80, change: -45.20, percent: -0.12, type: 'down', market: 'Chỉ số', exchange: 'CBOT', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 22_000_000_000 },
+  { symbol: 'SPX', name: 'S&P 500', price: 7711.70, change: 35.40, percent: 0.46, type: 'up', market: 'Chỉ số', exchange: 'CME / BINGX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 45_000_000_000 },
+  { symbol: 'NDX', name: 'Nasdaq 100', price: 30355.49, change: 180.50, percent: 0.60, type: 'up', market: 'Chỉ số', exchange: 'CME / BINGX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 38_000_000_000 },
+  { symbol: 'DJI', name: 'Dow Jones', price: 51632.40, change: 120.20, percent: 0.23, type: 'up', market: 'Chỉ số', exchange: 'CBOT / BINGX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 22_000_000_000 },
 ];
 
 

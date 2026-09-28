@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Search, BarChart2, Play, Pause, Square, ChevronRight, CandlestickChart, RefreshCcw, Undo2, Redo2 } from 'lucide-react';
 import { TIMEFRAMES, getPricePrecision, type Stock } from '../data';
 import { AssetAvatar } from './AssetAvatar';
+import { useI18n } from '../../../contexts/I18nContext';
+import { useMarketStore } from '../../../stores/useMarketStore';
 
 interface TickerHeaderProps {
   stock: Stock;
@@ -34,6 +36,7 @@ export const TickerHeader = ({
   onStartReplay, onCancelReplay, onReplayNext, onStopReplay, onGoToRealtime, onOpenSearch, onOpenIndicator, activeIndicatorCount,
   canUndo = false, canRedo = false, onUndo, onRedo
 }: TickerHeaderProps) => {
+  const { t } = useI18n();
   const [autoPlay, setAutoPlay] = useState(false);
   const [intervalId, setIntervalId] = useState<ReturnType<typeof setInterval> | null>(null);
 
@@ -66,10 +69,16 @@ export const TickerHeader = ({
   const precision = getPricePrecision(stock.price);
   const markPrice = (stock.price * 1.0002).toFixed(precision);
   const indexPrice = (stock.price * 1.0001).toFixed(precision);
-  const high24h = stock.price * 1.022;
-  const low24h = stock.price * 0.978;
-  const vol24h = stock.price > 1000 ? 158.49 : 15849.2;
-  const volUSDT = stock.price > 1000 ? 396.55 : 39.65;
+
+  const ticker = useMarketStore(state => state.tickers[stock.symbol]);
+  const high24h = ticker?.high24h || stock.price * 1.022;
+  const low24h = ticker?.low24h || stock.price * 0.978;
+  const vol24h = ticker?.volume24h
+    ? (ticker.volume24h >= 1000 ? ticker.volume24h / 1000 : ticker.volume24h)
+    : (stock.price > 1000 ? 158.49 : 15849.2);
+  const volUSDT = ticker?.quoteVolume24h
+    ? (ticker.quoteVolume24h >= 1_000_000 ? ticker.quoteVolume24h / 1_000_000 : ticker.quoteVolume24h)
+    : (stock.price > 1000 ? 396.55 : 39.65);
   const isUp = stock.type === 'up';
 
   return (
@@ -106,35 +115,35 @@ export const TickerHeader = ({
           {stock.market === 'Tiền điện tử (Crypto)' && (
             <>
               <div className="flex flex-col gap-0.5">
-                <span className="text-[#787b86] text-[10px] sm:text-xs">Giá đánh dấu</span>
+                <span className="text-[#787b86] text-[10px] sm:text-xs">{t('header.markPrice', 'Giá đánh dấu')}</span>
                 <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-xs sm:text-sm">{markPrice}</span>
               </div>
               <div className="flex flex-col gap-0.5">
-                <span className="text-[#787b86] text-[10px] sm:text-xs">Giá chỉ số</span>
+                <span className="text-[#787b86] text-[10px] sm:text-xs">{t('header.indexPrice', 'Giá chỉ số')}</span>
                 <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-xs sm:text-sm">{indexPrice}</span>
               </div>
               {stock.isFutures && (
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-[#787b86] text-[10px] sm:text-xs">Tài trợ (8h)</span>
+                  <span className="text-[#787b86] text-[10px] sm:text-xs">{t('header.funding', 'Tài trợ (8h)')}</span>
                   <span className="text-[#f6a111] font-mono font-semibold text-xs sm:text-sm">0.0100%</span>
                 </div>
               )}
             </>
           )}
           <div className="flex flex-col gap-0.5">
-            <span className="text-[#787b86] text-[10px] sm:text-xs">Cao nhất 24 giờ</span>
+            <span className="text-[#787b86] text-[10px] sm:text-xs">{t('header.24hHigh', 'Cao nhất 24 giờ')}</span>
             <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-xs sm:text-sm">{high24h.toLocaleString('vi-VN', { minimumFractionDigits: Math.min(2, precision), maximumFractionDigits: precision })}</span>
           </div>
           <div className="flex flex-col gap-0.5">
-            <span className="text-[#787b86] text-[10px] sm:text-xs">Thấp nhất 24 giờ</span>
+            <span className="text-[#787b86] text-[10px] sm:text-xs">{t('header.24hLow', 'Thấp nhất 24 giờ')}</span>
             <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-xs sm:text-sm">{low24h.toLocaleString('vi-VN', { minimumFractionDigits: Math.min(2, precision), maximumFractionDigits: precision })}</span>
           </div>
           <div className="flex flex-col gap-0.5">
-            <span className="text-[#787b86] text-[10px] sm:text-xs">KL 24h ({stock.symbol.replace('USDT', '').replace('.P', '')})</span>
+            <span className="text-[#787b86] text-[10px] sm:text-xs">{t('header.24hVol', 'KL 24h')} ({stock.symbol.replace('USDT', '').replace('.P', '')})</span>
             <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-xs sm:text-sm">{vol24h.toFixed(2)}K</span>
           </div>
           <div className="flex flex-col gap-0.5">
-            <span className="text-[#787b86] text-[10px] sm:text-xs">KL 24h (USDT)</span>
+            <span className="text-[#787b86] text-[10px] sm:text-xs">{t('header.24hVol', 'KL 24h')} (USDT)</span>
             <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-xs sm:text-sm">{volUSDT.toFixed(2)}M</span>
           </div>
         </div>
@@ -149,25 +158,25 @@ export const TickerHeader = ({
             onClick={() => onTabChange('chart')}
             className={`pb-1.5 border-b-2 ${activeTab === 'chart' ? 'text-[#1e2329] dark:text-[#d1d4dc] border-blue-500 font-semibold' : 'border-transparent hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
           >
-            Biểu đồ
+            {t('tab.chart', 'Biểu đồ')}
           </button>
           <button 
             onClick={() => onTabChange('coin_info')}
             className={`pb-1.5 border-b-2 ${activeTab === 'coin_info' ? 'text-[#1e2329] dark:text-[#d1d4dc] border-blue-500 font-semibold' : 'border-transparent hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
           >
-            Thông Tin {stock.market === 'Tiền điện tử (Crypto)' ? 'Coin' : 'Cổ phiếu'}
+            {stock.market === 'Tiền điện tử (Crypto)' ? t('tab.coinInfo', 'Thông Tin Coin') : t('tab.stockInfo', 'Thông Tin Cổ phiếu')}
           </button>
           <button 
             onClick={() => onTabChange('info')}
             className={`pb-1.5 border-b-2 ${activeTab === 'info' ? 'text-[#1e2329] dark:text-[#d1d4dc] border-blue-500 font-semibold' : 'border-transparent hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
           >
-            Thông tin
+            {t('tab.info', 'Thông tin')}
           </button>
         </div>
 
         {/* Right Side: Tools */}
         <div className="flex items-center gap-1 sm:gap-3 text-[#787b86] text-xs py-1 shrink-0 whitespace-nowrap">
-          <span className="hidden sm:inline text-xs">Khoảng thời gian</span>
+          <span className="hidden sm:inline text-xs">{t('tab.timeframe', 'Khoảng thời gian')}</span>
           <div className="flex items-center gap-0.5">
             {TIMEFRAMES.map(tf => (
               <button

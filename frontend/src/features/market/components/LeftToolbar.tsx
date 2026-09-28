@@ -239,29 +239,6 @@ const TOOLS = [
     ]
   },
   { 
-    id: 'anchoredText',            
-    icon: Type,         
-    label: 'Các công cụ Chú thích',
-    separator: false, 
-    hasDropdown: true,
-    subItems: [
-      {
-        category: 'CHÚ THÍCH',
-        items: [
-          { id: 'anchoredText', label: 'Văn bản', icon: Type, shortcut: 'Alt + T' },
-          { id: 'note', label: 'Ghi chú (Note)', icon: FileText },
-          { id: 'priceLabel', label: 'Nhãn giá', icon: Tag },
-          { id: 'priceNote', label: 'Ghi chú giá', icon: DollarSign },
-          { id: 'callout', label: 'Chú thích bong bóng', icon: MessageCircle },
-          { id: 'comment', label: 'Bình luận', icon: MessageSquare },
-          { id: 'flagMark', label: 'Cờ báo', icon: Flag },
-          { id: 'pinMark', label: 'Đinh ghim', icon: MapPin },
-          { id: 'tableMark', label: 'Bảng', icon: Table }
-        ]
-      }
-    ]
-  },
-  { 
     id: 'brush',                  
     icon: Brush,             
     label: 'Các Hình dạng Hình học & Cọ vẽ',       
@@ -386,12 +363,14 @@ const dict: Record<string, Record<string, string>> = {
     'Các công cụ Đường xu hướng': 'Trend Line Tools', 'ĐƯỜNG': 'LINES', 'Đường Xu hướng': 'Trend Line', 'Tia': 'Ray', 'Đường Thông tin': 'Info Line', 'Đường Mở rộng': 'Extended Line', 'Góc Xu hướng': 'Trend Angle', 'Đường nằm ngang': 'Horizontal Line', 'Tia nằm ngang': 'Horizontal Ray', 'Đường thẳng đứng': 'Vertical Line', 'Đường giao nhau': 'Cross Line',
     'KÊNH': 'CHANNELS', 'Kênh Song song': 'Parallel Channel', 'Xu hướng hồi quy': 'Regression Trend', 'Mặt phẳng đỉnh/đáy': 'Flat Top/Bottom', 'Không kết nối Kênh': 'Disjoint Channel',
     'PITCHFORKS': 'PITCHFORKS', 'Mô hình Pitchfork': 'Pitchfork', 'Mô hình Schiff Pitchfork': 'Schiff Pitchfork', 'Mô hình Schiff Pitchfork Biến đổi': 'Modified Schiff Pitchfork', 'Mô hình Pitchfork mặt trong': 'Inside Pitchfork',
-    'Các công cụ Gann và Fibonacci': 'Gann and Fibonacci Tools', 'Các Hình dạng Hình học & Cọ vẽ': 'Geometric Shapes & Brushes',
+    'Các công cụ Gann và Fibonacci': 'Gann and Fibonacci Tools', 'GANN VÀ FIBONACCI': 'GANN AND FIBONACCI', 'Mức thoái lui Fibonacci': 'Fibonacci Retracement', 'Hộp Gann': 'Gann Box', 'Các đường chu kỳ': 'Cycle Lines', 'Chu kỳ Thời gian': 'Time Cycles', 'Đường Sine': 'Sine Line',
+    'Các Hình dạng Hình học & Cọ vẽ': 'Geometric Shapes & Brushes',
+    'Mô hình': 'Patterns', 'MÔ HÌNH': 'PATTERNS', 'Mô hình XABCD': 'XABCD Pattern', 'Mô hình ABCD': 'ABCD Pattern', 'Mô hình Cypher': 'Cypher Pattern', 'Mô hình Ba Đường Dẫn': 'Three Drives Pattern', 'Mô hình Vai Đầu Vai': 'Head and Shoulders Pattern', 'Sóng đẩy Elliott (1-2-3-4-5)': 'Elliott Impulse Wave (1-2-3-4-5)', 'Sóng điều chỉnh Elliott (A-B-C)': 'Elliott Correction Wave (A-B-C)', 'Sóng tam giác Elliott (A-B-C-D-E)': 'Elliott Triangle Wave (A-B-C-D-E)', 'Sóng kết hợp đôi Elliott (W-X-Y)': 'Elliott Double Combo Wave (W-X-Y)', 'Sóng kết hợp ba Elliott (W-X-Y-X-Z)': 'Elliott Triple Combo Wave (W-X-Y-X-Z)',
     'CỌ': 'BRUSHES', 'Cọ vẽ': 'Brush', 'Bút đánh dấu': 'Highlighter',
     'MŨI TÊN': 'ARROWS', 'Mũi tên đánh dấu': 'Arrow Marker', 'Mũi tên chỉ lên': 'Arrow Up', 'Mũi tên chỉ xuống': 'Arrow Down', 'Mũi tên chỉ sang trái': 'Arrow Left', 'Mũi tên chỉ sang phải': 'Arrow Right',
     'HÌNH DẠNG': 'SHAPES', 'Hình chữ nhật': 'Rectangle', 'Hình chữ nhật xoay': 'Rotated Rectangle', 'Đường dẫn': 'Path', 'Vòng tròn': 'Circle', 'Hình elip': 'Ellipse', 'Hình Polyline': 'Polyline', 'Hình tam giác': 'Triangle', 'Hình vòng cung': 'Arc', 'Đường cong': 'Curve', 'Đường cong đôi': 'Double Curve',
     'Công cụ Dự đoán và Đo lường': 'Prediction and Measurement', 'DỰ ĐOÁN VÀ ĐO LƯỜNG': 'PREDICTION & MEASUREMENT', 'Thế giá lên': 'Long Position', 'Thế giá xuống': 'Short Position', 'Khoảng giá': 'Price Range', 'Khoảng thời gian': 'Date Range', 'Khoảng thời gian & Giá': 'Date and Price Range', 'Mô hình Ghost Feed': 'Ghost Feed',
-    'Công cụ Chú thích': 'Annotation Tools', 'VĂN BẢN & CHÚ THÍCH': 'TEXT & ANNOTATIONS', 'Văn bản': 'Text', 'Đoạn văn bản được ghim': 'Anchored Text', 'Ghi chú': 'Note', 'Ghi chú Giá': 'Price Note', 'Mã Pin': 'Pin Mark', 'Bảng': 'Table', 'Chú thích': 'Callout', 'Bình luận': 'Comment', 'Nhãn Giá': 'Price Label', 'Biển chỉ dẫn': 'Signpost', 'Cờ đánh dấu': 'Flag Mark',
+    'Công cụ Chú thích': 'Annotation Tools', 'Các công cụ Chú thích': 'Annotation Tools', 'VĂN BẢN & CHÚ THÍCH': 'TEXT & ANNOTATIONS', 'CHÚ THÍCH': 'ANNOTATIONS', 'Văn bản': 'Text', 'Đoạn văn bản được ghim': 'Anchored Text', 'Ghi chú': 'Note', 'Ghi chú Giá': 'Price Note', 'Mã Pin': 'Pin Mark', 'Bảng': 'Table', 'Chú thích': 'Callout', 'Bình luận': 'Comment', 'Nhãn Giá': 'Price Label', 'Biển chỉ dẫn': 'Signpost', 'Cờ đánh dấu': 'Flag Mark',
     'Biểu tượng': 'Icons', 'Đo lường': 'Measure', 'Phóng to': 'Zoom In', 'Chế độ Magnet': 'Magnet Mode', 'Giữ ở Chế độ Vẽ': 'Stay in Drawing Mode', 'Khóa tất cả công cụ vẽ': 'Lock All Drawing Tools', 'Ẩn tất cả công cụ vẽ': 'Hide All Drawing Tools', 'Xóa công cụ vẽ': 'Remove Drawing Tools',
     'NỤ CƯỜI VÀ MỌI NGƯỜI': 'SMILEYS & PEOPLE', 'ĐỘNG VẬT VÀ THIÊN NHIÊN': 'ANIMALS & NATURE', 'THỨC ĂN VÀ ĐỒ UỐNG': 'FOOD & DRINK', 'DU LỊCH VÀ ĐỊA ĐIỂM': 'TRAVEL & PLACES', 'ĐỒ VẬT': 'OBJECTS'
   }
