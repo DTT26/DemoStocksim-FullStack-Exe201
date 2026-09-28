@@ -20,12 +20,12 @@ export const NotificationDropdown = () => {
 
     fetchNotifications();
 
-    // Polling định kỳ mỗi 5s để cập nhật thông báo realtime tức thì mà không cần F5
+    // Polling định kỳ mỗi 3s để cập nhật thông báo realtime tức thì mà không cần F5
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible') {
         fetchNotifications();
       }
-    }, 5000);
+    }, 3000);
 
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {

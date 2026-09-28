@@ -525,6 +525,7 @@ export const TradingTerminal = () => {
           if (res && res.processed > 0) {
             fetchPortfolio(user._id);
             setTradeCount(c => c + 1);
+            useNotificationStore.getState().fetchNotifications();
             if (res.messages && Array.isArray(res.messages)) {
               res.messages.forEach((msg: string, i: number) => {
                 setTimeout(() => showToast(msg, 'success'), i * 800);

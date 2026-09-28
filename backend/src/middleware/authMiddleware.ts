@@ -8,16 +8,15 @@ export interface AuthRequest extends Request {
 
 export const protect = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const jwtSecret = process.env.JWT_ACCESS_SECRET || 'fallback_secret_key_change_this_in_production';
-  const tokensToTry: string[] = [];
-
-  if (req.cookies && req.cookies.token) {
-    tokensToTry.push(req.cookies.token);
-  }
+  // Prioritize Authorization Bearer header from active client session
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     const bearer = req.headers.authorization.split(' ')[1];
     if (bearer && !tokensToTry.includes(bearer)) {
       tokensToTry.push(bearer);
     }
+  }
+  if (req.cookies && req.cookies.token) {
+    tokensToTry.push(req.cookies.token);
   }
 
   for (const token of tokensToTry) {
