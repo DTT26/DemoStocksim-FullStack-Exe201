@@ -76,105 +76,105 @@ export const TickerHeader = ({
     <div className="flex flex-col bg-white dark:bg-[#131722] border-b border-[#e6e8ea] dark:border-[#2a2e39] text-xs shrink-0 w-full transition-colors">
       
       {/* ─── Row 1: Ticker Info ─── */}
-      <div className="flex items-center px-4 py-2 overflow-x-auto hide-scrollbar">
+      <div className="flex items-center px-2 sm:px-4 py-1.5 sm:py-2 overflow-x-auto hide-scrollbar">
         <div 
           onClick={onOpenSearch}
-          className="flex items-center gap-4 pr-6 border-r border-[#e6e8ea] dark:border-[#2a2e39] shrink-0 cursor-pointer hover:bg-[#f5f5f5] dark:hover:bg-[#2a2e39]/50 rounded p-1 -ml-1 transition-colors group"
+          className="flex items-center gap-2 sm:gap-4 pr-3 sm:pr-6 border-r border-[#e6e8ea] dark:border-[#2a2e39] shrink-0 cursor-pointer hover:bg-[#f5f5f5] dark:hover:bg-[#2a2e39]/50 rounded p-1 -ml-1 transition-colors group"
         >
           <div className="flex items-center gap-2">
             <AssetAvatar stock={stock} size="md" showExchangeBadge={false} />
             <div className="flex flex-col">
               <div className="flex items-center gap-1">
-                <span className="text-xl font-bold text-[#1e2329] dark:text-[#d1d4dc] group-hover:text-blue-500 dark:group-hover:text-blue-400">{stock.symbol}</span>
+                <span className="text-base sm:text-xl font-bold text-[#1e2329] dark:text-[#d1d4dc] group-hover:text-blue-500 dark:group-hover:text-blue-400">{stock.symbol}</span>
               </div>
-              <span className="text-[#787b86] text-[11px]">
+              <span className="text-[#787b86] text-[10px] sm:text-[11px] truncate max-w-[80px] sm:max-w-none">
                 {stock.name}
               </span>
             </div>
           </div>
-          <div className="flex flex-col items-end pl-4">
-            <span className={`text-lg font-bold font-mono leading-tight ${isUp ? 'text-[#089981]' : 'text-[#f23645]'}`}>
+          <div className="flex flex-col items-end pl-2 sm:pl-4">
+            <span className={`text-base sm:text-lg font-bold font-mono leading-tight ${isUp ? 'text-[#089981]' : 'text-[#f23645]'}`}>
               {stock.price.toLocaleString('vi-VN', { minimumFractionDigits: Math.min(2, precision), maximumFractionDigits: precision })}
             </span>
-            <span className={`font-mono text-[11px] ${isUp ? 'text-[#089981]' : 'text-[#f23645]'}`}>
+            <span className={`font-mono text-[10px] sm:text-[11px] ${isUp ? 'text-[#089981]' : 'text-[#f23645]'}`}>
               {stock.change > 0 ? '+' : ''}{stock.change.toFixed(precision)} ({stock.percent > 0 ? '+' : ''}{stock.percent.toFixed(2)}%)
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-8 pl-6 shrink-0 whitespace-nowrap">
+        <div className="flex items-center gap-3 xl:gap-6 pl-3 xl:pl-6 shrink-0 whitespace-nowrap">
           {stock.market === 'Tiền điện tử (Crypto)' && (
             <>
               <div className="flex flex-col gap-0.5">
-                <span className="text-[#787b86] text-xs">Giá đánh dấu</span>
-                <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-sm">{markPrice}</span>
+                <span className="text-[#787b86] text-[10px] sm:text-xs">Giá đánh dấu</span>
+                <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-xs sm:text-sm">{markPrice}</span>
               </div>
               <div className="flex flex-col gap-0.5">
-                <span className="text-[#787b86] text-xs">Giá chỉ số</span>
-                <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-sm">{indexPrice}</span>
+                <span className="text-[#787b86] text-[10px] sm:text-xs">Giá chỉ số</span>
+                <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-xs sm:text-sm">{indexPrice}</span>
               </div>
               {stock.isFutures && (
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-[#787b86] text-xs">Tài trợ (8h)/Quyết toán</span>
-                  <span className="text-[#f6a111] font-mono font-semibold text-sm">0.0100% / 00:44:27</span>
+                  <span className="text-[#787b86] text-[10px] sm:text-xs">Tài trợ (8h)</span>
+                  <span className="text-[#f6a111] font-mono font-semibold text-xs sm:text-sm">0.0100%</span>
                 </div>
               )}
             </>
           )}
           <div className="flex flex-col gap-0.5">
-            <span className="text-[#787b86] text-xs">Cao nhất 24 giờ</span>
-            <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-sm">{high24h.toLocaleString('vi-VN', { minimumFractionDigits: Math.min(2, precision), maximumFractionDigits: precision })}</span>
+            <span className="text-[#787b86] text-[10px] sm:text-xs">Cao nhất 24 giờ</span>
+            <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-xs sm:text-sm">{high24h.toLocaleString('vi-VN', { minimumFractionDigits: Math.min(2, precision), maximumFractionDigits: precision })}</span>
           </div>
           <div className="flex flex-col gap-0.5">
-            <span className="text-[#787b86] text-xs">Thấp nhất 24 giờ</span>
-            <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-sm">{low24h.toLocaleString('vi-VN', { minimumFractionDigits: Math.min(2, precision), maximumFractionDigits: precision })}</span>
+            <span className="text-[#787b86] text-[10px] sm:text-xs">Thấp nhất 24 giờ</span>
+            <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-xs sm:text-sm">{low24h.toLocaleString('vi-VN', { minimumFractionDigits: Math.min(2, precision), maximumFractionDigits: precision })}</span>
           </div>
           <div className="flex flex-col gap-0.5">
-            <span className="text-[#787b86] text-xs">KL 24h ({stock.symbol.replace('USDT', '').replace('.P', '')})</span>
-            <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-sm">{vol24h.toFixed(2)}K</span>
+            <span className="text-[#787b86] text-[10px] sm:text-xs">KL 24h ({stock.symbol.replace('USDT', '').replace('.P', '')})</span>
+            <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-xs sm:text-sm">{vol24h.toFixed(2)}K</span>
           </div>
           <div className="flex flex-col gap-0.5">
-            <span className="text-[#787b86] text-xs">KL 24h (USDT)</span>
-            <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-sm">{volUSDT.toFixed(2)}M</span>
+            <span className="text-[#787b86] text-[10px] sm:text-xs">KL 24h (USDT)</span>
+            <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono font-semibold text-xs sm:text-sm">{volUSDT.toFixed(2)}M</span>
           </div>
         </div>
       </div>
 
       {/* ─── Row 2: Tabs & Tools ─── */}
-      <div className="flex items-center px-4 justify-between border-t border-b border-[#e6e8ea] dark:border-[#2a2e39] bg-[#f8f9fa] dark:bg-[#1e222d] overflow-x-auto no-scrollbar gap-4">
+      <div className="flex items-center px-2 sm:px-3 xl:px-4 justify-between border-t border-b border-[#e6e8ea] dark:border-[#2a2e39] bg-[#f8f9fa] dark:bg-[#1e222d] overflow-x-auto no-scrollbar gap-2 xl:gap-4">
         
         {/* Left Side: Tabs */}
-        <div className="flex items-center gap-4 sm:gap-6 text-[13px] font-medium text-[#787b86] pt-1.5 shrink-0 whitespace-nowrap">
+        <div className="flex items-center gap-2 sm:gap-3 xl:gap-6 text-xs sm:text-[13px] font-medium text-[#787b86] pt-1.5 shrink-0 whitespace-nowrap">
           <button 
             onClick={() => onTabChange('chart')}
-            className={`pb-1.5 border-b-2 ${activeTab === 'chart' ? 'text-[#1e2329] dark:text-[#d1d4dc] border-blue-500' : 'border-transparent hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
+            className={`pb-1.5 border-b-2 ${activeTab === 'chart' ? 'text-[#1e2329] dark:text-[#d1d4dc] border-blue-500 font-semibold' : 'border-transparent hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
           >
             Biểu đồ
           </button>
           <button 
             onClick={() => onTabChange('coin_info')}
-            className={`pb-1.5 border-b-2 ${activeTab === 'coin_info' ? 'text-[#1e2329] dark:text-[#d1d4dc] border-blue-500' : 'border-transparent hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
+            className={`pb-1.5 border-b-2 ${activeTab === 'coin_info' ? 'text-[#1e2329] dark:text-[#d1d4dc] border-blue-500 font-semibold' : 'border-transparent hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
           >
             Thông Tin {stock.market === 'Tiền điện tử (Crypto)' ? 'Coin' : 'Cổ phiếu'}
           </button>
           <button 
             onClick={() => onTabChange('info')}
-            className={`pb-1.5 border-b-2 ${activeTab === 'info' ? 'text-[#1e2329] dark:text-[#d1d4dc] border-blue-500' : 'border-transparent hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
+            className={`pb-1.5 border-b-2 ${activeTab === 'info' ? 'text-[#1e2329] dark:text-[#d1d4dc] border-blue-500 font-semibold' : 'border-transparent hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
           >
             Thông tin
           </button>
         </div>
 
         {/* Right Side: Tools */}
-        <div className="flex items-center gap-2 sm:gap-3 text-[#787b86] text-xs py-1 shrink-0 whitespace-nowrap">
-          <span className="hidden sm:inline">Khoảng thời gian</span>
+        <div className="flex items-center gap-1 sm:gap-3 text-[#787b86] text-xs py-1 shrink-0 whitespace-nowrap">
+          <span className="hidden sm:inline text-xs">Khoảng thời gian</span>
           <div className="flex items-center gap-0.5">
             {TIMEFRAMES.map(tf => (
               <button
                 key={tf}
                 onClick={() => onTimeframeChange(tf)}
-                className={`px-2 py-1 rounded transition-colors whitespace-nowrap ${
-                  activeTimeframe === tf ? 'text-blue-600 dark:text-blue-400 font-semibold' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc] hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39]'
+                className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs transition-colors whitespace-nowrap ${
+                  activeTimeframe === tf ? 'text-blue-600 dark:text-blue-400 font-semibold bg-blue-50 dark:bg-blue-900/20' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc] hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39]'
                 }`}
               >
                 {tf}

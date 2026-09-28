@@ -128,8 +128,8 @@ export const BottomPanel = ({
   return (
     <div className={`border-t border-[#e6e8ea] dark:border-[#2a2e39] bg-white dark:bg-[#0b0e11] flex flex-col shrink-0 overflow-hidden text-xs text-[#787b86] transition-all duration-300 ${isExpanded ? 'h-64' : 'h-10'}`}>
       {/* Header Tabs */}
-      <div className="flex items-center justify-between border-b border-[#e6e8ea] dark:border-[#2a2e39] px-2 h-10 shrink-0">
-        <div className="flex items-center gap-6 h-full">
+      <div className="flex items-center justify-between border-b border-[#e6e8ea] dark:border-[#2a2e39] px-2 h-10 shrink-0 gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 xl:gap-5 h-full overflow-x-auto no-scrollbar shrink-0 min-w-0 flex-1">
           {tabs.map(tab => (
             <button
               key={tab.id}
@@ -141,9 +141,9 @@ export const BottomPanel = ({
                   setIsExpanded(true);
                 }
               }}
-              className={`h-full relative font-medium transition-colors px-1 ${
+              className={`h-full relative font-medium transition-colors px-1 whitespace-nowrap shrink-0 text-xs ${
                 activeTab === tab.id && isExpanded
-                  ? 'text-[#1e2329] dark:text-white' 
+                  ? 'text-[#1e2329] dark:text-white font-semibold' 
                   : 'hover:text-[#1e2329] dark:hover:text-white text-[#787b86]'
               }`}
             >
@@ -155,8 +155,8 @@ export const BottomPanel = ({
           ))}
         </div>
         
-        <div className="flex items-center gap-4">
-          <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#1e2329] dark:hover:text-[#d1d4dc] transition-colors">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+          <label className="flex items-center gap-1 cursor-pointer hover:text-[#1e2329] dark:hover:text-[#d1d4dc] transition-colors whitespace-nowrap" title="Chỉ hiển thị cặp hiện tại">
             {currentPairOnly ? (
               <CheckSquare className="w-3.5 h-3.5 text-[#fcd535]" />
             ) : (
@@ -168,9 +168,9 @@ export const BottomPanel = ({
               checked={currentPairOnly} 
               onChange={() => setCurrentPairOnly(!currentPairOnly)}
             />
-            <span className="text-[11px]">Cặp hiện tại</span>
+            <span className="text-[11px] hidden xl:inline">Cặp hiện tại</span>
           </label>
-          <button className="hover:text-[#1e2329] dark:hover:text-white transition-colors">
+          <button className="hover:text-[#1e2329] dark:hover:text-white transition-colors" title="Cài đặt">
             <Settings2 className="w-4 h-4" />
           </button>
           <button
@@ -181,35 +181,37 @@ export const BottomPanel = ({
                 await onClosePosition(p.symbol, p.side, markPrice);
               }
             }}
-            className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-white px-3 py-1 rounded text-[11px] font-medium transition-colors"
+            className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-white px-2 sm:px-2.5 py-1 rounded text-[11px] font-medium transition-colors whitespace-nowrap"
+            title="Đóng toàn bộ vị thế"
           >
-            Đóng toàn bộ
+            <span className="hidden xl:inline">Đóng toàn bộ</span>
+            <span className="xl:hidden">Đóng hết</span>
           </button>
           <button 
             onClick={() => setIsExpanded(!isExpanded)}
-            className="hover:text-[#1e2329] dark:hover:text-white transition-colors border-l border-[#e6e8ea] dark:border-[#2a2e39] pl-4 py-1"
+            className="hover:text-[#1e2329] dark:hover:text-white transition-colors border-l border-[#e6e8ea] dark:border-[#2a2e39] pl-1.5 sm:pl-2.5 py-1"
           >
             {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
           </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar relative">
+      <div className="flex-1 overflow-auto custom-scrollbar relative">
         {activeTab === 'positions' && (
           displayPositions.length > 0 ? (
-            <table className="w-full text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
+            <table className="w-full min-w-[680px] xl:min-w-[760px] text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
               <thead className="sticky top-0 bg-[#f8f9fa] dark:bg-[#0b0e11] text-[#787b86] font-normal text-[11px] border-b border-[#e6e8ea] dark:border-transparent">
                 <tr>
-                  <th className="px-4 py-2">Symbol</th>
-                  <th className="px-4 py-2">Size</th>
-                  <th className="px-4 py-2">Giá mở</th>
-                  <th className="px-4 py-2">Giá hiện tại</th>
-                  <th className="px-4 py-2 text-[#f23645] dark:text-[#ff6b6b] font-semibold">Giá thanh lý</th>
-                  <th className="px-4 py-2">Margin</th>
-                  <th className="px-4 py-2">Side</th>
-                  <th className="px-4 py-2 text-right">PNL (ROE%)</th>
-                  <th className="px-4 py-2 text-center">TP / SL</th>
-                  <th className="px-4 py-2 text-center">Thao tác</th>
+                  <th className="px-2.5 xl:px-4 py-2">Symbol</th>
+                  <th className="px-2 xl:px-4 py-2">Size</th>
+                  <th className="px-2 xl:px-4 py-2">Giá mở</th>
+                  <th className="px-2 xl:px-4 py-2">Giá hiện tại</th>
+                  <th className="px-2 xl:px-4 py-2 text-[#f23645] dark:text-[#ff6b6b] font-semibold">Giá thanh lý</th>
+                  <th className="px-2 xl:px-4 py-2">Margin</th>
+                  <th className="px-2 xl:px-4 py-2">Side</th>
+                  <th className="px-2 xl:px-4 py-2 text-right">PNL (ROE%)</th>
+                  <th className="px-2 xl:px-4 py-2 text-center">TP / SL</th>
+                  <th className="px-2 xl:px-4 py-2 text-center">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e6e8ea] dark:divide-[#2a2e39]/50">
@@ -237,14 +239,14 @@ export const BottomPanel = ({
                   
                   return (
                     <tr key={p.symbol} className="hover:bg-[#f5f5f5] dark:hover:bg-[#1e222d] transition-colors">
-                      <td className="px-4 py-2 font-bold">{p.symbol}</td>
-                      <td className="px-4 py-2 font-mono">{p.quantity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} Lot</td>
-                      <td className="px-4 py-2 font-mono">${p.averagePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
-                      <td className="px-4 py-2 font-mono">${markPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
-                      <td className="px-4 py-2 font-mono font-semibold text-[#f23645] dark:text-[#ff6b6b]">
+                      <td className="px-2.5 xl:px-4 py-2 font-bold">{p.symbol}</td>
+                      <td className="px-2 xl:px-4 py-2 font-mono">{p.quantity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} Lot</td>
+                      <td className="px-2 xl:px-4 py-2 font-mono">${p.averagePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
+                      <td className="px-2 xl:px-4 py-2 font-mono">${markPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
+                      <td className="px-2 xl:px-4 py-2 font-mono font-semibold text-[#f23645] dark:text-[#ff6b6b]">
                         {liqPrice !== null && liqPrice > 0 ? `$${liqPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: precision })}` : '--'}
                       </td>
-                      <td className="px-4 py-2 font-mono">
+                      <td className="px-2 xl:px-4 py-2 font-mono">
                         {addingMargin?.symbol === p.symbol ? (
                           <div className="flex items-center gap-1">
                             <input 
@@ -267,20 +269,20 @@ export const BottomPanel = ({
                         ) : (
                           <>
                             ${margin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            <button onClick={() => setAddingMargin({ symbol: p.symbol, side: p.side, amount: '' })} className="ml-2 text-blue-500 hover:text-blue-400 font-bold" title="Bơm thêm ký quỹ">+</button>
+                            <button onClick={() => setAddingMargin({ symbol: p.symbol, side: p.side, amount: '' })} className="ml-1 text-blue-500 hover:text-blue-400 font-bold" title="Bơm thêm ký quỹ">+</button>
                           </>
                         )}
                       </td>
-                      <td className={`px-4 py-2 font-bold ${p.side === 'LONG' ? 'text-[#089981]' : 'text-[#f23645]'}`}>{p.side} x{(p.leverage % 1 !== 0) ? p.leverage.toFixed(2) : p.leverage}</td>
-                      <td className={`px-4 py-2 text-right font-mono font-bold ${pnl >= 0 ? 'text-[#089981]' : 'text-[#f23645]'}`}>
+                      <td className={`px-2 xl:px-4 py-2 font-bold ${p.side === 'LONG' ? 'text-[#089981]' : 'text-[#f23645]'}`}>{p.side} x{(p.leverage % 1 !== 0) ? p.leverage.toFixed(2) : p.leverage}</td>
+                      <td className={`px-2.5 xl:px-4 py-2 text-right font-mono font-bold ${pnl >= 0 ? 'text-[#089981]' : 'text-[#f23645]'}`}>
                         {pnl >= 0 ? '+' : '-'}${Math.abs(pnl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
                         <span className="text-[10px] ml-1">({pnl >= 0 ? '+' : ''}{roe.toFixed(2)}%)</span>
                       </td>
-                      <td className="px-4 py-2 text-center text-[#787b86]">
+                      <td className="px-2 xl:px-4 py-2 text-center text-[#787b86]">
                         {p.tp ? p.tp.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'} / {p.sl ? p.sl.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
-                        <button onClick={() => onEditPosition(p.symbol)} className="ml-2 text-blue-500 hover:text-blue-400 font-medium">Sửa</button>
+                        <button onClick={() => onEditPosition(p.symbol)} className="ml-1.5 text-blue-500 hover:text-blue-400 font-medium">Sửa</button>
                       </td>
-                      <td className="px-4 py-2 text-center flex items-center justify-center gap-1.5">
+                      <td className="px-2 xl:px-4 py-2 text-center flex items-center justify-center gap-1">
                         <button 
                           onClick={() => setReviewTradeData({
                             symbol: p.symbol,
@@ -293,7 +295,7 @@ export const BottomPanel = ({
                             isOpen: true,
                             timeframe: '15m'
                           })}
-                          className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 px-2 py-1 rounded text-[11px] font-semibold transition-colors flex items-center gap-1"
+                          className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 px-1.5 py-1 rounded text-[11px] font-semibold transition-colors flex items-center gap-0.5"
                           title="Đánh giá quy trình lệnh bằng AI"
                         >
                           <Sparkles className="w-3 h-3" /> AI
@@ -307,7 +309,7 @@ export const BottomPanel = ({
                               type: res.success ? 'success' : 'error'
                             });
                           }}
-                          className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-[#d1d4dc] dark:hover:text-white px-3 py-1 rounded text-[11px] font-medium transition-colors"
+                          className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-[#d1d4dc] dark:hover:text-white px-2 py-1 rounded text-[11px] font-medium transition-colors whitespace-nowrap"
                         >
                           Đóng lệnh
                         </button>
@@ -323,7 +325,7 @@ export const BottomPanel = ({
         )}
 
         {activeTab === 'orders' && (
-          <table className="w-full text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
+          <table className="w-full min-w-[500px] text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
             <thead className="sticky top-0 bg-[#f8f9fa] dark:bg-[#0b0e11] text-[#787b86] font-normal text-[11px] border-b border-[#e6e8ea] dark:border-[#2a2e39] transition-colors">
               <tr>
                 <th className="px-4 py-2 font-medium">Mã</th>
@@ -358,7 +360,7 @@ export const BottomPanel = ({
 
         {['order_history', 'trade_history', 'position_history', 'cashflow_history'].includes(activeTab) && (() => {
           return (
-            <table className="w-full text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
+            <table className="w-full min-w-[750px] text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
               <thead className="sticky top-0 bg-[#f8f9fa] dark:bg-[#131722] text-[#787b86] font-medium border-b border-[#e6e8ea] dark:border-[#2a2e39] transition-colors">
                 <tr>
                   <th className="px-4 py-2 font-medium">{t('table.time', 'Thời gian')}</th>

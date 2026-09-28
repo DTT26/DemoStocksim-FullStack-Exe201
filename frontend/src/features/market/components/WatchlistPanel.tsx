@@ -97,7 +97,7 @@ export const WatchlistPanel = ({
   };
 
   return (
-    <div className="w-[300px] border-l border-[#e6e8ea] dark:border-[#2a2e39] flex flex-col bg-white dark:bg-[#131722] shrink-0 h-full relative">
+    <div className="w-full lg:w-[300px] lg:border-l border-[#e6e8ea] dark:border-[#2a2e39] flex flex-col bg-white dark:bg-[#131722] shrink-0 h-full relative">
       {!user ? (
         <AuthOverlay
           icon={<List className="w-8 h-8" />}

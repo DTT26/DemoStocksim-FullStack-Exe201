@@ -297,7 +297,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
   }
 
   return (
-    <div className="w-[280px] flex flex-col bg-white dark:bg-[#131722] border-l border-[#e6e8ea] dark:border-[#2a2e39] flex-1 min-h-0 overflow-hidden text-[#1e2329] dark:text-[#d1d4dc]">
+    <div className="w-full lg:w-[280px] flex flex-col bg-white dark:bg-[#131722] lg:border-l border-[#e6e8ea] dark:border-[#2a2e39] flex-1 min-h-0 overflow-hidden text-[#1e2329] dark:text-[#d1d4dc]">
       {/* Header Tabs Sổ lệnh / Giao dịch */}
       <div className="flex items-center border-b border-[#e6e8ea] dark:border-[#2a2e39] shrink-0">
         <button
