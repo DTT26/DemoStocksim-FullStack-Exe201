@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { TrendingUp, TrendingDown, Wallet, ChevronRight, ChevronLeft, Settings2, RotateCcw } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, ChevronRight, ChevronLeft, Settings2, RotateCcw, ChevronDown, Check } from 'lucide-react';
 import { STOCKS, type Stock, generateOHLCV, getPricePrecision } from '../data';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useModal } from '../../../contexts/ModalContext';
@@ -76,6 +76,10 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showTPSL, setShowTPSL] = useState(false);
+  const [sizingMode, setSizingMode] = useState<'qty' | 'amount' | 'percent'>('qty');
+  const [sizingDropdownOpen, setSizingDropdownOpen] = useState(false);
+  const [amountStr, setAmountStr] = useState<string>('');
+  const [percentVal, setPercentVal] = useState<number>(0);
 
   // Force showTPSL when editing
   useEffect(() => {
@@ -162,21 +166,102 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
     }
   }, [effectiveLeverageInfo.max, leverage]);
 
+  // Spot vs Margin / Futures check
+  const isSpot = selectedStock.market === 'Cổ phiếu' || (
+    !selectedStock.isFutures && 
+    selectedStock.market !== 'Ngoại hối (Forex)' && 
+    selectedStock.market !== 'Hàng hóa' && 
+    selectedStock.market !== 'Chỉ số'
+  );
+
+  const held = positions[selectedStock.symbol]?.quantity || 0;
+  const avgPrice = positions[selectedStock.symbol]?.averagePrice || 0;
+  const side = positions[selectedStock.symbol]?.side;
+  const posLeverage = positions[selectedStock.symbol]?.leverage || 1;
+  const posTp = positions[selectedStock.symbol]?.tp;
+  const posSl = positions[selectedStock.symbol]?.sl;
+
+  const currentLeverage = isSpot ? 1 : (isEditing ? posLeverage : leverage);
+  const pTotal = (orderType !== 'market' && !isEditing) ? (parseFloat(limitPriceStr) || selectedStock.price) : selectedStock.price;
+
+  let actualQty = 0;
+  let requiredMargin = 0;
+
+  if (sizingMode === 'qty') {
+    actualQty = parseFloat(lotStr) || 0;
+    requiredMargin = (actualQty * pTotal) / currentLeverage;
+  } else if (sizingMode === 'amount') {
+    requiredMargin = parseFloat(amountStr) || 0;
+    actualQty = pTotal > 0 ? (requiredMargin * currentLeverage) / pTotal : 0;
+  } else if (sizingMode === 'percent') {
+    requiredMargin = balance > 0 ? (balance * (percentVal / 100)) : 0;
+    actualQty = pTotal > 0 ? (requiredMargin * currentLeverage) / pTotal : 0;
+  }
+
+  const handleQuickPercent = (pct: number) => {
+    setPercentVal(pct);
+    const targetMargin = (balance * pct) / 100;
+    setAmountStr(targetMargin.toFixed(2));
+    if (pTotal > 0) {
+      const calcQty = (targetMargin * currentLeverage) / pTotal;
+      const step = selectedStock.market === 'Tiền điện tử (Crypto)' ? 4 : selectedStock.market === 'Cổ phiếu' ? 0 : 2;
+      setLotStr(calcQty.toFixed(step));
+    }
+  };
+
+  const handleLotChange = (val: string) => {
+    setLotStr(val);
+    const q = parseFloat(val) || 0;
+    const m = (q * pTotal) / currentLeverage;
+    setAmountStr(m > 0 ? m.toFixed(2) : '');
+    setPercentVal(balance > 0 ? Math.min(100, Math.round((m / balance) * 100)) : 0);
+  };
+
+  const handleAmountChange = (val: string) => {
+    setAmountStr(val);
+    const m = parseFloat(val) || 0;
+    setPercentVal(balance > 0 ? Math.min(100, Math.round((m / balance) * 100)) : 0);
+    if (pTotal > 0) {
+      const calcQty = (m * currentLeverage) / pTotal;
+      const step = selectedStock.market === 'Tiền điện tử (Crypto)' ? 4 : selectedStock.market === 'Cổ phiếu' ? 0 : 2;
+      setLotStr(calcQty > 0 ? calcQty.toFixed(step) : '');
+    }
+  };
+
+  const handlePercentInput = (val: string) => {
+    const num = Math.min(100, Math.max(0, parseInt(val) || 0));
+    setPercentVal(num);
+    const m = (balance * num) / 100;
+    setAmountStr(m > 0 ? m.toFixed(2) : '');
+    if (pTotal > 0) {
+      const calcQty = (m * currentLeverage) / pTotal;
+      const step = selectedStock.market === 'Tiền điện tử (Crypto)' ? 4 : selectedStock.market === 'Cổ phiếu' ? 0 : 2;
+      setLotStr(calcQty > 0 ? calcQty.toFixed(step) : '');
+    }
+  };
+
   const handleTrade = async (type: 'buy' | 'sell' | 'close') => {
-    // Nếu là Market order thì dùng selectedStock.price, Limit thì dùng limitPriceStr
     const p = (orderType !== 'market' && type !== 'close') ? parseFloat(limitPriceStr) || 0 : selectedStock.price;
-
-    const lot = parseFloat(lotStr) || 0;
-    const actualQty = lot;
-    const requiredMargin = (actualQty * p) / leverage;
-
-    const m = type === 'close' ? 1 : requiredMargin;
     const tpVal = tp ? parseFloat(tp) : undefined;
     const slVal = sl ? parseFloat(sl) : undefined;
 
     if (type === 'close') {
-      const result = await onTrade('close', p, m, leverage, tpVal, slVal);
+      const result = await onTrade('close', p, 1, currentLeverage, tpVal, slVal);
       showToast(result.message, result.success);
+      return;
+    }
+
+    if (requiredMargin <= 0 || actualQty <= 0) {
+      showAlert({ title: 'Khối lượng không hợp lệ', message: 'Vui lòng nhập khối lượng hoặc số tiền lớn hơn 0!', type: 'warning' });
+      return;
+    }
+
+    if (requiredMargin > balance) {
+      showAlert({ 
+        title: 'Số dư không đủ', 
+        message: `Ký quỹ yêu cầu ($${requiredMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) vượt quá số dư khả dụng ($${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})!`, 
+        type: 'warning' 
+      });
       return;
     }
 
@@ -208,33 +293,16 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
       if (type === 'sell' && slVal <= p) return showAlert({ title: 'Thiết lập TP/SL', message: 'Cắt lỗ (SL) của lệnh SHORT phải CAO HƠN giá mở lệnh', type: 'warning' });
     }
 
-    if (m <= 0) {
-      showAlert({ title: 'Khối lượng không hợp lệ', message: `${lotInputLabel} phải lớn hơn 0!`, type: 'warning' });
-      return;
-    }
-
     if (isSubmitting) return;
     setIsSubmitting(true);
 
     const tradeType = orderType === 'market' ? type :
       orderType === 'limit' ? (type === 'buy' ? 'limit_buy' : 'limit_sell') :
         (type === 'buy' ? 'stop_buy' : 'stop_sell');
-    const result = await onTrade(tradeType, p, requiredMargin, leverage, tpVal, slVal);
+    const result = await onTrade(tradeType, p, requiredMargin, currentLeverage, tpVal, slVal);
     showToast(result.message, result.success);
     setIsSubmitting(false);
   };
-
-  const pTotal = orderType === 'limit' ? (parseFloat(limitPriceStr) || 0) : selectedStock.price;
-  const currentLot = parseFloat(lotStr) || 0;
-  const actualQty = currentLot;
-  const requiredMargin = (actualQty * pTotal) / leverage;
-
-  const held = positions[selectedStock.symbol]?.quantity || 0;
-  const avgPrice = positions[selectedStock.symbol]?.averagePrice || 0;
-  const side = positions[selectedStock.symbol]?.side;
-  const posLeverage = positions[selectedStock.symbol]?.leverage || 1;
-  const posTp = positions[selectedStock.symbol]?.tp;
-  const posSl = positions[selectedStock.symbol]?.sl;
 
   const leverageInfo = effectiveLeverageInfo;
 
@@ -449,10 +517,67 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
             </button>
           </div>
 
-          {/* Price & Qty inputs */}
+          {/* QUY MÔ LỆNH - Sizing Mode Selector */}
+          <div className="flex items-center justify-between relative mt-0.5">
+            <span className="text-[10px] text-[#787b86] uppercase tracking-wider font-semibold">
+              QUY MÔ LỆNH
+            </span>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setSizingDropdownOpen(!sizingDropdownOpen)}
+                className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-white dark:bg-[#1e222d] hover:bg-slate-100 dark:hover:bg-[#2a2e39] text-xs font-semibold text-[#1e2329] dark:text-[#d1d4dc] border border-[#e6e8ea] dark:border-[#2a2e39] transition-all cursor-pointer shadow-xs"
+              >
+                <span>
+                  {sizingMode === 'qty' ? 'Khối lượng' : sizingMode === 'amount' ? 'Số tiền' : '% số dư'}
+                </span>
+                <ChevronDown className={`w-3.5 h-3.5 text-[#787b86] transition-transform ${sizingDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {sizingDropdownOpen && (
+                <div 
+                  className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-lg shadow-xl z-50 py-1 text-xs"
+                  onClick={() => setSizingDropdownOpen(false)}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSizingMode('qty')}
+                    className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-[#2a2e39] transition-colors cursor-pointer ${
+                      sizingMode === 'qty' ? 'text-blue-600 font-bold bg-blue-50/50 dark:bg-blue-900/20' : 'text-[#1e2329] dark:text-[#d1d4dc]'
+                    }`}
+                  >
+                    <span>Khối lượng</span>
+                    {sizingMode === 'qty' && <Check className="w-3.5 h-3.5 text-blue-600" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSizingMode('amount')}
+                    className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-[#2a2e39] transition-colors cursor-pointer ${
+                      sizingMode === 'amount' ? 'text-blue-600 font-bold bg-blue-50/50 dark:bg-blue-900/20' : 'text-[#1e2329] dark:text-[#d1d4dc]'
+                    }`}
+                  >
+                    <span>Số tiền</span>
+                    {sizingMode === 'amount' && <Check className="w-3.5 h-3.5 text-blue-600" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSizingMode('percent')}
+                    className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-[#2a2e39] transition-colors cursor-pointer ${
+                      sizingMode === 'percent' ? 'text-blue-600 font-bold bg-blue-50/50 dark:bg-blue-900/20' : 'text-[#1e2329] dark:text-[#d1d4dc]'
+                    }`}
+                  >
+                    <span>% số dư</span>
+                    {sizingMode === 'percent' && <Check className="w-3.5 h-3.5 text-blue-600" />}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Price & Input Mode Inputs */}
           <div className="flex gap-2">
             <div className="flex flex-col gap-1 flex-1">
-              <label className="text-[10px] text-[#787b86] uppercase tracking-wider">
+              <label className="text-[10px] text-[#787b86] uppercase tracking-wider font-medium">
                 {isEditing ? t('order.entryPrice', 'Giá vào lệnh') : `${t('order.price', 'Giá')} ${orderType === 'market' ? `(${t('order.market', 'Thị trường')})` : '(USD)'}`}
               </label>
               {isEditing ? (
@@ -476,84 +601,153 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
             </div>
 
             <div className="flex flex-col gap-1 flex-1">
-              <label className="text-[10px] text-[#787b86] uppercase tracking-wider">{lotInputLabel}</label>
+              <label className="text-[10px] text-[#787b86] uppercase tracking-wider font-medium">
+                {sizingMode === 'qty' ? lotInputLabel : sizingMode === 'amount' ? 'Số tiền ($ USD)' : '% Số dư'}
+              </label>
               {isEditing ? (
                 <div className="bg-[#f0f3fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#787b86] font-mono cursor-not-allowed">
                   {held.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
                 </div>
-              ) : (
+              ) : sizingMode === 'qty' ? (
                 <input
                   type="number"
                   step={selectedStock.market === 'Tiền điện tử (Crypto)' ? "0.01" : selectedStock.market === 'Cổ phiếu' ? "1" : "0.01"}
                   min="0.0001"
                   value={lotStr}
-                  onChange={e => setLotStr(e.target.value)}
+                  onChange={e => handleLotChange(e.target.value)}
                   className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full"
                 />
+              ) : sizingMode === 'amount' ? (
+                <input
+                  type="number"
+                  min="1"
+                  step="10"
+                  placeholder="VD: 5000"
+                  value={amountStr}
+                  onChange={e => handleAmountChange(e.target.value)}
+                  className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full"
+                />
+              ) : (
+                <div className="relative flex items-center">
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    placeholder="100"
+                    value={percentVal || ''}
+                    onChange={e => handlePercentInput(e.target.value)}
+                    className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full pr-7"
+                  />
+                  <span className="absolute right-2.5 text-xs text-[#787b86] pointer-events-none font-bold">%</span>
+                </div>
               )}
             </div>
           </div>
 
-          {/* Custom Leverage Slider Inline */}
-          <div className={`flex flex-col gap-1 mt-1 ${isEditing ? 'opacity-50' : ''}`}>
-            <div className="flex justify-between items-center px-1">
-              <div className="flex items-center gap-1.5">
-                <label className="text-[10px] text-[#787b86] uppercase tracking-wider">{t('order.leverage', 'Đòn bẩy')}</label>
-                {challengeBadge && (
-                  <span className="text-[9px] bg-amber-500/10 text-amber-500 border border-amber-500/30 px-1 py-0.2 rounded font-medium">
-                    {challengeBadge.includes('Tối đa theo sàn') ? `${challengeBadge} (${leverageInfo.max}X)` : `${challengeBadge} · Tối đa ${leverageInfo.max}X`}
-                  </span>
-                )}
-              </div>
-              <span className="text-xs font-mono font-bold text-[#1e2329] dark:text-white">{isEditing ? ((posLeverage % 1 !== 0) ? posLeverage.toFixed(2) : posLeverage) : leverage}X</span>
-            </div>
-
-            <div className="relative mt-2 mb-5 mx-1">
-              <input
-                type="range"
-                min="1"
-                max={leverageInfo.max}
-                value={isEditing ? posLeverage : leverage}
-                disabled={isEditing}
-                onChange={e => setLev(parseInt(e.target.value))}
-                className="w-full h-[3px] appearance-none cursor-pointer relative z-10 bg-transparent custom-leverage-slider m-0 p-0 block disabled:cursor-not-allowed"
-                style={{
-                  background: `linear-gradient(to right, var(--lev-fill) ${(((isEditing ? posLeverage : leverage) - 1) / (leverageInfo.max - 1 || 1)) * 100}%, var(--lev-bg) ${(((isEditing ? posLeverage : leverage) - 1) / (leverageInfo.max - 1 || 1)) * 100}%)`
-                }}
-              />
-
-              {/* Markers layer */}
-              <div className="absolute top-[1.5px] left-[7px] right-[7px] pointer-events-none z-20">
-                {/* Base 1x */}
-                <div
-                  className="absolute top-0 -translate-y-[14px] -translate-x-1/2 flex flex-col items-center justify-start cursor-pointer pointer-events-auto group w-[30px] h-[40px]"
-                  style={{ left: '0%' }}
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLev(1); }}
-                >
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#1e2329] dark:bg-white transition-transform group-hover:scale-125 shrink-0 mt-[10px]" />
-                  <span className="text-[10px] font-semibold text-[#1e2329] dark:text-white whitespace-nowrap mt-1">1X</span>
-                </div>
-
-                {leverageInfo.marks.map(m => {
-                  const percent = ((m - 1) / (leverageInfo.max - 1 || 1)) * 100;
-                  const isActive = (isEditing ? posLeverage : leverage) >= m;
-                  return (
-                    <div
-                      key={m}
-                      className="absolute top-0 -translate-y-[14px] -translate-x-1/2 flex flex-col items-center justify-start cursor-pointer pointer-events-auto group w-[40px] h-[40px]"
-                      style={{ left: `${percent}%` }}
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLev(m); }}
-                    >
-                      <div className={`w-2.5 h-2.5 rounded-full transition-transform group-hover:scale-125 shrink-0 mt-[10px] ${isActive ? 'bg-[#1e2329] dark:bg-white' : 'bg-[#e6e8ea] dark:bg-[#2a2e39]'}`} />
-                      <span className={`text-[10px] font-semibold whitespace-nowrap mt-1 transition-colors ${isActive ? 'text-[#1e2329] dark:text-[#d1d4dc] group-hover:text-black dark:group-hover:text-white' : 'text-[#787b86] group-hover:text-[#1e2329] dark:group-hover:text-white'}`}>
-                        {m}X
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+          {/* Quick percent buttons: [25%] [50%] [75%] [100%] */}
+          <div className="grid grid-cols-4 gap-1.5">
+            {[25, 50, 75, 100].map(pct => (
+              <button
+                key={pct}
+                type="button"
+                onClick={() => handleQuickPercent(pct)}
+                className={`py-1 rounded text-xs font-semibold font-mono transition-all cursor-pointer ${
+                  percentVal === pct
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-[#f0f3fa] dark:bg-[#1e222d] text-[#787b86] hover:text-[#1e2329] dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#2a2e39]'
+                }`}
+              >
+                {pct}%
+              </button>
+            ))}
           </div>
+
+          {/* Estimated helper info row */}
+          {sizingMode !== 'qty' ? (
+            <div className="flex items-center justify-between text-[11px] bg-blue-500/5 dark:bg-blue-500/10 px-2.5 py-1 rounded border border-blue-500/20">
+              <span className="text-[#787b86]">Khối lượng dự kiến:</span>
+              <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
+                {actualQty.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {assetUnit}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between text-[11px] bg-[#f0f3fa] dark:bg-[#1e222d] px-2.5 py-1 rounded border border-[#e6e8ea] dark:border-[#2a2e39]">
+              <span className="text-[#787b86]">Dùng vốn (Ký quỹ):</span>
+              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                ${requiredMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+          )}
+
+          {/* Custom Leverage Slider Inline OR Spot Mode Notification */}
+          {isSpot ? (
+            <div className="flex items-center justify-between px-2.5 py-1.5 rounded bg-[#f0f3fa] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] text-xs">
+              <span className="text-[10px] text-[#787b86] uppercase tracking-wider font-semibold">Chế độ giao dịch</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                Spot (1X · Không đòn bẩy)
+              </span>
+            </div>
+          ) : (
+            <div className={`flex flex-col gap-1 mt-0.5 ${isEditing ? 'opacity-50' : ''}`}>
+              <div className="flex justify-between items-center px-1">
+                <div className="flex items-center gap-1.5">
+                  <label className="text-[10px] text-[#787b86] uppercase tracking-wider">{t('order.leverage', 'Đòn bẩy')}</label>
+                  {challengeBadge && (
+                    <span className="text-[9px] bg-amber-500/10 text-amber-500 border border-amber-500/30 px-1 py-0.2 rounded font-medium">
+                      {challengeBadge.includes('Tối đa theo sàn') ? `${challengeBadge} (${leverageInfo.max}X)` : `${challengeBadge} · Tối đa ${leverageInfo.max}X`}
+                    </span>
+                  )}
+                </div>
+                <span className="text-xs font-mono font-bold text-[#1e2329] dark:text-white">{isEditing ? ((posLeverage % 1 !== 0) ? posLeverage.toFixed(2) : posLeverage) : leverage}X</span>
+              </div>
+
+              <div className="relative mt-2 mb-5 mx-1">
+                <input
+                  type="range"
+                  min="1"
+                  max={leverageInfo.max}
+                  value={isEditing ? posLeverage : leverage}
+                  disabled={isEditing}
+                  onChange={e => setLev(parseInt(e.target.value))}
+                  className="w-full h-[3px] appearance-none cursor-pointer relative z-10 bg-transparent custom-leverage-slider m-0 p-0 block disabled:cursor-not-allowed"
+                  style={{
+                    background: `linear-gradient(to right, var(--lev-fill) ${(((isEditing ? posLeverage : leverage) - 1) / (leverageInfo.max - 1 || 1)) * 100}%, var(--lev-bg) ${(((isEditing ? posLeverage : leverage) - 1) / (leverageInfo.max - 1 || 1)) * 100}%)`
+                  }}
+                />
+
+                {/* Markers layer */}
+                <div className="absolute top-[1.5px] left-[7px] right-[7px] pointer-events-none z-20">
+                  {/* Base 1x */}
+                  <div
+                    className="absolute top-0 -translate-y-[14px] -translate-x-1/2 flex flex-col items-center justify-start cursor-pointer pointer-events-auto group w-[30px] h-[40px]"
+                    style={{ left: '0%' }}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLev(1); }}
+                  >
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#1e2329] dark:bg-white transition-transform group-hover:scale-125 shrink-0 mt-[10px]" />
+                    <span className="text-[10px] font-semibold text-[#1e2329] dark:text-white whitespace-nowrap mt-1">1X</span>
+                  </div>
+
+                  {leverageInfo.marks.map(m => {
+                    const percent = ((m - 1) / (leverageInfo.max - 1 || 1)) * 100;
+                    const isActive = (isEditing ? posLeverage : leverage) >= m;
+                    return (
+                      <div
+                        key={m}
+                        className="absolute top-0 -translate-y-[14px] -translate-x-1/2 flex flex-col items-center justify-start cursor-pointer pointer-events-auto group w-[40px] h-[40px]"
+                        style={{ left: `${percent}%` }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLev(m); }}
+                      >
+                        <div className={`w-2.5 h-2.5 rounded-full transition-transform group-hover:scale-125 shrink-0 mt-[10px] ${isActive ? 'bg-[#1e2329] dark:bg-white' : 'bg-[#e6e8ea] dark:bg-[#2a2e39]'}`} />
+                        <span className={`text-[10px] font-semibold whitespace-nowrap mt-1 transition-colors ${isActive ? 'text-[#1e2329] dark:text-[#d1d4dc] group-hover:text-black dark:group-hover:text-white' : 'text-[#787b86] group-hover:text-[#1e2329] dark:group-hover:text-white'}`}>
+                          {m}X
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* TP / SL Toggle */}
           <div className="flex items-center gap-2 mt-2">
@@ -711,19 +905,50 @@ export const RightSidebar = ({ selectedStock, positions, balance, maxAllowedLeve
             );
           })()}
 
-          {/* Total info */}
-          <div className="flex flex-col gap-1 border-t border-[#e6e8ea] dark:border-[#2a2e39]/50 pt-2 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[#787b86]">{t('order.positionValue', 'Giá trị vị thế')}</span>
-              <span className="font-mono text-[#1e2329] dark:text-[#d1d4dc] font-medium">${(actualQty * pTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          {/* Summary Box */}
+          <div className="bg-[#f0f3fa] dark:bg-[#1a1e29] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-lg p-2.5 flex flex-col gap-1.5 text-xs">
+            <div className="flex items-center justify-between text-[#787b86]">
+              <span>Số dư</span>
+              <span className="font-mono font-medium text-[#1e2329] dark:text-[#d1d4dc]">
+                ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
             </div>
+
+            <div className="flex items-center justify-between text-[#787b86]">
+              <span>Sử dụng vốn</span>
+              <span className="font-mono font-medium text-[#1e2329] dark:text-[#d1d4dc]">
+                {balance > 0 ? ((requiredMargin / balance) * 100).toFixed(1) : 0}%
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between text-[#787b86]">
+              <span>Đòn bẩy</span>
+              <span className="font-mono font-medium text-[#1e2329] dark:text-[#d1d4dc]">
+                {isSpot ? 'Spot (1X)' : `${currentLeverage}X`}
+              </span>
+            </div>
+
+            <div className="h-px bg-[#e6e8ea] dark:bg-[#2a2e39] my-0.5" />
+
             <div className="flex items-center justify-between font-bold">
-              <span className="text-[#787b86]">{t('order.requiredMargin', 'Ký quỹ yêu cầu')}</span>
-              <span className="font-mono text-blue-500">${requiredMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className="text-[#1e2329] dark:text-white">Ký quỹ</span>
+              <span className="font-mono text-blue-600 dark:text-blue-400">
+                ${requiredMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
             </div>
-            <div className="flex items-center justify-between text-[10px] pb-1">
-              <span className="text-[#787b86]">{t('order.actualQty', 'Khối lượng thực tế')}</span>
-              <span className="font-mono text-[#787b86]">{actualQty.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} Lot</span>
+
+            <div className="flex items-center justify-between font-semibold">
+              <span className="text-[#787b86]">Giá trị vị thế</span>
+              <span className="font-mono text-[#1e2329] dark:text-white">
+                ${(actualQty * pTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] text-[#787b86] pt-0.5">
+              <span>Khối lượng thực tế</span>
+              <span className="font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                {actualQty.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {assetUnit}
+              </span>
             </div>
           </div>
 
