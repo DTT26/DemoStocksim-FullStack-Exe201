@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Target, User, LogOut, TrendingUp, Menu, ChevronLeft, LineChart } from 'lucide-react';
+import { LayoutDashboard, Users, Target, User, LogOut, Menu, ChevronLeft, LineChart } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface AdminSidebarProps {
@@ -59,16 +59,13 @@ export const AdminSidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpe
         {/* Logo */}
         <div className="flex items-center justify-between h-16 px-4 border-b border-[#e2e8f0] dark:border-[#1e293b]">
           {!collapsed && (
-            <Link to="/admin" className="flex items-center gap-2.5 px-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
-                <TrendingUp className="w-5 h-5 text-white" />
-              </div>
+            <Link to="/admin" className="flex items-center px-2">
               <span className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Stock<span className="text-blue-600 dark:text-blue-400">Sim</span></span>
             </Link>
           )}
           {collapsed && (
-            <Link to="/admin" className="mx-auto flex items-center justify-center w-10 h-10 rounded-lg bg-blue-600 shadow-lg shadow-blue-600/20">
-              <TrendingUp className="w-6 h-6 text-white" />
+            <Link to="/admin" className="mx-auto flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1f293d] transition-colors">
+              <span className="text-xl font-black text-blue-600">S</span>
             </Link>
           )}
           <button

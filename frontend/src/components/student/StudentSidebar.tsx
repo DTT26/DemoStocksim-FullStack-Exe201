@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Target, BookOpen, Activity, User, LogOut, TrendingUp, Menu, LineChart } from 'lucide-react';
+import { LayoutDashboard, Target, BookOpen, Activity, User, LogOut, Menu, LineChart } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface StudentSidebarProps {
@@ -54,16 +54,13 @@ export const StudentSidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileO
       <aside className={sidebarClasses}>
         <div className="flex items-center justify-between h-16 px-4 border-b border-[#e2e8f0] dark:border-[#253047]">
           {!collapsed && (
-            <Link to="/student" className="flex items-center gap-2 px-2">
-              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-sm">
-                <TrendingUp className="w-5 h-5 text-white" />
-              </div>
+            <Link to="/student" className="flex items-center px-2">
               <span className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Stock<span className="text-indigo-600 dark:text-indigo-500">Sim</span></span>
             </Link>
           )}
           {collapsed && (
-            <Link to="/student" className="mx-auto flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-600 shadow-sm">
-              <TrendingUp className="w-6 h-6 text-white" />
+            <Link to="/student" className="mx-auto flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-100 dark:hover:bg-[#172033] transition-colors">
+              <span className="text-xl font-black text-indigo-600">S</span>
             </Link>
           )}
           <button 

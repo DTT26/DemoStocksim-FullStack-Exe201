@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useI18n } from '../contexts/I18nContext';
 import { User, Bell, Moon, Sun, Globe, Trophy, Sparkles } from 'lucide-react';
 import { UserDropdown } from './UserDropdown';
@@ -43,9 +44,13 @@ export const ToolbarNavbar = ({
   return (
     <>
       <nav className="h-12 bg-white dark:bg-[#131722] border-b border-[#e6e8ea] dark:border-[#2a2e39] flex items-center px-4 justify-between text-[#1e2329] dark:text-[#d1d4dc] text-sm shrink-0 relative z-50">
-        {/* Logo AITRADEX & Prop Firm Challenge */}
+        {/* Logo StockSim & Prop Firm Challenge */}
         <div className="flex items-center gap-3">
-          <img src="/images/logo.jpg" alt="AITRADEX" className="h-7 object-contain rounded" />
+          <Link to="/" className="flex items-center group mr-1">
+            <span className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+              Stock<span className="text-indigo-600 dark:text-indigo-500">Sim</span>
+            </span>
+          </Link>
           
           {/* Nút Thử Thách Quỹ (Prop Firm Challenge) */}
           <button
