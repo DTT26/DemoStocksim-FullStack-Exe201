@@ -4015,6 +4015,7 @@ export const ChartArea = ({
 
     chartRef.current = chart;
     globalChartInstance = chart;
+    (window as any).__STOCKSIM_CHART__ = chart;
 
     // Overlay click state tracking
     const lastOverlayClickTimeRef = { current: 0 };
@@ -4231,6 +4232,9 @@ export const ChartArea = ({
       container?.removeEventListener('click', handleChartClick);
       if (chartContainerRef.current) {
         dispose(chartContainerRef.current);
+      }
+      if (globalChartInstance === chartRef.current) {
+        globalChartInstance = null;
       }
       chartRef.current = null;
     };

@@ -16,6 +16,8 @@ interface AiTutorDrawerProps {
   timeframe?: string;
   marketContext?: any;
   topOffset?: number;
+  sharedImage?: string | null;
+  onClearSharedImage?: () => void;
   onStartBacktestReplay?: (symbol: string, timeframe: string, rules?: {
     strategy: string;
     entryRule: string;
@@ -30,6 +32,7 @@ interface ChatMessage {
   sender: 'user' | 'tutor';
   text: string;
   data?: AskResponse;
+  imageUrl?: string;
 }
 
 const QUICK_CONCEPTS = [
@@ -154,6 +157,8 @@ export const AiTutorDrawer = ({
   timeframe = '15m',
   marketContext,
   topOffset = 48,
+  sharedImage,
+  onClearSharedImage,
   onStartBacktestReplay
 }: AiTutorDrawerProps) => {
   const [activeTab, setActiveTab] = useState<'tutor' | 'compare' | 'backtest'>('tutor');
@@ -199,6 +204,46 @@ export const AiTutorDrawer = ({
       isCancelled = true;
     };
   }, [isOpen]);
+
+  // Handle shared chart snapshot from Camera toolbar
+  useEffect(() => {
+    if (sharedImage && isOpen) {
+      setActiveTab('tutor');
+      const newMsgId = 'chart-snapshot-' + Date.now();
+      const newMsg: ChatMessage = {
+        id: newMsgId,
+        sender: 'user',
+        text: `📊 **Ảnh chụp biểu đồ: ${currentSymbol} (${timeframe})**\nĐã đính kèm ảnh chụp biểu đồ kỹ thuật cùng các công cụ vẽ. Nhờ AI Tutor phân tích cấu trúc giá và các mức Fibonacci/hỗ trợ kháng cự trên biểu đồ này!`,
+        imageUrl: sharedImage
+      };
+      setMessages(prev => [...prev, newMsg]);
+
+      (async () => {
+        try {
+          setLoading(true);
+          const res = await aiService.askTutor({
+            query: `Phân tích cấu trúc thị trường, các vùng giá quan trọng và các mức Fibonacci của mã ${currentSymbol} trên khung thời gian ${timeframe}. Đưa ra các gợi ý kịch bản giao dịch theo quản trị rủi ro.`,
+            currentSymbol,
+            timeframe,
+            currentPrice,
+            marketContext
+          });
+          const tutorMsg: ChatMessage = {
+            id: 'tutor-' + Date.now(),
+            sender: 'tutor',
+            text: res.answer,
+            data: res
+          };
+          setMessages(prev => [...prev, tutorMsg]);
+        } catch (err: any) {
+          console.error('Error asking tutor on shared image:', err);
+        } finally {
+          setLoading(false);
+          onClearSharedImage?.();
+        }
+      })();
+    }
+  }, [sharedImage, isOpen, currentSymbol, timeframe, currentPrice, marketContext, onClearSharedImage]);
 
   const handleClearChat = async () => {
     if (!confirm('Bạn có chắc muốn xóa toàn bộ lịch sử đoạn chat này trong Database không?')) return;
@@ -560,6 +605,17 @@ ${spec.invalidationRule}`;
                     /* USER MESSAGE */
                     <div className="flex items-end justify-end gap-2 pl-8">
                       <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-medium px-3.5 py-2 rounded-2xl rounded-tr-sm shadow-sm text-[13px] leading-relaxed">
+                        {msg.imageUrl && (
+                          <div className="mb-2 rounded-lg overflow-hidden border border-black/15 shadow-sm max-w-xs">
+                            <img
+                              src={msg.imageUrl}
+                              alt="Chart Snapshot"
+                              className="w-full h-auto object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                              onClick={() => window.open(msg.imageUrl, '_blank')}
+                              title="Bấm để mở ảnh kích thước đầy đủ trong tab mới"
+                            />
+                          </div>
+                        )}
                         {msg.text}
                       </div>
                       <div className="w-6 h-6 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mb-0.5">

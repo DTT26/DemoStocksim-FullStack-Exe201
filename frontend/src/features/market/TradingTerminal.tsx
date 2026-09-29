@@ -288,6 +288,12 @@ export const TradingTerminal = () => {
   });
   const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
   const [isAiTutorOpen, setIsAiTutorOpen] = useState(false);
+  const [sharedChartImage, setSharedChartImage] = useState<string | null>(null);
+
+  const handleShareChartToChat = (imageUrl: string) => {
+    setSharedChartImage(imageUrl);
+    setIsAiTutorOpen(true);
+  };
 
   // Store backtest rules when launching Bar Replay from AI Tutor
   const [activeBacktestRules, setActiveBacktestRules] = useState<{
@@ -972,6 +978,9 @@ export const TradingTerminal = () => {
         accountRankBadge={accountRankConfig.badge}
         accountRankName={`${accountRankConfig.badge} - ${accountRankConfig.levelName}`}
         certCount={challengeState.certificates?.length || 0}
+        selectedStock={selectedStock}
+        activeTimeframe={activeTimeframe}
+        onShareToChat={handleShareChartToChat}
       />
 
       {/* Dynamic Prop Challenge Header Bar - Chỉ hiển thị khi đang trong bài thi hoặc có kết quả */}
@@ -1543,7 +1552,10 @@ export const TradingTerminal = () => {
       />
       <AiTutorDrawer
         isOpen={isAiTutorOpen}
-        onClose={() => setIsAiTutorOpen(false)}
+        onClose={() => {
+          setIsAiTutorOpen(false);
+          setSharedChartImage(null);
+        }}
         currentSymbol={selectedStock.symbol}
         currentPrice={selectedStock.price}
         timeframe={activeTimeframe}
@@ -1553,6 +1565,8 @@ export const TradingTerminal = () => {
           exchange: selectedStock.exchange,
           market: selectedStock.market
         }}
+        sharedImage={sharedChartImage}
+        onClearSharedImage={() => setSharedChartImage(null)}
         onStartBacktestReplay={handleStartBacktestReplayFromAi}
       />
     </div>

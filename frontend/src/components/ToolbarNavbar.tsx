@@ -8,6 +8,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useModal } from '../contexts/ModalContext';
 import { LanguageModal } from './LanguageModal';
 import { NotificationDropdown } from './NotificationDropdown';
+import { ChartSnapshotDropdown } from '../features/market/components/ChartSnapshotDropdown';
+import type { Stock } from '../features/market/data';
 
 interface ToolbarNavbarProps {
   balance: number;
@@ -20,6 +22,9 @@ interface ToolbarNavbarProps {
   accountRankBadge?: string;
   accountRankName?: string;
   certCount?: number;
+  selectedStock?: Stock;
+  activeTimeframe?: string;
+  onShareToChat?: (imageUrl: string) => void;
 }
 
 export const ToolbarNavbar = ({ 
@@ -32,7 +37,10 @@ export const ToolbarNavbar = ({
   challengeStatus,
   accountRankBadge,
   accountRankName,
-  certCount
+  certCount,
+  selectedStock,
+  activeTimeframe,
+  onShareToChat
 }: ToolbarNavbarProps) => {
   const { user, login, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -89,7 +97,14 @@ export const ToolbarNavbar = ({
           </div>
         )}
         {/* Right side controls */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
+          {/* Nút Chụp ảnh biểu đồ - BÊN TRÁI CHỮ AI */}
+          <ChartSnapshotDropdown
+            selectedStock={selectedStock}
+            activeTimeframe={activeTimeframe}
+            onShareToChat={onShareToChat}
+          />
+
           {/* Nút AI Trading Tutor */}
           <button
             onClick={onOpenAiTutor}
