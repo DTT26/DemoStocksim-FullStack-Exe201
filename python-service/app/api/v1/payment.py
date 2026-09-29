@@ -61,3 +61,16 @@ async def payos_webhook(request: Request):
         logger.error(f"Unexpected error in payos_webhook: {e}", exc_info=True)
         # Never crash FastAPI
         return {"success": False, "message": "Webhook handler error"}
+
+@router.get("/verify-order/{order_code}")
+def verify_order(
+    order_code: int,
+    user_id: str = Depends(get_current_user_id)
+):
+    """
+    GET /api/v1/payment/verify-order/{order_code}
+    Direct check with PayOS API to confirm payment and upgrade subscription.
+    """
+    res = payos_service.verify_order_payment(order_code)
+    return res
+

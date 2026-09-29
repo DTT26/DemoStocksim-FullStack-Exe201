@@ -10,6 +10,11 @@ def get_current_user_id(request: Request) -> str:
     Returns authenticated user ID.
     Raises HTTPException 401 if missing or invalid.
     """
+    # 0. Check trusted internal header forwarded from Express protect middleware
+    internal_uid = request.headers.get("x-user-id")
+    if internal_uid:
+        return str(internal_uid).strip()
+
     token = None
     auth_header = request.headers.get("authorization")
     if auth_header and auth_header.startswith("Bearer "):

@@ -301,6 +301,7 @@ export const aiService = {
     const res = await fetch(`${API_BASE}/ask`, {
       method: 'POST',
       headers: getAuthHeaders(),
+      credentials: 'include',
       body: JSON.stringify({ question, framework, symbol, currentPrice, timeframe, marketContext, chatHistory, allStocks }),
     });
     const json = await res.json();
@@ -312,6 +313,7 @@ export const aiService = {
     const res = await fetch(`${API_BASE}/explain-concept`, {
       method: 'POST',
       headers: getAuthHeaders(),
+      credentials: 'include',
       body: JSON.stringify({ concept, framework }),
     });
     const json = await res.json();
@@ -345,6 +347,7 @@ export const aiService = {
     const res = await fetch(`${API_BASE}/submit-reflection`, {
       method: 'POST',
       headers: getAuthHeaders(),
+      credentials: 'include',
       body: JSON.stringify(payload)
     });
     const json = await res.json();
@@ -401,7 +404,8 @@ export const aiService = {
 
   async getSavedReviews() {
     const res = await fetch(`${API_BASE}/reviews`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
+      credentials: 'include'
     });
     const json = await res.json();
     if (!json.success) throw new Error(json.message || 'Lỗi tải danh sách review');
@@ -411,7 +415,8 @@ export const aiService = {
   async getChatHistory(symbol?: string): Promise<Array<{ id: string; sender: 'user' | 'tutor'; text: string; data?: AskResponse }>> {
     const query = symbol ? `?symbol=${encodeURIComponent(symbol)}` : '';
     const res = await fetch(`${API_BASE}/chat-history${query}`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
+      credentials: 'include'
     });
     const json = await res.json();
     if (!json.success) throw new Error(json.message || 'Lỗi tải lịch sử chat');
@@ -422,7 +427,8 @@ export const aiService = {
     const query = symbol ? `?symbol=${encodeURIComponent(symbol)}` : '';
     const res = await fetch(`${API_BASE}/chat-history${query}`, {
       method: 'DELETE',
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
+      credentials: 'include'
     });
     const json = await res.json();
     if (!json.success) throw new Error(json.message || 'Lỗi xóa lịch sử chat');

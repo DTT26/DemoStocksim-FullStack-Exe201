@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Mail, CheckCircle2, Save, X, Edit3, User, Phone, BookOpen, GraduationCap, FileText, Loader2, Camera } from 'lucide-react';
+import { Mail, CheckCircle2, Save, X, Edit3, User, Phone, BookOpen, GraduationCap, FileText, Loader2, Camera, Crown, Sparkles } from 'lucide-react';
 import { ChangePasswordCard } from '../../components/ChangePasswordCard';
 import { AvatarChangeModal } from '../../components/AvatarChangeModal';
 import { UserAvatar } from '../../components/UserAvatar';
 import { LecturerRegistrationCard } from '../../components/student/LecturerRegistrationCard';
+import { subscriptionService, type SubscriptionInfo } from '../../services/subscriptionService';
+import { UpgradeProModal } from '../../features/ai/UpgradeProModal';
 
 export const StudentProfile = () => {
   const { user, refreshUser } = useAuth();
@@ -13,6 +15,17 @@ export const StudentProfile = () => {
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [toastMsg, setToastMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+
+  const fetchSubscription = async () => {
+    try {
+      const s = await subscriptionService.getMySubscription();
+      setSubscription(s);
+    } catch {
+      // ignore
+    }
+  };
   const [stats, setStats] = useState({
     participationsCount: 0,
     submissionsCount: 0,
@@ -79,6 +92,7 @@ export const StudentProfile = () => {
       };
 
       fetchStudentStats();
+      fetchSubscription();
     }
   }, [user]);
 
@@ -392,6 +406,42 @@ export const StudentProfile = () => {
             </div>
           </div>
 
+          {/* Gói AI Tutor & Subscription */}
+          <div className="p-6 bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500/20 to-purple-500/20 text-amber-500 border border-amber-500/30 flex items-center justify-center shrink-0">
+                <Crown className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-slate-900 dark:text-white">Gói Dịch Vụ AI Trading Tutor</h3>
+                  {subscription?.isPremium ? (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 text-xs font-bold border border-amber-500/30 font-mono">
+                      PRO VIP
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 text-xs font-semibold">
+                      FREE (10 lượt/ngày)
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  {subscription?.isPremium 
+                    ? `Hạn dùng đến: ${subscription.premiumExpiresAt ? new Date(subscription.premiumExpiresAt).toLocaleDateString('vi-VN') : '30 ngày'} • 500 lượt hỏi/ngày`
+                    : 'Nâng cấp lên gói PRO để mở khóa 500 câu hỏi/ngày và chế độ phân tích rủi ro quỹ chuyên nghiệp.'
+                  }
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsUpgradeModalOpen(true)}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/25 transition-all cursor-pointer shrink-0 hover:scale-[1.02]"
+            >
+              <Crown className="w-4 h-4" />
+              <span>{subscription?.isPremium ? 'Gia hạn thêm gói PRO' : 'Nâng cấp lên PRO (99k)'}</span>
+            </button>
+          </div>
+
           {/* Đăng ký làm Giảng viên (Lecturer Registration) */}
           <LecturerRegistrationCard user={user} onRefreshUser={refreshUser} />
 
@@ -401,6 +451,14 @@ export const StudentProfile = () => {
         </div>
 
       </div>
+
+      {/* Upgrade Pro Modal */}
+      <UpgradeProModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        currentSubscription={subscription}
+        onSuccess={fetchSubscription}
+      />
 
       {/* Avatar Change Modal */}
       <AvatarChangeModal

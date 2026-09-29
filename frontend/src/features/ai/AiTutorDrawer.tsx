@@ -3,9 +3,12 @@ import {
   X, Sparkles, BookOpen, Layers, GitCompare, 
   Send, ExternalLink, HelpCircle, CheckCircle2, AlertTriangle, ShieldCheck, User,
   MessageSquare, Scale, Copy, Check, ChevronRight, Bot, Trash2, RefreshCw,
-  PlayCircle, Target, TrendingUp, Lightbulb
+  PlayCircle, Target, TrendingUp, Lightbulb, Crown, ArrowRight, Lock
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 import { aiService, type AskResponse, type StrategyComparisonData } from '../../services/aiService';
+import { subscriptionService, type SubscriptionInfo } from '../../services/subscriptionService';
+import { UpgradeProModal } from './UpgradeProModal';
 import { STOCKS } from '../market/data';
 
 interface AiTutorDrawerProps {
@@ -167,7 +170,28 @@ export const AiTutorDrawer = ({
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
+  const { user, login } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+
+  const fetchSubscription = async () => {
+    if (!user?._id) return;
+    try {
+      const sub = await subscriptionService.getMySubscription();
+      setSubscription(sub);
+    } catch (err) {
+      console.warn('Could not fetch subscription:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && user?._id) {
+      fetchSubscription();
+    } else if (!user) {
+      setSubscription(null);
+    }
+  }, [isOpen, user?._id]);
 
   // Load chat history from Database on open
   useEffect(() => {
@@ -252,6 +276,10 @@ export const AiTutorDrawer = ({
   const [compareData, setCompareData] = useState<StrategyComparisonData | null>(null);
 
   const handleAsk = async (questionText?: string) => {
+    if (!user) {
+      login();
+      return;
+    }
     const q = (questionText || query).trim();
     if (!q) return;
 
@@ -302,6 +330,7 @@ export const AiTutorDrawer = ({
         data: res
       };
       setMessages(prev => [...prev, tutorMsg]);
+      fetchSubscription();
     } catch (err: any) {
       console.error(err);
       setMessages(prev => [
@@ -359,54 +388,100 @@ export const AiTutorDrawer = ({
   if (!isOpen) return null;
 
   return (
-    <div 
-      style={{ top: `${topOffset}px`, height: `calc(100vh - ${topOffset}px)` }}
-      className="fixed right-0 z-40 w-full sm:w-[540px] md:w-[620px] bg-white dark:bg-[#131722] border-l border-[#e6e8ea] dark:border-[#2a2e39] text-[#1e2329] dark:text-slate-200 shadow-2xl flex flex-col transform transition-all duration-200 ease-in-out"
-    >
+    <>
+      <div 
+        style={{ top: `${topOffset}px`, height: `calc(100vh - ${topOffset}px)` }}
+        className="fixed right-0 z-40 w-full sm:w-[540px] md:w-[620px] bg-white dark:bg-[#131722] border-l border-[#e6e8ea] dark:border-[#2a2e39] text-[#1e2329] dark:text-slate-200 shadow-2xl flex flex-col transform transition-all duration-200 ease-in-out"
+      >
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-[#e6e8ea] dark:border-[#2a2e39] bg-[#f8f9fa] dark:bg-[#1e222d]">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-gradient-to-tr from-amber-500/20 to-blue-500/20 border border-amber-500/30 text-amber-500 dark:text-amber-400">
-            <Sparkles className="w-5 h-5 animate-pulse" />
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#e6e8ea] dark:border-[#2a2e39] bg-[#f8f9fa] dark:bg-[#1e222d] gap-2">
+        {/* Left identity */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500/20 via-purple-500/20 to-blue-500/20 border border-amber-500/30 text-amber-500 dark:text-amber-400 flex items-center justify-center shrink-0">
+            <Sparkles className="w-4 h-4 animate-pulse" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-[#1e2329] dark:text-white">AI Trading Tutor</h2>
-              <span className="text-[11px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono border border-emerald-500/30 font-semibold">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <h2 className="text-sm font-bold text-[#1e2329] dark:text-white truncate">AI Trading Tutor</h2>
+              <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium border border-emerald-500/20 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 Online
               </span>
             </div>
-            <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500 dark:text-slate-300">
-              <span className="font-semibold text-[#1e2329] dark:text-white">{currentSymbol}</span>
-              <span className="text-slate-400 dark:text-slate-500">•</span>
+            <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap overflow-hidden text-ellipsis">
+              <span className="font-semibold text-slate-800 dark:text-slate-200">{currentSymbol}</span>
+              <span>•</span>
               <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">
                 ${currentPrice >= 100 ? currentPrice.toLocaleString('en-US') : currentPrice.toFixed(4)}
               </span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 font-mono">
+              <span className="text-[10px] px-1 py-0.2 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 font-mono">
                 {timeframe}
-              </span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/20">
-                Live Data
               </span>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
+
+        {/* Right actions */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {user && (
+            <>
+              {subscription?.isPremium ? (
+                <button
+                  type="button"
+                  onClick={() => setIsUpgradeModalOpen(true)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-purple-500/15 border border-amber-500/35 hover:border-amber-500/60 text-amber-600 dark:text-amber-400 font-bold text-xs whitespace-nowrap shadow-xs transition-all cursor-pointer hover:scale-[1.02]"
+                  title={subscription.premiumExpiresAt ? `Tài khoản PRO VIP • Còn ${subscription.remainingToday}/500 lượt hôm nay • Hạn dùng đến: ${new Date(subscription.premiumExpiresAt).toLocaleString('vi-VN')} (Bấm xem chi tiết / gia hạn)` : 'Tài khoản PRO VIP (Bấm xem chi tiết)'}
+                >
+                  <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                  <span>PRO</span>
+                  <span className="font-mono text-[11px] opacity-85">({subscription.remainingToday}/500)</span>
+                  {subscription.premiumExpiresAt && (
+                    <span className="hidden sm:inline-flex items-center text-[10px] text-amber-700 dark:text-amber-300 font-normal ml-0.5 border-l border-amber-500/30 pl-1.5 gap-1">
+                      <span>HSD:</span>
+                      <strong className="font-mono font-medium">{new Date(subscription.premiumExpiresAt).toLocaleDateString('vi-VN')}</strong>
+                    </span>
+                  )}
+                </button>
+              ) : (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span 
+                    className="hidden sm:inline-flex items-center px-2 py-1 rounded-lg bg-slate-100 dark:bg-[#1a1f2c] text-slate-600 dark:text-slate-300 text-xs font-mono border border-slate-200 dark:border-[#2b3347] whitespace-nowrap"
+                    title="Lượt hỏi AI miễn phí còn lại hôm nay"
+                  >
+                    <span className="text-slate-400 text-[11px] mr-1">Free:</span>
+                    <strong className="text-amber-600 dark:text-amber-400">{subscription ? subscription.remainingToday : 10}</strong>
+                    <span className="text-slate-400">/{subscription?.dailyAiLimit || 10}</span>
+                  </span>
+                  <button
+                    onClick={() => setIsUpgradeModalOpen(true)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs shadow-xs transition-all cursor-pointer whitespace-nowrap hover:scale-[1.02]"
+                    title="Nâng cấp lên gói PRO 500 lượt/ngày qua PayOS"
+                  >
+                    <Crown className="w-3.5 h-3.5 shrink-0" />
+                    <span>Nâng cấp PRO</span>
+                  </button>
+                </div>
+              )}
+              <div className="h-4 w-px bg-slate-200 dark:bg-[#2a2e39] mx-0.5" />
+            </>
+          )}
+
           {activeTab === 'tutor' && messages.length > 1 && (
             <button 
               onClick={handleClearChat}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 border border-slate-200 dark:border-transparent transition-colors"
-              title="Xóa lịch sử chat trong Database"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0 cursor-pointer"
+              title="Xóa lịch sử đoạn chat này"
             >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Xóa chat</span>
+              <Trash2 className="w-4 h-4" />
             </button>
           )}
+
           <button 
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-[#1e2329] dark:hover:text-white hover:bg-[#e4e7eb] dark:hover:bg-[#2a2e39] transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-[#1e2329] dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#2a2e39] transition-colors shrink-0 cursor-pointer"
+            title="Đóng bảng AI Tutor"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -536,6 +611,27 @@ export const AiTutorDrawer = ({
                         <div>
                           {renderFormattedText(msg.text)}
                         </div>
+
+                        {/* Quota Exceeded Guardrail Callout */}
+                        {(msg.data?.guardrailTriggered === 'QUOTA_EXCEEDED' || msg.text?.includes('QUOTA_EXCEEDED') || msg.text?.includes('lượt tương tác AI miễn phí')) && (
+                          <div className="mt-3 p-3.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-purple-500/10 to-amber-500/15 border border-amber-500/40 text-center space-y-2">
+                            <div className="text-xs font-bold text-amber-700 dark:text-amber-300 flex items-center justify-center gap-1.5">
+                              <Crown className="w-4 h-4 text-amber-500 shrink-0" />
+                              <span>Mở khóa 500 lượt hỏi AI / ngày với gói PRO</span>
+                            </div>
+                            <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                              Kích hoạt Senior Prop Firm AI Tutor • Đo lường rủi ro quỹ • Quét mã QR PayOS kích hoạt ngay
+                            </p>
+                            <button
+                              onClick={() => setIsUpgradeModalOpen(true)}
+                              className="px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 transition-all flex items-center justify-center gap-1.5 mx-auto cursor-pointer hover:scale-[1.02]"
+                            >
+                              <Crown className="w-3.5 h-3.5" />
+                              <span>Nâng cấp PRO ngay (99.000₫ / 30 ngày)</span>
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
 
                         {/* Verified Sources (Compact) */}
                         {msg.data?.sources && msg.data.sources.length > 0 && (
@@ -1041,40 +1137,71 @@ export const AiTutorDrawer = ({
       {/* Footer / Input (For Tutor Tab) */}
       {activeTab === 'tutor' && (
         <div className="p-3 border-t border-[#e6e8ea] dark:border-[#252c3f] bg-white/95 dark:bg-[#161a26]/90 backdrop-blur-md">
-          <form 
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleAsk();
-            }}
-            className="relative flex items-center"
-          >
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Nhập câu hỏi bất kỳ (ví dụ: FVG là gì?, tính rủi ro lệnh, review vị thế...)..."
-              className="w-full bg-[#f0f3fa] dark:bg-[#10141f] border border-[#e6e8ea] dark:border-[#2b3347] focus:border-amber-500/70 focus:ring-2 focus:ring-amber-500/20 rounded-xl pl-3.5 pr-10 py-2.5 text-xs text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none transition-all shadow-inner"
-            />
-            <button
-              type="submit"
-              disabled={loading || !query.trim()}
-              className="absolute right-1.5 p-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-20 disabled:pointer-events-none text-slate-950 transition-all shadow-sm cursor-pointer"
-              title="Gửi câu hỏi (Nhấn Enter)"
-            >
-              <Send className="w-3.5 h-3.5" />
-            </button>
-          </form>
-          <div className="flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500 mt-2 px-1">
-            <span className="flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-amber-500" />
-              AI Trading Tutor • Sẵn sàng giải đáp mọi thắc mắc
-            </span>
-            <span className="hidden sm:inline font-mono text-[10px] text-slate-500 bg-[#edf0f5] dark:bg-[#1e2433] px-1.5 py-0.5 rounded border border-[#dce1ea] dark:border-[#2a3246]">
-              Enter ↵
-            </span>
-          </div>
+          {!user ? (
+            <div className="py-2.5 px-3.5 rounded-xl bg-slate-50 dark:bg-[#1a1f2c] border border-slate-200 dark:border-[#262c3d] flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
+                  <Lock className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-800 dark:text-slate-100">Yêu cầu đăng nhập tài khoản</div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">Vui lòng đăng nhập để bắt đầu trò chuyện và quản lý lượt hỏi AI.</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => login()}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs shadow-sm transition-all whitespace-nowrap cursor-pointer hover:scale-[1.02]"
+              >
+                Đăng nhập ngay
+              </button>
+            </div>
+          ) : (
+            <>
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleAsk();
+                }}
+                className="relative flex items-center"
+              >
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Nhập câu hỏi bất kỳ (ví dụ: FVG là gì?, tính rủi ro lệnh, review vị thế...)..."
+                  className="w-full bg-[#f0f3fa] dark:bg-[#10141f] border border-[#e6e8ea] dark:border-[#2b3347] focus:border-amber-500/70 focus:ring-2 focus:ring-amber-500/20 rounded-xl pl-3.5 pr-10 py-2.5 text-xs text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none transition-all shadow-inner"
+                />
+                <button
+                  type="submit"
+                  disabled={loading || !query.trim()}
+                  className="absolute right-1.5 p-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-20 disabled:pointer-events-none text-slate-950 transition-all shadow-sm cursor-pointer"
+                  title="Gửi câu hỏi (Nhấn Enter)"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                </button>
+              </form>
+              <div className="flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500 mt-2 px-1">
+                <span className="flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-amber-500" />
+                  AI Trading Tutor • Sẵn sàng giải đáp mọi thắc mắc
+                </span>
+                <span className="hidden sm:inline font-mono text-[10px] text-slate-500 bg-[#edf0f5] dark:bg-[#1e2433] px-1.5 py-0.5 rounded border border-[#dce1ea] dark:border-[#2a3246]">
+                  Enter ↵
+                </span>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
+
+    <UpgradeProModal
+      isOpen={isUpgradeModalOpen}
+      onClose={() => setIsUpgradeModalOpen(false)}
+      currentSubscription={subscription}
+      onSuccess={fetchSubscription}
+    />
+  </>
   );
 };

@@ -6,7 +6,7 @@ import AiChatMessage from '../models/AiChatMessage';
 import Wallet from '../models/Wallet';
 import Holding from '../models/Holding';
 import Challenge from '../models/Challenge';
-import { AuthRequest } from '../middleware/authMiddleware';
+import { AuthRequest, protect } from '../middleware/authMiddleware';
 
 const router = Router();
 const PYTHON_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
@@ -42,10 +42,10 @@ async function forwardToPython(endpoint: string, method: string = 'POST', data?:
   return await resp.json();
 }
 
-// 1. Ask AI Tutor (with MongoDB persistence & full DB context)
-router.post('/ask', async (req: Request, res: Response) => {
+// 1. Ask AI Tutor (Bắt buộc đăng nhập tài khoản)
+router.post('/ask', protect, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.body?.userId || getUserIdFromReq(req);
+    const userId = req.user._id.toString();
     const symbol = req.body?.symbol || 'BTCUSDT';
     const question = req.body?.question || '';
 
@@ -371,10 +371,10 @@ router.get('/reviews', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// 11. Chat History
-router.get('/chat-history', async (req: Request, res: Response) => {
+// 11. Chat History (Bắt buộc đăng nhập)
+router.get('/chat-history', protect, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = (req.query?.userId as string) || getUserIdFromReq(req);
+    const userId = req.user._id.toString();
     const symbol = req.query?.symbol as string;
     const limit = parseInt(req.query?.limit as string) || 50;
 
@@ -404,10 +404,10 @@ router.get('/chat-history', async (req: Request, res: Response) => {
   }
 });
 
-// 12. Clear Chat History
-router.delete('/chat-history', async (req: Request, res: Response) => {
+// 12. Clear Chat History (Bắt buộc đăng nhập)
+router.delete('/chat-history', protect, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = (req.query?.userId as string) || getUserIdFromReq(req);
+    const userId = req.user._id.toString();
     const symbol = req.query?.symbol as string;
 
     const query: any = { userId };

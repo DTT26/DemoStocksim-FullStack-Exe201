@@ -37,6 +37,9 @@ import { StudentProfile } from './pages/student/Profile';
 import { LandingPage } from './pages/shared/LandingPage';
 import { AiLearningDashboard } from './features/ai/AiLearningDashboard';
 
+import { PaymentSuccess } from './pages/shared/PaymentSuccess';
+import { PaymentCancel } from './pages/shared/PaymentCancel';
+
 function App() {
   const { user, loading } = useAuth();
 
@@ -46,6 +49,10 @@ function App() {
 
   return (
     <Routes>
+      {/* Payment Callbacks (PayOS) */}
+      <Route path="/payment/success" element={<PaymentSuccess />} />
+      <Route path="/payment/cancel" element={<PaymentCancel />} />
+
       {/* Route for Trading Terminal (Isolated) */}
       <Route path="/trade" element={<Navigate to="/trade/btcusdt" replace />} />
       <Route path="/trade/:simulationId" element={

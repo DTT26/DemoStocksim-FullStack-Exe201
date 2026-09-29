@@ -77,6 +77,9 @@ class PayOSService:
         short_uid = str(user_id)[-8:]
         description = f"PRO {short_uid}"[:25] # PayOS max 25 chars
         amount = PREMIUM_MONTHLY_PRICE
+        expire_minutes = 10
+        expire_timestamp = int(time.time()) + (expire_minutes * 60)
+        expired_at_dt = datetime.fromtimestamp(expire_timestamp, tz=timezone.utc)
 
         try:
             client = self._get_client()
@@ -91,7 +94,8 @@ class PayOSService:
                     description=description,
                     items=[item],
                     cancelUrl=self.cancel_url,
-                    returnUrl=self.return_url
+                    returnUrl=self.return_url,
+                    expiredAt=expire_timestamp
                 )
                 res = client.createPaymentLink(payment_data)
                 checkout_url = getattr(res, "checkoutUrl", None) or getattr(res, "checkout_url", "")
@@ -106,7 +110,8 @@ class PayOSService:
                     description=description,
                     items=[item],
                     cancel_url=self.cancel_url,
-                    return_url=self.return_url
+                    return_url=self.return_url,
+                    expired_at=expire_timestamp
                 )
                 res = client.payment_requests.create(req_obj)
                 checkout_url = res.checkout_url
@@ -126,11 +131,11 @@ class PayOSService:
                 "qr_code": qr_code,
                 "created_at": now_utc,
                 "paid_at": None,
-                "expired_at": None
+                "expired_at": expired_at_dt
             }
             col.insert_one(payment_record)
 
-            logger.info(f"Created PayOS payment link for user {user_id}, order {order_code}")
+            logger.info(f"Created PayOS payment link for user {user_id}, order {order_code}, expires at {expired_at_dt}")
             return {
                 "success": True,
                 "orderCode": order_code,
@@ -220,4 +225,91 @@ class PayOSService:
             logger.error(f"Webhook processing error: {e}", exc_info=True)
             return {"success": False, "message": f"Server webhook error: {str(e)}"}
 
+    def verify_order_payment(self, order_code: int) -> Dict[str, Any]:
+        """
+        Directly checks order status from PayOS API and upgrades user if PAID.
+        Ensures immediate activation even when webhooks cannot reach localhost.
+        """
+        if not (self.client_id and self.api_key and self.checksum_key):
+            return {"success": False, "message": "PayOS credentials not configured"}
+
+        try:
+            col = get_payments_collection()
+            payment = col.find_one({"order_code": int(order_code)})
+            if not payment:
+                return {"success": False, "message": f"Order {order_code} not found in database"}
+
+            # If already verified as PAID in database
+            if payment.get("status") == "PAID":
+                user_id = payment["user_id"]
+                sub = subscription_service.get_or_create_subscription(user_id)
+                return {
+                    "success": True,
+                    "status": "PAID",
+                    "is_premium": True,
+                    "orderCode": order_code,
+                    "subscription": sub,
+                    "message": "Giao dịch đã được xác nhận thanh toán."
+                }
+
+            client = self._get_client()
+            order_info = None
+            try:
+                order_info = client.payment_requests.get(int(order_code))
+            except Exception:
+                try:
+                    order_info = client.getPaymentLinkInformation(int(order_code))
+                except Exception as e:
+                    logger.error(f"Failed to fetch order info from PayOS for {order_code}: {e}")
+                    return {"success": False, "message": f"Cannot query PayOS: {str(e)}"}
+
+            status = getattr(order_info, "status", None)
+            if status is None and isinstance(order_info, dict):
+                status = order_info.get("status")
+
+            logger.info(f"PayOS API check for order {order_code}: status={status}")
+
+            if status == "PAID":
+                now_utc = datetime.now(timezone.utc)
+                col.update_one(
+                    {"order_code": int(order_code)},
+                    {"$set": {"status": "PAID", "paid_at": now_utc}}
+                )
+                user_id = payment["user_id"]
+                sub = subscription_service.upgrade_to_premium(user_id, int(order_code))
+                logger.info(f"Verified order {order_code} as PAID. Upgraded user {user_id} to PREMIUM.")
+                return {
+                    "success": True,
+                    "status": "PAID",
+                    "is_premium": True,
+                    "orderCode": order_code,
+                    "subscription": sub,
+                    "message": "Giao dịch đã thanh toán thành công. Kích hoạt tài khoản PRO thành công!"
+                }
+            elif status in ["CANCELLED", "EXPIRED"]:
+                col.update_one(
+                    {"order_code": int(order_code)},
+                    {"$set": {"status": status}}
+                )
+                return {
+                    "success": False,
+                    "status": status,
+                    "is_premium": False,
+                    "orderCode": order_code,
+                    "message": f"Giao dịch đã kết thúc với trạng thái: {status}"
+                }
+            else:
+                return {
+                    "success": True,
+                    "status": status or "PENDING",
+                    "is_premium": False,
+                    "orderCode": order_code,
+                    "message": "Giao dịch đang chờ thanh toán"
+                }
+
+        except Exception as e:
+            logger.error(f"Error verifying order {order_code}: {e}", exc_info=True)
+            return {"success": False, "message": f"Lỗi khi xác minh giao dịch: {str(e)}"}
+
 payos_service = PayOSService()
+

@@ -12,7 +12,22 @@ def get_my_subscription(user_id: str = Depends(get_current_user_id)):
     """
     GET /api/v1/subscription/me
     Retrieves current user's subscription and remaining daily quota.
+    Syncs with PayOS if user has recent pending orders.
     """
+    try:
+        from app.core.database import get_payments_collection
+        from app.services.payos_service import payos_service
+        col_pay = get_payments_collection()
+        pending_list = list(col_pay.find({"user_id": str(user_id), "status": "PENDING"}).sort("created_at", -1).limit(3))
+        for p in pending_list:
+            oc = p.get("order_code")
+            if oc:
+                v_res = payos_service.verify_order_payment(int(oc))
+                if v_res.get("status") == "PAID":
+                    break
+    except Exception as e:
+        logger.warning(f"Error checking pending payments during get_my_subscription: {e}")
+
     sub = subscription_service.get_or_create_subscription(user_id)
     plan = sub.get("plan", "FREE")
     limit = sub.get("daily_ai_limit", 10)

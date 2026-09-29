@@ -5,13 +5,19 @@ const router = Router();
 const PYTHON_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
 
 // 1. Get current user's subscription and remaining quota
-router.get('/me', protect, async (req: Request, res: Response) => {
+router.get('/me', protect, async (req: any, res: Response) => {
   try {
-    const authHeader = req.headers.authorization;
+    const userId = req.user?._id?.toString();
+    const token = req.headers.authorization?.startsWith('Bearer ')
+      ? req.headers.authorization.split(' ')[1]
+      : req.cookies?.token;
+    const authHeader = token ? `Bearer ${token}` : req.headers.authorization;
+
     const resp = await fetch(`${PYTHON_URL}/api/v1/subscription/me`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        ...(userId ? { 'x-user-id': userId } : {}),
         ...(authHeader ? { Authorization: authHeader } : {})
       }
     });
