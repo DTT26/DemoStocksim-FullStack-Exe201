@@ -221,13 +221,14 @@ export const AiTutorDrawer = ({
       (async () => {
         try {
           setLoading(true);
-          const res = await aiService.askTutor({
-            query: `Phân tích cấu trúc thị trường, các vùng giá quan trọng và các mức Fibonacci của mã ${currentSymbol} trên khung thời gian ${timeframe}. Đưa ra các gợi ý kịch bản giao dịch theo quản trị rủi ro.`,
+          const res = await aiService.askQuestion(
+            `Phân tích cấu trúc thị trường, các vùng giá quan trọng và các mức Fibonacci của mã ${currentSymbol} trên khung thời gian ${timeframe}. Đưa ra các gợi ý kịch bản giao dịch theo quản trị rủi ro.`,
+            undefined,
             currentSymbol,
-            timeframe,
             currentPrice,
+            timeframe,
             marketContext
-          });
+          );
           const tutorMsg: ChatMessage = {
             id: 'tutor-' + Date.now(),
             sender: 'tutor',

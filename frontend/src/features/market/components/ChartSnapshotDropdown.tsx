@@ -35,7 +35,7 @@ export const ChartSnapshotDropdown: React.FC<ChartSnapshotDropdownProps> = ({
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = useCallback((text: string, type: 'success' | 'error' | 'info' = 'success') => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
