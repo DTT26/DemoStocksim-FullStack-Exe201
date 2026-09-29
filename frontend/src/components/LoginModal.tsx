@@ -22,13 +22,22 @@ interface LoginModalProps {
   onClose: () => void;
   onLoginGoogle: (captchaToken: string) => void;
   isGoogleLoading?: boolean;
+  googleError?: string;
+  onClearGoogleError?: () => void;
 }
 
 type AuthTab = 'login' | 'register' | 'forgot_password';
 type RegisterStep = 'form' | 'otp';
 type ForgotStep = 'email' | 'otp' | 'new_password' | 'success';
 
-export const LoginModal = ({ isOpen, onClose, onLoginGoogle, isGoogleLoading = false }: LoginModalProps) => {
+export const LoginModal = ({ 
+  isOpen, 
+  onClose, 
+  onLoginGoogle, 
+  isGoogleLoading = false,
+  googleError = '',
+  onClearGoogleError
+}: LoginModalProps) => {
   const { loginWithEmail, registerRequest, verifyOtp, resendOtp, forgotPassword, verifyForgotOtp, resetPassword } = useAuth();
 
   const [tab, setTab] = useState<AuthTab>('login');
@@ -38,6 +47,12 @@ export const LoginModal = ({ isOpen, onClose, onLoginGoogle, isGoogleLoading = f
   const [successMsg, setSuccessMsg] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  useEffect(() => {
+    if (googleError) {
+      setErrorMsg(googleError);
+    }
+  }, [googleError]);
 
   // Form states
   const [loginEmail, setLoginEmail] = useState('');
@@ -161,6 +176,7 @@ export const LoginModal = ({ isOpen, onClose, onLoginGoogle, isGoogleLoading = f
   const handleGoogleClick = async () => {
     setLoading(true);
     setErrorMsg('');
+    if (onClearGoogleError) onClearGoogleError();
     try {
       const token = await getRecaptchaToken('google_login');
       onLoginGoogle(token);

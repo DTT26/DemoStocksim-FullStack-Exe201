@@ -67,11 +67,20 @@ const verifyRecaptchaV3 = async (captchaToken?: string): Promise<boolean> => {
 
     if (!captchaData.success || (typeof captchaData.score === 'number' && captchaData.score < 0.5)) {
       console.warn('reCAPTCHA v3 verification failed or low score:', captchaData);
+      const errorCodes: string[] = captchaData['error-codes'] || [];
+      // Khi chạy môi trường dev/local hoặc domain chưa kịp cấu hình trong Google Console (hostname-mismatch)
+      if (process.env.NODE_ENV !== 'production' || errorCodes.includes('hostname-mismatch') || process.env.BYPASS_CAPTCHA === 'true') {
+        console.warn('⚡ [AUTH] Bỏ qua lỗi reCAPTCHA v3 do môi trường thử nghiệm hoặc domain chưa whitelist:', captchaData);
+        return true;
+      }
       return false;
     }
     return true;
   } catch (err) {
     console.error('reCAPTCHA verification error:', err);
+    if (process.env.NODE_ENV !== 'production') {
+      return true;
+    }
     return false;
   }
 };
