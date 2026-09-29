@@ -3436,6 +3436,7 @@ interface ChartAreaProps {
   isReplaying: boolean;
   replayTime?: number | null;
   replayStepTrigger?: number;
+  replayReloadTrigger?: number;
   onReplayTimeChange?: (time: number) => void;
   tradeOrders: TradeOrder[];
   chartSettings: ChartSettings;
@@ -3483,6 +3484,7 @@ export const ChartArea = ({
   isReplaying,
   replayTime,
   replayStepTrigger,
+  replayReloadTrigger,
   onReplayTimeChange,
   tradeOrders,
   chartSettings,
@@ -4551,15 +4553,20 @@ export const ChartArea = ({
       if (!isMounted) return;
 
       // In replay mode: filter data up to replayTime
-      const visibleData = (isReplaying && currentReplayTime)
+      let visibleData = (isReplaying && currentReplayTime)
         ? allData.filter(d => d.timestamp <= currentReplayTime)
-        : allData;
+        : (isReplaying ? (allData.length > 0 ? [allData[0]] : []) : allData);
+
+      if (isReplaying && visibleData.length === 0 && allData.length > 0) {
+        visibleData = [allData[0]];
+      }
 
       if (isReplaying && visibleData.length > 0) {
         const lastCandle = visibleData[visibleData.length - 1];
-        if (onPriceUpdate) onPriceUpdate(lastCandle.close);
+        const effectiveTime = currentReplayTime || lastCandle.timestamp;
+        if (onPriceUpdate) onPriceUpdate(lastCandle.close, effectiveTime);
       } else if (!isReplaying && allData.length > 0 && onPriceUpdate) {
-        onPriceUpdate(allData[allData.length - 1].close);
+        onPriceUpdate(allData[allData.length - 1].close, allData[allData.length - 1].timestamp);
       }
 
       const precision = getPricePrecision(selectedStock.price);
@@ -4640,7 +4647,7 @@ export const ChartArea = ({
               if (chart && typeof (chart as any).updateData === 'function') {
                 (chart as any).updateData(newCandle);
               }
-              if (onPriceUpdate) onPriceUpdate(newCandle.close);
+              if (onPriceUpdate) onPriceUpdate(newCandle.close, newCandle.timestamp);
             }
           );
         },
@@ -4664,7 +4671,7 @@ export const ChartArea = ({
       if (tickerInterval) clearInterval(tickerInterval);
       if (wsUnsubscribe) wsUnsubscribe();
     };
-  }, [selectedStock.symbol, selectedStock.market, selectedStock.isFutures, activeTimeframe, isReplaying]);
+  }, [selectedStock.symbol, selectedStock.market, selectedStock.isFutures, activeTimeframe, isReplaying, replayReloadTrigger]);
 
   // Sync active indicators with chart
   useEffect(() => {

@@ -21,6 +21,9 @@ interface SimulationPanelProps {
   selectedStock?: Stock;
   currentPrice?: number;
   isReplaying: boolean;
+  replayTime?: number | null;
+  activeTimeframe?: string;
+  onResumeSession?: (session: PaperSession, resumeTimestamp?: number, timeframe?: string) => void;
   onStartSimulation: (config: SimulationConfig) => void;
   onStartReplay?: () => void;
   onSelectStock?: (stock: Stock) => void;
@@ -57,6 +60,9 @@ export const SimulationPanel = ({
   selectedStock, 
   currentPrice, 
   isReplaying, 
+  replayTime,
+  activeTimeframe,
+  onResumeSession,
   onStartSimulation, 
   onStartReplay,
   onSelectStock,
@@ -121,9 +127,17 @@ export const SimulationPanel = ({
 
   const handleContinueSession = async (session: any) => {
     try {
+      let targetSession = session;
+      let resumeTimeStr = store.currentTime || store.session?.replayCurrentTime || targetSession.replayCurrentTime || targetSession.replayStartTime;
+      let sessionTimeframe = store.session?.timeframe || targetSession.timeframe || activeTimeframe || '1m';
+
       if (!store.isActive || store.session?._id !== session._id) {
         const { getSessionDetails } = await import('../../../services/marketApi');
         const data = await getSessionDetails(session._id);
+        targetSession = data.session;
+        resumeTimeStr = targetSession.replayCurrentTime || targetSession.replayStartTime;
+        sessionTimeframe = targetSession.timeframe || activeTimeframe || '1m';
+
         const effectiveStockPrice = (currentPrice && currentPrice > 0) 
           ? currentPrice 
           : (STOCKS.find((s: Stock) => s.symbol === data.session.symbol)?.price || 100);
@@ -133,7 +147,7 @@ export const SimulationPanel = ({
             _id: data.session._id,
             name: data.session.name,
             symbol: data.session.symbol,
-            timeframe: data.session.timeframe,
+            timeframe: sessionTimeframe,
             config: {
               initialBalance: data.session.initialBalance,
               leverage: data.session.leverage,
@@ -158,12 +172,19 @@ export const SimulationPanel = ({
           data.history,
           effectiveStockPrice
         );
-
-        if (onSelectStock && data.session.symbol) {
-          const matchStock = STOCKS.find(s => s.symbol === data.session.symbol);
-          if (matchStock) onSelectStock(matchStock);
-        }
+      } else {
+        resumeTimeStr = store.currentTime || store.session?.replayCurrentTime || targetSession.replayCurrentTime || targetSession.replayStartTime;
+        sessionTimeframe = store.session?.timeframe || targetSession.timeframe || activeTimeframe || '1m';
       }
+
+      const resumeTimestamp = resumeTimeStr ? new Date(resumeTimeStr).getTime() : undefined;
+      if (onResumeSession) {
+        onResumeSession(targetSession, resumeTimestamp, sessionTimeframe);
+      } else if (onSelectStock && targetSession.symbol) {
+        const matchStock = STOCKS.find(s => s.symbol === targetSession.symbol);
+        if (matchStock) onSelectStock(matchStock);
+      }
+
       setCurrentView('trading');
     } catch (error) {
       console.error("Failed to continue session", error);
@@ -256,8 +277,13 @@ export const SimulationPanel = ({
   useEffect(() => {
     fetchSessions();
     const handleSessionEnded = () => fetchSessions();
+    const handleSessionUpdated = () => fetchSessions();
     window.addEventListener('simulator-session-ended', handleSessionEnded);
-    return () => window.removeEventListener('simulator-session-ended', handleSessionEnded);
+    window.addEventListener('simulator-session-updated', handleSessionUpdated);
+    return () => {
+      window.removeEventListener('simulator-session-ended', handleSessionEnded);
+      window.removeEventListener('simulator-session-updated', handleSessionUpdated);
+    };
   }, [user]);
 
   const store = useSimulatorStore();
@@ -315,9 +341,15 @@ export const SimulationPanel = ({
     }
 
     try {
+      const sessionReplayTime = (replayTime && !isNaN(replayTime))
+        ? new Date(replayTime).toISOString()
+        : (store.currentTime || new Date().toISOString());
+
+      const sessionTimeframe = activeTimeframe || '1m';
+
       const newSession = await createSession({
         symbol: currentSymbol,
-        timeframe: 'D', // Hardcoded for now
+        timeframe: sessionTimeframe,
         initialBalance: config.balance,
         leverage: config.leverage,
         minLot: config.minLot,
@@ -327,7 +359,7 @@ export const SimulationPanel = ({
         commission: config.commission,
         swapLong: config.swapLong,
         swapShort: config.swapShort,
-        replayStartTime: new Date().toISOString() // Should be from Replay State
+        replayStartTime: sessionReplayTime
       });
       
       setSessions(prev => [newSession, ...prev]);
@@ -359,6 +391,10 @@ export const SimulationPanel = ({
         replayCurrentTime: newSession.replayCurrentTime,
         status: newSession.status
       }, stockPrice);
+
+      const resumeTimestamp = (replayTime && !isNaN(replayTime)) ? replayTime : new Date(sessionReplayTime).getTime();
+      onResumeSession?.(newSession, resumeTimestamp, sessionTimeframe);
+
       setCurrentView('trading');
     } catch (error) {
       console.error("Failed to create session", error);
@@ -538,7 +574,11 @@ export const SimulationPanel = ({
       <div className="w-full lg:w-[320px] lg:border-l border-[#e6e8ea] dark:border-[#2a2e39] bg-white dark:bg-[#131722] shrink-0 h-full flex flex-col text-[#1e2329] dark:text-[#d1d4dc] font-sans">
         <SimulatorTradingPanel
           selectedStock={sessionStock}
-          onBack={() => setCurrentView('list')}
+          onBack={async () => {
+            await store.flushSync();
+            await fetchSessions();
+            setCurrentView('list');
+          }}
           onPreviewTPSLChange={onPreviewTPSLChange}
           draggedTPSL={draggedTPSL}
         />

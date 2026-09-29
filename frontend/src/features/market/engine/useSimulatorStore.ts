@@ -32,70 +32,101 @@ interface SimulatorState {
   // Risk Mgmt
   updateTPSL: (positionId: string, sl?: number, tp?: number) => void;
   setLeverage: (leverage: number) => void;
+  setTimeframe: (timeframe: string) => void;
   
   // App state mgmt
+  flushSync: () => Promise<void>;
   reset: () => void;
 }
 
 let syncTimeout: any = null;
-const debouncedSyncToBackend = () => {
-  if (syncTimeout) clearTimeout(syncTimeout);
-  syncTimeout = setTimeout(async () => {
-    const state = useSimulatorStore.getState();
-    if (!state.session?._id) return;
+let lastSyncTime = 0;
 
-    try {
-      const { updateSession } = await import('../../../services/marketApi');
-      const history = state.history || [];
-      const positions = state.positions || [];
-      const totalTrades = history.length + positions.length;
-      const winningTrades = history.filter(h => h.netPnL > 0);
-      const losingTrades = history.filter(h => h.netPnL <= 0);
-      const wins = winningTrades.length;
-      const losses = losingTrades.length;
-      const winRate = history.length > 0 ? parseFloat(((wins / history.length) * 100).toFixed(1)) : 0;
-      const grossProfit = winningTrades.reduce((sum, h) => sum + h.netPnL, 0);
-      const grossLoss = losingTrades.reduce((sum, h) => sum + Math.abs(h.netPnL), 0);
-      const netPnL = grossProfit - grossLoss;
+const doSyncToBackend = async () => {
+  const state = useSimulatorStore.getState();
+  if (!state.session?._id) return;
 
-      const statistics = {
-        totalTrades,
-        wins,
-        losses,
-        winRate,
-        grossProfit,
-        grossLoss,
-        netPnL,
-        averageWin: wins > 0 ? grossProfit / wins : 0,
-        averageLoss: losses > 0 ? grossLoss / losses : 0,
-        largestWin: wins > 0 ? Math.max(...winningTrades.map(h => h.netPnL)) : 0,
-        largestLoss: losses > 0 ? Math.max(...losingTrades.map(h => Math.abs(h.netPnL))) : 0,
-        maxDrawdown: 0,
-        averageRR: 0
-      };
+  try {
+    const { updateSession } = await import('../../../services/marketApi');
+    const history = state.history || [];
+    const positions = state.positions || [];
+    const totalTrades = history.length + positions.length;
+    const winningTrades = history.filter(h => h.netPnL > 0);
+    const losingTrades = history.filter(h => h.netPnL <= 0);
+    const wins = winningTrades.length;
+    const losses = losingTrades.length;
+    const winRate = history.length > 0 ? parseFloat(((wins / history.length) * 100).toFixed(1)) : 0;
+    const grossProfit = winningTrades.reduce((sum, h) => sum + h.netPnL, 0);
+    const grossLoss = losingTrades.reduce((sum, h) => sum + Math.abs(h.netPnL), 0);
+    const netPnL = grossProfit - grossLoss;
 
-      const sessionData = {
-        balance: state.session.balance,
-        equity: state.session.equity,
-        usedMargin: state.session.usedMargin,
-        freeMargin: state.session.freeMargin,
-        replayCurrentTime: state.session.replayCurrentTime || state.currentTime,
-        statistics,
-        status: state.session.status || 'running'
-      };
+    const statistics = {
+      totalTrades,
+      wins,
+      losses,
+      winRate,
+      grossProfit,
+      grossLoss,
+      netPnL,
+      averageWin: wins > 0 ? grossProfit / wins : 0,
+      averageLoss: losses > 0 ? grossLoss / losses : 0,
+      largestWin: wins > 0 ? Math.max(...winningTrades.map(h => h.netPnL)) : 0,
+      largestLoss: losses > 0 ? Math.max(...losingTrades.map(h => Math.abs(h.netPnL))) : 0,
+      maxDrawdown: 0,
+      averageRR: 0
+    };
 
-      await updateSession(state.session._id, {
-        sessionData,
-        positions: state.positions,
-        orders: state.orders,
-        history: state.history
-      });
+    const sessionData = {
+      balance: state.session.balance,
+      equity: state.session.equity,
+      usedMargin: state.session.usedMargin,
+      freeMargin: state.session.freeMargin,
+      timeframe: state.session.timeframe,
+      replayCurrentTime: state.currentTime || state.session.replayCurrentTime,
+      statistics,
+      status: state.session.status || 'running'
+    };
 
-      window.dispatchEvent(new Event('simulator-session-updated'));
-    } catch (err) {
-      console.warn('Auto-sync simulator session failed:', err);
+    await updateSession(state.session._id, {
+      sessionData,
+      positions: state.positions,
+      orders: state.orders,
+      history: state.history
+    });
+
+    window.dispatchEvent(new Event('simulator-session-updated'));
+  } catch (err) {
+    console.warn('Auto-sync simulator session failed:', err);
+  }
+};
+
+const debouncedSyncToBackend = (forceImmediately = false) => {
+  const now = Date.now();
+  if (forceImmediately) {
+    if (syncTimeout) {
+      clearTimeout(syncTimeout);
+      syncTimeout = null;
     }
-  }, 200);
+    lastSyncTime = now;
+    return doSyncToBackend();
+  }
+
+  // Periodic sync every 2s during fast playback
+  if (now - lastSyncTime > 2000) {
+    if (syncTimeout) {
+      clearTimeout(syncTimeout);
+      syncTimeout = null;
+    }
+    lastSyncTime = now;
+    return doSyncToBackend();
+  }
+
+  if (syncTimeout) clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(() => {
+    syncTimeout = null;
+    lastSyncTime = Date.now();
+    doSyncToBackend();
+  }, 400);
 };
 
 export const useSimulatorStore = create<SimulatorState>((set, get) => ({
@@ -109,6 +140,27 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
   currentBid: 0,
   currentAsk: 0,
   currentTime: '',
+
+  flushSync: async () => {
+    if (syncTimeout) {
+      clearTimeout(syncTimeout);
+      syncTimeout = null;
+    }
+    await doSyncToBackend();
+  },
+
+  setTimeframe: (timeframe: string) => {
+    set((draft) => {
+      if (!draft.session) return {};
+      return {
+        session: {
+          ...draft.session,
+          timeframe
+        }
+      };
+    });
+    debouncedSyncToBackend();
+  },
 
   reset: () => {
     set({
@@ -153,7 +205,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       currentPrice: initP,
       currentBid: initP,
       currentAsk: initP > 0 ? initP + spread : 0,
-      currentTime: session.replayCurrentTime,
+      currentTime: session.replayCurrentTime || session.replayStartTime,
     });
   },
 
@@ -417,11 +469,6 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
 
       // Update state
       const finalEquity = balance + floatingPnL;
-      
-      const hasTradesChanged = history.length !== draft.history.length || positions.length !== draft.positions.length || orders.length !== draft.orders.length;
-      if (hasTradesChanged) {
-        debouncedSyncToBackend();
-      }
 
       return {
         currentPrice: price,
@@ -441,6 +488,9 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
         }
       };
     });
+
+    // Sync state and replayCurrentTime to backend after state update is committed
+    debouncedSyncToBackend();
   },
 
   executeMarketOrder: (side, lot, sl, tp, setupTag) => {
