@@ -8,13 +8,12 @@ import Wallet from './models/Wallet';
 dotenv.config();
 
 const PORT = process.env.PORT || 3000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/stocksim';
+const DEFAULT_MONGO_URI = 'mongodb+srv://de180115tranvandong_db_user:WM96L8H6biEenBJa@cluster0.yappw0s.mongodb.net/stocksim?retryWrites=true&w=majority&appName=Cluster0';
+const MONGO_URI = process.env.MONGO_URI || DEFAULT_MONGO_URI;
 
 const server = http.createServer(app);
 
-const MONGO_URI_LOCAL = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/stocksim';
-
-mongoose.connect(MONGO_URI_LOCAL)
+mongoose.connect(MONGO_URI)
   .then(async () => {
     console.log('✅ Connected to MongoDB');
 

@@ -13,7 +13,12 @@ def get_mongo_client() -> MongoClient:
     global _client
     if _client is None:
         try:
-            _client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+            _client = MongoClient(
+                MONGO_URI, 
+                serverSelectionTimeoutMS=20000,
+                connectTimeoutMS=20000,
+                socketTimeoutMS=30000
+            )
             logger.info("Connected to MongoDB successfully.")
         except Exception as e:
             logger.error(f"Failed to connect to MongoDB: {e}")
