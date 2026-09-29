@@ -22,6 +22,9 @@ from app.services.time_helper import (
     get_current_time_context,
     is_time_query
 )
+from app.services.subscription_service import subscription_service
+from app.services.intent_router import route_question_intent
+from app.core.config import FREE_DAILY_LIMIT, PREMIUM_DAILY_LIMIT
 
 SIGNAL_KEYWORDS = [
   "có nên mua", "có nên bán", "buy hay sell", "mua hay bán", 
@@ -98,6 +101,29 @@ class AiTutorService:
     def answer_question(self, req: AskQuestionRequest) -> Dict[str, Any]:
         query = req.question.strip()
 
+        # 0. User Subscription & Daily Quota Guardrail Check (Sections 3, 4, 5, 31)
+        user_id = req.userId or (req.userData and req.userData.get("userId")) or "64f7b1e4a3b9c2d1e8f9a0b1"
+        sub = subscription_service.get_or_create_subscription(user_id)
+        plan = req.plan or sub.get("plan", "FREE")
+        limit = sub.get("daily_ai_limit", FREE_DAILY_LIMIT if plan == "FREE" else PREMIUM_DAILY_LIMIT)
+        used = sub.get("daily_ai_used", 0)
+
+        # 0.1 Scoring-based Question Intent Router (Sections 22 - 28)
+        intent_info = route_question_intent(query)
+        question_intent = intent_info["intent"]
+        matched_tags = intent_info["matchedTags"]
+
+        if used >= limit:
+            limit_str = f"{used}/{limit}"
+            return {
+                "success": False,
+                "intent": question_intent,
+                "message": f"⚠️ Bạn đã sử dụng hết {limit_str} lượt tương tác AI miễn phí hôm nay!\nVui lòng nâng cấp lên gói ✨ AI Tutor PRO để tiếp tục phân tích.",
+                "guardrailTriggered": "QUOTA_EXCEEDED",
+                "remainingToday": 0,
+                "plan": plan
+            }
+
         # 1. Kích hoạt Strict Signal Guardrail trước mọi luồng xử lý (kể cả khi có LLM)
         # Ngăn chặn hoàn toàn prompt injection hoặc yêu cầu phím lệnh trực tiếp
         strict_guard = check_strict_signal_guardrail(query, req.symbol)
@@ -150,6 +176,18 @@ class AiTutorService:
 
         # 3. VIP MODE: Senior Prop Firm Funded Trader & ICT/SMC Coach Engine
         if llm_client.is_configured():
+            # Concurrency-safe atomic quota reservation (Section 6)
+            reserved, updated_sub = subscription_service.reserve_quota_slot(user_id)
+            if not reserved:
+                return {
+                    "success": False,
+                    "intent": question_intent,
+                    "message": f"⚠️ Bạn đã sử dụng hết {limit}/{limit} lượt tương tác AI miễn phí hôm nay!\nVui lòng nâng cấp lên gói ✨ AI Tutor PRO để tiếp tục phân tích.",
+                    "guardrailTriggered": "QUOTA_EXCEEDED",
+                    "remainingToday": 0,
+                    "plan": plan
+                }
+
             active_method = route_query_to_method(
                 query,
                 has_positions=bool(req.userData and req.userData.get("positions"))
@@ -193,6 +231,47 @@ class AiTutorService:
                 f"- Trạng thái Killzone ICT: {time_ctx['active_killzone']}"
             )
 
+            # Tiered Prompting (Section 33: FREE vs PREMIUM)
+            if plan == "PREMIUM":
+                tiered_prompt_section = (
+                    "\n\n==================================================\n"
+                    "✨ CẤU HÌNH PHẢN HỒI CHUYÊN SÂU [TIER: PREMIUM AI TUTOR PRO]\n"
+                    "==================================================\n"
+                    "Học viên đang sử dụng gói PREMIUM AI TUTOR PRO. Cung cấp phân tích chuyên sâu đa chiều khi dữ liệu thị trường hỗ trợ:\n"
+                    "1. Phân tích đa khung thời gian: HTF (khung lớn định hướng) -> MTF (cấu trúc) -> LTF (thực thi).\n"
+                    "2. Cấu trúc thị trường & Dòng tiền thông minh (Market Structure, BOS, CHoCH, MSS).\n"
+                    "3. Quét thanh khoản (Liquidity Pools, BSL/SSL Sweep, Internal/External range).\n"
+                    "4. Xung lực giá (Displacement), POI, Fair Value Gap (FVG), Order Block (OB).\n"
+                    "5. Bối cảnh mở vị thế (Entry context), điểm vô hiệu hóa (Invalidation), mục tiêu (Target) và tỷ lệ R:R.\n"
+                    "6. Đánh giá rủi ro (Risk & Drawdown) dựa trên số liệu thực tế từ tài khoản.\n"
+                    "7. Luận điểm phản biện (Counter-thesis) & Kịch bản thị trường thay thế (Scenario Analysis).\n"
+                    "Giữ phong thái sắc sảo, kỷ luật của một Senior Prop Firm Funded Trader."
+                )
+            else:
+                tiered_prompt_section = (
+                    "\n\n==================================================\n"
+                    "🎯 CẤU HÌNH PHẢN HỒI GÓI TIÊU CHUẨN [TIER: FREE USER PLAN]\n"
+                    "==================================================\n"
+                    "Học viên đang sử dụng gói FREE.\n"
+                    "Quy chuẩn phản hồi: Ngắn gọn, cô đọng khoảng 2-3 đoạn văn.\n"
+                    "Tập trung chính vào:\n"
+                    f"- Ý định câu hỏi: [{question_intent}]\n"
+                    "- Bằng chứng then chốt (Main Evidence) & Lý do quan trọng nhất.\n"
+                    "- Vùng POI / FVG / Mốc thanh khoản chính.\n"
+                    "- Điểm vô hiệu hóa (Main Invalidation).\n"
+                    "- Đúng 1 câu hỏi dẫn dắt tư duy (One Critical Socratic Question).\n"
+                    "Tránh giải thích quá dài dòng hoặc lan man."
+                )
+
+            if question_intent in ["BAR_REPLAY", "BACKTEST_HISTORICAL"]:
+                tiered_prompt_section += (
+                    "\n\n==================================================\n"
+                    "⏳ QUY TẮC PHÂN TÍCH REPLAY & BACKTEST (CHỐNG THIÊN KIẾN TƯƠNG LAI):\n"
+                    "==================================================\n"
+                    "- Tuyệt đối KHÔNG sử dụng thông tin hay diễn biến của nến tương lai để phân tích quyết định tại mốc lịch sử.\n"
+                    "- Chỉ sử dụng dữ liệu có sẵn tại đúng thời điểm đó để đánh giá logic vào lệnh."
+                )
+
             sys_prompt = (
                 "Bạn là Senior Prop Firm Funded Trader & AI Trading Coach của nền tảng StockSim.\n"
                 "Bạn phân tích thị trường với tư duy của một trader chuyên nghiệp theo phương pháp ICT, SMC (Smart Money Concepts) và Price Action thuần túy.\n\n"
@@ -203,6 +282,7 @@ class AiTutorService:
                 "PHƯƠNG PHÁP ĐƯỢC KÍCH HOẠT CHO CÂU HỎI HIỆN TẠI:\n"
                 "==================================================\n"
                 f"{intent_guidance}\n\n"
+                f"{tiered_prompt_section}\n\n"
                 "YÊU CẦU BẮT BUỘC:\n"
                 "1. Tuân thủ nghiêm ngặt các mục trong [Các yếu tố bắt buộc phân tích] và [Quy chuẩn phản hồi] của phương pháp trên.\n"
                 "2. Khi học viên hỏi về GIÁ CỦA BẤT KỲ MÃ NÀO: Tra cứu trong [BẢNG GIÁ THỊ TRƯỜNG LIÊN QUAN] để trả lời chính xác giá thực và biến động 24h.\n"
@@ -347,7 +427,7 @@ class AiTutorService:
                     f"{kb_context}\n\n"
                     "Hãy trả lời súc tích, hoàn chỉnh, chuyên nghiệp và chuẩn xác dựa trên toàn bộ dữ liệu thị trường và database học viên được cung cấp ở trên."
                 )
-            llm_answer = llm_client.generate_text(sys_prompt, user_p, max_tokens=1500)
+            llm_answer = llm_client.generate_text(sys_prompt, user_p, max_tokens=2000 if plan == "PREMIUM" else 1000)
 
             if llm_answer:
                 # Nếu có rủi ro vi phạm quỹ Hard Breach, đảm bảo khối cảnh báo ở đầu bài
@@ -355,33 +435,53 @@ class AiTutorService:
                     if "🔴" not in llm_answer and "HARD BREACH" not in llm_answer.upper():
                         llm_answer = f"{risk_eval['alert_markdown']}\n\n---\n\n{llm_answer}"
 
+                new_used = updated_sub.get("daily_ai_used", used + 1)
+                remaining = max(0, limit - new_used)
+
                 return {
+                    "success": True,
+                    "intent": question_intent,
                     "answer": llm_answer,
+                    "plan": plan,
+                    "dailyAiUsed": new_used,
+                    "dailyAiLimit": limit,
+                    "remainingToday": remaining,
+                    "guardrailTriggered": "HARD_BREACH_ALERT" if (risk_eval and risk_eval.get("is_hard_breach")) else None,
                     "concept": results[0].document.concept if results else ("Session Timing & Real-time Clock" if is_time_query(query) else ("Prop Firm Risk Management" if risk_eval else "AI Trading Tutor")),
                     "framework": results[0].document.framework if results else "VIP_LLM",
                     "sources": citations,
                     "socraticQuestions": [],
-                    "guardrailTriggered": "HARD_BREACH_ALERT" if (risk_eval and risk_eval.get("is_hard_breach")) else None
+                    "matchedTags": matched_tags
                 }
-            elif llm_client.last_error and any(code in llm_client.last_error for code in ["401", "403"]):
-                return {
-                    "answer": (
-                        f"⚠️ **Key AI trong file `.env` bị Google từ chối cấp quyền:**\n\n"
-                        f"> 🔴 **Mã lỗi từ Google**: `{llm_client.last_error}`\n\n"
-                        f"**Nguyên nhân:** Project hoặc Token này bị hạn chế quyền truy cập API (`PERMISSION_DENIED`).\n\n"
-                        f"**Cách xử lý:**\n"
-                        f"1. Vào: https://aistudio.google.com/app/apikey bằng một tài khoản Gmail khác\n"
-                        f"2. Bấm **'Create API key'** và dán vào `GEMINI_API_KEY=` trong file `python-service/.env`"
-                    ),
-                    "concept": "Lỗi phân quyền API Key",
-                    "framework": "CONFIG_ERROR",
-                    "sources": citations,
-                    "socraticQuestions": [
-                        "Bạn có muốn đổi sang key từ một Gmail khác không?",
-                        "Hoặc dùng key OpenAI (bắt đầu bằng sk-...) vào file .env."
-                    ],
-                    "guardrailTriggered": "API_KEY_ERROR"
-                }
+            else:
+                # LLM request failed -> Rollback reserved quota so user quota is NOT consumed (Section 6, 38)
+                subscription_service.rollback_quota_slot(user_id)
+
+                if llm_client.last_error and any(code in llm_client.last_error for code in ["401", "403"]):
+                    return {
+                        "success": False,
+                        "intent": question_intent,
+                        "plan": plan,
+                        "dailyAiUsed": used,
+                        "dailyAiLimit": limit,
+                        "remainingToday": max(0, limit - used),
+                        "answer": (
+                            f"⚠️ **Key AI trong file `.env` bị Google từ chối cấp quyền:**\n\n"
+                            f"> 🔴 **Mã lỗi từ Google**: `{llm_client.last_error}`\n\n"
+                            f"**Nguyên nhân:** Project hoặc Token này bị hạn chế quyền truy cập API (`PERMISSION_DENIED`).\n\n"
+                            f"**Cách xử lý:**\n"
+                            f"1. Vào: https://aistudio.google.com/app/apikey bằng một tài khoản Gmail khác\n"
+                            f"2. Bấm **'Create API key'** và dán vào `GEMINI_API_KEY=` trong file `python-service/.env`"
+                        ),
+                        "concept": "Lỗi phân quyền API Key",
+                        "framework": "CONFIG_ERROR",
+                        "sources": citations,
+                        "socraticQuestions": [
+                            "Bạn có muốn đổi sang key từ một Gmail khác không?",
+                            "Hoặc dùng key OpenAI (bắt đầu bằng sk-...) vào file .env."
+                        ],
+                        "guardrailTriggered": "API_KEY_ERROR"
+                    }
 
         # 4. OFFLINE / TOOL FALLBACK: Nếu có tính toán rủi ro lệnh hoặc gửi ảnh chart
         if risk_eval:

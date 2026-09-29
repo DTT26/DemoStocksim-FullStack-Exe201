@@ -119,10 +119,26 @@ router.post('/ask', async (req: Request, res: Response) => {
 
     const payload = {
       ...req.body,
+      userId,
       userData: userData || req.body?.userData
     };
 
     const data = await forwardToPython('/ask', 'POST', payload);
+
+    // If quota exceeded, return controlled tutor message
+    if (data && data.success === false && data.guardrailTriggered === 'QUOTA_EXCEEDED') {
+      return res.json({
+        success: true,
+        data: {
+          answer: data.message,
+          guardrailTriggered: 'QUOTA_EXCEEDED',
+          remainingToday: data.remainingToday,
+          plan: data.plan,
+          sources: [],
+          socraticQuestions: []
+        }
+      });
+    }
 
     // Persist tutor answer
     if (data?.answer) {
