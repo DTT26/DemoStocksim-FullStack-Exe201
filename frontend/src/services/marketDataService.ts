@@ -2,30 +2,57 @@ import type { KLineData } from 'klinecharts';
 import { fetchBinanceKlines, mapTimeframeToBinance, subscribeBinanceKline } from './binanceApi';
 
 export const BINGX_SYMBOL_MAP: Record<string, string> = {
-  // Hàng hóa (Commodities)
-  'XAUUSD': 'XAUT-USDT',
+  // Hàng hóa & Năng lượng (Commodities & Energy)
+  'XAUUSD': 'NCCOGOLD2USD-USDT',
   'XAGUSD': 'NCCOXAG2USD-USDT',
   'USOIL': 'NCCO1OILWTI2USD-USDT',
+  'BRENT': 'NCCO1OILBRENT2USD-USDT',
+  'NGAS': 'NCCO7241NATGAS2USD-USDT',
+  'COPPER': 'NCCO724COPPER2USD-USDT',
+  'PLATINUM': 'NCCOXPT2USD-USDT',
 
-  // Ngoại hối (Forex)
+  // Ngoại hối chính & chéo (Forex Majors & Crosses)
   'EURUSD': 'NCFXEUR2USD-USDT',
   'GBPUSD': 'NCFXGBP2USD-USDT',
   'USDJPY': 'NCFXUSD2JPY-USDT',
   'AUDUSD': 'NCFXAUD2USD-USDT',
   'USDCAD': 'NCFXUSD2CAD-USDT',
+  'USDCHF': 'NCFXUSD2CHF-USDT',
+  'NZDUSD': 'NCFXNZD2USD-USDT',
+  'GBPJPY': 'NCFXGBP2JPY-USDT',
+  'EURJPY': 'NCFXEUR2JPY-USDT',
+  'EURGBP': 'NCFXEUR2GBP-USDT',
+  'AUDJPY': 'NCFXAUD2JPY-USDT',
+  'CHFJPY': 'NCFXCHF2JPY-USDT',
+  'CADJPY': 'NCFXCAD2JPY-USDT',
 
-  // Cổ phiếu Mỹ (US Stocks)
+  // Cổ phiếu Mỹ Big Tech & Bluechips (US Stocks)
   'AAPL': 'NCSKAAPL2USD-USDT',
   'MSFT': 'NCSKMSFT2USD-USDT',
   'TSLA': 'NCSKTSLA2USD-USDT',
   'NVDA': 'NCSKNVDA2USD-USDT',
+  'GOOGL': 'NCSKGOOGL2USD-USDT',
+  'AMZN': 'NCSKAMZN2USD-USDT',
+  'META': 'NCSKMETA2USD-USDT',
+  'AMD': 'NCSKAMD2USD-USDT',
+  'INTC': 'NCSKINTC2USD-USDT',
+  'BABA': 'NCSKBABA2USD-USDT',
+  'DIS': 'NCSKDIS2USD-USDT',
+  'COIN': 'NCSKCOIN2USD-USDT',
+  'UBER': 'NCSKUBER2USD-USDT',
+  'ORCL': 'NCSKORCL2USD-USDT',
   'KO': 'NCSKKO2USD-USDT',
   'JNJ': 'NCSKJNJ2USD-USDT',
 
-  // Chỉ số (Indices)
+  // Chỉ số toàn cầu & Sức mạnh USD (Global Indices & DXY)
   'SPX': 'NCSISP5002USD-USDT',
   'NDX': 'NCSINASDAQ1002USD-USDT',
   'DJI': 'NCSIDOWJONES2USD-USDT',
+  'DXY': 'NCSIDXY2USD-USDT',
+  'JP225': 'NCSINIKKEI2252USD-USDT',
+  'UK100': 'NCSIUK2USD-USDT',
+  'EU50': 'NCSIEUSTX2USD-USDT',
+  'US2000': 'NCSIRUSSELL20002USD-USDT',
 };
 
 // Bản đồ ngược từ mã BingX sang mã chuẩn của hệ thống
@@ -34,7 +61,10 @@ export const BINGX_REVERSE_MAP: Record<string, string> = Object.entries(BINGX_SY
     acc[bingxSym] = stdSym;
     return acc;
   },
-  {} as Record<string, string>
+  {
+    'XAUT-USDT': 'XAUUSD',
+    'NCCOGOLD2USD-USDT': 'XAUUSD',
+  } as Record<string, string>
 );
 
 export const mapTimeframeToBingX = (timeframe: string): string => {
@@ -254,26 +284,35 @@ export const fetchAllMarketLivePrices = async (): Promise<Record<string, number>
 
   try {
     const [spotRes, futRes, bingxRes] = await Promise.all([
-      fetch('https://api.binance.com/api/v3/ticker/price').catch(() => null),
-      fetch('https://fapi.binance.com/fapi/v1/ticker/price').catch(() => null),
+      fetch('https://api.binance.com/api/v3/ticker/24hr').catch(() => null),
+      fetch('https://fapi.binance.com/fapi/v1/ticker/24hr').catch(() => null),
       fetch('https://open-api.bingx.com/openApi/swap/v2/quote/ticker').catch(() => null),
     ]);
 
     // 1. Xử lý Binance Spot
     if (spotRes && spotRes.ok) {
       const spotData = await spotRes.json();
-      spotData.forEach((item: any) => {
-        priceMap[item.symbol] = parseFloat(item.price);
-      });
+      if (Array.isArray(spotData)) {
+        spotData.forEach((item: any) => {
+          const p = parseFloat(item.lastPrice);
+          if (!isNaN(p)) priceMap[item.symbol] = p;
+        });
+      }
     }
 
     // 2. Xử lý Binance Futures
     if (futRes && futRes.ok) {
       const futData = await futRes.json();
-      futData.forEach((item: any) => {
-        priceMap[item.symbol] = parseFloat(item.price);
-        priceMap[`${item.symbol}.P`] = parseFloat(item.price);
-      });
+      if (Array.isArray(futData)) {
+        futData.forEach((item: any) => {
+          const p = parseFloat(item.lastPrice);
+          if (!isNaN(p)) {
+            priceMap[item.symbol] = p;
+            priceMap[`${item.symbol}.P`] = p;
+            priceMap[`${item.symbol}.SWAP`] = p;
+          }
+        });
+      }
     }
 
     // 3. Xử lý BingX (Vàng, Dầu, Forex, Cổ phiếu, Chỉ số...)
@@ -308,16 +347,90 @@ export const fetchAllMarketLivePrices = async (): Promise<Record<string, number>
  */
 export const syncLiveMarketData = async (stocksList: any[]): Promise<void> => {
   try {
-    const livePrices = await fetchAllMarketLivePrices();
+    const [spotRes, futRes, bingxRes] = await Promise.all([
+      fetch('https://api.binance.com/api/v3/ticker/24hr').catch(() => null),
+      fetch('https://fapi.binance.com/fapi/v1/ticker/24hr').catch(() => null),
+      fetch('https://open-api.bingx.com/openApi/swap/v2/quote/ticker').catch(() => null),
+    ]);
+
+    const tickerMap: Record<string, { price: number; change: number; percent: number; type: 'up' | 'down'; volume24h?: number }> = {};
+
+    if (spotRes && spotRes.ok) {
+      const spotData = await spotRes.json();
+      if (Array.isArray(spotData)) {
+        spotData.forEach((item: any) => {
+          const price = parseFloat(item.lastPrice);
+          const change = parseFloat(item.priceChange);
+          const percent = parseFloat(item.priceChangePercent);
+          if (!isNaN(price) && price > 0) {
+            tickerMap[item.symbol] = {
+              price,
+              change: isNaN(change) ? 0 : change,
+              percent: isNaN(percent) ? 0 : percent,
+              type: change >= 0 ? 'up' : 'down',
+              volume24h: parseFloat(item.quoteVolume) || 0,
+            };
+          }
+        });
+      }
+    }
+
+    if (futRes && futRes.ok) {
+      const futData = await futRes.json();
+      if (Array.isArray(futData)) {
+        futData.forEach((item: any) => {
+          const price = parseFloat(item.lastPrice);
+          const change = parseFloat(item.priceChange);
+          const percent = parseFloat(item.priceChangePercent);
+          if (!isNaN(price) && price > 0) {
+            const obj = {
+              price,
+              change: isNaN(change) ? 0 : change,
+              percent: isNaN(percent) ? 0 : percent,
+              type: (change >= 0 ? 'up' : 'down') as 'up' | 'down',
+              volume24h: parseFloat(item.quoteVolume) || 0,
+            };
+            tickerMap[`${item.symbol}.P`] = obj;
+            tickerMap[`${item.symbol}.SWAP`] = obj;
+            if (!tickerMap[item.symbol]) tickerMap[item.symbol] = obj;
+          }
+        });
+      }
+    }
+
+    if (bingxRes && bingxRes.ok) {
+      const bingxData = await bingxRes.json();
+      if (bingxData.code === 0 && Array.isArray(bingxData.data)) {
+        bingxData.data.forEach((item: any) => {
+          const price = parseFloat(item.lastPrice);
+          const change = parseFloat(item.priceChange);
+          const percent = parseFloat(item.priceChangePercent);
+          if (!isNaN(price) && price > 0) {
+            const bingxSym = item.symbol;
+            const stdSym = BINGX_REVERSE_MAP[bingxSym] || bingxSym;
+            const obj = {
+              price,
+              change: isNaN(change) ? 0 : change,
+              percent: isNaN(percent) ? 0 : percent,
+              type: (change >= 0 ? 'up' : 'down') as 'up' | 'down',
+              volume24h: parseFloat(item.quoteVolume) || 0,
+            };
+            tickerMap[stdSym] = obj;
+            tickerMap[bingxSym] = obj;
+          }
+        });
+      }
+    }
+
     stocksList.forEach(stock => {
-      const livePrice = livePrices[stock.symbol];
-      if (livePrice && livePrice > 0) {
-        if (stock.price !== livePrice) {
-          const change = livePrice - stock.price;
-          stock.price = livePrice;
-          stock.change = change;
-          stock.percent = parseFloat(((change / (livePrice - change)) * 100).toFixed(2));
-          stock.type = change >= 0 ? 'up' : 'down';
+      const t = tickerMap[stock.symbol];
+      if (t && t.price > 0) {
+        stock.price = t.price;
+        stock.change = t.change;
+        stock.percent = t.percent;
+        stock.type = t.type;
+        if (t.volume24h && t.volume24h > 0) {
+          stock.volume24h = t.volume24h;
         }
       }
     });

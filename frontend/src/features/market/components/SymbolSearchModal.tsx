@@ -248,8 +248,8 @@ export const SymbolSearchModal = ({ isOpen, onClose, onSelect, watchlistMode, ac
                     }}
                     className={`flex items-center px-5 py-3 hover:bg-[#f5f5f5] dark:hover:bg-[#2a2e39]/50 transition-colors group gap-3 border-b border-[#e6e8ea] dark:border-transparent last:border-b-0 ${!watchlistMode ? 'cursor-pointer' : ''}`}
                   >
-                    {/* Avatar - hide in watchlist mode for closer match to user screenshot */}
-                    {!watchlistMode && <AssetAvatar stock={stock} size="md" showExchangeBadge />}
+                    {/* Avatar with exchange badge */}
+                    <AssetAvatar stock={stock} size="md" showExchangeBadge />
 
                     {/* Symbol + Name */}
                     <div className="w-44 shrink-0 flex flex-col">

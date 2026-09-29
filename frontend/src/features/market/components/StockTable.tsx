@@ -1,46 +1,19 @@
 import { useState, useEffect } from 'react';
-import { STOCKS, formatVolume, type Stock } from '../data';
-import { fetchAllMarketLivePrices } from '../../../services/marketDataService';
+import { formatVolume } from '../data';
+import { useMarketStore } from '../../../stores/useMarketStore';
 import { useNavigate } from 'react-router-dom';
 
 export const StockTable = () => {
   const navigate = useNavigate();
-  const [stocks, setStocks] = useState<Stock[]>(STOCKS);
+  const stocks = useMarketStore(state => state.stocks);
+  const fetchMarketData = useMarketStore(state => state.fetchMarketData);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    let isMounted = true;
-    const updatePrices = async () => {
-      try {
-        const livePrices = await fetchAllMarketLivePrices();
-        if (!isMounted) return;
-        setStocks(prev =>
-          prev.map(s => {
-            const livePrice = livePrices[s.symbol];
-            if (!livePrice || livePrice === s.price) return s;
-            const change = livePrice - s.price;
-            const percent = (change / s.price) * 100;
-            return {
-              ...s,
-              price: livePrice,
-              change,
-              percent,
-              type: change >= 0 ? 'up' : 'down',
-            };
-          })
-        );
-      } catch (err) {
-        // bỏ qua lỗi cập nhật giá nền
-      }
-    };
-
-    updatePrices();
-    const interval = setInterval(updatePrices, 3000);
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
-  }, []);
+    fetchMarketData();
+    const interval = setInterval(fetchMarketData, 3000);
+    return () => clearInterval(interval);
+  }, [fetchMarketData]);
 
   const filteredStocks = stocks.filter(s =>
     s.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||

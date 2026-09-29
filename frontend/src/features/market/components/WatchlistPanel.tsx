@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Plus, MoreHorizontal, ChevronDown, Check, List, Trash2, Edit2, Copy, Share2 } from 'lucide-react';
 import { STOCKS, type Stock } from '../data';
+import { AssetAvatar } from './AssetAvatar';
 import { useMarketStore } from '../../../stores/useMarketStore';
 import { SymbolSearchModal } from './SymbolSearchModal';
 import { AuthOverlay } from './AuthOverlay';
@@ -245,14 +246,15 @@ export const WatchlistPanel = ({
                   <div 
                     key={symbol}
                     onClick={() => onSelectStock(stock)}
-                    className={`flex items-center px-4 py-2.5 cursor-pointer border-l-2 transition-colors ${
+                    className={`flex items-center px-3 py-2 cursor-pointer border-l-2 transition-colors gap-2.5 ${
                       isSelected 
                         ? 'border-blue-500 bg-[#f5f5f5] dark:bg-[#1e222d]' 
                         : 'border-transparent hover:bg-[#f5f5f5] dark:hover:bg-[#2a2e39]/30'
                     }`}
                   >
-                    <div className="w-[120px] flex flex-col">
-                      <span className="font-bold text-[#1e2329] dark:text-[#d1d4dc] text-sm">{stock.symbol}</span>
+                    <AssetAvatar stock={stock} size="sm" showExchangeBadge={true} />
+                    <div className="w-[100px] flex flex-col min-w-0">
+                      <span className="font-bold text-[#1e2329] dark:text-[#d1d4dc] text-sm truncate">{stock.symbol}</span>
                       <span className="text-[10px] text-[#787b86] truncate max-w-full">{stock.market === 'Tiền điện tử (Crypto)' ? t('market.crypto', 'Tiền điện tử (Crypto)') : stock.market}</span>
                     </div>
                     <div className="flex-1 text-right font-mono text-sm font-medium text-[#1e2329] dark:text-[#d1d4dc]">

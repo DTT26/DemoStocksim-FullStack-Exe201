@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Search, BarChart2, Play, Pause, Square, ChevronRight, CandlestickChart, RefreshCcw, Undo2, Redo2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, BarChart2, Play, Pause, Square, ChevronRight, ChevronDown, CandlestickChart, RefreshCcw, Undo2, Redo2 } from 'lucide-react';
 import { TIMEFRAMES, getPricePrecision, type Stock } from '../data';
 import { AssetAvatar } from './AssetAvatar';
 import { useI18n } from '../../../contexts/I18nContext';
@@ -39,10 +39,25 @@ export const TickerHeader = ({
   const { t } = useI18n();
   const [autoPlay, setAutoPlay] = useState(false);
   const [intervalId, setIntervalId] = useState<ReturnType<typeof setInterval> | null>(null);
+  const [replaySpeed, setReplaySpeed] = useState<number>(1);
+
+  const getIntervalMs = (speed: number) => {
+    switch (speed) {
+      case 0.25: return 2400;
+      case 0.5: return 1200;
+      case 1: return 600;
+      case 2: return 300;
+      case 3: return 200;
+      case 5: return 120;
+      case 10: return 60;
+      default: return Math.round(600 / speed);
+    }
+  };
 
   const startAutoPlay = () => {
     setAutoPlay(true);
-    const id = setInterval(() => onReplayNext(), 600);
+    if (intervalId) clearInterval(intervalId);
+    const id = setInterval(() => onReplayNext(), getIntervalMs(replaySpeed));
     setIntervalId(id);
   };
 
@@ -51,6 +66,21 @@ export const TickerHeader = ({
     if (intervalId) clearInterval(intervalId);
     setIntervalId(null);
   };
+
+  const handleSelectSpeed = (speed: number) => {
+    setReplaySpeed(speed);
+    if (autoPlay) {
+      if (intervalId) clearInterval(intervalId);
+      const id = setInterval(() => onReplayNext(), getIntervalMs(speed));
+      setIntervalId(id);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [intervalId]);
 
   const handleStopReplay = () => {
     stopAutoPlay();
@@ -66,20 +96,36 @@ export const TickerHeader = ({
     return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   };
 
-  const precision = getPricePrecision(stock.price);
-  const markPrice = (stock.price * 1.0002).toFixed(precision);
-  const indexPrice = (stock.price * 1.0001).toFixed(precision);
-
   const ticker = useMarketStore(state => state.tickers[stock.symbol]);
-  const high24h = ticker?.high24h || stock.price * 1.022;
-  const low24h = ticker?.low24h || stock.price * 0.978;
+  const currentPrice = stock.price || ticker?.price || 0;
+  const precision = getPricePrecision(currentPrice);
+  const markPrice = (currentPrice * 1.0002).toFixed(precision);
+  const indexPrice = (currentPrice * 1.0001).toFixed(precision);
+
+  const high24h = ticker?.high24h || currentPrice * 1.022;
+  const low24h = ticker?.low24h || currentPrice * 0.978;
   const vol24h = ticker?.volume24h
     ? (ticker.volume24h >= 1000 ? ticker.volume24h / 1000 : ticker.volume24h)
-    : (stock.price > 1000 ? 158.49 : 15849.2);
+    : (currentPrice > 1000 ? 158.49 : 15849.2);
   const volUSDT = ticker?.quoteVolume24h
     ? (ticker.quoteVolume24h >= 1_000_000 ? ticker.quoteVolume24h / 1_000_000 : ticker.quoteVolume24h)
-    : (stock.price > 1000 ? 396.55 : 39.65);
-  const isUp = stock.type === 'up';
+    : (currentPrice > 1000 ? 396.55 : 39.65);
+
+  let displayChange = stock.change;
+  let displayPercent = stock.percent;
+  let isUp = stock.type === 'up';
+
+  if (ticker) {
+    if (ticker.openPrice && ticker.openPrice > 0 && currentPrice > 0) {
+      displayChange = currentPrice - ticker.openPrice;
+      displayPercent = (displayChange / ticker.openPrice) * 100;
+      isUp = displayChange >= 0;
+    } else if (ticker.change !== undefined && ticker.percent !== undefined) {
+      displayChange = ticker.change;
+      displayPercent = ticker.percent;
+      isUp = ticker.type === 'up';
+    }
+  }
 
   return (
     <div className="flex flex-col bg-white dark:bg-[#131722] border-b border-[#e6e8ea] dark:border-[#2a2e39] text-xs shrink-0 w-full transition-colors">
@@ -103,10 +149,10 @@ export const TickerHeader = ({
           </div>
           <div className="flex flex-col items-end pl-2 sm:pl-4">
             <span className={`text-base sm:text-lg font-bold font-mono leading-tight ${isUp ? 'text-[#089981]' : 'text-[#f23645]'}`}>
-              {stock.price.toLocaleString('vi-VN', { minimumFractionDigits: Math.min(2, precision), maximumFractionDigits: precision })}
+              {currentPrice.toLocaleString('vi-VN', { minimumFractionDigits: Math.min(2, precision), maximumFractionDigits: precision })}
             </span>
             <span className={`font-mono text-[10px] sm:text-[11px] ${isUp ? 'text-[#089981]' : 'text-[#f23645]'}`}>
-              {stock.change > 0 ? '+' : ''}{stock.change.toFixed(precision)} ({stock.percent > 0 ? '+' : ''}{stock.percent.toFixed(2)}%)
+              {displayChange > 0 ? '+' : ''}{displayChange.toFixed(precision)} ({displayPercent > 0 ? '+' : ''}{displayPercent.toFixed(2)}%)
             </span>
           </div>
         </div>
@@ -261,6 +307,28 @@ export const TickerHeader = ({
                   {autoPlay ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
                 </button>
               )}
+
+              {/* Tốc độ Replay */}
+              {!reachedEnd && (
+                <div className="relative inline-flex items-center">
+                  <select
+                    value={replaySpeed}
+                    onChange={(e) => handleSelectSpeed(parseFloat(e.target.value))}
+                    title="Chọn tốc độ phát nến"
+                    className="appearance-none cursor-pointer pl-1.5 pr-4 py-0.5 text-[11px] font-mono font-bold rounded text-orange-800 dark:text-orange-200 bg-orange-200/80 dark:bg-orange-800/70 hover:bg-orange-300 dark:hover:bg-orange-700 transition-colors border border-orange-300 dark:border-orange-600/50 outline-none select-none focus:ring-1 focus:ring-orange-500"
+                  >
+                    <option value={0.25} className="bg-white dark:bg-[#1e222d] text-slate-800 dark:text-slate-200 font-sans">0.25x (Rất chậm)</option>
+                    <option value={0.5} className="bg-white dark:bg-[#1e222d] text-slate-800 dark:text-slate-200 font-sans">0.5x (Chậm)</option>
+                    <option value={1} className="bg-white dark:bg-[#1e222d] text-slate-800 dark:text-slate-200 font-sans">1x (Chuẩn)</option>
+                    <option value={2} className="bg-white dark:bg-[#1e222d] text-slate-800 dark:text-slate-200 font-sans">2x (Nhanh)</option>
+                    <option value={3} className="bg-white dark:bg-[#1e222d] text-slate-800 dark:text-slate-200 font-sans">3x (Nhanh x3)</option>
+                    <option value={5} className="bg-white dark:bg-[#1e222d] text-slate-800 dark:text-slate-200 font-sans">5x (Rất nhanh)</option>
+                    <option value={10} className="bg-white dark:bg-[#1e222d] text-slate-800 dark:text-slate-200 font-sans">10x (Siêu tốc)</option>
+                  </select>
+                  <ChevronDown className="w-2.5 h-2.5 opacity-70 text-orange-800 dark:text-orange-200 pointer-events-none absolute right-1" />
+                </div>
+              )}
+
               <button onClick={handleStopReplay} title="Thoát chế độ Replay" className="p-1 text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40 rounded transition-colors">
                 <Square className="w-3.5 h-3.5" />
               </button>

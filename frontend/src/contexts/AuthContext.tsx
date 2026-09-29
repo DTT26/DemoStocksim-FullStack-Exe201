@@ -61,6 +61,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [captchaToken, setCaptchaToken] = useState<string>('');
   const [suspendedModal, setSuspendedModal] = useState<{ isOpen: boolean; message: string } | null>(null);
   const [isGoogleAuthenticating, setIsGoogleAuthenticating] = useState(false);
+  const [googleAuthError, setGoogleAuthError] = useState<string>('');
   const captchaTokenRef = useRef<string>('');
 
   const fetchUser = async () => {
@@ -121,6 +122,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     onSuccess: async (tokenResponse) => {
       try {
         setIsGoogleAuthenticating(true);
+        setGoogleAuthError('');
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
         const tokenToSend = captchaTokenRef.current || captchaToken;
         const res = await fetch(`${apiUrl}/auth/google`, { 
@@ -142,17 +144,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             localStorage.setItem('refreshToken', data.refreshToken);
           }
           await fetchUser();
+          setGoogleAuthError('');
           setIsLoginModalOpen(false);
         } else {
           console.error('Backend login failed:', data.message);
-          setIsLoginModalOpen(false);
-          setSuspendedModal({
-            isOpen: true,
-            message: data.message || 'Tài khoản của bạn đã bị khóa hoặc tạm ngưng (Suspended). Vui lòng liên hệ Quản trị viên để được hỗ trợ.'
-          });
+          const isSuspended = res.status === 403 && data.message && (
+            data.message.includes('Suspended') || 
+            data.message.includes('khóa') || 
+            data.message.includes('đình chỉ')
+          );
+
+          if (isSuspended) {
+            setIsLoginModalOpen(false);
+            setSuspendedModal({
+              isOpen: true,
+              message: data.message || 'Tài khoản của bạn đã bị khóa hoặc tạm ngưng (Suspended). Vui lòng liên hệ Quản trị viên để được hỗ trợ.'
+            });
+          } else {
+            // Lỗi không phải do tài khoản bị khóa -> Hiển thị cảnh báo trong LoginModal
+            setGoogleAuthError(data.message || 'Đăng nhập Google thất bại. Vui lòng thử lại.');
+          }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to authenticate', err);
+        setGoogleAuthError(err?.message || 'Lỗi kết nối máy chủ khi đăng nhập Google.');
       } finally {
         setIsGoogleAuthenticating(false);
       }
@@ -160,6 +175,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     onError: (err) => {
       console.log('Login Failed', err);
       setIsGoogleAuthenticating(false);
+      setGoogleAuthError('Đăng nhập Google không thành công hoặc đã bị hủy.');
     }
   });
 
@@ -387,13 +403,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isOpen={isLoginModalOpen} 
         onClose={() => {
           if (!isGoogleAuthenticating) {
+            setGoogleAuthError('');
             setIsLoginModalOpen(false);
           }
         }} 
         isGoogleLoading={isGoogleAuthenticating}
+        googleError={googleAuthError}
+        onClearGoogleError={() => setGoogleAuthError('')}
         onLoginGoogle={(token) => {
           captchaTokenRef.current = token;
           setCaptchaToken(token);
+          setGoogleAuthError('');
           setIsGoogleAuthenticating(true);
           triggerGoogleLogin();
         }} 
