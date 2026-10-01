@@ -463,4 +463,33 @@ router.post('/inspect-chart', optionalProtect, async (req: any, res: Response) =
   }
 });
 
+// 14. Inspect Chart Structured Drawings Data (Tự động đọc dữ liệu nến và hình vẽ trên biểu đồ)
+router.post('/inspect-chart-data', optionalProtect, async (req: any, res: Response) => {
+  try {
+    const userId = req.user?._id?.toString() || req.body?.userId || 'guest_user';
+    const { drawings, klines, symbol, timeframe, userNotes } = req.body;
+
+    if (!drawings || !Array.isArray(drawings) || drawings.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Bạn chưa vẽ vùng phân tích nào trên biểu đồ. Hãy dùng thanh công cụ bên trái (Hộp chữ nhật, Đường kẻ) để đánh dấu vùng Order Block / FVG trước nhé!' 
+      });
+    }
+
+    const result = await forwardToPython('/inspect-chart-data', 'POST', {
+      drawings,
+      klines: klines || [],
+      symbol: symbol || '',
+      timeframe: timeframe || '',
+      userNotes: userNotes || '',
+      userId
+    });
+
+    return res.json(result);
+  } catch (error: any) {
+    console.error('Inspect Chart Data error:', error.message);
+    res.status(500).json({ success: false, message: error.message || 'Lỗi khi phân tích dữ liệu hình vẽ' });
+  }
+});
+
 export default router;

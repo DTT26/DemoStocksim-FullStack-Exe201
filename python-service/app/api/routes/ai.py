@@ -71,6 +71,24 @@ async def inspect_chart(request: Request):
         user_id=user_id
     )
 
+@router.post("/inspect-chart-data")
+async def inspect_chart_data(request: Request):
+    data = await request.json()
+    drawings = data.get("drawings", [])
+    klines = data.get("klines", [])
+    symbol = data.get("symbol")
+    timeframe = data.get("timeframe")
+    user_notes = data.get("userNotes", "")
+    user_id = request.headers.get("x-user-id") or data.get("userId")
+    return ai_tutor_service.inspect_chart_data(
+        drawings=drawings,
+        klines=klines,
+        symbol=symbol,
+        timeframe=timeframe,
+        user_notes=user_notes,
+        user_id=user_id
+    )
+
 @router.get("/sources")
 def get_sources():
     """Return all verified knowledge documents currently indexed in vector store"""

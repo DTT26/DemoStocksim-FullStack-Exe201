@@ -42,6 +42,104 @@ const hexToRgba = (hex: string, alpha: number = 1) => {
 // Global reference for overlays to access chart data
 let globalChartInstance: any = null;
 export const getChartInstance = () => globalChartInstance;
+
+export interface UserChartDrawing {
+  id?: string;
+  name: string;
+  points: Array<{
+    timestamp?: number;
+    price?: number;
+    dataIndex?: number;
+  }>;
+  priceHigh?: number;
+  priceLow?: number;
+  priceStart?: number;
+  priceEnd?: number;
+}
+
+export const getChartDrawingsData = (): { drawings: UserChartDrawing[]; klines: any[] } => {
+  if (!globalChartInstance) return { drawings: [], klines: [] };
+  try {
+    const rawOverlays = typeof globalChartInstance.getOverlays === 'function' 
+      ? globalChartInstance.getOverlays() 
+      : [];
+
+    const klines = typeof globalChartInstance.getDataList === 'function'
+      ? (globalChartInstance.getDataList() || []).slice(-60)
+      : [];
+
+    const drawings: UserChartDrawing[] = [];
+    if (Array.isArray(rawOverlays)) {
+      rawOverlays.forEach((ov: any) => {
+        if (!ov || ov.name === 'zoomInBox' || ov.name === 'aiCorrectionBox') return;
+        const pts = (ov.points || []).map((p: any) => ({
+          timestamp: p.timestamp,
+          price: p.value !== undefined ? p.value : p.price,
+          dataIndex: p.dataIndex
+        }));
+        if (pts.length > 0) {
+          const prices = pts.map((p: any) => p.price).filter((v: any) => typeof v === 'number');
+          const priceHigh = prices.length > 0 ? Math.max(...prices) : undefined;
+          const priceLow = prices.length > 0 ? Math.min(...prices) : undefined;
+          drawings.push({
+            id: ov.id,
+            name: ov.name,
+            points: pts,
+            priceHigh,
+            priceLow,
+            priceStart: pts[0]?.price,
+            priceEnd: pts[pts.length - 1]?.price
+          });
+        }
+      });
+    }
+
+    return { drawings, klines };
+  } catch (err) {
+    console.error('Error getting chart drawings data:', err);
+    return { drawings: [], klines: [] };
+  }
+};
+
+export const drawAiCorrectionOverlay = (suggestedZone: {
+  priceHigh: number;
+  priceLow: number;
+  startTimestamp?: number;
+  endTimestamp?: number;
+  label?: string;
+}) => {
+  if (!globalChartInstance) return null;
+  try {
+    const klines = (globalChartInstance.getDataList && globalChartInstance.getDataList()) || [];
+    const lastKline = klines[klines.length - 1];
+    const prevKline = klines[Math.max(0, klines.length - 15)];
+
+    const t1 = suggestedZone.startTimestamp || prevKline?.timestamp || (Date.now() - 3600000 * 4);
+    const t2 = suggestedZone.endTimestamp || lastKline?.timestamp || Date.now();
+
+    const newId = globalChartInstance.createOverlay({
+      name: 'rect',
+      points: [
+        { timestamp: t1, value: suggestedZone.priceHigh },
+        { timestamp: t2, value: suggestedZone.priceLow }
+      ],
+      styles: {
+        rect: {
+          style: 'stroke_fill',
+          color: 'rgba(245, 158, 11, 0.25)',
+          borderColor: '#f59e0b',
+          borderSize: 2,
+          borderStyle: 'dashed'
+        }
+      },
+      lock: false
+    });
+    return newId;
+  } catch (err) {
+    console.error('Error drawing AI correction overlay:', err);
+    return null;
+  }
+};
 // Đăng ký các công cụ Sóng Elliott
 const createElliottOverlay = (name: string, step: number, labels: string[]) => ({
   name,

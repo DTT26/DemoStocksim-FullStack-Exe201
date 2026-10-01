@@ -459,5 +459,41 @@ export const aiService = {
     });
     const json = await res.json();
     return json;
+  },
+
+  async inspectChartDrawings(params: {
+    symbol: string;
+    timeframe: string;
+    drawings: any[];
+    klines: any[];
+    userNotes?: string;
+  }): Promise<{
+    success: boolean;
+    symbol?: string;
+    timeframe?: string;
+    score?: number;
+    verdict?: 'CORRECT' | 'PARTIALLY_CORRECT' | 'INCORRECT';
+    analysis?: string;
+    suggestedZone?: {
+      name?: string;
+      priceHigh: number;
+      priceLow: number;
+      startTimestamp?: number;
+      endTimestamp?: number;
+      label?: string;
+    };
+    remainingToday?: number;
+    isPremium?: boolean;
+    quotaExceeded?: boolean;
+    message?: string;
+  }> {
+    const res = await fetch(`${API_BASE}/inspect-chart-data`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      credentials: 'include',
+      body: JSON.stringify(params)
+    });
+    const json = await res.json();
+    return json;
   }
 };
