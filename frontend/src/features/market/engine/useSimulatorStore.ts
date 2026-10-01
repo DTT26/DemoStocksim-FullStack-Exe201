@@ -1,11 +1,6 @@
 import { create } from 'zustand';
 import type { SimSession, SimPosition, SimOrder, SimHistory, SimConfig } from './simulatorTypes';
-
-// Point value multiplier (e.g. 1 lot of EURUSD = 100,000, 1 lot of BTC = 1, etc.)
-// For simplicity in this demo, let's assume contract size = 100000 for everything,
-// or we make position value = lot * currentPrice * contractSize.
-// Let's assume standard forex lot size: 100,000 units.
-const CONTRACT_SIZE = 100000;
+import { getContractMultiplier } from '../data';
 
 interface SimulatorState {
   isActive: boolean;
@@ -37,10 +32,102 @@ interface SimulatorState {
   // Risk Mgmt
   updateTPSL: (positionId: string, sl?: number, tp?: number) => void;
   setLeverage: (leverage: number) => void;
+  setTimeframe: (timeframe: string) => void;
   
   // App state mgmt
+  flushSync: () => Promise<void>;
   reset: () => void;
 }
+
+let syncTimeout: any = null;
+let lastSyncTime = 0;
+
+const doSyncToBackend = async () => {
+  const state = useSimulatorStore.getState();
+  if (!state.session?._id) return;
+
+  try {
+    const { updateSession } = await import('../../../services/marketApi');
+    const history = state.history || [];
+    const positions = state.positions || [];
+    const totalTrades = history.length + positions.length;
+    const winningTrades = history.filter(h => h.netPnL > 0);
+    const losingTrades = history.filter(h => h.netPnL <= 0);
+    const wins = winningTrades.length;
+    const losses = losingTrades.length;
+    const winRate = history.length > 0 ? parseFloat(((wins / history.length) * 100).toFixed(1)) : 0;
+    const grossProfit = winningTrades.reduce((sum, h) => sum + h.netPnL, 0);
+    const grossLoss = losingTrades.reduce((sum, h) => sum + Math.abs(h.netPnL), 0);
+    const netPnL = grossProfit - grossLoss;
+
+    const statistics = {
+      totalTrades,
+      wins,
+      losses,
+      winRate,
+      grossProfit,
+      grossLoss,
+      netPnL,
+      averageWin: wins > 0 ? grossProfit / wins : 0,
+      averageLoss: losses > 0 ? grossLoss / losses : 0,
+      largestWin: wins > 0 ? Math.max(...winningTrades.map(h => h.netPnL)) : 0,
+      largestLoss: losses > 0 ? Math.max(...losingTrades.map(h => Math.abs(h.netPnL))) : 0,
+      maxDrawdown: 0,
+      averageRR: 0
+    };
+
+    const sessionData = {
+      balance: state.session.balance,
+      equity: state.session.equity,
+      usedMargin: state.session.usedMargin,
+      freeMargin: state.session.freeMargin,
+      timeframe: state.session.timeframe,
+      replayCurrentTime: state.currentTime || state.session.replayCurrentTime,
+      statistics,
+      status: state.session.status || 'running'
+    };
+
+    await updateSession(state.session._id, {
+      sessionData,
+      positions: state.positions,
+      orders: state.orders,
+      history: state.history
+    });
+
+    window.dispatchEvent(new Event('simulator-session-updated'));
+  } catch (err) {
+    console.warn('Auto-sync simulator session failed:', err);
+  }
+};
+
+const debouncedSyncToBackend = (forceImmediately = false) => {
+  const now = Date.now();
+  if (forceImmediately) {
+    if (syncTimeout) {
+      clearTimeout(syncTimeout);
+      syncTimeout = null;
+    }
+    lastSyncTime = now;
+    return doSyncToBackend();
+  }
+
+  // Periodic sync every 2s during fast playback
+  if (now - lastSyncTime > 2000) {
+    if (syncTimeout) {
+      clearTimeout(syncTimeout);
+      syncTimeout = null;
+    }
+    lastSyncTime = now;
+    return doSyncToBackend();
+  }
+
+  if (syncTimeout) clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(() => {
+    syncTimeout = null;
+    lastSyncTime = Date.now();
+    doSyncToBackend();
+  }, 400);
+};
 
 export const useSimulatorStore = create<SimulatorState>((set, get) => ({
   isActive: false,
@@ -53,6 +140,27 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
   currentBid: 0,
   currentAsk: 0,
   currentTime: '',
+
+  flushSync: async () => {
+    if (syncTimeout) {
+      clearTimeout(syncTimeout);
+      syncTimeout = null;
+    }
+    await doSyncToBackend();
+  },
+
+  setTimeframe: (timeframe: string) => {
+    set((draft) => {
+      if (!draft.session) return {};
+      return {
+        session: {
+          ...draft.session,
+          timeframe
+        }
+      };
+    });
+    debouncedSyncToBackend();
+  },
 
   reset: () => {
     set({
@@ -82,6 +190,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       currentAsk: initP > 0 ? initP + spread : 0,
       currentTime: session.replayStartTime,
     });
+    debouncedSyncToBackend();
   },
 
   loadSession: (session, positions, orders, history, initialPrice) => {
@@ -96,11 +205,12 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       currentPrice: initP,
       currentBid: initP,
       currentAsk: initP > 0 ? initP + spread : 0,
-      currentTime: session.replayCurrentTime,
+      currentTime: session.replayCurrentTime || session.replayStartTime,
     });
   },
 
   endSession: async () => {
+    if (syncTimeout) clearTimeout(syncTimeout);
     const state = get();
     if (!state.session) return;
     
@@ -161,10 +271,11 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       await updateSession(finalSession._id, {
         sessionData: payload,
         positions: [], // all closed
-        orders: finalState.orders, // could cancel pending too, but backend will just store them or delete them
+        orders: finalState.orders,
         history: finalState.history
       });
-      // Fire a custom event to notify TradingTerminal to refresh sessions
+      // Fire custom events to notify views to refresh
+      window.dispatchEvent(new Event('simulator-session-updated'));
       window.dispatchEvent(new Event('simulator-session-ended'));
     } catch (e) {
       console.error('Failed to sync completed session to backend', e);
@@ -212,7 +323,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
         
         // PnL Calculation
         const currentExecPrice = pos.side === 'LONG' ? bid : ask;
-        const actualQty = pos.lot * CONTRACT_SIZE;
+        const actualQty = pos.lot * getContractMultiplier(pos.symbol);
         const rawPnL = pos.side === 'LONG' 
           ? (currentExecPrice - pos.entryPrice) * actualQty
           : (pos.entryPrice - currentExecPrice) * actualQty;
@@ -272,7 +383,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
           for (let k = 0; k < positions.length; k++) {
             const p = positions[k];
             const pExecPrice = p.side === 'LONG' ? bid : ask;
-            const pQty = p.lot * CONTRACT_SIZE;
+            const pQty = p.lot * getContractMultiplier(p.symbol);
             const pPnL = p.side === 'LONG' 
               ? (pExecPrice - p.entryPrice) * pQty 
               : (p.entryPrice - pExecPrice) * pQty;
@@ -285,7 +396,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
           if (worstPosIndex !== -1) {
             const forcePos = positions[worstPosIndex];
             const forceExecPrice = forcePos.side === 'LONG' ? bid : ask;
-            const forceQty = forcePos.lot * CONTRACT_SIZE;
+            const forceQty = forcePos.lot * getContractMultiplier(forcePos.symbol);
             const forceRawPnL = forcePos.side === 'LONG'
               ? (forceExecPrice - forcePos.entryPrice) * forceQty
               : (forcePos.entryPrice - forceExecPrice) * forceQty;
@@ -327,7 +438,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
 
         if (triggered) {
           // Open position
-          const ordActualQty = ord.lot * CONTRACT_SIZE;
+          const ordActualQty = ord.lot * getContractMultiplier(ord.symbol);
           const reqMargin = (execPrice * ordActualQty) / config.leverage;
           const comm = config.commission * ord.lot;
           
@@ -358,7 +469,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
 
       // Update state
       const finalEquity = balance + floatingPnL;
-      
+
       return {
         currentPrice: price,
         currentBid: bid,
@@ -377,6 +488,9 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
         }
       };
     });
+
+    // Sync state and replayCurrentTime to backend after state update is committed
+    debouncedSyncToBackend();
   },
 
   executeMarketOrder: (side, lot, sl, tp, setupTag) => {
@@ -395,7 +509,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
     }
 
     const execPrice = side === 'LONG' ? ask : bid;
-    const actualQty = lot * CONTRACT_SIZE;
+    const actualQty = lot * getContractMultiplier(session.symbol);
     const margin = (execPrice * actualQty) / config.leverage;
     const commission = config.commission * lot;
 
@@ -434,6 +548,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
         }
       };
     });
+    debouncedSyncToBackend();
   },
 
   placePendingOrder: (type, side, price, lot, sl, tp, setupTag) => {
@@ -456,6 +571,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
     set(draft => ({
       orders: [...draft.orders, newOrder]
     }));
+    debouncedSyncToBackend();
   },
 
   closePosition: (positionId, reason = 'MANUAL') => {
@@ -480,7 +596,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       }
 
       const currentExecPrice = pos.side === 'LONG' ? bid : ask;
-      const actualQty = pos.lot * CONTRACT_SIZE;
+      const actualQty = pos.lot * getContractMultiplier(pos.symbol);
       const rawPnL = pos.side === 'LONG' 
         ? (currentExecPrice - pos.entryPrice) * actualQty
         : (pos.entryPrice - currentExecPrice) * actualQty;
@@ -509,7 +625,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       const usedMargin = positions.reduce((sum, p) => sum + p.margin, 0);
       const remainingFloatingPnL = positions.reduce((sum, p) => {
         const pExecPrice = p.side === 'LONG' ? bid : ask;
-        const pQty = p.lot * CONTRACT_SIZE;
+        const pQty = p.lot * getContractMultiplier(p.symbol);
         const pRaw = p.side === 'LONG' ? (pExecPrice - p.entryPrice) * pQty : (p.entryPrice - pExecPrice) * pQty;
         return sum + (pRaw - p.commission + p.accumulatedSwap);
       }, 0);
@@ -527,18 +643,21 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
         }
       };
     });
+    debouncedSyncToBackend();
   },
 
   cancelOrder: (orderId) => {
     set(draft => ({
       orders: draft.orders.filter(o => o.id !== orderId)
     }));
+    debouncedSyncToBackend();
   },
 
   updateTPSL: (positionId, sl, tp) => {
     set(draft => ({
       positions: draft.positions.map(p => p.id === positionId ? { ...p, sl, tp } : p)
     }));
+    debouncedSyncToBackend();
   },
 
   setLeverage: (leverage) => {

@@ -12,6 +12,7 @@ export const TradingJournalPanel: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useI18n();
   const session = useSimulatorStore((s) => s.session);
+  const positions = useSimulatorStore((s) => s.positions) || [];
   const history = useSimulatorStore((s) => s.history) || [];
 
   const initialBalance = session?.config.initialBalance || 100000000;
@@ -106,11 +107,62 @@ export const TradingJournalPanel: React.FC = () => {
           </div>
         </div>
 
+        {/* Open Positions in Session */}
+        {positions.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                {t('journal.openPositions', 'Vị thế đang mở')} ({positions.length})
+              </span>
+            </div>
+            <div className="space-y-2">
+              {positions.map((pos) => {
+                const isLong = pos.side === 'LONG';
+                return (
+                  <div
+                    key={pos.id}
+                    onClick={() => navigate('/student/journal')}
+                    className="p-2.5 rounded-lg bg-slate-50 dark:bg-[#172033] border border-blue-500/30 hover:border-blue-500/60 cursor-pointer transition-all flex items-center justify-between text-xs"
+                  >
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`font-bold px-1.5 py-0.2 rounded text-[10px] ${
+                            isLong
+                              ? 'bg-emerald-500/15 text-emerald-500'
+                              : 'bg-rose-500/15 text-rose-500'
+                          }`}
+                        >
+                          {pos.side}
+                        </span>
+                        <span className="font-bold text-slate-900 dark:text-white">
+                          {pos.symbol}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {pos.lot} lot
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        Entry: {pos.entryPrice}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] font-bold text-blue-500 uppercase px-1.5 py-0.5 bg-blue-500/10 rounded border border-blue-500/20">
+                        OPEN
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Recent Trades in Session */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              {t('journal.recentTrades', 'Lệnh gần đây')} ({history.length})
+              {t('journal.recentTrades', 'Lệnh đã đóng')} ({history.length})
             </span>
             <button
               onClick={() => navigate('/student/journal')}
