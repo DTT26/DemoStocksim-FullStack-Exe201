@@ -3,13 +3,20 @@ import {
   X, Sparkles, BookOpen, Layers, GitCompare, 
   Send, ExternalLink, HelpCircle, CheckCircle2, AlertTriangle, ShieldCheck, User,
   MessageSquare, Scale, Copy, Check, ChevronRight, Bot, Trash2, RefreshCw,
-  PlayCircle, Target, TrendingUp, Lightbulb, Crown, ArrowRight, Lock
+  PlayCircle, Target, TrendingUp, Lightbulb, Crown, ArrowRight, Lock,
+  PenTool, Eye, CheckCheck
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { aiService, type AskResponse, type StrategyComparisonData } from '../../services/aiService';
 import { subscriptionService, type SubscriptionInfo } from '../../services/subscriptionService';
 import { UpgradeProModal } from './UpgradeProModal';
 import { STOCKS } from '../market/data';
+import { 
+  getChartInstance, 
+  getChartDrawingsData, 
+  drawAiCorrectionOverlay, 
+  type UserChartDrawing 
+} from '../market/components/ChartArea';
 
 interface AiTutorDrawerProps {
   isOpen: boolean;
@@ -158,7 +165,7 @@ export const AiTutorDrawer = ({
   marketContext,
   topOffset = 48
 }: AiTutorDrawerProps) => {
-  const [activeTab, setActiveTab] = useState<'tutor' | 'compare'>('tutor');
+  const [activeTab, setActiveTab] = useState<'tutor' | 'inspect' | 'compare'>('tutor');
   
   // Chat Q&A State
   const [query, setQuery] = useState('');
@@ -274,6 +281,72 @@ export const AiTutorDrawer = ({
   const [compareLoading, setCompareLoading] = useState(false);
   const [compareError, setCompareError] = useState<string | null>(null);
   const [compareData, setCompareData] = useState<StrategyComparisonData | null>(null);
+
+  // Chart Structured Drawing Inspection State (Pure Data - No Screenshot)
+  const [detectedDrawings, setDetectedDrawings] = useState<UserChartDrawing[]>([]);
+  const [detectedKlines, setDetectedKlines] = useState<any[]>([]);
+  const [inspectNotes, setInspectNotes] = useState('');
+  const [inspectLoading, setInspectLoading] = useState(false);
+  const [inspectError, setInspectError] = useState<string | null>(null);
+  const [inspectResult, setInspectResult] = useState<any | null>(null);
+  const [hasDrawnCorrection, setHasDrawnCorrection] = useState(false);
+
+  // Scan drawings directly from chart instance
+  const handleScanDrawings = () => {
+    const data = getChartDrawingsData();
+    setDetectedDrawings(data.drawings);
+    setDetectedKlines(data.klines);
+    return data;
+  };
+
+  // Auto scan when switching to inspect tab
+  useEffect(() => {
+    if (activeTab === 'inspect') {
+      handleScanDrawings();
+    }
+  }, [activeTab]);
+
+  const handleInspectDrawings = async () => {
+    if (!user) {
+      login();
+      return;
+    }
+    const currentData = handleScanDrawings();
+    if (!currentData.drawings || currentData.drawings.length === 0) {
+      setInspectError('Chưa tìm thấy vùng vẽ nào trên biểu đồ. Hãy dùng thanh công cụ bên trái biểu đồ (Hộp chữ nhật, Đường kẻ) để vẽ vùng Order Block / FVG trước nhé!');
+      return;
+    }
+    setInspectLoading(true);
+    setInspectError(null);
+    setHasDrawnCorrection(false);
+    try {
+      const res = await aiService.inspectChartDrawings({
+        drawings: currentData.drawings,
+        klines: currentData.klines,
+        symbol: activeSymbol,
+        timeframe: timeframe || '15m',
+        userNotes: inspectNotes
+      });
+      if (res.quotaExceeded) {
+        setInspectError(res.message || 'Bạn đã sử dụng hết hạn mức AI hôm nay.');
+      } else {
+        setInspectResult(res);
+        fetchSubscription();
+      }
+    } catch (err: any) {
+      setInspectError(err.message || 'Lỗi khi gửi dữ liệu hình vẽ cho AI chấm');
+    } finally {
+      setInspectLoading(false);
+    }
+  };
+
+  const handleApplyAiCorrection = () => {
+    if (!inspectResult?.suggestedZone) return;
+    const overlayId = drawAiCorrectionOverlay(inspectResult.suggestedZone);
+    if (overlayId) {
+      setHasDrawnCorrection(true);
+    }
+  };
 
   const handleAsk = async (questionText?: string) => {
     if (!user) {
@@ -490,7 +563,7 @@ export const AiTutorDrawer = ({
       <div className="flex border-b border-[#e6e8ea] dark:border-[#2a2e39] bg-[#f0f3fa] dark:bg-[#181b24] px-3 text-xs font-medium">
         <button
           onClick={() => setActiveTab('tutor')}
-          className={`flex items-center gap-1.5 px-4 py-2.5 border-b-2 transition-colors ${
+          className={`flex items-center gap-1.5 px-3.5 py-2.5 border-b-2 transition-colors cursor-pointer ${
             activeTab === 'tutor' 
               ? 'border-amber-500 text-amber-600 dark:text-amber-400 font-semibold' 
               : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-[#1e2329] dark:hover:text-slate-200'
@@ -500,11 +573,22 @@ export const AiTutorDrawer = ({
           Gia sư AI (Chat)
         </button>
         <button
+          onClick={() => setActiveTab('inspect')}
+          className={`flex items-center gap-1.5 px-3.5 py-2.5 border-b-2 transition-colors cursor-pointer ${
+            activeTab === 'inspect' 
+              ? 'border-amber-500 text-amber-600 dark:text-amber-400 font-semibold' 
+              : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-[#1e2329] dark:hover:text-slate-200'
+          }`}
+        >
+          <Target className="w-3.5 h-3.5 text-amber-500" />
+          <span>🎯 Chấm Bài Vùng Vẽ</span>
+        </button>
+        <button
           onClick={() => {
             setActiveTab('compare');
             if (!compareData) handleRunComparison();
           }}
-          className={`flex items-center gap-1.5 px-4 py-2.5 border-b-2 transition-colors ${
+          className={`flex items-center gap-1.5 px-3.5 py-2.5 border-b-2 transition-colors cursor-pointer ${
             activeTab === 'compare' 
               ? 'border-amber-500 text-amber-600 dark:text-amber-400 font-semibold' 
               : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-[#1e2329] dark:hover:text-slate-200'
@@ -681,7 +765,290 @@ export const AiTutorDrawer = ({
           </>
         )}
 
-        {/* TAB 2: STRATEGY COMPARISON */}
+        {/* TAB 2: AI CHART DRAWINGS DIRECT DATA INSPECTION */}
+        {activeTab === 'inspect' && (
+          <div className="space-y-4">
+            {/* Header Card */}
+            <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/10 via-purple-500/5 to-blue-500/10 border border-amber-500/30 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-500 to-amber-600 text-slate-950 flex items-center justify-center font-bold shadow-xs">
+                    <PenTool className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      AI Chấm Bài Vùng Vẽ Trực Tiếp
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                        SMC & ICT DATA PRO
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Tự động trích xuất tọa độ vùng hộp, đường kẻ bạn vẽ trên biểu đồ để AI phân tích mà không cần chụp ảnh
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleScanDrawings}
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-[#1f2430] hover:bg-slate-200 dark:hover:bg-[#2b3347] text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+                  title="Quét lại hình vẽ mới nhất trên biểu đồ"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Quét lại hình</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Error Message */}
+            {inspectError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <span>{inspectError}</span>
+                  {inspectError.includes('hạn mức') && (
+                    <button
+                      onClick={() => setIsUpgradeModalOpen(true)}
+                      className="block mt-1 font-bold underline cursor-pointer text-amber-600 dark:text-amber-400"
+                    >
+                      Nâng cấp gói PRO ngay &rarr;
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* CASE 1: No drawings found on chart */}
+            {detectedDrawings.length === 0 && !inspectResult && !inspectLoading && (
+              <div className="p-5 rounded-xl bg-white dark:bg-[#181d2a] border border-dashed border-slate-300 dark:border-[#2b3347] text-center space-y-3">
+                <div className="w-10 h-10 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto">
+                  <PenTool className="w-5 h-5" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                    Chưa phát hiện vùng vẽ nào trên biểu đồ
+                  </h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
+                    Hãy dùng thanh công cụ vẽ bên trái biểu đồ để vẽ vùng phân tích của bạn, sau đó AI sẽ tự động đọc tọa độ để chấm điểm:
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-50 dark:bg-[#131722] border border-slate-200 dark:border-[#202636] text-left text-xs space-y-2 max-w-sm mx-auto">
+                  <div className="flex items-start gap-2">
+                    <span className="w-4 h-4 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">1</span>
+                    <span className="text-slate-700 dark:text-slate-300">
+                      Chọn công cụ <strong>Hộp chữ nhật (Rectangle)</strong> hoặc <strong>Đường kẻ (Line)</strong> ở thanh công cụ vẽ bên trái biểu đồ.
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="w-4 h-4 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">2</span>
+                    <span className="text-slate-700 dark:text-slate-300">
+                      Khoanh vùng nến bạn xác định là <strong>Order Block (OB)</strong>, <strong>Fair Value Gap (FVG)</strong> hoặc <strong>Vùng Cung/Cầu</strong>.
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="w-4 h-4 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">3</span>
+                    <span className="text-slate-700 dark:text-slate-300">
+                      Bấm nút <strong>"Quét lại hình vẽ"</strong> để AI nạp dữ liệu tọa độ và chấm bài ngay lập tức!
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleScanDrawings}
+                  className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-bold text-xs shadow-xs transition-all cursor-pointer inline-flex items-center gap-2"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Quét lại hình vẽ trên biểu đồ</span>
+                </button>
+              </div>
+            )}
+
+            {/* CASE 2: Drawings found on chart -> show data & ready to inspect */}
+            {detectedDrawings.length > 0 && !inspectResult && (
+              <div className="p-4 rounded-xl bg-white dark:bg-[#181d2a] border border-slate-200 dark:border-[#2b3347] space-y-3.5">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-[#2b3347]">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                      Đã phát hiện {detectedDrawings.length} vùng vẽ trên {activeSymbol} ({timeframe}):
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleScanDrawings}
+                    className="text-[11px] text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    Cập nhật
+                  </button>
+                </div>
+
+                {/* List detected drawing data items */}
+                <div className="space-y-2">
+                  {detectedDrawings.map((d, idx) => (
+                    <div
+                      key={d.id || idx}
+                      className="p-2.5 rounded-lg bg-slate-50 dark:bg-[#131722] border border-slate-200 dark:border-[#232938] flex items-center justify-between gap-2 text-xs"
+                    >
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <div className="w-5 h-5 rounded bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold text-[10px] shrink-0">
+                          #{idx + 1}
+                        </div>
+                        <div className="truncate">
+                          <span className="font-semibold text-slate-900 dark:text-white capitalize">
+                            {d.name === 'rect' ? 'Hộp vùng giá (Rectangle)' : d.name}
+                          </span>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-mono">
+                            {d.priceLow !== undefined && d.priceHigh !== undefined
+                              ? `$${d.priceLow.toLocaleString('en-US')} → $${d.priceHigh.toLocaleString('en-US')}`
+                              : `${d.points?.length || 0} điểm neo`}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0 font-medium">
+                        Sẵn sàng chấm
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* User Notes Input */}
+                <div className="space-y-1 pt-1">
+                  <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                    Luận điểm / Nhận định của bạn (Tùy chọn):
+                  </label>
+                  <textarea
+                    value={inspectNotes}
+                    onChange={(e) => setInspectNotes(e.target.value)}
+                    placeholder="Ví dụ: Tôi vừa vẽ Bearish Order Block ở cây nến tăng cuối cùng trước khi có nhịp sập mạnh. Tôi định Sell khi giá hồi về test..."
+                    rows={2}
+                    className="w-full p-2.5 rounded-lg bg-slate-50 dark:bg-[#131722] border border-slate-300 dark:border-[#2b3347] text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden focus:border-amber-500 resize-none"
+                  />
+                </div>
+
+                {/* Submit Action */}
+                <button
+                  onClick={handleInspectDrawings}
+                  disabled={inspectLoading}
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:from-amber-600 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <Sparkles className={`w-4 h-4 ${inspectLoading ? 'animate-spin' : ''}`} />
+                  <span>{inspectLoading ? 'AI đang đối chiếu dữ liệu nến...' : '🚀 Gửi AI Phân Tích & Chấm Điểm Bài Vẽ'}</span>
+                </button>
+              </div>
+            )}
+
+            {/* Loading Indicator */}
+            {inspectLoading && (
+              <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 text-center space-y-2.5 animate-pulse">
+                <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center mx-auto">
+                  <Sparkles className="w-4 h-4 animate-spin" />
+                </div>
+                <div className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                  AI đang đối chiếu dữ liệu tọa độ hình vẽ với cấu trúc nến OHLCV...
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Xác định nhịp Displacement, cấu trúc FVG / Imbalance và bẫy thanh khoản Smart Money Trap...
+                </p>
+              </div>
+            )}
+
+            {/* Inspection Result Presentation */}
+            {inspectResult && !inspectLoading && (
+              <div className="p-4 rounded-xl bg-white dark:bg-[#181d2a] border border-amber-500/30 shadow-sm space-y-4">
+                {/* Result Header: Score & Verdict */}
+                <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-[#2b3347]">
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 ${
+                      inspectResult.verdict === 'CORRECT' 
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' 
+                        : inspectResult.verdict === 'PARTIALLY_CORRECT'
+                        ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                        : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                    }`}>
+                      {inspectResult.verdict === 'CORRECT' && <CheckCircle2 className="w-3.5 h-3.5" />}
+                      {inspectResult.verdict === 'PARTIALLY_CORRECT' && <AlertTriangle className="w-3.5 h-3.5" />}
+                      {inspectResult.verdict === 'INCORRECT' && <X className="w-3.5 h-3.5" />}
+                      <span>
+                        {inspectResult.verdict === 'CORRECT' 
+                          ? 'VẼ ĐÚNG LÝ THUYẾT' 
+                          : inspectResult.verdict === 'PARTIALLY_CORRECT'
+                          ? 'ĐÚNG MỘT PHẦN / CẦN LƯU Ý'
+                          : 'CHƯA ĐÚNG'}
+                      </span>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Điểm:</span>
+                    <span className="text-sm font-black font-mono text-amber-600 dark:text-amber-400">
+                      {inspectResult.score}/100
+                    </span>
+                  </div>
+                </div>
+
+                {/* AI Suggested Zone & Direct Auto-Draw onto Chart */}
+                {inspectResult.suggestedZone && (
+                  <div className="p-3 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Target className="w-4 h-4 text-amber-500" />
+                        <span className="text-xs font-bold text-slate-900 dark:text-white">
+                          AI Đề Xuất Vùng Vẽ Chuẩn Xác Nhất:
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400">
+                        ${inspectResult.suggestedZone.priceLow?.toLocaleString('en-US')} — ${inspectResult.suggestedZone.priceHigh?.toLocaleString('en-US')}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={handleApplyAiCorrection}
+                      disabled={hasDrawnCorrection}
+                      className={`w-full py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                        hasDrawnCorrection
+                          ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 cursor-default'
+                          : 'bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 shadow-xs'
+                      }`}
+                    >
+                      {hasDrawnCorrection ? (
+                        <>
+                          <CheckCheck className="w-4 h-4" />
+                          <span>Đã vẽ vùng AI sửa lại lên biểu đồ!</span>
+                        </>
+                      ) : (
+                        <>
+                          <PenTool className="w-3.5 h-3.5" />
+                          <span>🎯 Tự động vẽ vùng AI sửa lại lên biểu đồ</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* Formatted Markdown Analysis */}
+                <div className="text-slate-800 dark:text-slate-100 text-xs leading-relaxed space-y-2">
+                  {renderFormattedText(inspectResult.analysis)}
+                </div>
+
+                {/* Action button to test again */}
+                <div className="pt-2 flex justify-end">
+                  <button
+                    onClick={() => {
+                      setInspectResult(null);
+                      setHasDrawnCorrection(false);
+                      handleScanDrawings();
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-[#1f2430] hover:bg-slate-200 dark:hover:bg-[#2b3347] text-slate-700 dark:text-slate-200 text-xs font-semibold cursor-pointer transition-colors"
+                  >
+                    Chấm bài vẽ khác &rarr;
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 3: STRATEGY COMPARISON */}
         {activeTab === 'compare' && (
           <div className="space-y-4">
             {/* Exchange & Symbol Selector Card (Redesigned) */}

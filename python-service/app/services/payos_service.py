@@ -60,7 +60,13 @@ class PayOSService:
         # Fallback timestamp code
         return int(time.time()) % 1000000000
 
-    def create_payment_link(self, user_id: str, plan: str = "PREMIUM_MONTHLY") -> Dict[str, Any]:
+    def create_payment_link(
+        self, 
+        user_id: str, 
+        plan: str = "PREMIUM_MONTHLY",
+        return_url: Optional[str] = None,
+        cancel_url: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Creates a PayOS payment link for the authenticated user.
         Stores the pending payment in the database.
@@ -72,6 +78,9 @@ class PayOSService:
                 "orderCode": 0,
                 "checkoutUrl": ""
             }
+
+        effective_return_url = return_url or self.return_url
+        effective_cancel_url = cancel_url or self.cancel_url
 
         order_code = self.generate_unique_order_code()
         short_uid = str(user_id)[-8:]
@@ -93,8 +102,8 @@ class PayOSService:
                     amount=amount,
                     description=description,
                     items=[item],
-                    cancelUrl=self.cancel_url,
-                    returnUrl=self.return_url,
+                    cancelUrl=effective_cancel_url,
+                    returnUrl=effective_return_url,
                     expiredAt=expire_timestamp
                 )
                 res = client.createPaymentLink(payment_data)
@@ -109,8 +118,8 @@ class PayOSService:
                     amount=amount,
                     description=description,
                     items=[item],
-                    cancel_url=self.cancel_url,
-                    return_url=self.return_url,
+                    cancel_url=effective_cancel_url,
+                    return_url=effective_return_url,
                     expired_at=expire_timestamp
                 )
                 res = client.payment_requests.create(req_obj)
