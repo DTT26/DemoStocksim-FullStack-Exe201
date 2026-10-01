@@ -8,13 +8,12 @@ import Wallet from './models/Wallet';
 dotenv.config();
 
 const PORT = process.env.PORT || 3000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/stocksim';
+const DEFAULT_MONGO_URI = 'mongodb+srv://de180115tranvandong_db_user:WM96L8H6biEenBJa@cluster0.yappw0s.mongodb.net/stocksim?retryWrites=true&w=majority&appName=Cluster0';
+const MONGO_URI = process.env.MONGO_URI || DEFAULT_MONGO_URI;
 
 const server = http.createServer(app);
 
-const MONGO_URI_LOCAL = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/stocksim';
-
-mongoose.connect(MONGO_URI_LOCAL)
+mongoose.connect(MONGO_URI)
   .then(async () => {
     console.log('✅ Connected to MongoDB');
 
@@ -97,6 +96,19 @@ mongoose.connect(MONGO_URI_LOCAL)
 
     server.listen(PORT, () => {
       console.log(`🚀 Server is running on port ${PORT}`);
+
+      // Auto keep-alive ping to Python Service every 10 mins to prevent Render Free spin-down
+      const pyUrl = process.env.PYTHON_SERVICE_URL;
+      if (pyUrl && pyUrl.startsWith('http') && !pyUrl.includes('localhost')) {
+        console.log(`📡 Enabled keep-alive pings to Python Service: ${pyUrl}`);
+        setInterval(async () => {
+          try {
+            await fetch(`${pyUrl.replace(/\/+$/, '')}/health`, { signal: AbortSignal.timeout(10000) });
+          } catch (pingErr: any) {
+            // Ignore background ping errors
+          }
+        }, 10 * 60 * 1000);
+      }
     });
   })
   .catch(err => {

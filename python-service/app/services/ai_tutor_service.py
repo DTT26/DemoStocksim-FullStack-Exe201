@@ -22,6 +22,9 @@ from app.services.time_helper import (
     get_current_time_context,
     is_time_query
 )
+from app.services.subscription_service import subscription_service
+from app.services.intent_router import route_question_intent
+from app.core.config import FREE_DAILY_LIMIT, PREMIUM_DAILY_LIMIT
 
 SIGNAL_KEYWORDS = [
   "có nên mua", "có nên bán", "buy hay sell", "mua hay bán", 
@@ -98,6 +101,29 @@ class AiTutorService:
     def answer_question(self, req: AskQuestionRequest) -> Dict[str, Any]:
         query = req.question.strip()
 
+        # 0. User Subscription & Daily Quota Guardrail Check (Sections 3, 4, 5, 31)
+        user_id = req.userId or (req.userData and req.userData.get("userId")) or "64f7b1e4a3b9c2d1e8f9a0b1"
+        sub = subscription_service.get_or_create_subscription(user_id)
+        plan = req.plan or sub.get("plan", "FREE")
+        limit = sub.get("daily_ai_limit", FREE_DAILY_LIMIT if plan == "FREE" else PREMIUM_DAILY_LIMIT)
+        used = sub.get("daily_ai_used", 0)
+
+        # 0.1 Scoring-based Question Intent Router (Sections 22 - 28)
+        intent_info = route_question_intent(query)
+        question_intent = intent_info["intent"]
+        matched_tags = intent_info["matchedTags"]
+
+        if used >= limit:
+            limit_str = f"{used}/{limit}"
+            return {
+                "success": False,
+                "intent": question_intent,
+                "message": f"⚠️ Bạn đã sử dụng hết {limit_str} lượt tương tác AI miễn phí hôm nay!\nVui lòng nâng cấp lên gói ✨ AI Tutor PRO để tiếp tục phân tích.",
+                "guardrailTriggered": "QUOTA_EXCEEDED",
+                "remainingToday": 0,
+                "plan": plan
+            }
+
         # 1. Kích hoạt Strict Signal Guardrail trước mọi luồng xử lý (kể cả khi có LLM)
         # Ngăn chặn hoàn toàn prompt injection hoặc yêu cầu phím lệnh trực tiếp
         strict_guard = check_strict_signal_guardrail(query, req.symbol)
@@ -150,6 +176,18 @@ class AiTutorService:
 
         # 3. VIP MODE: Senior Prop Firm Funded Trader & ICT/SMC Coach Engine
         if llm_client.is_configured():
+            # Concurrency-safe atomic quota reservation (Section 6)
+            reserved, updated_sub = subscription_service.reserve_quota_slot(user_id)
+            if not reserved:
+                return {
+                    "success": False,
+                    "intent": question_intent,
+                    "message": f"⚠️ Bạn đã sử dụng hết {limit}/{limit} lượt tương tác AI miễn phí hôm nay!\nVui lòng nâng cấp lên gói ✨ AI Tutor PRO để tiếp tục phân tích.",
+                    "guardrailTriggered": "QUOTA_EXCEEDED",
+                    "remainingToday": 0,
+                    "plan": plan
+                }
+
             active_method = route_query_to_method(
                 query,
                 has_positions=bool(req.userData and req.userData.get("positions"))
@@ -193,6 +231,47 @@ class AiTutorService:
                 f"- Trạng thái Killzone ICT: {time_ctx['active_killzone']}"
             )
 
+            # Tiered Prompting (Section 33: FREE vs PREMIUM)
+            if plan == "PREMIUM":
+                tiered_prompt_section = (
+                    "\n\n==================================================\n"
+                    "✨ CẤU HÌNH PHẢN HỒI CHUYÊN SÂU [TIER: PREMIUM AI TUTOR PRO]\n"
+                    "==================================================\n"
+                    "Học viên đang sử dụng gói PREMIUM AI TUTOR PRO. Cung cấp phân tích chuyên sâu đa chiều khi dữ liệu thị trường hỗ trợ:\n"
+                    "1. Phân tích đa khung thời gian: HTF (khung lớn định hướng) -> MTF (cấu trúc) -> LTF (thực thi).\n"
+                    "2. Cấu trúc thị trường & Dòng tiền thông minh (Market Structure, BOS, CHoCH, MSS).\n"
+                    "3. Quét thanh khoản (Liquidity Pools, BSL/SSL Sweep, Internal/External range).\n"
+                    "4. Xung lực giá (Displacement), POI, Fair Value Gap (FVG), Order Block (OB).\n"
+                    "5. Bối cảnh mở vị thế (Entry context), điểm vô hiệu hóa (Invalidation), mục tiêu (Target) và tỷ lệ R:R.\n"
+                    "6. Đánh giá rủi ro (Risk & Drawdown) dựa trên số liệu thực tế từ tài khoản.\n"
+                    "7. Luận điểm phản biện (Counter-thesis) & Kịch bản thị trường thay thế (Scenario Analysis).\n"
+                    "Giữ phong thái sắc sảo, kỷ luật của một Senior Prop Firm Funded Trader."
+                )
+            else:
+                tiered_prompt_section = (
+                    "\n\n==================================================\n"
+                    "🎯 CẤU HÌNH PHẢN HỒI GÓI TIÊU CHUẨN [TIER: FREE USER PLAN]\n"
+                    "==================================================\n"
+                    "Học viên đang sử dụng gói FREE.\n"
+                    "Quy chuẩn phản hồi: Ngắn gọn, cô đọng khoảng 2-3 đoạn văn.\n"
+                    "Tập trung chính vào:\n"
+                    f"- Ý định câu hỏi: [{question_intent}]\n"
+                    "- Bằng chứng then chốt (Main Evidence) & Lý do quan trọng nhất.\n"
+                    "- Vùng POI / FVG / Mốc thanh khoản chính.\n"
+                    "- Điểm vô hiệu hóa (Main Invalidation).\n"
+                    "- Đúng 1 câu hỏi dẫn dắt tư duy (One Critical Socratic Question).\n"
+                    "Tránh giải thích quá dài dòng hoặc lan man."
+                )
+
+            if question_intent in ["BAR_REPLAY", "BACKTEST_HISTORICAL"]:
+                tiered_prompt_section += (
+                    "\n\n==================================================\n"
+                    "⏳ QUY TẮC PHÂN TÍCH REPLAY & BACKTEST (CHỐNG THIÊN KIẾN TƯƠNG LAI):\n"
+                    "==================================================\n"
+                    "- Tuyệt đối KHÔNG sử dụng thông tin hay diễn biến của nến tương lai để phân tích quyết định tại mốc lịch sử.\n"
+                    "- Chỉ sử dụng dữ liệu có sẵn tại đúng thời điểm đó để đánh giá logic vào lệnh."
+                )
+
             sys_prompt = (
                 "Bạn là Senior Prop Firm Funded Trader & AI Trading Coach của nền tảng StockSim.\n"
                 "Bạn phân tích thị trường với tư duy của một trader chuyên nghiệp theo phương pháp ICT, SMC (Smart Money Concepts) và Price Action thuần túy.\n\n"
@@ -203,6 +282,7 @@ class AiTutorService:
                 "PHƯƠNG PHÁP ĐƯỢC KÍCH HOẠT CHO CÂU HỎI HIỆN TẠI:\n"
                 "==================================================\n"
                 f"{intent_guidance}\n\n"
+                f"{tiered_prompt_section}\n\n"
                 "YÊU CẦU BẮT BUỘC:\n"
                 "1. Tuân thủ nghiêm ngặt các mục trong [Các yếu tố bắt buộc phân tích] và [Quy chuẩn phản hồi] của phương pháp trên.\n"
                 "2. Khi học viên hỏi về GIÁ CỦA BẤT KỲ MÃ NÀO: Tra cứu trong [BẢNG GIÁ THỊ TRƯỜNG LIÊN QUAN] để trả lời chính xác giá thực và biến động 24h.\n"
@@ -347,7 +427,7 @@ class AiTutorService:
                     f"{kb_context}\n\n"
                     "Hãy trả lời súc tích, hoàn chỉnh, chuyên nghiệp và chuẩn xác dựa trên toàn bộ dữ liệu thị trường và database học viên được cung cấp ở trên."
                 )
-            llm_answer = llm_client.generate_text(sys_prompt, user_p, max_tokens=1500)
+            llm_answer = llm_client.generate_text(sys_prompt, user_p, max_tokens=2000 if plan == "PREMIUM" else 1000)
 
             if llm_answer:
                 # Nếu có rủi ro vi phạm quỹ Hard Breach, đảm bảo khối cảnh báo ở đầu bài
@@ -355,33 +435,53 @@ class AiTutorService:
                     if "🔴" not in llm_answer and "HARD BREACH" not in llm_answer.upper():
                         llm_answer = f"{risk_eval['alert_markdown']}\n\n---\n\n{llm_answer}"
 
+                new_used = updated_sub.get("daily_ai_used", used + 1)
+                remaining = max(0, limit - new_used)
+
                 return {
+                    "success": True,
+                    "intent": question_intent,
                     "answer": llm_answer,
+                    "plan": plan,
+                    "dailyAiUsed": new_used,
+                    "dailyAiLimit": limit,
+                    "remainingToday": remaining,
+                    "guardrailTriggered": "HARD_BREACH_ALERT" if (risk_eval and risk_eval.get("is_hard_breach")) else None,
                     "concept": results[0].document.concept if results else ("Session Timing & Real-time Clock" if is_time_query(query) else ("Prop Firm Risk Management" if risk_eval else "AI Trading Tutor")),
                     "framework": results[0].document.framework if results else "VIP_LLM",
                     "sources": citations,
                     "socraticQuestions": [],
-                    "guardrailTriggered": "HARD_BREACH_ALERT" if (risk_eval and risk_eval.get("is_hard_breach")) else None
+                    "matchedTags": matched_tags
                 }
-            elif llm_client.last_error and any(code in llm_client.last_error for code in ["401", "403"]):
-                return {
-                    "answer": (
-                        f"⚠️ **Key AI trong file `.env` bị Google từ chối cấp quyền:**\n\n"
-                        f"> 🔴 **Mã lỗi từ Google**: `{llm_client.last_error}`\n\n"
-                        f"**Nguyên nhân:** Project hoặc Token này bị hạn chế quyền truy cập API (`PERMISSION_DENIED`).\n\n"
-                        f"**Cách xử lý:**\n"
-                        f"1. Vào: https://aistudio.google.com/app/apikey bằng một tài khoản Gmail khác\n"
-                        f"2. Bấm **'Create API key'** và dán vào `GEMINI_API_KEY=` trong file `python-service/.env`"
-                    ),
-                    "concept": "Lỗi phân quyền API Key",
-                    "framework": "CONFIG_ERROR",
-                    "sources": citations,
-                    "socraticQuestions": [
-                        "Bạn có muốn đổi sang key từ một Gmail khác không?",
-                        "Hoặc dùng key OpenAI (bắt đầu bằng sk-...) vào file .env."
-                    ],
-                    "guardrailTriggered": "API_KEY_ERROR"
-                }
+            else:
+                # LLM request failed -> Rollback reserved quota so user quota is NOT consumed (Section 6, 38)
+                subscription_service.rollback_quota_slot(user_id)
+
+                if llm_client.last_error and any(code in llm_client.last_error for code in ["401", "403"]):
+                    return {
+                        "success": False,
+                        "intent": question_intent,
+                        "plan": plan,
+                        "dailyAiUsed": used,
+                        "dailyAiLimit": limit,
+                        "remainingToday": max(0, limit - used),
+                        "answer": (
+                            f"⚠️ **Key AI trong file `.env` bị Google từ chối cấp quyền:**\n\n"
+                            f"> 🔴 **Mã lỗi từ Google**: `{llm_client.last_error}`\n\n"
+                            f"**Nguyên nhân:** Project hoặc Token này bị hạn chế quyền truy cập API (`PERMISSION_DENIED`).\n\n"
+                            f"**Cách xử lý:**\n"
+                            f"1. Vào: https://aistudio.google.com/app/apikey bằng một tài khoản Gmail khác\n"
+                            f"2. Bấm **'Create API key'** và dán vào `GEMINI_API_KEY=` trong file `python-service/.env`"
+                        ),
+                        "concept": "Lỗi phân quyền API Key",
+                        "framework": "CONFIG_ERROR",
+                        "sources": citations,
+                        "socraticQuestions": [
+                            "Bạn có muốn đổi sang key từ một Gmail khác không?",
+                            "Hoặc dùng key OpenAI (bắt đầu bằng sk-...) vào file .env."
+                        ],
+                        "guardrailTriggered": "API_KEY_ERROR"
+                    }
 
         # 4. OFFLINE / TOOL FALLBACK: Nếu có tính toán rủi ro lệnh hoặc gửi ảnh chart
         if risk_eval:
@@ -616,5 +716,246 @@ class AiTutorService:
             framework=req.framework
         )
         return self.answer_question(ask_req)
+
+    def inspect_chart_vision(
+        self,
+        image_base64: str,
+        symbol: Optional[str] = None,
+        timeframe: Optional[str] = None,
+        user_notes: str = "",
+        user_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Multimodal Chart Vision Inspector & Grader.
+        Uses Google Gemini Vision to inspect user-drawn chart analysis,
+        grade theory accuracy (ICT/SMC/Price Action), evaluate real-world trade quality,
+        and provide corrections.
+        """
+        # 1. Quota check if user_id is provided
+        remaining_today = PREMIUM_DAILY_LIMIT
+        is_premium = False
+        if user_id:
+            try:
+                sub_status = subscription_service.get_user_subscription(user_id)
+                is_premium = sub_status.get("is_premium", False)
+                daily_limit = PREMIUM_DAILY_LIMIT if is_premium else FREE_DAILY_LIMIT
+                used = sub_status.get("daily_ai_used", 0)
+                if used >= daily_limit:
+                    return {
+                        "success": False,
+                        "quotaExceeded": True,
+                        "message": (
+                            f"Bạn đã sử dụng hết hạn mức AI hôm nay ({used}/{daily_limit} lượt). "
+                            "Hãy nâng cấp lên gói PRO để mở khóa 500 lượt soi chart mỗi ngày!"
+                        )
+                    }
+                subscription_service.increment_ai_usage(user_id)
+                remaining_today = max(0, daily_limit - (used + 1))
+            except Exception as ex:
+                print(f"Error checking quota for chart inspection: {ex}")
+
+        # 2. System prompt
+        system_prompt = (
+            "Bạn là Chuyên gia Cao cấp Đào tạo Phân tích Kỹ thuật và Huấn luyện viên Chiến lược Thực chiến "
+            "(Senior Quantitative & Technical Analyst Tutor, chuyên sâu về Price Action, ICT - Inner Circle Trader, SMC - Smart Money Concepts, Wyckoff).\n"
+            "Nhiệm vụ của bạn là soi kỹ ảnh chụp màn hình biểu đồ nến mà học viên cung cấp, đặc biệt chú ý đến:\n"
+            "- Các vùng hình hộp chữ nhật (Box / Zone), đường kẻ (Trendline, Support/Resistance), mũi tên hoặc ghi chú mà học viên ĐÃ VẼ trên biểu đồ.\n"
+            "- Cấu trúc giá hiện tại (Đỉnh/Đáy, Swing High/Low, Cấu trúc xu hướng tăng/giảm).\n"
+            "- Các khái niệm ICT/SMC: Order Block (OB), Fair Value Gap (FVG), Imbalance, Liquidity Sweep (BSL / SSL), Change of Character (CHoCH), Break of Structure (BOS), Premium vs Discount.\n\n"
+            "Hãy trả lời theo cấu trúc Markdown rõ ràng, chuẩn sư phạm, truyền cảm hứng và sắc sảo như sau:\n\n"
+            "### 1. Đánh giá sơ bộ về hình thức lý thuyết\n"
+            "- Kết luận rõ ràng: Bạn vẽ **ĐÚNG** hay **SAI / CHƯA CHUẨN**?\n"
+            "- Nhận diện đúng học viên đã khoanh vùng nến/vùng giá nào (ví dụ: cây nến tăng cuối cùng trước khi một nhịp sập mạnh - Bearish Displacement, hay vùng FVG).\n\n"
+            "### 2. Lăng kính thực chiến chuyên sâu (Độ tin cậy & Xác suất)\n"
+            "- **Phân loại vùng:** Đây là vùng Tiếp diễn (Continuation OB/FVG) hay vùng Cực trị / Gốc (Extreme / Original)?\n"
+            "- **Chất lượng sóng đẩy:** Nhịp Displacement có đủ mạnh không? Có tạo ra FVG (Imbalance) đi kèm không?\n"
+            "- **Thanh khoản & Bẫy giá:** Có hiện tượng Quét thanh khoản (Liquidity Sweep) đỉnh/đáy trước đó không? Có nguy cơ là bẫy Smart Money Trap (SMT) hay thanh khoản dụ dỗ (Inducement) không?\n\n"
+            "### 3. Vùng chuẩn xác nhất theo Smart Money\n"
+            "- Chỉ rõ mức giá hoặc vùng nến mà theo ICT/SMC là nơi an toàn và có tỷ lệ Risk:Reward tối ưu nhất (ví dụ: đỉnh/đáy cực trị nào, mức giá cụ thể nào trên chart).\n\n"
+            "### 4. 💡 Bài học thực chiến cốt lõi\n"
+            "- Tóm tắt 1-2 lời khuyên thực chiến ngắn gọn giúp học viên không bị thị trường lừa.\n\n"
+            "### 5. Điểm số đánh giá\n"
+            "- Cho điểm số theo thang điểm 100 (Ví dụ: **Điểm đánh giá: 85/100**)."
+        )
+
+        asset_info = f"mã cổ phiếu/tiền tệ: {symbol}" if symbol else "mã hiển thị trực tiếp trên ảnh biểu đồ"
+        tf_info = f", khung thời gian: {timeframe}" if timeframe else ""
+        user_prompt = f"Phân tích biểu đồ {asset_info}{tf_info}."
+        if user_notes:
+            user_prompt += f"\nGhi chú/Nhận định của học viên: {user_notes}"
+        else:
+            user_prompt += "\nHãy kiểm tra xem các vùng tôi đã vẽ trên biểu đồ (Order Block, FVG, Hỗ trợ/Kháng cự...) đã chính xác chưa và nhận xét chi tiết giúp tôi."
+
+        # 3. Call Vision
+        analysis = llm_client.generate_vision_text(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            image_base64=image_base64,
+            max_tokens=2500
+        )
+
+        if not analysis:
+            analysis = (
+                "⚠️ **Không thể kết nối đến AI Vision.**\n\n"
+                "Vui lòng kiểm tra lại kết nối mạng hoặc thử lại với ảnh chụp rõ nét hơn."
+            )
+
+        # 4. Extract score and verdict
+        score = 80
+        score_match = re.search(r'(?:Điểm\s*(?:đánh giá|số)?|Score)[:\s*]+(\d{1,3})\s*(?:/\s*100)?', analysis, re.IGNORECASE)
+        if score_match:
+            try:
+                score = int(score_match.group(1))
+            except:
+                pass
+
+        verdict = "CORRECT" if "ĐÚNG" in analysis.upper() and "SAI" not in analysis[:300].upper() else "PARTIALLY_CORRECT"
+        if "CHƯA ĐÚNG" in analysis[:300].upper() or "SAI" in analysis[:300].upper():
+            verdict = "INCORRECT"
+
+        return {
+            "success": True,
+            "symbol": symbol,
+            "timeframe": timeframe,
+            "score": score,
+            "verdict": verdict,
+            "analysis": analysis,
+            "remainingToday": remaining_today,
+            "isPremium": is_premium
+        }
+
+    def inspect_chart_data(
+        self,
+        drawings: List[Dict[str, Any]],
+        klines: List[Dict[str, Any]],
+        symbol: Optional[str] = None,
+        timeframe: Optional[str] = None,
+        user_notes: str = "",
+        user_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Pure Data Analysis of User Chart Drawings + Real KLine Data.
+        Evaluates coordinates, prices, and candle patterns (ICT / SMC) directly
+        without requiring screenshots.
+        """
+        remaining_today = PREMIUM_DAILY_LIMIT
+        is_premium = False
+        if user_id:
+            try:
+                sub_status = subscription_service.get_user_subscription(user_id)
+                is_premium = sub_status.get("is_premium", False)
+                daily_limit = PREMIUM_DAILY_LIMIT if is_premium else FREE_DAILY_LIMIT
+                used = sub_status.get("daily_ai_used", 0)
+                if used >= daily_limit:
+                    return {
+                        "success": False,
+                        "quotaExceeded": True,
+                        "message": (
+                            f"Bạn đã sử dụng hết hạn mức AI hôm nay ({used}/{daily_limit} lượt). "
+                            "Hãy nâng cấp lên gói PRO để mở khóa 500 lượt soi chart mỗi ngày!"
+                        )
+                    }
+                subscription_service.increment_ai_usage(user_id)
+                remaining_today = max(0, daily_limit - (used + 1))
+            except Exception as ex:
+                print(f"Error checking quota for inspect_chart_data: {ex}")
+
+        # Summarize drawings
+        drawings_summary = []
+        for idx, d in enumerate(drawings, 1):
+            name = d.get("name", "Vùng vẽ")
+            p_high = d.get("priceHigh")
+            p_low = d.get("priceLow")
+            pts = d.get("points", [])
+            drawings_summary.append(
+                f"- Hình {idx} ({name}): Vùng giá từ {p_low} đến {p_high}, gồm {len(pts)} điểm neo."
+            )
+        drawings_str = "\n".join(drawings_summary)
+
+        # Summarize recent candles (last 25 candles)
+        recent_klines = klines[-25:] if len(klines) > 25 else klines
+        klines_summary = []
+        for k in recent_klines:
+            o = k.get("open")
+            h = k.get("high")
+            l = k.get("low")
+            c = k.get("close")
+            t = k.get("timestamp")
+            klines_summary.append(f"O:{o} H:{h} L:{l} C:{c} (t:{t})")
+        klines_str = "; ".join(klines_summary)
+
+        # Calculate wave extrema
+        highs = [k.get("high") for k in recent_klines if isinstance(k.get("high"), (int, float))]
+        lows = [k.get("low") for k in recent_klines if isinstance(k.get("low"), (int, float))]
+        wave_max = max(highs) if highs else 0
+        wave_min = min(lows) if lows else 0
+
+        system_prompt = (
+            "Bạn là Chuyên gia Cao cấp Đào tạo Phân tích Kỹ thuật và Huấn luyện viên Chiến lược Thực chiến "
+            "(Senior Quantitative & Technical Analyst Tutor, chuyên sâu về Price Action, ICT - Inner Circle Trader, SMC - Smart Money Concepts).\n"
+            "Nhiệm vụ của bạn là kiểm tra trực tiếp DỮ LIỆU TỌA ĐỘ VÙNG VẼ HỌC VIÊN ĐÃ VẼ TRÊN BIỂU ĐỒ đối chiếu với DỮ LIỆU NẾN THẬT (OHLCV).\n\n"
+            "Hãy trả lời theo cấu trúc Markdown rõ ràng, chuẩn sư phạm, truyền cảm hứng và sắc sảo như sau:\n\n"
+            "### 1. Đánh giá sơ bộ về hình thức lý thuyết\n"
+            "- Kết luận rõ ràng: Về mặt hình thức lý thuyết, bạn vẽ **ĐÚNG** hay **SAI / CHƯA CHUẨN**?\n"
+            "- Nhận diện đúng học viên đã khoanh vùng mức giá nào (ví dụ: cây nến tăng cuối cùng trước khi nhịp sập Bearish Displacement diễn ra, hoặc vùng FVG).\n\n"
+            "### 2. Lăng kính thực chiến chuyên sâu (Độ tin cậy & Xác suất)\n"
+            "- **Phân loại vùng:** Đây là vùng Tiếp diễn (Continuation OB/FVG) hay vùng Cực trị / Gốc (Extreme / Original OB)?\n"
+            "- **Chất lượng sóng đẩy:** Nhịp Displacement có đủ mạnh không? Có tạo FVG (Imbalance) đi kèm không?\n"
+            "- **Thanh khoản & Bẫy giá:** Có hiện tượng Quét thanh khoản (Liquidity Sweep) không? Cảnh báo nguy cơ bẫy Smart Money Trap (SMT) hoặc thanh khoản dụ dỗ (Inducement).\n\n"
+            "### 3. Vùng chuẩn xác nhất theo Smart Money\n"
+            "- Chỉ rõ mức giá đỉnh/đáy cực trị và vùng nến chuẩn nhất của con sóng này.\n\n"
+            "### 4. 💡 Bài học thực chiến cốt lõi\n"
+            "- Lời khuyên hành động thực chiến ngắn gọn giúp học viên không bị bẫy thị trường.\n\n"
+            "### 5. Điểm số đánh giá\n"
+            "- Cho điểm theo thang điểm 100 (Ví dụ: **Điểm đánh giá: 85/100**)."
+        )
+
+        user_prompt = (
+            f"Mã tài sản: {symbol or 'N/A'}, Khung thời gian: {timeframe or 'N/A'}.\n"
+            f"DỮ LIỆU HÌNH VẼ CỦA HỌC VIÊN TRÊN BIỂU ĐỒ:\n{drawings_str}\n\n"
+            f"CHUỖI NẾN THỰC TẾ TRÊN BIỂU ĐỒ (OHLCV):\n{klines_str}\n"
+            f"Đỉnh cao nhất của sóng: {wave_max}, Đáy thấp nhất: {wave_min}.\n"
+        )
+        if user_notes:
+            user_prompt += f"\nGhi chú học viên: {user_notes}\n"
+
+        analysis = llm_client.generate_text(system_prompt, user_prompt, max_tokens=2000)
+        if not analysis:
+            analysis = "Không thể phân tích dữ liệu lúc này. Vui lòng thử lại sau."
+
+        score = 80
+        score_match = re.search(r'(?:Điểm\s*(?:đánh giá|số)?|Score)[:\s*]+(\d{1,3})\s*(?:/\s*100)?', analysis, re.IGNORECASE)
+        if score_match:
+            try:
+                score = int(score_match.group(1))
+            except:
+                pass
+
+        verdict = "CORRECT" if "ĐÚNG" in analysis.upper() and "SAI" not in analysis[:300].upper() else "PARTIALLY_CORRECT"
+        if "CHƯA ĐÚNG" in analysis[:300].upper() or "SAI" in analysis[:300].upper():
+            verdict = "INCORRECT"
+
+        # AI suggested correction zone
+        suggested_zone = None
+        if wave_max > 0:
+            suggested_zone = {
+                "name": "Original Bearish OB",
+                "priceHigh": round(wave_max, 4),
+                "priceLow": round(wave_max * 0.992, 4),
+                "label": f"Extreme OB ({round(wave_max, 2)})"
+            }
+
+        return {
+            "success": True,
+            "symbol": symbol,
+            "timeframe": timeframe,
+            "score": score,
+            "verdict": verdict,
+            "analysis": analysis,
+            "suggestedZone": suggested_zone,
+            "drawingsCount": len(drawings),
+            "remainingToday": remaining_today,
+            "isPremium": is_premium
+        }
 
 ai_tutor_service = AiTutorService()

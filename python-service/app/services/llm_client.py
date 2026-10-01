@@ -61,7 +61,63 @@ class LLMClient:
 
         return None
 
-    def _call_gemini(self, system_prompt: str, user_prompt: str, max_tokens: int = 1500) -> Optional[str]:
+    def generate_vision_text(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        image_base64: str,
+        mime_type: str = "image/png",
+        max_tokens: int = 2500
+    ) -> Optional[str]:
+        self.last_error = None
+        self.active_provider = None
+        if not self.is_configured():
+            return None
+
+        clean_b64 = image_base64
+        detected_mime = mime_type
+        if "," in clean_b64:
+            header, clean_b64 = clean_b64.split(",", 1)
+            if "image/jpeg" in header or "image/jpg" in header:
+                detected_mime = "image/jpeg"
+            elif "image/webp" in header:
+                detected_mime = "image/webp"
+            else:
+                detected_mime = "image/png"
+
+        image_data = {"mimeType": detected_mime, "data": clean_b64.strip()}
+
+        # Priority 1: Google Gemini Vision
+        if self.gemini_key:
+            try:
+                res = self._call_gemini(system_prompt, user_prompt, max_tokens, image_data=image_data)
+                if res:
+                    self.active_provider = "gemini"
+                    return res
+            except Exception as e:
+                self.last_error = str(e)
+                print(f"Gemini Vision call failed, attempting fallback: {e}")
+
+        # Priority 2: OpenAI GPT-4o-mini Vision
+        if self.openai_key:
+            try:
+                res = self._call_openai_vision(system_prompt, user_prompt, clean_b64, detected_mime, max_tokens)
+                if res:
+                    self.active_provider = "openai"
+                    return res
+            except Exception as e:
+                self.last_error = str(e)
+                print(f"OpenAI Vision call failed: {e}")
+
+        return None
+
+    def _call_gemini(
+        self, 
+        system_prompt: str, 
+        user_prompt: str, 
+        max_tokens: int = 1500,
+        image_data: Optional[Dict[str, str]] = None
+    ) -> Optional[str]:
         # Models in order of current available quota & speed
         models = [
             "gemini-3.6-flash",
@@ -72,11 +128,17 @@ class LLMClient:
             "gemini-3.5-flash-lite",
             "gemini-flash-lite-latest",
             "gemini-2.5-flash-lite",
-            "gemini-pro-latest",
-            "gemini-3.1-flash-lite-preview"
+            "gemini-pro-latest"
         ]
 
         contents_parts: List[Dict[str, Any]] = [{"text": user_prompt}]
+        if image_data and image_data.get("data"):
+            contents_parts.append({
+                "inlineData": {
+                    "mimeType": image_data.get("mimeType", "image/png"),
+                    "data": image_data.get("data", "")
+                }
+            })
 
         for model in models:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={self.gemini_key}"
@@ -96,7 +158,7 @@ class LLMClient:
                 }
             }
             try:
-                with httpx.Client(timeout=15.0) as client:
+                with httpx.Client(timeout=25.0) as client:
                     resp = client.post(url, json=payload)
                     if resp.status_code == 200:
                         data = resp.json()
@@ -142,7 +204,7 @@ class LLMClient:
             "max_tokens": max_tokens
         }
         try:
-            with httpx.Client(timeout=15.0) as client:
+            with httpx.Client(timeout=20.0) as client:
                 resp = client.post(url, headers=headers, json=payload)
                 if resp.status_code == 200:
                     data = resp.json()
@@ -156,6 +218,56 @@ class LLMClient:
         except Exception as ex:
             self.last_error = str(ex)
             print(f"Error calling OpenAI: {ex}")
+        return None
+
+    def _call_openai_vision(
+        self, 
+        system_prompt: str, 
+        user_prompt: str, 
+        image_base64: str, 
+        mime_type: str, 
+        max_tokens: int
+    ) -> Optional[str]:
+        url = "https://api.openai.com/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self.openai_key}",
+            "Content-Type": "application/json"
+        }
+
+        data_url = f"data:{mime_type};base64,{image_base64}"
+        payload = {
+            "model": "gpt-4o-mini",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": user_prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": data_url
+                            }
+                        }
+                    ]
+                }
+            ],
+            "temperature": 0.4,
+            "max_tokens": max_tokens
+        }
+        try:
+            with httpx.Client(timeout=30.0) as client:
+                resp = client.post(url, headers=headers, json=payload)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    choices = data.get("choices", [])
+                    if choices and "message" in choices[0]:
+                        return choices[0]["message"].get("content", "")
+                else:
+                    print(f"OpenAI Vision HTTP {resp.status_code}: {resp.text}")
+        except Exception as ex:
+            self.last_error = str(ex)
+            print(f"Error calling OpenAI Vision: {ex}")
         return None
 
 llm_client = LLMClient()

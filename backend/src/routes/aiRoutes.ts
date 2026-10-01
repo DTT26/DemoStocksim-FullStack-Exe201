@@ -6,7 +6,7 @@ import AiChatMessage from '../models/AiChatMessage';
 import Wallet from '../models/Wallet';
 import Holding from '../models/Holding';
 import Challenge from '../models/Challenge';
-import { AuthRequest } from '../middleware/authMiddleware';
+import { AuthRequest, protect, optionalProtect } from '../middleware/authMiddleware';
 
 const router = Router();
 const PYTHON_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
@@ -33,19 +33,36 @@ async function forwardToPython(endpoint: string, method: string = 'POST', data?:
     method,
     headers: { 'Content-Type': 'application/json' },
     body: data ? JSON.stringify(data) : undefined,
+    signal: AbortSignal.timeout(65000), // Cho phép 65s để Render khởi động nếu đang ngủ (cold-start)
   };
-  const resp = await fetch(url, options);
-  if (!resp.ok) {
-    const errorText = await resp.text();
-    throw new Error(`Python AI Service error (${resp.status}): ${errorText}`);
+
+  let lastError: any = null;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const resp = await fetch(url, options);
+      if (!resp.ok) {
+        if ((resp.status === 502 || resp.status === 503 || resp.status === 504) && attempt === 1) {
+          await new Promise(r => setTimeout(r, 3000));
+          continue;
+        }
+        const errorText = await resp.text();
+        throw new Error(`Python AI Service error (${resp.status}): ${errorText}`);
+      }
+      return await resp.json();
+    } catch (err: any) {
+      lastError = err;
+      if (attempt === 1) {
+        await new Promise(r => setTimeout(r, 3000));
+      }
+    }
   }
-  return await resp.json();
+  throw lastError;
 }
 
-// 1. Ask AI Tutor (with MongoDB persistence & full DB context)
-router.post('/ask', async (req: Request, res: Response) => {
+// 1. Ask AI Tutor (Bắt buộc đăng nhập tài khoản)
+router.post('/ask', protect, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.body?.userId || getUserIdFromReq(req);
+    const userId = req.user._id.toString();
     const symbol = req.body?.symbol || 'BTCUSDT';
     const question = req.body?.question || '';
 
@@ -119,10 +136,26 @@ router.post('/ask', async (req: Request, res: Response) => {
 
     const payload = {
       ...req.body,
+      userId,
       userData: userData || req.body?.userData
     };
 
     const data = await forwardToPython('/ask', 'POST', payload);
+
+    // If quota exceeded, return controlled tutor message
+    if (data && data.success === false && data.guardrailTriggered === 'QUOTA_EXCEEDED') {
+      return res.json({
+        success: true,
+        data: {
+          answer: data.message,
+          guardrailTriggered: 'QUOTA_EXCEEDED',
+          remainingToday: data.remainingToday,
+          plan: data.plan,
+          sources: [],
+          socraticQuestions: []
+        }
+      });
+    }
 
     // Persist tutor answer
     if (data?.answer) {
@@ -355,10 +388,10 @@ router.get('/reviews', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// 11. Chat History
-router.get('/chat-history', async (req: Request, res: Response) => {
+// 11. Chat History (Bắt buộc đăng nhập)
+router.get('/chat-history', protect, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = (req.query?.userId as string) || getUserIdFromReq(req);
+    const userId = req.user._id.toString();
     const symbol = req.query?.symbol as string;
     const limit = parseInt(req.query?.limit as string) || 50;
 
@@ -388,10 +421,10 @@ router.get('/chat-history', async (req: Request, res: Response) => {
   }
 });
 
-// 12. Clear Chat History
-router.delete('/chat-history', async (req: Request, res: Response) => {
+// 12. Clear Chat History (Bắt buộc đăng nhập)
+router.delete('/chat-history', protect, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = (req.query?.userId as string) || getUserIdFromReq(req);
+    const userId = req.user._id.toString();
     const symbol = req.query?.symbol as string;
 
     const query: any = { userId };
@@ -402,6 +435,60 @@ router.delete('/chat-history', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Clear Chat History error:', error.message);
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// 13. Inspect Chart Vision (Soi biểu đồ AI)
+router.post('/inspect-chart', optionalProtect, async (req: any, res: Response) => {
+  try {
+    const userId = req.user?._id?.toString() || req.body?.userId || 'guest_user';
+    const { image, symbol, timeframe, userNotes } = req.body;
+
+    if (!image) {
+      return res.status(400).json({ success: false, message: 'Thiếu dữ liệu ảnh biểu đồ (image base64)' });
+    }
+
+    const result = await forwardToPython('/inspect-chart', 'POST', {
+      image,
+      symbol: symbol || '',
+      timeframe: timeframe || '',
+      userNotes: userNotes || '',
+      userId
+    });
+
+    return res.json(result);
+  } catch (error: any) {
+    console.error('Inspect Chart error:', error.message);
+    res.status(500).json({ success: false, message: error.message || 'Lỗi khi soi biểu đồ' });
+  }
+});
+
+// 14. Inspect Chart Structured Drawings Data (Tự động đọc dữ liệu nến và hình vẽ trên biểu đồ)
+router.post('/inspect-chart-data', optionalProtect, async (req: any, res: Response) => {
+  try {
+    const userId = req.user?._id?.toString() || req.body?.userId || 'guest_user';
+    const { drawings, klines, symbol, timeframe, userNotes } = req.body;
+
+    if (!drawings || !Array.isArray(drawings) || drawings.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Bạn chưa vẽ vùng phân tích nào trên biểu đồ. Hãy dùng thanh công cụ bên trái (Hộp chữ nhật, Đường kẻ) để đánh dấu vùng Order Block / FVG trước nhé!' 
+      });
+    }
+
+    const result = await forwardToPython('/inspect-chart-data', 'POST', {
+      drawings,
+      klines: klines || [],
+      symbol: symbol || '',
+      timeframe: timeframe || '',
+      userNotes: userNotes || '',
+      userId
+    });
+
+    return res.json(result);
+  } catch (error: any) {
+    console.error('Inspect Chart Data error:', error.message);
+    res.status(500).json({ success: false, message: error.message || 'Lỗi khi phân tích dữ liệu hình vẽ' });
   }
 });
 

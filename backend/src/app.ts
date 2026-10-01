@@ -13,6 +13,8 @@ import walletRoutes from './routes/walletRoutes';
 import aiRoutes from './routes/aiRoutes';
 import notificationRoutes from './routes/notification';
 import lecturerApplicationRoutes from './routes/lecturerApplication';
+import paymentRoutes from './routes/paymentRoutes';
+import subscriptionRoutes from './routes/subscriptionRoutes';
 
 const app = express();
 
@@ -78,5 +80,7 @@ app.use('/api/wallet', walletRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/lecturer-applications', lecturerApplicationRoutes);
+app.use('/api/v1/payment', paymentRoutes);
+app.use('/api/v1/subscription', subscriptionRoutes);
 
 export default app;

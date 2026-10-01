@@ -2,13 +2,16 @@ import { useState, useRef, useEffect } from 'react';
 import { 
   Search, Bell, Menu, X, ChevronDown, Sun, Moon, 
   CheckCircle2, AlertCircle, AlertTriangle, BookOpen, 
-  Award, UserPlus, UserMinus, CheckCheck, Clock, Check
+  Award, UserPlus, UserMinus, CheckCheck, Clock, Check,
+  Crown, Sparkles
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserAvatar } from '../UserAvatar';
 import { useNotificationStore, type AppNotification } from '../../stores/useNotificationStore';
+import { subscriptionService, type SubscriptionInfo } from '../../services/subscriptionService';
+import { UpgradeProModal } from '../../features/ai/UpgradeProModal';
 
 interface StudentTopbarProps {
   mobileOpen: boolean;
@@ -23,8 +26,25 @@ export const StudentTopbar = ({ mobileOpen, setMobileOpen }: StudentTopbarProps)
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+
+  const fetchSubscription = async () => {
+    try {
+      const sub = await subscriptionService.getMySubscription();
+      setSubscription(sub);
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    if (user?._id) {
+      fetchSubscription();
+    }
+  }, [user?._id]);
 
   const { notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead } = useNotificationStore();
 
@@ -141,7 +161,8 @@ export const StudentTopbar = ({ mobileOpen, setMobileOpen }: StudentTopbarProps)
   };
 
   return (
-    <header className="h-16 border-b border-[#e2e8f0] dark:border-[#253047] bg-white/80 dark:bg-[#111827]/80 backdrop-blur-md sticky top-0 z-30 px-4 flex items-center justify-between transition-colors">
+    <>
+      <header className="h-16 border-b border-[#e2e8f0] dark:border-[#253047] bg-white/80 dark:bg-[#111827]/80 backdrop-blur-md sticky top-0 z-30 px-4 flex items-center justify-between transition-colors">
       <div className="flex items-center gap-4 flex-1">
         <button 
           onClick={() => setMobileOpen(!mobileOpen)}
@@ -163,6 +184,24 @@ export const StudentTopbar = ({ mobileOpen, setMobileOpen }: StudentTopbarProps)
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4">
+        {/* Pro Upgrade / Badge Button */}
+        {subscription?.isPremium ? (
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/15 to-purple-500/15 border border-amber-500/40 text-amber-600 dark:text-amber-400 font-bold text-xs shadow-xs">
+            <Crown className="w-3.5 h-3.5 text-amber-500" />
+            <span>AI Tutor PRO</span>
+          </div>
+        ) : (
+          <button
+            onClick={() => setIsUpgradeModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs shadow-sm shadow-amber-500/25 transition-all cursor-pointer hover:scale-[1.02]"
+            title="Nâng cấp lên gói AI Tutor PRO để nhận 500 lượt hỏi/ngày qua PayOS"
+          >
+            <Crown className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Nâng cấp PRO</span>
+            <span className="sm:hidden">PRO</span>
+          </button>
+        )}
+
         {/* Theme Toggle Button */}
         <button 
           onClick={toggleTheme}
@@ -327,5 +366,13 @@ export const StudentTopbar = ({ mobileOpen, setMobileOpen }: StudentTopbarProps)
         </div>
       </div>
     </header>
+
+    <UpgradeProModal
+      isOpen={isUpgradeModalOpen}
+      onClose={() => setIsUpgradeModalOpen(false)}
+      currentSubscription={subscription}
+      onSuccess={fetchSubscription}
+    />
+  </>
   );
 };

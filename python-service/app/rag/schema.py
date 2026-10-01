@@ -33,6 +33,8 @@ class AskQuestionRequest(BaseModel):
     chatHistory: Optional[List[Dict[str, Any]]] = None
     allStocks: Optional[List[Dict[str, Any]]] = None
     userData: Optional[Dict[str, Any]] = None
+    userId: Optional[str] = None
+    plan: Optional[str] = None
 
 class ConceptExplainRequest(BaseModel):
     concept: str
