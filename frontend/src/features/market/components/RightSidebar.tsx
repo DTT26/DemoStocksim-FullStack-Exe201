@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { TrendingUp, TrendingDown, Wallet, ChevronRight, ChevronLeft, Settings2, RotateCcw, ChevronDown, Check } from 'lucide-react';
 import { STOCKS, type Stock, generateOHLCV, getPricePrecision } from '../data';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -16,24 +16,19 @@ export const getLotMultiplier = (stock: Stock): number => {
 };
 
 export const getAssetUnit = (stock: Stock): string => {
-  if (stock.market === 'Tiền điện tử (Crypto)') {
-    return stock.symbol.replace('.SWAP', '').replace('.P', '').replace('USDT', '').replace('USD', '');
+  if (stock.market === 'Tiền điện tử (Crypto)' || stock.market === 'Ngoại hối (Forex)') {
+    return 'Lot';
   }
   if (stock.market === 'Cổ phiếu') return 'CP';
   if (stock.market === 'Chỉ số') return 'HĐ';
-  if (stock.market === 'Ngoại hối (Forex)') return 'Lot';
   if (stock.symbol === 'XAUUSD' || stock.symbol === 'XAGUSD') return 'oz';
   if (stock.symbol === 'USOIL') return 'thùng';
-  return 'Đơn vị';
+  return 'Lot';
 };
 
 export const getLotInputLabel = (stock: Stock, t: any): string => {
-  if (stock.market === 'Ngoại hối (Forex)' || stock.market === 'Hàng hóa') {
+  if (stock.market === 'Ngoại hối (Forex)' || stock.market === 'Hàng hóa' || stock.market === 'Tiền điện tử (Crypto)') {
     return `${t('order.qty', 'Khối lượng')} (Lot)`;
-  }
-  if (stock.market === 'Tiền điện tử (Crypto)') {
-    const base = stock.symbol.replace('.SWAP', '').replace('.P', '').replace('USDT', '').replace('USD', '');
-    return `${t('order.qty', 'Khối lượng')} (${base})`;
   }
   if (stock.market === 'Cổ phiếu') {
     return `${t('order.qty', 'Số lượng')} (${t('order.stock', 'Cổ phiếu')})`;
@@ -41,7 +36,7 @@ export const getLotInputLabel = (stock: Stock, t: any): string => {
   if (stock.market === 'Chỉ số') {
     return `${t('order.qty', 'Số lượng')} (${t('order.contract', 'Hợp đồng')})`;
   }
-  return t('order.qty', 'Khối lượng');
+  return `${t('order.qty', 'Khối lượng')} (Lot)`;
 };
 
 interface RightSidebarProps {
@@ -78,6 +73,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showTPSL, setShowTPSL] = useState(false);
   const [sizingMode, setSizingMode] = useState<'qty' | 'amount' | 'percent'>('qty');
+  const prevTpslRef = useRef<string>('');
   const [sizingDropdownOpen, setSizingDropdownOpen] = useState(false);
   const [amountStr, setAmountStr] = useState<string>('');
   const [percentVal, setPercentVal] = useState<number>(0);
@@ -324,24 +320,29 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
     const tpNum = tp ? parseFloat(tp) : undefined;
     const slNum = sl ? parseFloat(sl) : undefined;
 
+    let newTpsl: any = null;
     if (isLimitOrStop) {
-      onPreviewTPSLChange?.({
+      newTpsl = {
         enabled: true,
         orderPrice: limitPriceNum,
         orderType: orderType === 'limit' ? 'LIMIT' : 'STOP',
         tp: showTPSL && tpNum !== undefined && !isNaN(tpNum) ? tpNum : undefined,
         sl: showTPSL && slNum !== undefined && !isNaN(slNum) ? slNum : undefined,
         side: currentSide
-      });
+      };
     } else if (showTPSL) {
-      onPreviewTPSLChange?.({
+      newTpsl = {
         enabled: true,
         tp: (tpNum !== undefined && !isNaN(tpNum)) ? tpNum : undefined,
         sl: (slNum !== undefined && !isNaN(slNum)) ? slNum : undefined,
         side: currentSide
-      });
-    } else {
-      onPreviewTPSLChange?.(null);
+      };
+    }
+
+    const newTpslStr = JSON.stringify(newTpsl);
+    if (prevTpslRef.current !== newTpslStr) {
+      prevTpslRef.current = newTpslStr;
+      onPreviewTPSLChange?.(newTpsl);
     }
   }, [showTPSL, tp, sl, side, held, orderType, limitPriceStr, selectedStock.price, onPreviewTPSLChange]);
 
@@ -582,14 +583,21 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
                   {selectedStock.price >= 100 ? selectedStock.price.toLocaleString('en-US') : selectedStock.price.toFixed(getPricePrecision(selectedStock.price))}
                 </div>
               ) : (
-                <input
-                  type="number"
-                  disabled={isEditing}
-                  value={limitPriceStr}
-                  placeholder="VD: 64500"
-                  onChange={e => setLimitPriceStr(e.target.value)}
-                  className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full disabled:opacity-50"
-                />
+                <div className="flex flex-col w-full">
+                  <input
+                    type="number"
+                    disabled={isEditing}
+                    value={limitPriceStr}
+                    placeholder="VD: 64500"
+                    onChange={e => setLimitPriceStr(e.target.value)}
+                    className="bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full disabled:opacity-50"
+                  />
+                  {!isEditing && (
+                    <span className="text-[10px] text-blue-500 dark:text-blue-400 mt-1 italic">
+                      * Kéo thả đường đứt nét trên biểu đồ để chọn giá
+                    </span>
+                  )}
+                </div>
               )}
             </div>
 
