@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { protect, optionalProtect } from '../middleware/authMiddleware';
 
 const router = Router();
@@ -48,28 +49,59 @@ router.post('/payos-webhook', async (req: Request, res: Response) => {
   }
 });
 
+
 // 3. Verify Order with PayOS directly (Requires Auth)
 router.get('/verify-order/:orderCode', protect, async (req: any, res: Response) => {
-  try {
-    const userId = req.user?._id?.toString();
-    const token = req.headers.authorization?.startsWith('Bearer ')
-      ? req.headers.authorization.split(' ')[1]
-      : req.cookies?.token;
-    const authHeader = token ? `Bearer ${token}` : req.headers.authorization;
+  const userId = req.user?._id?.toString();
+  const token = req.headers.authorization?.startsWith('Bearer ')
+    ? req.headers.authorization.split(' ')[1]
+    : req.cookies?.token;
+  const authHeader = token ? `Bearer ${token}` : req.headers.authorization;
 
+  try {
     const resp = await fetch(`${PYTHON_URL}/api/v1/payment/verify-order/${req.params.orderCode}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         ...(userId ? { 'x-user-id': userId } : {}),
         ...(authHeader ? { Authorization: authHeader } : {})
-      }
+      },
+      signal: AbortSignal.timeout(6000)
     });
 
-    const data = await resp.json();
-    return res.status(resp.status).json(data);
+    if (resp.ok) {
+      const data = await resp.json();
+      return res.status(resp.status).json(data);
+    }
   } catch (error: any) {
-    console.error('Error forwarding verify-order to python:', error);
+    console.warn(`[Payment] verify-order via python service failed: ${error?.message || error}. Checking MongoDB...`);
+  }
+
+  // Fallback to MongoDB payments collection if python service is unavailable
+  try {
+    const db = mongoose.connection.db;
+    const orderNum = parseInt(req.params.orderCode, 10);
+    if (db && !isNaN(orderNum)) {
+      const pay = await db.collection('payments').findOne({ order_code: orderNum });
+      if (pay && pay.status === 'PAID') {
+        return res.json({
+          success: true,
+          status: 'PAID',
+          is_premium: true,
+          orderCode: orderNum,
+          message: 'Giao dịch đã được xác nhận thanh toán.'
+        });
+      }
+    }
+    return res.json({
+      success: true,
+      status: 'PENDING',
+      is_premium: false,
+      orderCode: req.params.orderCode,
+      message: 'Giao dịch đang chờ xử lý'
+    });
+  } catch (dbErr: any) {
+    console.error('Error in MongoDB payment verify fallback:', dbErr);
     return res.status(500).json({ success: false, message: 'Lỗi xác minh thanh toán' });
   }
 });
