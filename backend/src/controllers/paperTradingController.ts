@@ -8,7 +8,40 @@ import PaperTradingHistory from '../models/PaperTradingHistory';
 // Get all sessions for the logged in user
 export const getSessions = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const sessions = await PaperTradingSession.find({ user: req.user?._id }).sort({ startedAt: -1 });
+    const sessions = await PaperTradingSession.find({ user: req.user?._id }).sort({ startedAt: -1 }).lean();
+
+    // Enrich sessions with up-to-date trade counts & stats if running or if statistics not stored
+    for (const session of sessions as any[]) {
+      const historyCount = await PaperTradingHistory.countDocuments({ session: session._id });
+      const positionsCount = await PaperTradingPosition.countDocuments({ session: session._id });
+      const totalTrades = historyCount + positionsCount;
+
+      if (!session.statistics || session.status === 'running') {
+        const historyItems = await PaperTradingHistory.find({ session: session._id }).lean();
+        const wins = historyItems.filter((h: any) => (h.netPnL || 0) > 0).length;
+        const winRate = historyCount > 0 ? parseFloat(((wins / historyCount) * 100).toFixed(1)) : 0;
+        const netPnL = historyItems.reduce((acc: number, h: any) => acc + (h.netPnL || 0), 0);
+
+        session.statistics = {
+          totalTrades,
+          wins,
+          losses: historyCount - wins,
+          winRate,
+          grossProfit: historyItems.filter((h: any) => (h.netPnL || 0) > 0).reduce((acc: number, h: any) => acc + (h.netPnL || 0), 0),
+          grossLoss: historyItems.filter((h: any) => (h.netPnL || 0) < 0).reduce((acc: number, h: any) => acc + Math.abs(h.netPnL || 0), 0),
+          netPnL,
+          averageWin: wins > 0 ? historyItems.filter((h: any) => (h.netPnL || 0) > 0).reduce((acc: number, h: any) => acc + (h.netPnL || 0), 0) / wins : 0,
+          averageLoss: (historyCount - wins) > 0 ? historyItems.filter((h: any) => (h.netPnL || 0) < 0).reduce((acc: number, h: any) => acc + Math.abs(h.netPnL || 0), 0) / (historyCount - wins) : 0,
+          largestWin: wins > 0 ? Math.max(...historyItems.filter((h: any) => (h.netPnL || 0) > 0).map((h: any) => h.netPnL || 0)) : 0,
+          largestLoss: (historyCount - wins) > 0 ? Math.max(...historyItems.filter((h: any) => (h.netPnL || 0) < 0).map((h: any) => Math.abs(h.netPnL || 0))) : 0,
+          maxDrawdown: 0,
+          averageRR: 0
+        };
+      } else {
+        session.statistics.totalTrades = totalTrades || session.statistics.totalTrades || 0;
+      }
+    }
+
     res.json(sessions);
   } catch (error) {
     res.status(500).json({ message: 'Server Error', error });
@@ -100,7 +133,11 @@ export const updateSession = async (req: AuthRequest, res: Response): Promise<vo
     if (positions) {
       await PaperTradingPosition.deleteMany({ session: id });
       if (positions.length > 0) {
-        await PaperTradingPosition.insertMany(positions.map((p: any) => ({ ...p, session: id })));
+        const cleanPositions = positions.map((p: any) => {
+          const { _id, id: pId, ...rest } = p;
+          return { ...rest, session: id };
+        });
+        await PaperTradingPosition.insertMany(cleanPositions);
       }
     }
 
@@ -108,17 +145,23 @@ export const updateSession = async (req: AuthRequest, res: Response): Promise<vo
     if (orders) {
       await PaperTradingOrder.deleteMany({ session: id });
       if (orders.length > 0) {
-        await PaperTradingOrder.insertMany(orders.map((o: any) => ({ ...o, session: id })));
+        const cleanOrders = orders.map((o: any) => {
+          const { _id, id: oId, ...rest } = o;
+          return { ...rest, session: id };
+        });
+        await PaperTradingOrder.insertMany(cleanOrders);
       }
     }
 
     // 4. Insert new history (closed trades)
-    // History is append-only. To avoid duplicates, we expect frontend to only send NEW history items,
-    // OR we delete and replace them. Replacing is safer for simple autosave.
     if (history) {
       await PaperTradingHistory.deleteMany({ session: id });
       if (history.length > 0) {
-        await PaperTradingHistory.insertMany(history.map((h: any) => ({ ...h, session: id })));
+        const cleanHistory = history.map((h: any) => {
+          const { _id, id: hId, ...rest } = h;
+          return { ...rest, session: id };
+        });
+        await PaperTradingHistory.insertMany(cleanHistory);
       }
     }
     

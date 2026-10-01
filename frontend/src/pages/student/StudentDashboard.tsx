@@ -153,64 +153,7 @@ export const StudentDashboard = () => {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Main Column */}
         <div className="xl:col-span-2 space-y-6 min-w-0">
-          {/* Active Simulation */}
-          <section>
-            <div className="flex justify-between items-center mb-3 sm:mb-4">
-              <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">Kỳ thi đang tham gia</h2>
-            </div>
-            {activeSimulation ? (
-              <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] shadow-sm p-4 sm:p-6 overflow-hidden relative transition-colors">
-                <div className="absolute top-0 left-0 w-2 h-full bg-blue-600"></div>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
-                      <span className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-emerald-200 dark:border-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                        Đang diễn ra
-                      </span>
-                    </div>
-                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">{activeSimulation.name}</h3>
-                    <p className="text-slate-600 dark:text-[#787b86] mt-2 max-w-lg text-xs sm:text-sm leading-relaxed">
-                      {activeSimulation.description || 'Thực hành giao dịch cổ phiếu theo khuôn khổ kỳ thi mô phỏng.'}
-                    </p>
-                  </div>
-                  <div className="pt-2 sm:pt-0 shrink-0">
-                    <Link
-                      to={`/trade/${activeSimulation.market?.toLowerCase() || 'fpt'}`}
-                      className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
-                    >
-                      Vào giao dịch <ArrowRight className="w-4 h-4" />
-                    </Link>
-                  </div>
-                  <h3 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Trading Challenge #01</h3>
-                  <p className="text-slate-600 dark:text-[#787b86] mt-2 max-w-lg text-xs sm:text-sm leading-relaxed">
-                    Luyện tập giao dịch mô phỏng thời gian thực, hoàn thành các bài tập của giảng viên và cạnh tranh bảng xếp hạng hiệu suất.
-                  </p>
-                </div>
-                <div className="pt-2 sm:pt-0 shrink-0">
-                  <Link
-                    to="/trade/btcusdt"
-                    className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
-                  >
-                    Trade Now <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white dark:bg-[#111827] rounded-2xl border border-dashed border-slate-300 dark:border-[#253047] p-6 text-center">
-                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Bạn chưa tham gia kỳ thi mô phỏng nào</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
-                  Khám phá các kỳ thi mô phỏng đang mở và đăng ký tham gia để bắt đầu giao dịch theo thời gian thực.
-                </p>
-                <Link
-                  to="/student/simulations"
-                  className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl transition-colors"
-                >
-                  Khám phá kỳ thi <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-            )}
-          </section>
+
 
           {/* Performance Chart */}
           <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-[#253047] shadow-sm dark:shadow-lg p-4 sm:p-6 transition-colors min-w-0">

@@ -1,22 +1,35 @@
 import { type Watchlist } from '../features/market/components/WatchlistPanel';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+
+const getHeaders = (hasBody: boolean = false) => {
+  const token = localStorage.getItem('token');
+  const headers: Record<string, string> = {};
+  if (hasBody) {
+    headers['Content-Type'] = 'application/json';
+  }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
 
 // --- Watchlist API ---
 
 export const getWatchlists = async (): Promise<Watchlist[]> => {
-  const res = await fetch(`${API_URL}/watchlists`, { credentials: 'include',
-    });
+  const res = await fetch(`${API_URL}/watchlists`, {
+    credentials: 'include',
+    headers: getHeaders(false)
+  });
   if (!res.ok) throw new Error('Failed to fetch watchlists');
   return res.json();
 };
 
 export const createWatchlist = async (data: { name: string; symbols?: string[] }): Promise<Watchlist> => {
-  const res = await fetch(`${API_URL}/watchlists`, { credentials: 'include',
+  const res = await fetch(`${API_URL}/watchlists`, {
+    credentials: 'include',
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
+    headers: getHeaders(true),
     body: JSON.stringify(data)
   });
   if (!res.ok) throw new Error('Failed to create watchlist');
@@ -24,11 +37,10 @@ export const createWatchlist = async (data: { name: string; symbols?: string[] }
 };
 
 export const updateWatchlist = async (id: string, data: { name?: string; symbols?: string[] }): Promise<Watchlist> => {
-  const res = await fetch(`${API_URL}/watchlists/${id}`, { credentials: 'include',
+  const res = await fetch(`${API_URL}/watchlists/${id}`, {
+    credentials: 'include',
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json'
-    },
+    headers: getHeaders(true),
     body: JSON.stringify(data)
   });
   if (!res.ok) throw new Error('Failed to update watchlist');
@@ -36,9 +48,11 @@ export const updateWatchlist = async (id: string, data: { name?: string; symbols
 };
 
 export const deleteWatchlist = async (id: string): Promise<void> => {
-  const res = await fetch(`${API_URL}/watchlists/${id}`, { credentials: 'include',
+  const res = await fetch(`${API_URL}/watchlists/${id}`, {
+    credentials: 'include',
     method: 'DELETE',
-    });
+    headers: getHeaders(false)
+  });
   if (!res.ok) throw new Error('Failed to delete watchlist');
 };
 
@@ -79,24 +93,28 @@ export interface PaperSession {
 }
 
 export const getSessions = async (): Promise<PaperSession[]> => {
-  const res = await fetch(`${API_URL}/paper-trading`, { credentials: 'include',
-    });
+  const res = await fetch(`${API_URL}/paper-trading`, {
+    credentials: 'include',
+    headers: getHeaders(false)
+  });
   if (!res.ok) throw new Error('Failed to fetch sessions');
   return res.json();
 };
 
 export const getSessionDetails = async (id: string): Promise<any> => {
-  const res = await fetch(`${API_URL}/paper-trading/${id}`, { credentials: 'include' });
+  const res = await fetch(`${API_URL}/paper-trading/${id}`, {
+    credentials: 'include',
+    headers: getHeaders(false)
+  });
   if (!res.ok) throw new Error('Failed to fetch session details');
   return res.json();
 };
 
 export const createSession = async (data: any): Promise<any> => {
-  const res = await fetch(`${API_URL}/paper-trading`, { credentials: 'include',
+  const res = await fetch(`${API_URL}/paper-trading`, {
+    credentials: 'include',
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
+    headers: getHeaders(true),
     body: JSON.stringify(data)
   });
   if (!res.ok) throw new Error('Failed to create session');
@@ -104,11 +122,10 @@ export const createSession = async (data: any): Promise<any> => {
 };
 
 export const updateSession = async (id: string, data: any): Promise<any> => {
-  const res = await fetch(`${API_URL}/paper-trading/${id}`, { credentials: 'include',
+  const res = await fetch(`${API_URL}/paper-trading/${id}`, {
+    credentials: 'include',
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json'
-    },
+    headers: getHeaders(true),
     body: JSON.stringify(data)
   });
   if (!res.ok) throw new Error('Failed to update session');
@@ -118,7 +135,8 @@ export const updateSession = async (id: string, data: any): Promise<any> => {
 export const deleteSession = async (id: string): Promise<any> => {
   const res = await fetch(`${API_URL}/paper-trading/${id}`, {
     credentials: 'include',
-    method: 'DELETE'
+    method: 'DELETE',
+    headers: getHeaders(false)
   });
   if (!res.ok) throw new Error('Failed to delete session');
   return res.json();

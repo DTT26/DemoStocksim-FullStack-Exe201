@@ -472,13 +472,25 @@ export async function fetchStudentTradingEvidence(studentId: string, assignment:
       });
     });
 
+    const getLotMultiplier = (sym?: string): number => {
+      if (!sym) return 1;
+      const s = sym.toUpperCase().trim();
+      if (s === 'XAUUSD') return 100;
+      if (s === 'XAGUSD') return 5000;
+      if (s === 'USOIL') return 1000;
+      const forexPairs = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCHF', 'NZDUSD', 'USDCAD', 'EURJPY', 'GBPJPY'];
+      if (forexPairs.includes(s)) return 100000;
+      return 1;
+    };
+
     paperTrades.forEach((pt: any) => {
+      const multiplier = getLotMultiplier(pt.symbol);
       normalizedItems.push({
         id: pt._id.toString(),
         side: pt.side === 'LONG' ? 'BUY' : 'SELL',
         type: 'MARKET',
         symbol: pt.symbol,
-        quantity: pt.lot ? pt.lot * 100000 : 100,
+        quantity: pt.lot ? pt.lot * multiplier : 100,
         price: pt.entryPrice,
         exitPrice: pt.exitPrice,
         pnl: pt.netPnL,
@@ -494,12 +506,13 @@ export async function fetchStudentTradingEvidence(studentId: string, assignment:
     });
 
     openPositions.forEach((pos: any) => {
+      const multiplier = getLotMultiplier(pos.symbol);
       normalizedItems.push({
         id: pos._id.toString(),
         side: pos.side === 'LONG' ? 'BUY' : 'SELL',
         type: 'POSITION',
         symbol: pos.symbol,
-        quantity: pos.lot ? pos.lot * 100000 : 100,
+        quantity: pos.lot ? pos.lot * multiplier : 100,
         price: pos.entryPrice,
         stopLoss: pos.sl || null,
         takeProfit: pos.tp || null,

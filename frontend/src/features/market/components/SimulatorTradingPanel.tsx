@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { type Stock, getPricePrecision } from '../data';
+import { type Stock, getPricePrecision, getContractMultiplier, getAssetUnit } from '../data';
 import { useSimulatorStore } from '../engine/useSimulatorStore';
 import { ArrowUp, ArrowDown, Wallet, ChevronLeft } from 'lucide-react';
 import { useI18n } from '../../../contexts/I18nContext';
@@ -53,15 +53,8 @@ export const SimulatorTradingPanel = ({
   const currentExecBid = store.currentBid > 0 ? store.currentBid : effectivePrice;
   const currentExecAsk = store.currentAsk > 0 ? store.currentAsk : (effectivePrice + spreadValue);
 
-  const getLotMultiplier = (stock: Stock): number => {
-    if (stock.market === 'Ngoại hối (Forex)') return 100000;
-    if (stock.symbol === 'XAUUSD') return 100;
-    if (stock.symbol === 'XAGUSD') return 5000;
-    if (stock.symbol === 'USOIL') return 1000;
-    return 1;
-  };
-
-  const lotMultiplier = getLotMultiplier(selectedStock);
+  const lotMultiplier = getContractMultiplier(selectedStock);
+  const assetUnit = getAssetUnit(selectedStock);
   const priceNum = parseFloat(priceStr) || effectivePrice;
 
   let finalLot = lot;
@@ -181,6 +174,8 @@ export const SimulatorTradingPanel = ({
       }
     }
 
+    const formattedQty = actualQty < 1 ? Number(actualQty.toFixed(6)).toString() : actualQty.toLocaleString('vi-VN');
+
     if (orderType === 'MARKET') {
       store.executeMarketOrder(
         side, 
@@ -189,7 +184,7 @@ export const SimulatorTradingPanel = ({
         tpVal, 
         setupTag || undefined
       );
-      showToast(`Đã mở lệnh ${side} ${lot} lot thành công!`, true);
+      showToast(`Đã mở lệnh ${side} ${finalLot} lot (${formattedQty} ${assetUnit}) thành công!`, true);
     } else {
       if (priceNum <= 0) {
         showToast('Giá đặt lệnh không hợp lệ!', false);
@@ -204,7 +199,7 @@ export const SimulatorTradingPanel = ({
         tpVal, 
         setupTag || undefined
       );
-      showToast(`Đã đặt lệnh chờ ${side} ${orderType} thành công!`, true);
+      showToast(`Đã đặt lệnh chờ ${side} ${orderType} ${finalLot} lot (${formattedQty} ${assetUnit}) thành công!`, true);
     }
     setSetupTag('');
   };
@@ -563,7 +558,9 @@ export const SimulatorTradingPanel = ({
           </div>
           <div className="flex items-center justify-between text-[11px]">
             <span className="text-[#787b86]">Khối lượng thực tế</span>
-            <span className="font-mono text-[#787b86]">{finalLot.toFixed(2)} Lot ({actualQty.toLocaleString('vi-VN')})</span>
+            <span className="font-mono text-[#787b86]">
+              {finalLot.toFixed(2)} Lot ({actualQty < 1 ? Number(actualQty.toFixed(6)).toString() : actualQty.toLocaleString('vi-VN')} {assetUnit})
+            </span>
           </div>
           <div className="flex items-center justify-between text-[11px]">
             <span className="text-[#787b86]">Spread Mua/Bán</span>

@@ -3608,6 +3608,7 @@ interface ChartAreaProps {
   isReplaying: boolean;
   replayTime?: number | null;
   replayStepTrigger?: number;
+  replayReloadTrigger?: number;
   onReplayTimeChange?: (time: number) => void;
   tradeOrders: TradeOrder[];
   chartSettings: ChartSettings;
@@ -3657,6 +3658,7 @@ export const ChartArea = ({
   isReplaying,
   replayTime,
   replayStepTrigger,
+  replayReloadTrigger,
   onReplayTimeChange,
   tradeOrders,
   chartSettings,
@@ -4194,6 +4196,7 @@ export const ChartArea = ({
 
     chartRef.current = chart;
     globalChartInstance = chart;
+    (window as any).__STOCKSIM_CHART__ = chart;
 
     // Overlay click state tracking
     const lastOverlayClickTimeRef = { current: 0 };
@@ -4411,7 +4414,7 @@ export const ChartArea = ({
       const y = e.clientY - bounding.top;
 
       const points = chart.convertFromPixel([{ x, y }], { paneId: 'candle_pane' });
-      const price = points?.[0]?.value || 0;
+      const price = (Array.isArray(points) ? points[0]?.value : (points as any)?.value) || 0;
       
       console.log('Right click detected:', { x: e.clientX, y: e.clientY, price });
 
@@ -4448,6 +4451,9 @@ export const ChartArea = ({
       container?.removeEventListener('mousedown', handleRightClickMousedown, { capture: true });
       if (chartContainerRef.current) {
         dispose(chartContainerRef.current);
+      }
+      if (globalChartInstance === chartRef.current) {
+        globalChartInstance = null;
       }
       chartRef.current = null;
     };
@@ -4784,15 +4790,20 @@ export const ChartArea = ({
       if (!isMounted) return;
 
       // In replay mode: filter data up to replayTime
-      const visibleData = (isReplaying && currentReplayTime)
+      let visibleData = (isReplaying && currentReplayTime)
         ? allData.filter(d => d.timestamp <= currentReplayTime)
-        : allData;
+        : (isReplaying ? (allData.length > 0 ? [allData[0]] : []) : allData);
+
+      if (isReplaying && visibleData.length === 0 && allData.length > 0) {
+        visibleData = [allData[0]];
+      }
 
       if (isReplaying && visibleData.length > 0) {
         const lastCandle = visibleData[visibleData.length - 1];
-        if (onPriceUpdate) onPriceUpdate(lastCandle.close);
+        const effectiveTime = currentReplayTime || lastCandle.timestamp;
+        if (onPriceUpdate) onPriceUpdate(lastCandle.close, effectiveTime);
       } else if (!isReplaying && allData.length > 0 && onPriceUpdate) {
-        onPriceUpdate(allData[allData.length - 1].close);
+        onPriceUpdate(allData[allData.length - 1].close, allData[allData.length - 1].timestamp);
       }
 
       const precision = getPricePrecision(selectedStock.price);
@@ -4873,7 +4884,7 @@ export const ChartArea = ({
               if (chart && typeof (chart as any).updateData === 'function') {
                 (chart as any).updateData(newCandle);
               }
-              if (onPriceUpdate) onPriceUpdate(newCandle.close);
+              if (onPriceUpdate) onPriceUpdate(newCandle.close, newCandle.timestamp);
             }
           );
         },
@@ -4897,7 +4908,7 @@ export const ChartArea = ({
       if (tickerInterval) clearInterval(tickerInterval);
       if (wsUnsubscribe) wsUnsubscribe();
     };
-  }, [selectedStock.symbol, selectedStock.market, selectedStock.isFutures, activeTimeframe, isReplaying]);
+  }, [selectedStock.symbol, selectedStock.market, selectedStock.isFutures, activeTimeframe, isReplaying, replayReloadTrigger]);
 
   // Sync active indicators with chart
   useEffect(() => {

@@ -20,27 +20,38 @@ export const SessionDetailPage: React.FC = () => {
   const [error, setError] = useState(false);
   const [activeTab, setActiveTab] = useState<JournalTabId>('overview');
 
-  const fetchSession = async () => {
+  const fetchSession = async (showLoading = true) => {
     if (!sessionId) return;
-    setLoading(true);
+    if (showLoading) setLoading(true);
     setError(false);
     try {
       const data = await journalService.getSessionById(sessionId);
       if (data) {
         setSession(data);
       } else {
-        setError(true);
+        if (showLoading) setError(true);
       }
     } catch (e) {
       console.error('Failed to load session details', e);
-      setError(true);
+      if (showLoading) setError(true);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchSession();
+    fetchSession(true);
+
+    const handleUpdate = () => {
+      fetchSession(false);
+    };
+
+    window.addEventListener('simulator-session-updated', handleUpdate);
+    window.addEventListener('simulator-session-ended', handleUpdate);
+    return () => {
+      window.removeEventListener('simulator-session-updated', handleUpdate);
+      window.removeEventListener('simulator-session-ended', handleUpdate);
+    };
   }, [sessionId]);
 
   if (loading) {

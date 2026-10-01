@@ -311,6 +311,7 @@ export const TradingTerminal = () => {
   const [isSelectingReplayStart, setIsSelectingReplayStart] = useState(false);
   const [replayTime, setReplayTime] = useState<number | null>(null);
   const [replayStepTrigger, setReplayStepTrigger] = useState(0);
+  const [replayReloadTrigger, setReplayReloadTrigger] = useState(0);
   const [totalBars, setTotalBars] = useState(1000);
   const [goToRealtimeTrigger, setGoToRealtimeTrigger] = useState(0);
 
@@ -354,6 +355,12 @@ export const TradingTerminal = () => {
   });
   const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
   const [isAiTutorOpen, setIsAiTutorOpen] = useState(false);
+  const [sharedChartImage, setSharedChartImage] = useState<string | null>(null);
+
+  const handleShareChartToChat = (imageUrl: string) => {
+    setSharedChartImage(imageUrl);
+    setIsAiTutorOpen(true);
+  };
 
   // Store backtest rules when launching Bar Replay from AI Tutor
   const [activeBacktestRules, setActiveBacktestRules] = useState<{
@@ -518,10 +525,13 @@ export const TradingTerminal = () => {
   useEffect(() => {
     if (store.isActive && store.session && selectedStock?.price > 0) {
       if (store.currentPrice === 0) {
-        store.tick(selectedStock.price, new Date().toISOString());
+        const simTime = (isReplaying && replayTime)
+          ? new Date(replayTime).toISOString()
+          : (store.currentTime || store.session.replayCurrentTime || store.session.replayStartTime || new Date().toISOString());
+        store.tick(selectedStock.price, simTime);
       }
     }
-  }, [store.isActive, store.session, selectedStock?.price, store.currentPrice]);
+  }, [store.isActive, store.session, selectedStock?.price, store.currentPrice, isReplaying, replayTime]);
 
   const calculateUnrealizedPnL = () => {
     let totalPnL = 0;
@@ -969,6 +979,41 @@ export const TradingTerminal = () => {
     setReplayTime(timestamp);
     setIsSelectingReplayStart(false);
     setIsReplaying(true);
+    setReplayReloadTrigger(t => t + 1);
+    if (store.isActive && store.session) {
+      const isoTime = new Date(timestamp).toISOString();
+      store.tick(selectedStock.price, isoTime);
+    }
+  };
+
+  const handleResumeSession = (session: any, resumeTimestamp?: number, timeframe?: string) => {
+    // 1. Switch stock without resetting replay
+    if (session.symbol && session.symbol.toUpperCase() !== selectedStock.symbol.toUpperCase()) {
+      const matchStock = STOCKS.find(s => s.symbol.toUpperCase() === session.symbol.toUpperCase()) || {
+        ...selectedStock,
+        symbol: session.symbol.toUpperCase(),
+        name: session.symbol.toUpperCase()
+      };
+      setSelectedStock(matchStock);
+      localStorage.setItem('lastSelectedStock', matchStock.symbol.toLowerCase());
+      navigate(`/trade/${matchStock.symbol.toLowerCase()}`, { replace: true });
+    }
+
+    // 2. Switch timeframe if needed
+    if (timeframe && timeframe !== activeTimeframe) {
+      setActiveTimeframe(timeframe);
+    }
+    if (store.isActive && store.session && timeframe) {
+      store.setTimeframe(timeframe);
+    }
+
+    // 3. Set Replay state
+    if (resumeTimestamp && !isNaN(resumeTimestamp)) {
+      setReplayTime(resumeTimestamp);
+      setIsSelectingReplayStart(false);
+      setIsReplaying(true);
+      setReplayReloadTrigger(t => t + 1);
+    }
   };
 
 
@@ -1039,6 +1084,9 @@ export const TradingTerminal = () => {
         accountRankBadge={accountRankConfig.badge}
         accountRankName={`${accountRankConfig.badge} - ${accountRankConfig.levelName}`}
         certCount={challengeState.certificates?.length || 0}
+        selectedStock={selectedStock}
+        activeTimeframe={activeTimeframe}
+        onShareToChat={handleShareChartToChat}
       />
 
       {/* Dynamic Prop Challenge Header Bar - Chỉ hiển thị khi đang trong bài thi hoặc có kết quả */}
@@ -1169,7 +1217,12 @@ export const TradingTerminal = () => {
             activeTab={activeTab}
             onTabChange={setActiveTab}
             activeTimeframe={activeTimeframe}
-            onTimeframeChange={setActiveTimeframe}
+            onTimeframeChange={(tf) => {
+              setActiveTimeframe(tf);
+              if (store.isActive && store.session) {
+                store.setTimeframe(tf);
+              }
+            }}
             isReplaying={isReplaying}
             isSelectingReplayStart={isSelectingReplayStart}
             replayTime={replayTime}
@@ -1207,6 +1260,7 @@ export const TradingTerminal = () => {
                   onSelectReplayStart={handleConfirmReplayStart}
                   replayTime={replayTime}
                   replayStepTrigger={replayStepTrigger}
+                  replayReloadTrigger={replayReloadTrigger}
                   onReplayTimeChange={setReplayTime}
                   goToRealtimeTrigger={goToRealtimeTrigger}
                   onDataLoaded={setTotalBars}
@@ -1244,7 +1298,16 @@ export const TradingTerminal = () => {
                     handlePriceChange(price);
 
                     if (store.isActive && store.session) {
-                      store.tick(price, timestamp ? new Date(timestamp).toISOString() : new Date().toISOString());
+                      let candleTimeStr: string;
+                      if (isReplaying && replayTime) {
+                        const targetMs = Math.max(timestamp || 0, replayTime);
+                        candleTimeStr = new Date(targetMs).toISOString();
+                      } else if (timestamp) {
+                        candleTimeStr = new Date(timestamp).toISOString();
+                      } else {
+                        candleTimeStr = store.currentTime || store.session.replayCurrentTime || store.session.replayStartTime || new Date().toISOString();
+                      }
+                      store.tick(price, candleTimeStr);
                     }
                   }}
                 />
@@ -1359,6 +1422,9 @@ export const TradingTerminal = () => {
               selectedStock={selectedStock}
               currentPrice={selectedStock.price}
               isReplaying={isReplaying}
+              replayTime={replayTime}
+              activeTimeframe={activeTimeframe}
+              onResumeSession={handleResumeSession}
               onStartSimulation={handleStartSimulation}
               onStartReplay={handleStartReplaySelection}
               onSelectStock={handleStockSelect}
@@ -1465,6 +1531,9 @@ export const TradingTerminal = () => {
                   selectedStock={selectedStock}
                   currentPrice={selectedStock.price}
                   isReplaying={isReplaying}
+                  replayTime={replayTime}
+                  activeTimeframe={activeTimeframe}
+                  onResumeSession={handleResumeSession}
                   onStartSimulation={handleStartSimulation}
                   onStartReplay={handleStartReplaySelection}
                   onSelectStock={handleStockSelect}
@@ -1614,7 +1683,10 @@ export const TradingTerminal = () => {
       />
       <AiTutorDrawer
         isOpen={isAiTutorOpen}
-        onClose={() => setIsAiTutorOpen(false)}
+        onClose={() => {
+          setIsAiTutorOpen(false);
+          setSharedChartImage(null);
+        }}
         currentSymbol={selectedStock.symbol}
         currentPrice={selectedStock.price}
         timeframe={activeTimeframe}
@@ -1624,6 +1696,8 @@ export const TradingTerminal = () => {
           exchange: selectedStock.exchange,
           market: selectedStock.market
         }}
+        sharedImage={sharedChartImage}
+        onClearSharedImage={() => setSharedChartImage(null)}
         onStartBacktestReplay={handleStartBacktestReplayFromAi}
       />
     </div>
