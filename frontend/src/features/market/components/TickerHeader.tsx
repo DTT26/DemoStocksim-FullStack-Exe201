@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Search, BarChart2, Play, Pause, Square, ChevronRight, ChevronDown, CandlestickChart, RefreshCcw, Undo2, Redo2 } from 'lucide-react';
 import { TIMEFRAMES, getPricePrecision, type Stock } from '../data';
 import { AssetAvatar } from './AssetAvatar';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useMarketStore } from '../../../stores/useMarketStore';
+
+const PRIMARY_TIMEFRAMES = ['1m', '5m', '15m', '1h', '4h', 'D'];
+const EXTRA_TIMEFRAMES = ['30m', 'W', 'M'];
 
 interface TickerHeaderProps {
   stock: Stock;
@@ -40,6 +43,30 @@ export const TickerHeader = ({
   const [autoPlay, setAutoPlay] = useState(false);
   const [intervalId, setIntervalId] = useState<ReturnType<typeof setInterval> | null>(null);
   const [replaySpeed, setReplaySpeed] = useState<number>(1);
+  const [tfDropdownOpen, setTfDropdownOpen] = useState(false);
+  const tfDropdownRef = useRef<HTMLDivElement>(null);
+  const replayRef = useRef<HTMLDivElement>(null);
+
+  const isExtraActive = EXTRA_TIMEFRAMES.includes(activeTimeframe);
+  const visibleTimeframes = isExtraActive 
+    ? [...PRIMARY_TIMEFRAMES, activeTimeframe] 
+    : PRIMARY_TIMEFRAMES;
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (tfDropdownRef.current && !tfDropdownRef.current.contains(e.target as Node)) {
+        setTfDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (isReplaying && replayRef.current) {
+      replayRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+  }, [isReplaying]);
 
   const getIntervalMs = (speed: number) => {
     switch (speed) {
@@ -196,10 +223,10 @@ export const TickerHeader = ({
       </div>
 
       {/* ─── Row 2: Tabs & Tools ─── */}
-      <div className="flex items-center px-2 sm:px-3 xl:px-4 justify-between border-t border-b border-[#e6e8ea] dark:border-[#2a2e39] bg-[#f8f9fa] dark:bg-[#1e222d] overflow-x-auto no-scrollbar gap-2 xl:gap-4">
+      <div className="flex items-center px-2 sm:px-3 justify-between border-t border-b border-[#e6e8ea] dark:border-[#2a2e39] bg-[#f8f9fa] dark:bg-[#1e222d] overflow-x-auto no-scrollbar gap-2 sm:gap-3">
         
         {/* Left Side: Tabs */}
-        <div className="flex items-center gap-2 sm:gap-3 xl:gap-6 text-xs sm:text-[13px] font-medium text-[#787b86] pt-1.5 shrink-0 whitespace-nowrap">
+        <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-[13px] font-medium text-[#787b86] pt-1.5 shrink-0 whitespace-nowrap">
           <button 
             onClick={() => onTabChange('chart')}
             className={`pb-1.5 border-b-2 ${activeTab === 'chart' ? 'text-[#1e2329] dark:text-[#d1d4dc] border-blue-500 font-semibold' : 'border-transparent hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
@@ -221,50 +248,63 @@ export const TickerHeader = ({
         </div>
 
         {/* Right Side: Tools */}
-        <div className="flex items-center gap-1 sm:gap-3 text-[#787b86] text-xs py-1 shrink-0 whitespace-nowrap">
-          <span className="hidden sm:inline text-xs">{t('tab.timeframe', 'Khoảng thời gian')}</span>
+        <div className="flex items-center gap-1 sm:gap-2 text-[#787b86] text-xs py-1 shrink-0 whitespace-nowrap">
+          {/* Timeframes */}
           <div className="flex items-center gap-0.5">
-            {TIMEFRAMES.map(tf => (
+            {visibleTimeframes.map(tf => (
               <button
                 key={tf}
                 onClick={() => onTimeframeChange(tf)}
-                className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs transition-colors whitespace-nowrap ${
+                className={`px-1.5 py-0.5 rounded text-xs transition-colors whitespace-nowrap ${
                   activeTimeframe === tf ? 'text-blue-600 dark:text-blue-400 font-semibold bg-blue-50 dark:bg-blue-900/20' : 'hover:text-[#1e2329] dark:hover:text-[#d1d4dc] hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39]'
                 }`}
               >
                 {tf}
               </button>
             ))}
+            {/* Dropdown for other timeframes */}
+            <div ref={tfDropdownRef} className="relative">
+              <button
+                onClick={() => setTfDropdownOpen(v => !v)}
+                title="Khung thời gian khác"
+                className="p-1 rounded text-xs hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39] text-[#787b86] flex items-center transition-colors"
+              >
+                <ChevronDown className="w-3 h-3" />
+              </button>
+              {tfDropdownOpen && (
+                <div 
+                  className="absolute top-full right-0 sm:left-0 mt-1 z-50 bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded shadow-lg py-1 flex flex-col min-w-[70px]"
+                >
+                  {EXTRA_TIMEFRAMES.map(tf => (
+                    <button
+                      key={tf}
+                      onClick={() => {
+                        onTimeframeChange(tf);
+                        setTfDropdownOpen(false);
+                      }}
+                      className={`px-3 py-1 text-left text-xs hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] transition-colors ${
+                        activeTimeframe === tf ? 'text-blue-600 dark:text-blue-400 font-semibold bg-blue-50/50 dark:bg-blue-900/10' : 'text-[#1e2329] dark:text-[#d1d4dc]'
+                      }`}
+                    >
+                      {tf}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           
-          <div className="w-px h-4 bg-[#e6e8ea] dark:bg-[#2a2e39] mx-1" />
+          <div className="w-px h-4 bg-[#e6e8ea] dark:bg-[#2a2e39] mx-0.5" />
 
-          <button className="hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39] p-1 rounded transition-colors text-blue-600 dark:text-blue-500" title="Biểu đồ nến">
-            <CandlestickChart className="w-4 h-4" />
-          </button>
-
-          <button 
-            onClick={onOpenIndicator}
-            className="flex items-center gap-1 hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39] px-2 py-1 rounded transition-colors relative"
-          >
-            <BarChart2 className="w-4 h-4" />
-            {activeIndicatorCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[9px] w-3.5 h-3.5 flex items-center justify-center rounded-full font-bold">
-                {activeIndicatorCount}
-              </span>
-            )}
-          </button>
-
-          <div className="w-px h-4 bg-[#e6e8ea] dark:bg-[#2a2e39] mx-1" />
-
+          {/* Replay Controller (Prominently placed, never covered) */}
           {isSelectingReplayStart ? (
-            <div className="flex items-center gap-2 bg-blue-100 dark:bg-blue-900/40 border border-blue-300 dark:border-blue-700/60 rounded px-2 py-0.5 shrink-0">
+            <div className="flex items-center gap-1.5 bg-blue-100 dark:bg-blue-900/40 border border-blue-300 dark:border-blue-700/60 rounded px-2 py-0.5 shrink-0">
               <span className="text-blue-700 dark:text-blue-300 text-xs font-semibold">
-                Nhấp vào nến trên biểu đồ để chọn điểm bắt đầu
+                Nhấp nến để chọn điểm bắt đầu
               </span>
               <button 
                 onClick={onCancelReplay}
-                className="ml-2 text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 px-2 py-0.5 rounded text-gray-800 dark:text-gray-200 transition-colors"
+                className="ml-1 text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 px-2 py-0.5 rounded text-gray-800 dark:text-gray-200 transition-colors"
               >
                 Hủy
               </button>
@@ -273,7 +313,7 @@ export const TickerHeader = ({
             <button
               disabled
               title="Bài thi cấp vốn yêu cầu 100% dữ liệu thời gian thực (Real-time) để đảm bảo tính minh bạch, không được dùng Replay."
-              className="flex items-center gap-1.5 px-2 py-1 rounded text-slate-400 opacity-40 cursor-not-allowed border border-dashed border-slate-600/40"
+              className="flex items-center gap-1 px-2 py-0.5 rounded text-slate-400 opacity-40 cursor-not-allowed border border-dashed border-slate-600/40"
             >
               <Play className="w-3.5 h-3.5" />
               <span className="hidden sm:inline text-xs">Replay (Khóa khi thi)</span>
@@ -281,29 +321,41 @@ export const TickerHeader = ({
           ) : !isReplaying ? (
             <button
               onClick={onStartReplay}
-              className="flex items-center gap-1 hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39] px-2 py-1 rounded transition-colors"
+              className="flex items-center gap-1 hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39] px-2 py-0.5 rounded transition-colors text-orange-600 dark:text-orange-400 font-medium"
+              title="Chế độ phát lại nến (Replay)"
             >
-              <Play className="w-4 h-4" />
-              <span className="hidden sm:inline">Replay</span>
+              <Play className="w-3.5 h-3.5" />
+              <span>Replay</span>
             </button>
           ) : (
-            <div className="flex items-center gap-1.5 bg-orange-100 dark:bg-orange-900/40 border border-orange-300 dark:border-orange-700/60 rounded px-2 py-0.5 shrink-0">
-              <span className="text-orange-700 dark:text-orange-300 text-xs font-semibold flex items-center gap-1.5">
+            <div 
+              ref={replayRef}
+              className="flex items-center gap-1 bg-orange-100 dark:bg-orange-900/40 border border-orange-300 dark:border-orange-700/60 rounded px-1.5 py-0.5 shrink-0 shadow-sm"
+            >
+              <span className="text-orange-700 dark:text-orange-300 text-xs font-semibold flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse inline-block" />
-                <span>{reachedEnd ? '✅ Đã đến hiện tại' : 'Replay'}</span>
+                <span className="hidden md:inline">{reachedEnd ? '✅ Đến hiện tại' : 'Replay'}</span>
                 {replayTime && (
-                  <span className="font-mono text-[11px] bg-orange-200 dark:bg-orange-800/70 text-orange-900 dark:text-orange-200 px-1.5 py-0.5 rounded font-semibold">
+                  <span className="font-mono text-[10px] sm:text-[11px] bg-orange-200 dark:bg-orange-800/70 text-orange-900 dark:text-orange-200 px-1.5 py-0.5 rounded font-semibold whitespace-nowrap">
                     {formatReplayTime(replayTime)}
                   </span>
                 )}
               </span>
               {!reachedEnd && !autoPlay && (
-                <button onClick={onReplayNext} title="Nến tiếp theo (Bước tiếp)" className="p-1 text-orange-600 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-700/40 rounded transition-colors">
+                <button 
+                  onClick={onReplayNext} 
+                  title="Nến tiếp theo (Bước tiếp)" 
+                  className="p-1 text-orange-600 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-700/40 rounded transition-colors"
+                >
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               )}
               {!reachedEnd && (
-                <button onClick={autoPlay ? stopAutoPlay : startAutoPlay} title={autoPlay ? "Tạm dừng" : "Phát tự động"} className="p-1 text-orange-600 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-700/40 rounded transition-colors">
+                <button 
+                  onClick={autoPlay ? stopAutoPlay : startAutoPlay} 
+                  title={autoPlay ? "Tạm dừng" : "Phát tự động"} 
+                  className="p-1 text-orange-600 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-700/40 rounded transition-colors"
+                >
                   {autoPlay ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
                 </button>
               )}
@@ -315,27 +367,51 @@ export const TickerHeader = ({
                     value={replaySpeed}
                     onChange={(e) => handleSelectSpeed(parseFloat(e.target.value))}
                     title="Chọn tốc độ phát nến"
-                    className="appearance-none cursor-pointer pl-1.5 pr-4 py-0.5 text-[11px] font-mono font-bold rounded text-orange-800 dark:text-orange-200 bg-orange-200/80 dark:bg-orange-800/70 hover:bg-orange-300 dark:hover:bg-orange-700 transition-colors border border-orange-300 dark:border-orange-600/50 outline-none select-none focus:ring-1 focus:ring-orange-500"
+                    className="appearance-none cursor-pointer pl-1.5 pr-3.5 py-0.5 text-[11px] font-mono font-bold rounded text-orange-800 dark:text-orange-200 bg-orange-200/80 dark:bg-orange-800/70 hover:bg-orange-300 dark:hover:bg-orange-700 transition-colors border border-orange-300 dark:border-orange-600/50 outline-none select-none focus:ring-1 focus:ring-orange-500"
                   >
-                    <option value={0.25} className="bg-white dark:bg-[#1e222d] text-slate-800 dark:text-slate-200 font-sans">0.25x (Rất chậm)</option>
-                    <option value={0.5} className="bg-white dark:bg-[#1e222d] text-slate-800 dark:text-slate-200 font-sans">0.5x (Chậm)</option>
-                    <option value={1} className="bg-white dark:bg-[#1e222d] text-slate-800 dark:text-slate-200 font-sans">1x (Chuẩn)</option>
-                    <option value={2} className="bg-white dark:bg-[#1e222d] text-slate-800 dark:text-slate-200 font-sans">2x (Nhanh)</option>
-                    <option value={3} className="bg-white dark:bg-[#1e222d] text-slate-800 dark:text-slate-200 font-sans">3x (Nhanh x3)</option>
-                    <option value={5} className="bg-white dark:bg-[#1e222d] text-slate-800 dark:text-slate-200 font-sans">5x (Rất nhanh)</option>
-                    <option value={10} className="bg-white dark:bg-[#1e222d] text-slate-800 dark:text-slate-200 font-sans">10x (Siêu tốc)</option>
+                    <option value={0.25} className="bg-white dark:bg-[#1e222d] text-slate-800 dark:text-slate-200 font-sans">0.25x</option>
+                    <option value={0.5} className="bg-white dark:bg-[#1e222d] text-slate-800 dark:text-slate-200 font-sans">0.5x</option>
+                    <option value={1} className="bg-white dark:bg-[#1e222d] text-slate-800 dark:text-slate-200 font-sans">1x</option>
+                    <option value={2} className="bg-white dark:bg-[#1e222d] text-slate-800 dark:text-slate-200 font-sans">2x</option>
+                    <option value={3} className="bg-white dark:bg-[#1e222d] text-slate-800 dark:text-slate-200 font-sans">3x</option>
+                    <option value={5} className="bg-white dark:bg-[#1e222d] text-slate-800 dark:text-slate-200 font-sans">5x</option>
+                    <option value={10} className="bg-white dark:bg-[#1e222d] text-slate-800 dark:text-slate-200 font-sans">10x</option>
                   </select>
-                  <ChevronDown className="w-2.5 h-2.5 opacity-70 text-orange-800 dark:text-orange-200 pointer-events-none absolute right-1" />
+                  <ChevronDown className="w-2.5 h-2.5 opacity-70 text-orange-800 dark:text-orange-200 pointer-events-none absolute right-0.5" />
                 </div>
               )}
 
-              <button onClick={handleStopReplay} title="Thoát chế độ Replay" className="p-1 text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40 rounded transition-colors">
+              <button 
+                onClick={handleStopReplay} 
+                title="Thoát chế độ Replay" 
+                className="p-1 text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40 rounded transition-colors ml-0.5"
+              >
                 <Square className="w-3.5 h-3.5" />
               </button>
             </div>
           )}
 
-          <div className="w-px h-4 bg-[#e6e8ea] dark:bg-[#2a2e39] mx-1 hidden sm:block" />
+          <div className="w-px h-4 bg-[#e6e8ea] dark:bg-[#2a2e39] mx-0.5" />
+
+          {/* Chart Types & Indicators */}
+          <button className="hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39] p-1 rounded transition-colors text-blue-600 dark:text-blue-500" title="Biểu đồ nến">
+            <CandlestickChart className="w-4 h-4" />
+          </button>
+
+          <button 
+            onClick={onOpenIndicator}
+            className="flex items-center gap-1 hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39] px-1.5 py-1 rounded transition-colors relative"
+            title="Chỉ báo"
+          >
+            <BarChart2 className="w-4 h-4" />
+            {activeIndicatorCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[9px] w-3.5 h-3.5 flex items-center justify-center rounded-full font-bold">
+                {activeIndicatorCount}
+              </span>
+            )}
+          </button>
+
+          <div className="w-px h-4 bg-[#e6e8ea] dark:bg-[#2a2e39] mx-0.5 hidden sm:block" />
 
           {/* Undo & Redo (Quay lại & Làm lại) */}
           <div className="flex items-center gap-0.5">
@@ -357,7 +433,7 @@ export const TickerHeader = ({
             </button>
           </div>
           
-          <div className="w-px h-4 bg-[#e6e8ea] dark:bg-[#2a2e39] mx-1 hidden sm:block" />
+          <div className="w-px h-4 bg-[#e6e8ea] dark:bg-[#2a2e39] mx-0.5 hidden sm:block" />
           
           <button 
             onClick={onGoToRealtime}
