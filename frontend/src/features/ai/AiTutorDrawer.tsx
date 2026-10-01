@@ -3,13 +3,15 @@ import {
   X, Sparkles, BookOpen, Layers, GitCompare, 
   Send, ExternalLink, HelpCircle, CheckCircle2, AlertTriangle, ShieldCheck, User,
   MessageSquare, Scale, Copy, Check, ChevronRight, Bot, Trash2, RefreshCw,
-  PlayCircle, Target, TrendingUp, Lightbulb, Crown, ArrowRight, Lock
+  PlayCircle, Target, TrendingUp, Lightbulb, Crown, ArrowRight, Lock,
+  Camera, Upload, Image as ImageIcon
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { aiService, type AskResponse, type StrategyComparisonData } from '../../services/aiService';
 import { subscriptionService, type SubscriptionInfo } from '../../services/subscriptionService';
 import { UpgradeProModal } from './UpgradeProModal';
 import { STOCKS } from '../market/data';
+import { getChartInstance } from '../market/components/ChartArea';
 
 interface AiTutorDrawerProps {
   isOpen: boolean;
@@ -158,7 +160,7 @@ export const AiTutorDrawer = ({
   marketContext,
   topOffset = 48
 }: AiTutorDrawerProps) => {
-  const [activeTab, setActiveTab] = useState<'tutor' | 'compare'>('tutor');
+  const [activeTab, setActiveTab] = useState<'tutor' | 'inspect' | 'compare'>('tutor');
   
   // Chat Q&A State
   const [query, setQuery] = useState('');
@@ -274,6 +276,92 @@ export const AiTutorDrawer = ({
   const [compareLoading, setCompareLoading] = useState(false);
   const [compareError, setCompareError] = useState<string | null>(null);
   const [compareData, setCompareData] = useState<StrategyComparisonData | null>(null);
+
+  // Chart Vision Inspection State
+  const [inspectImage, setInspectImage] = useState<string | null>(null);
+  const [inspectNotes, setInspectNotes] = useState('');
+  const [inspectLoading, setInspectLoading] = useState(false);
+  const [inspectError, setInspectError] = useState<string | null>(null);
+  const [inspectResult, setInspectResult] = useState<any | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCaptureChart = () => {
+    try {
+      const chart = getChartInstance();
+      if (chart && typeof chart.getConvertPictureUrl === 'function') {
+        const pic = chart.getConvertPictureUrl(true, 'png', '#131722');
+        if (pic) {
+          setInspectImage(pic);
+          setInspectError(null);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Klinechart screenshot error:', err);
+    }
+
+    // Fallback: Query canvas from DOM
+    const canvases = document.querySelectorAll('.k-line-chart-container canvas');
+    if (canvases.length > 0) {
+      const mainCanvas = canvases[0] as HTMLCanvasElement;
+      if (mainCanvas && mainCanvas.width > 0) {
+        try {
+          const pic = mainCanvas.toDataURL('image/png');
+          setInspectImage(pic);
+          setInspectError(null);
+          return;
+        } catch (e) {
+          console.warn('Canvas toDataURL error:', e);
+        }
+      }
+    }
+    setInspectError('Không thể tự động chụp biểu đồ. Vui lòng tải ảnh lên từ máy tính.');
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setInspectImage(event.target.result as string);
+          setInspectError(null);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleInspectChart = async () => {
+    if (!user) {
+      login();
+      return;
+    }
+    if (!inspectImage) {
+      setInspectError('Vui lòng chụp hoặc tải ảnh biểu đồ lên trước');
+      return;
+    }
+    setInspectLoading(true);
+    setInspectError(null);
+    try {
+      const res = await aiService.inspectChart({
+        image: inspectImage,
+        symbol: activeSymbol,
+        timeframe: timeframe,
+        userNotes: inspectNotes
+      });
+      if (res.quotaExceeded) {
+        setInspectError(res.message || 'Bạn đã sử dụng hết lượt AI hôm nay.');
+      } else {
+        setInspectResult(res);
+        fetchSubscription();
+      }
+    } catch (err: any) {
+      setInspectError(err.message || 'Lỗi khi gửi ảnh cho AI chấm');
+    } finally {
+      setInspectLoading(false);
+    }
+  };
 
   const handleAsk = async (questionText?: string) => {
     if (!user) {
@@ -490,7 +578,7 @@ export const AiTutorDrawer = ({
       <div className="flex border-b border-[#e6e8ea] dark:border-[#2a2e39] bg-[#f0f3fa] dark:bg-[#181b24] px-3 text-xs font-medium">
         <button
           onClick={() => setActiveTab('tutor')}
-          className={`flex items-center gap-1.5 px-4 py-2.5 border-b-2 transition-colors ${
+          className={`flex items-center gap-1.5 px-3.5 py-2.5 border-b-2 transition-colors cursor-pointer ${
             activeTab === 'tutor' 
               ? 'border-amber-500 text-amber-600 dark:text-amber-400 font-semibold' 
               : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-[#1e2329] dark:hover:text-slate-200'
@@ -500,11 +588,22 @@ export const AiTutorDrawer = ({
           Gia sư AI (Chat)
         </button>
         <button
+          onClick={() => setActiveTab('inspect')}
+          className={`flex items-center gap-1.5 px-3.5 py-2.5 border-b-2 transition-colors cursor-pointer ${
+            activeTab === 'inspect' 
+              ? 'border-amber-500 text-amber-600 dark:text-amber-400 font-semibold' 
+              : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-[#1e2329] dark:hover:text-slate-200'
+          }`}
+        >
+          <Camera className="w-3.5 h-3.5 text-amber-500" />
+          <span>📸 Soi Biểu Đồ (Vision)</span>
+        </button>
+        <button
           onClick={() => {
             setActiveTab('compare');
             if (!compareData) handleRunComparison();
           }}
-          className={`flex items-center gap-1.5 px-4 py-2.5 border-b-2 transition-colors ${
+          className={`flex items-center gap-1.5 px-3.5 py-2.5 border-b-2 transition-colors cursor-pointer ${
             activeTab === 'compare' 
               ? 'border-amber-500 text-amber-600 dark:text-amber-400 font-semibold' 
               : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-[#1e2329] dark:hover:text-slate-200'
@@ -681,7 +780,202 @@ export const AiTutorDrawer = ({
           </>
         )}
 
-        {/* TAB 2: STRATEGY COMPARISON */}
+        {/* TAB 2: AI CHART INSPECTION (VISION) */}
+        {activeTab === 'inspect' && (
+          <div className="space-y-4">
+            {/* Header Card */}
+            <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/10 via-purple-500/5 to-blue-500/10 border border-amber-500/30 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-500 to-amber-600 text-slate-950 flex items-center justify-center font-bold shadow-xs">
+                    <Camera className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      AI Soi Biểu Đồ & Chấm Bài Vẽ
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                        VISION PRO
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Soi trực tiếp Order Block, FVG, Trendline bạn đã vẽ theo trường phái ICT & SMC
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons to capture or upload */}
+              <div className="pt-2 flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={handleCaptureChart}
+                  className="px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                  title="Tự động chụp lại biểu đồ hiện tại bạn đang vẽ"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  <span>📸 Tự động chụp biểu đồ</span>
+                </button>
+
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-3 py-2 rounded-lg bg-slate-100 dark:bg-[#1f2430] hover:bg-slate-200 dark:hover:bg-[#2b3347] border border-slate-300 dark:border-[#374158] text-slate-700 dark:text-slate-200 font-medium text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                  title="Tải ảnh biểu đồ có sẵn từ máy"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Tải ảnh lên</span>
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+
+                {inspectImage && (
+                  <button
+                    onClick={() => {
+                      setInspectImage(null);
+                      setInspectResult(null);
+                      setInspectError(null);
+                    }}
+                    className="px-2.5 py-2 rounded-lg text-rose-500 hover:bg-rose-500/10 text-xs font-medium transition-colors cursor-pointer ml-auto"
+                  >
+                    Xóa ảnh
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Error Message */}
+            {inspectError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <span>{inspectError}</span>
+                  {inspectError.includes('hạn mức') && (
+                    <button
+                      onClick={() => setIsUpgradeModalOpen(true)}
+                      className="block mt-1 font-bold underline cursor-pointer text-amber-600 dark:text-amber-400"
+                    >
+                      Nâng cấp gói PRO ngay &rarr;
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* If Image is Captured / Uploaded */}
+            {inspectImage && (
+              <div className="p-3.5 rounded-xl bg-white dark:bg-[#181d2a] border border-slate-200 dark:border-[#2b3347] space-y-3">
+                <div className="relative rounded-lg overflow-hidden border border-slate-200 dark:border-[#374158] bg-slate-950 max-h-56 flex items-center justify-center">
+                  <img
+                    src={inspectImage}
+                    alt="Biểu đồ phân tích"
+                    className="w-full h-full object-contain max-h-56"
+                  />
+                  <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/70 backdrop-blur-xs text-[10px] font-mono text-white">
+                    {activeSymbol} • {timeframe}
+                  </div>
+                </div>
+
+                {/* User Notes Input */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                    Ghi chú / Nhận định của bạn (Tùy chọn):
+                  </label>
+                  <textarea
+                    value={inspectNotes}
+                    onChange={(e) => setInspectNotes(e.target.value)}
+                    placeholder="Ví dụ: Tôi vừa vẽ Order Block giảm (Bearish OB) trên nến xanh cuối cùng trước khi sập giá, tôi định Sell khi giá hồi về test. Đã chuẩn chưa?"
+                    rows={2}
+                    className="w-full p-2.5 rounded-lg bg-slate-50 dark:bg-[#131722] border border-slate-300 dark:border-[#2b3347] text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden focus:border-amber-500 resize-none"
+                  />
+                </div>
+
+                {/* Submit Action */}
+                <button
+                  onClick={handleInspectChart}
+                  disabled={inspectLoading}
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:from-amber-600 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <Sparkles className={`w-4 h-4 ${inspectLoading ? 'animate-spin' : ''}`} />
+                  <span>{inspectLoading ? 'AI đang soi từng thế nến...' : '🚀 Gửi AI Soi Biểu Đồ & Chấm Điểm'}</span>
+                </button>
+              </div>
+            )}
+
+            {/* Loading Indicator */}
+            {inspectLoading && (
+              <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 text-center space-y-2.5 animate-pulse">
+                <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center mx-auto">
+                  <Sparkles className="w-4 h-4 animate-spin" />
+                </div>
+                <div className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                  AI Vision đang phân tích các vùng vẽ và thế nến...
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Đang đối chiếu quy tắc Smart Money Concepts (ICT/SMC), xác định Displacement và quét thanh khoản...
+                </p>
+              </div>
+            )}
+
+            {/* Inspection Result Presentation */}
+            {inspectResult && !inspectLoading && (
+              <div className="p-4 rounded-xl bg-white dark:bg-[#181d2a] border border-amber-500/30 shadow-sm space-y-3.5">
+                {/* Result Header: Score & Verdict */}
+                <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-[#2b3347]">
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 ${
+                      inspectResult.verdict === 'CORRECT' 
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' 
+                        : inspectResult.verdict === 'PARTIALLY_CORRECT'
+                        ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                        : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                    }`}>
+                      {inspectResult.verdict === 'CORRECT' && <CheckCircle2 className="w-3.5 h-3.5" />}
+                      {inspectResult.verdict === 'PARTIALLY_CORRECT' && <AlertTriangle className="w-3.5 h-3.5" />}
+                      {inspectResult.verdict === 'INCORRECT' && <X className="w-3.5 h-3.5" />}
+                      <span>
+                        {inspectResult.verdict === 'CORRECT' 
+                          ? 'VẼ ĐÚNG LÝ THUYẾT' 
+                          : inspectResult.verdict === 'PARTIALLY_CORRECT'
+                          ? 'ĐÚNG MỘT PHẦN / CẦN LƯU Ý'
+                          : 'CHƯA ĐÚNG'}
+                      </span>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Điểm:</span>
+                    <span className="text-sm font-black font-mono text-amber-600 dark:text-amber-400">
+                      {inspectResult.score}/100
+                    </span>
+                  </div>
+                </div>
+
+                {/* Formatted Markdown Analysis */}
+                <div className="text-slate-800 dark:text-slate-100 text-xs leading-relaxed space-y-2">
+                  {renderFormattedText(inspectResult.analysis)}
+                </div>
+
+                {/* Action button to test again */}
+                <div className="pt-2 flex justify-end">
+                  <button
+                    onClick={() => {
+                      setInspectResult(null);
+                      setInspectImage(null);
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-[#1f2430] hover:bg-slate-200 dark:hover:bg-[#2b3347] text-slate-700 dark:text-slate-200 text-xs font-semibold cursor-pointer transition-colors"
+                  >
+                    Soi ảnh biểu đồ khác &rarr;
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 3: STRATEGY COMPARISON */}
         {activeTab === 'compare' && (
           <div className="space-y-4">
             {/* Exchange & Symbol Selector Card (Redesigned) */}

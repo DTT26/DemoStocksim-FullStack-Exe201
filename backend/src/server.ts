@@ -96,6 +96,19 @@ mongoose.connect(MONGO_URI)
 
     server.listen(PORT, () => {
       console.log(`🚀 Server is running on port ${PORT}`);
+
+      // Auto keep-alive ping to Python Service every 10 mins to prevent Render Free spin-down
+      const pyUrl = process.env.PYTHON_SERVICE_URL;
+      if (pyUrl && pyUrl.startsWith('http') && !pyUrl.includes('localhost')) {
+        console.log(`📡 Enabled keep-alive pings to Python Service: ${pyUrl}`);
+        setInterval(async () => {
+          try {
+            await fetch(`${pyUrl.replace(/\/+$/, '')}/health`, { signal: AbortSignal.timeout(10000) });
+          } catch (pingErr: any) {
+            // Ignore background ping errors
+          }
+        }, 10 * 60 * 1000);
+      }
     });
   })
   .catch(err => {

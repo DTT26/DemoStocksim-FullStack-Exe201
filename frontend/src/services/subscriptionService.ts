@@ -47,11 +47,16 @@ export const subscriptionService = {
   },
 
   async createCheckout(plan: string = 'PREMIUM_MONTHLY'): Promise<CreateCheckoutResult> {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
     const res = await fetch(`${getRootApi()}/v1/payment/create-checkout`, {
       method: 'POST',
       headers: getAuthHeaders(),
       credentials: 'include',
-      body: JSON.stringify({ plan })
+      body: JSON.stringify({
+        plan,
+        returnUrl: origin ? `${origin}/payment/success` : undefined,
+        cancelUrl: origin ? `${origin}/payment/cancel` : undefined
+      })
     });
     const json = await res.json();
     if (!res.ok && !json.message) {

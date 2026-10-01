@@ -19,7 +19,12 @@ def create_checkout(
     Generates a PayOS checkout link with QR code for the authenticated user.
     """
     try:
-        result = payos_service.create_payment_link(user_id=user_id, plan=req.plan)
+        result = payos_service.create_payment_link(
+            user_id=user_id, 
+            plan=req.plan,
+            return_url=req.returnUrl,
+            cancel_url=req.cancelUrl
+        )
         if not result.get("success"):
             return CreateCheckoutResponse(
                 success=False,

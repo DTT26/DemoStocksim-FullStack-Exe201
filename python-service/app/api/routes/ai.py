@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from typing import Dict, Any, List
 from app.rag.schema import (
     AskQuestionRequest,
@@ -54,6 +54,22 @@ def backtest_assist(req: BacktestAssistantRequest):
 @router.post("/trade-insights")
 def trade_insights(req: TradeInsightsRequest):
     return journal_pattern_detector.analyze_patterns(req.trades)
+
+@router.post("/inspect-chart")
+async def inspect_chart(request: Request):
+    data = await request.json()
+    image = data.get("image", "")
+    symbol = data.get("symbol")
+    timeframe = data.get("timeframe")
+    user_notes = data.get("userNotes", "")
+    user_id = request.headers.get("x-user-id") or data.get("userId")
+    return ai_tutor_service.inspect_chart_vision(
+        image_base64=image,
+        symbol=symbol,
+        timeframe=timeframe,
+        user_notes=user_notes,
+        user_id=user_id
+    )
 
 @router.get("/sources")
 def get_sources():

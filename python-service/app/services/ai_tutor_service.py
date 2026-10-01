@@ -717,4 +717,111 @@ class AiTutorService:
         )
         return self.answer_question(ask_req)
 
+    def inspect_chart_vision(
+        self,
+        image_base64: str,
+        symbol: Optional[str] = None,
+        timeframe: Optional[str] = None,
+        user_notes: str = "",
+        user_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Multimodal Chart Vision Inspector & Grader.
+        Uses Google Gemini Vision to inspect user-drawn chart analysis,
+        grade theory accuracy (ICT/SMC/Price Action), evaluate real-world trade quality,
+        and provide corrections.
+        """
+        # 1. Quota check if user_id is provided
+        remaining_today = PREMIUM_DAILY_LIMIT
+        is_premium = False
+        if user_id:
+            try:
+                sub_status = subscription_service.get_user_subscription(user_id)
+                is_premium = sub_status.get("is_premium", False)
+                daily_limit = PREMIUM_DAILY_LIMIT if is_premium else FREE_DAILY_LIMIT
+                used = sub_status.get("daily_ai_used", 0)
+                if used >= daily_limit:
+                    return {
+                        "success": False,
+                        "quotaExceeded": True,
+                        "message": (
+                            f"Bạn đã sử dụng hết hạn mức AI hôm nay ({used}/{daily_limit} lượt). "
+                            "Hãy nâng cấp lên gói PRO để mở khóa 500 lượt soi chart mỗi ngày!"
+                        )
+                    }
+                subscription_service.increment_ai_usage(user_id)
+                remaining_today = max(0, daily_limit - (used + 1))
+            except Exception as ex:
+                print(f"Error checking quota for chart inspection: {ex}")
+
+        # 2. System prompt
+        system_prompt = (
+            "Bạn là Chuyên gia Cao cấp Đào tạo Phân tích Kỹ thuật và Huấn luyện viên Chiến lược Thực chiến "
+            "(Senior Quantitative & Technical Analyst Tutor, chuyên sâu về Price Action, ICT - Inner Circle Trader, SMC - Smart Money Concepts, Wyckoff).\n"
+            "Nhiệm vụ của bạn là soi kỹ ảnh chụp màn hình biểu đồ nến mà học viên cung cấp, đặc biệt chú ý đến:\n"
+            "- Các vùng hình hộp chữ nhật (Box / Zone), đường kẻ (Trendline, Support/Resistance), mũi tên hoặc ghi chú mà học viên ĐÃ VẼ trên biểu đồ.\n"
+            "- Cấu trúc giá hiện tại (Đỉnh/Đáy, Swing High/Low, Cấu trúc xu hướng tăng/giảm).\n"
+            "- Các khái niệm ICT/SMC: Order Block (OB), Fair Value Gap (FVG), Imbalance, Liquidity Sweep (BSL / SSL), Change of Character (CHoCH), Break of Structure (BOS), Premium vs Discount.\n\n"
+            "Hãy trả lời theo cấu trúc Markdown rõ ràng, chuẩn sư phạm, truyền cảm hứng và sắc sảo như sau:\n\n"
+            "### 1. Đánh giá sơ bộ về hình thức lý thuyết\n"
+            "- Kết luận rõ ràng: Bạn vẽ **ĐÚNG** hay **SAI / CHƯA CHUẨN**?\n"
+            "- Nhận diện đúng học viên đã khoanh vùng nến/vùng giá nào (ví dụ: cây nến tăng cuối cùng trước khi một nhịp sập mạnh - Bearish Displacement, hay vùng FVG).\n\n"
+            "### 2. Lăng kính thực chiến chuyên sâu (Độ tin cậy & Xác suất)\n"
+            "- **Phân loại vùng:** Đây là vùng Tiếp diễn (Continuation OB/FVG) hay vùng Cực trị / Gốc (Extreme / Original)?\n"
+            "- **Chất lượng sóng đẩy:** Nhịp Displacement có đủ mạnh không? Có tạo ra FVG (Imbalance) đi kèm không?\n"
+            "- **Thanh khoản & Bẫy giá:** Có hiện tượng Quét thanh khoản (Liquidity Sweep) đỉnh/đáy trước đó không? Có nguy cơ là bẫy Smart Money Trap (SMT) hay thanh khoản dụ dỗ (Inducement) không?\n\n"
+            "### 3. Vùng chuẩn xác nhất theo Smart Money\n"
+            "- Chỉ rõ mức giá hoặc vùng nến mà theo ICT/SMC là nơi an toàn và có tỷ lệ Risk:Reward tối ưu nhất (ví dụ: đỉnh/đáy cực trị nào, mức giá cụ thể nào trên chart).\n\n"
+            "### 4. 💡 Bài học thực chiến cốt lõi\n"
+            "- Tóm tắt 1-2 lời khuyên thực chiến ngắn gọn giúp học viên không bị thị trường lừa.\n\n"
+            "### 5. Điểm số đánh giá\n"
+            "- Cho điểm số theo thang điểm 100 (Ví dụ: **Điểm đánh giá: 85/100**)."
+        )
+
+        asset_info = f"mã cổ phiếu/tiền tệ: {symbol}" if symbol else "mã hiển thị trực tiếp trên ảnh biểu đồ"
+        tf_info = f", khung thời gian: {timeframe}" if timeframe else ""
+        user_prompt = f"Phân tích biểu đồ {asset_info}{tf_info}."
+        if user_notes:
+            user_prompt += f"\nGhi chú/Nhận định của học viên: {user_notes}"
+        else:
+            user_prompt += "\nHãy kiểm tra xem các vùng tôi đã vẽ trên biểu đồ (Order Block, FVG, Hỗ trợ/Kháng cự...) đã chính xác chưa và nhận xét chi tiết giúp tôi."
+
+        # 3. Call Vision
+        analysis = llm_client.generate_vision_text(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            image_base64=image_base64,
+            max_tokens=2500
+        )
+
+        if not analysis:
+            analysis = (
+                "⚠️ **Không thể kết nối đến AI Vision.**\n\n"
+                "Vui lòng kiểm tra lại kết nối mạng hoặc thử lại với ảnh chụp rõ nét hơn."
+            )
+
+        # 4. Extract score and verdict
+        score = 80
+        score_match = re.search(r'(?:Điểm\s*(?:đánh giá|số)?|Score)[:\s*]+(\d{1,3})\s*(?:/\s*100)?', analysis, re.IGNORECASE)
+        if score_match:
+            try:
+                score = int(score_match.group(1))
+            except:
+                pass
+
+        verdict = "CORRECT" if "ĐÚNG" in analysis.upper() and "SAI" not in analysis[:300].upper() else "PARTIALLY_CORRECT"
+        if "CHƯA ĐÚNG" in analysis[:300].upper() or "SAI" in analysis[:300].upper():
+            verdict = "INCORRECT"
+
+        return {
+            "success": True,
+            "symbol": symbol,
+            "timeframe": timeframe,
+            "score": score,
+            "verdict": verdict,
+            "analysis": analysis,
+            "remainingToday": remaining_today,
+            "isPremium": is_premium
+        }
+
 ai_tutor_service = AiTutorService()

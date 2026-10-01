@@ -432,5 +432,32 @@ export const aiService = {
     });
     const json = await res.json();
     if (!json.success) throw new Error(json.message || 'Lỗi xóa lịch sử chat');
+  },
+
+  async inspectChart(params: {
+    image: string;
+    symbol: string;
+    timeframe: string;
+    userNotes?: string;
+  }): Promise<{
+    success: boolean;
+    symbol?: string;
+    timeframe?: string;
+    score?: number;
+    verdict?: 'CORRECT' | 'PARTIALLY_CORRECT' | 'INCORRECT';
+    analysis?: string;
+    remainingToday?: number;
+    isPremium?: boolean;
+    quotaExceeded?: boolean;
+    message?: string;
+  }> {
+    const res = await fetch(`${API_BASE}/inspect-chart`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      credentials: 'include',
+      body: JSON.stringify(params)
+    });
+    const json = await res.json();
+    return json;
   }
 };
