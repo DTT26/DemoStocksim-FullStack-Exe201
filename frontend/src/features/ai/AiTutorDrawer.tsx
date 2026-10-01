@@ -453,12 +453,18 @@ export const AiTutorDrawer = ({
       fetchSubscription();
     } catch (err: any) {
       console.error(err);
+      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      const errMessage = err?.message || '';
+      const noticeText = isLocal
+        ? '⚠️ Không thể kết nối tới AI Service. Vui lòng đảm bảo `python-service` đang chạy trên cổng 8000.'
+        : `⚠️ Không thể kết nối tới AI Service trên máy chủ. ${errMessage ? `(Chi tiết: ${errMessage})` : 'Vui lòng kiểm tra lại dịch vụ python-service trên Render.'}`;
+
       setMessages(prev => [
         ...prev, 
         {
           id: String(Date.now() + 1),
           sender: 'tutor',
-          text: '⚠️ Không thể kết nối tới AI Service. Vui lòng đảm bảo `python-service` đang chạy trên cổng 8000.'
+          text: noticeText
         }
       ]);
     } finally {
