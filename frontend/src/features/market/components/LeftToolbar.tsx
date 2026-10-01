@@ -337,7 +337,22 @@ const TOOLS = [
   },
   { id: 'priceLine',                icon: Ruler,             label: 'Đo lường',                     separator: false, hasDropdown: false },
   { id: 'zoomIn',                   icon: ZoomIn,            label: 'Phóng to',                     separator: true,  hasDropdown: false },
-  { id: 'magnet',                   icon: Magnet,            label: 'Chế độ Magnet',                separator: false, hasDropdown: false },
+  { 
+    id: 'magnet',                   
+    icon: Magnet,            
+    label: 'Chế độ Magnet',                
+    separator: false, 
+    hasDropdown: true,
+    subItems: [
+      {
+        category: 'Nam châm',
+        items: [
+          { id: 'strong_magnet', icon: Magnet, label: 'Nam châm mạnh' },
+          { id: 'weak_magnet', icon: Magnet, label: 'Nam châm yếu' }
+        ]
+      }
+    ]
+  },
   { id: 'stayInDrawing',            icon: PenTool,           label: 'Giữ ở Chế độ Vẽ',              separator: false, hasDropdown: false },
   { id: 'lock',                     icon: Lock,              label: 'Khóa tất cả công cụ vẽ',       separator: false, hasDropdown: false },
   { id: 'hide',                     icon: Eye,               label: 'Ẩn tất cả công cụ vẽ',         separator: true,  hasDropdown: false },
@@ -348,7 +363,9 @@ interface LeftToolbarProps {
   activeTool: string;
   onToolSelect: (toolName: string) => void;
   magnetMode?: boolean;
+  magnetType?: 'weak' | 'strong';
   onToggleMagnet?: () => void;
+  onMagnetTypeSelect?: (type: 'weak' | 'strong') => void;
   stayInDrawingMode?: boolean;
   onToggleStayInDrawingMode?: () => void;
   lockDrawing?: boolean;
@@ -380,7 +397,9 @@ export const LeftToolbar = ({
   activeTool, 
   onToolSelect,
   magnetMode,
+  magnetType,
   onToggleMagnet,
+  onMagnetTypeSelect,
   stayInDrawingMode,
   onToggleStayInDrawingMode,
   lockDrawing,
@@ -613,13 +632,21 @@ export const LeftToolbar = ({
                 </span>
                 {category.items.map((item: any) => {
                   const ItemIcon = item.icon;
-                  const isSelected = activeTool === item.id;
+                  const isSelected = activeDropdown.id === 'magnet' 
+                    ? (item.id === (magnetType === 'weak' ? 'weak_magnet' : 'strong_magnet'))
+                    : activeTool === item.id;
                   return (
                     <button
                       key={item.id}
                       onClick={() => {
-                        setLastSelectedSubItems(prev => ({ ...prev, [activeDropdown.id]: item.id }));
-                        onToolSelect(item.id);
+                        if (activeDropdown.id === 'magnet') {
+                          onMagnetTypeSelect?.(item.id === 'weak_magnet' ? 'weak' : 'strong');
+                          if (!magnetMode) onToggleMagnet?.();
+                          setLastSelectedSubItems(prev => ({ ...prev, [activeDropdown.id]: item.id }));
+                        } else {
+                          onToolSelect(item.id);
+                          setLastSelectedSubItems(prev => ({ ...prev, [activeDropdown.id]: item.id }));
+                        }
                         setActiveDropdown(null);
                       }}
                       className={`flex items-center justify-between px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] transition-colors ${

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { type Stock, getPricePrecision, getContractMultiplier, getAssetUnit } from '../data';
 import { useSimulatorStore } from '../engine/useSimulatorStore';
 import { ArrowUp, ArrowDown, Wallet, ChevronLeft } from 'lucide-react';
@@ -27,6 +27,11 @@ export const SimulatorTradingPanel = ({
   const [tp, setTp] = useState<string>('');
   const [setupTag, setSetupTag] = useState<string>('');
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  const [tradeSide, setTradeSide] = useState<'LONG' | 'SHORT'>('LONG');
+  const [riskMode, setRiskMode] = useState<'%' | '$'>('%');
+  const [riskValue, setRiskValue] = useState<string>('1');
+  const [volumeMode, setVolumeMode] = useState<'Auto' | 'Manual'>('Manual');
+  const prevTpslRef = useRef<string>('');
 
   if (!store.isActive || !store.session) return null;
 
@@ -48,10 +53,28 @@ export const SimulatorTradingPanel = ({
   const currentExecBid = store.currentBid > 0 ? store.currentBid : effectivePrice;
   const currentExecAsk = store.currentAsk > 0 ? store.currentAsk : (effectivePrice + spreadValue);
 
-  const priceNum = parseFloat(priceStr) || effectivePrice;
-  const multiplier = getContractMultiplier(selectedStock);
+  const lotMultiplier = getContractMultiplier(selectedStock);
   const assetUnit = getAssetUnit(selectedStock);
-  const actualQty = lot * multiplier;
+  const priceNum = parseFloat(priceStr) || effectivePrice;
+
+  let finalLot = lot;
+  const riskAmt = riskMode === '%' 
+    ? (store.session.equity * (parseFloat(riskValue) || 0)) / 100 
+    : (parseFloat(riskValue) || 0);
+
+  if (volumeMode === 'Auto') {
+    const slValNum = sl ? parseFloat(sl) : 0;
+    if (slValNum > 0) {
+      const dist = Math.abs(priceNum - slValNum);
+      if (dist > 0) {
+        let calcLot = riskAmt / (dist * lotMultiplier);
+        calcLot = Math.max(config.minLot, parseFloat(calcLot.toFixed(2)));
+        finalLot = calcLot;
+      }
+    }
+  }
+
+  const actualQty = finalLot * lotMultiplier;
   
   const marginRequired = orderType === 'MARKET' 
     ? (currentExecAsk * actualQty) / leverage 
@@ -78,27 +101,31 @@ export const SimulatorTradingPanel = ({
 
   // Synchronize preview TP/SL and order price line with parent chart
   useEffect(() => {
-    const activePos = store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase());
-    const currentSide = activePos ? activePos.side : 'LONG';
+    const currentSide = tradeSide;
 
+    let newTpsl: any = null;
     if (orderType !== 'MARKET') {
-      onPreviewTPSLChange?.({
+      newTpsl = {
         tp: showTPSL && tp ? parseFloat(tp) : undefined,
         sl: showTPSL && sl ? parseFloat(sl) : undefined,
         side: currentSide,
         enabled: true,
         orderPrice: priceNum,
         orderType: orderType,
-      });
+      };
     } else if (showTPSL && (tp || sl)) {
-      onPreviewTPSLChange?.({
+      newTpsl = {
         tp: tp ? parseFloat(tp) : undefined,
         sl: sl ? parseFloat(sl) : undefined,
         side: currentSide,
         enabled: true,
-      });
-    } else {
-      onPreviewTPSLChange?.(null);
+      };
+    }
+
+    const newTpslStr = JSON.stringify(newTpsl);
+    if (prevTpslRef.current !== newTpslStr) {
+      prevTpslRef.current = newTpslStr;
+      onPreviewTPSLChange?.(newTpsl);
     }
   }, [showTPSL, tp, sl, orderType, priceStr, priceNum, selectedStock.symbol, onPreviewTPSLChange]);
 
@@ -114,7 +141,7 @@ export const SimulatorTradingPanel = ({
       showToast('Vượt quá Ký quỹ tối đa cho phép!', false);
       return;
     }
-    if (lot <= 0) {
+    if (finalLot <= 0) {
       showToast('Khối lượng Lot phải lớn hơn 0!', false);
       return;
     }
@@ -152,12 +179,12 @@ export const SimulatorTradingPanel = ({
     if (orderType === 'MARKET') {
       store.executeMarketOrder(
         side, 
-        lot, 
+        finalLot, 
         slVal, 
         tpVal, 
         setupTag || undefined
       );
-      showToast(`Đã mở lệnh ${side} ${lot} lot (${formattedQty} ${assetUnit}) thành công!`, true);
+      showToast(`Đã mở lệnh ${side} ${finalLot} lot (${formattedQty} ${assetUnit}) thành công!`, true);
     } else {
       if (priceNum <= 0) {
         showToast('Giá đặt lệnh không hợp lệ!', false);
@@ -167,12 +194,12 @@ export const SimulatorTradingPanel = ({
         orderType, 
         side, 
         priceNum, 
-        lot, 
+        finalLot, 
         slVal, 
         tpVal, 
         setupTag || undefined
       );
-      showToast(`Đã đặt lệnh chờ ${side} ${orderType} ${lot} lot (${formattedQty} ${assetUnit}) thành công!`, true);
+      showToast(`Đã đặt lệnh chờ ${side} ${orderType} ${finalLot} lot (${formattedQty} ${assetUnit}) thành công!`, true);
     }
     setSetupTag('');
   };
@@ -232,7 +259,24 @@ export const SimulatorTradingPanel = ({
           ))}
         </div>
 
-        {/* Price & Qty inputs */}
+        {/* Trade Side Tabs */}
+        <div className="flex bg-[#f0f1f3] dark:bg-[#1e222d] rounded p-1 shrink-0 gap-1 text-xs font-semibold mt-1">
+          {(['LONG', 'SHORT'] as const).map(side => (
+            <button
+              key={side}
+              onClick={() => setTradeSide(side)}
+              className={`flex-1 py-1.5 rounded transition-colors text-center text-[11px] font-bold uppercase ${
+                tradeSide === side 
+                  ? (side === 'LONG' ? 'bg-[#089981] text-white' : 'bg-[#f23645] text-white')
+                  : 'text-[#787b86] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'
+              }`}
+            >
+              {side === 'LONG' ? 'MUA (LONG)' : 'BÁN (SHORT)'}
+            </button>
+          ))}
+        </div>
+
+        {/* Price input */}
         <div className="flex gap-2">
           <div className="flex flex-col gap-1 flex-1">
             <label className="text-[10px] text-[#787b86] uppercase tracking-wider font-semibold">
@@ -243,25 +287,85 @@ export const SimulatorTradingPanel = ({
                 {effectivePrice.toLocaleString('vi-VN')}
               </div>
             ) : (
-              <input
-                type="number"
-                value={priceStr}
-                placeholder={effectivePrice.toString()}
-                onChange={e => setPriceStr(e.target.value)}
-                className="bg-[#f0f1f3] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full"
-              />
+              <div className="flex flex-col w-full">
+                <input
+                  type="number"
+                  value={priceStr}
+                  placeholder={effectivePrice.toString()}
+                  onChange={e => setPriceStr(e.target.value)}
+                  className="bg-[#f0f1f3] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full"
+                />
+                <span className="text-[10px] text-blue-500 dark:text-blue-400 mt-1 italic">
+                  * Kéo thả đường đứt nét trên biểu đồ để chọn giá
+                </span>
+              </div>
             )}
           </div>
+        </div>
 
-          <div className="flex flex-col gap-1 flex-1">
-            <label className="text-[10px] text-[#787b86] uppercase tracking-wider font-semibold">Khối lượng (Lot)</label>
+        {/* RISK PER TRADE */}
+        <div className="border border-[#e6e8ea] dark:border-[#2a2e39] rounded p-2.5 flex flex-col gap-2 mt-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-[#787b86] uppercase tracking-wider font-semibold">RISK PER TRADE</span>
+            <div className="flex bg-[#f0f1f3] dark:bg-[#1e222d] rounded shrink-0 text-xs font-semibold overflow-hidden">
+              <button 
+                onClick={() => setRiskMode('%')} 
+                className={`px-2 py-1 transition-colors ${riskMode === '%' ? 'bg-[#089981] text-white' : 'text-[#787b86]'}`}
+              >%</button>
+              <button 
+                onClick={() => setRiskMode('$')} 
+                className={`px-2 py-1 transition-colors ${riskMode === '$' ? 'bg-[#089981] text-white' : 'text-[#787b86]'}`}
+              >$</button>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <input 
+              type="number"
+              value={riskValue}
+              onChange={e => setRiskValue(e.target.value)}
+              className="bg-[#f0f1f3] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-2 py-1.5 text-sm text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-blue-500 flex-1 w-0"
+            />
+            <span className="text-sm font-semibold text-[#1e2329] dark:text-white w-4 text-center">{riskMode}</span>
+          </div>
+          <div className="text-[11px] font-mono text-[#f23645] font-semibold">
+            = ${riskAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+          {riskMode === '%' && (
+            <div className="flex gap-1 mt-1">
+              {[0.5, 1, 2, 3].map(v => (
+                <button 
+                  key={v}
+                  onClick={() => setRiskValue(v.toString())}
+                  className="flex-1 bg-[#f0f1f3] dark:bg-[#1e222d] hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39] rounded py-1 text-[10px] font-mono text-[#787b86] transition-colors"
+                >
+                  {v}%
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* VOLUME (LOTS) */}
+        <div className="border border-[#e6e8ea] dark:border-[#2a2e39] rounded p-2.5 flex flex-col gap-2 mt-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-[#787b86] uppercase tracking-wider font-semibold">VOLUME (LOTS)</span>
+            <div className="flex bg-[#f0f1f3] dark:bg-[#1e222d] rounded shrink-0 text-xs font-semibold overflow-hidden">
+              <button 
+                onClick={() => setVolumeMode('Auto')} 
+                className={`px-2 py-1 transition-colors ${volumeMode === 'Auto' ? 'bg-[#089981] text-white' : 'text-[#787b86]'}`}
+              >Auto</button>
+              <button 
+                onClick={() => setVolumeMode('Manual')} 
+                className={`px-2 py-1 transition-colors ${volumeMode === 'Manual' ? 'bg-[#089981] text-white' : 'text-[#787b86]'}`}
+              >Manual</button>
+            </div>
+          </div>
+          {volumeMode === 'Manual' ? (
             <div className="flex items-center">
               <button 
                 onClick={() => setLot(l => Math.max(config.minLot, parseFloat((l - config.lotStep).toFixed(2))))}
                 className="bg-[#f0f1f3] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] border-r-0 px-2.5 py-1.5 rounded-l text-[#1e2329] dark:text-white hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39] text-xs font-bold"
-              >
-                -
-              </button>
+              >-</button>
               <input
                 type="number"
                 value={lot}
@@ -273,11 +377,18 @@ export const SimulatorTradingPanel = ({
               <button 
                 onClick={() => setLot(l => parseFloat((l + config.lotStep).toFixed(2)))}
                 className="bg-[#f0f1f3] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] border-l-0 px-2.5 py-1.5 rounded-r text-[#1e2329] dark:text-white hover:bg-[#e6e8ea] dark:hover:bg-[#2a2e39] text-xs font-bold"
-              >
-                +
-              </button>
+              >+</button>
             </div>
-          </div>
+          ) : (
+            <div className="flex flex-col gap-1">
+              <div className="bg-[#f0f1f3] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#089981] font-mono cursor-not-allowed">
+                {finalLot.toFixed(2)}
+              </div>
+              <span className="text-[10px] text-[#089981] italic">
+                {sl ? 'Tự động tính từ SL & Risk' : 'Yêu cầu điền Stop Loss'}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Custom Leverage Slider Inline */}
@@ -343,12 +454,9 @@ export const SimulatorTradingPanel = ({
               const isChecked = e.target.checked;
               setShowTPSL(isChecked);
               if (isChecked) {
-                const activePos = store.positions.find(p => p.symbol === selectedStock.symbol);
-                const refPrice = orderType !== 'MARKET' && parseFloat(priceStr) > 0
-                  ? parseFloat(priceStr)
-                  : (activePos && activePos.entryPrice > 0 ? activePos.entryPrice : effectivePrice);
+                const refPrice = orderType !== 'MARKET' && parseFloat(priceStr) > 0 ? parseFloat(priceStr) : effectivePrice;
                 const precision = getPricePrecision(refPrice);
-                const currentSide = activePos ? activePos.side : 'LONG';
+                const currentSide = tradeSide;
 
                 let newTp = tp;
                 let newSl = sl;
@@ -376,10 +484,7 @@ export const SimulatorTradingPanel = ({
 
         {/* TP / SL inputs */}
         {showTPSL && (() => {
-          const activePos = store.positions.find(p => p.symbol === selectedStock.symbol);
-          const baseRefPrice = (orderType !== 'MARKET' && parseFloat(priceStr) > 0)
-            ? parseFloat(priceStr)
-            : (activePos && activePos.entryPrice > 0 ? activePos.entryPrice : effectivePrice);
+          const baseRefPrice = (orderType !== 'MARKET' && parseFloat(priceStr) > 0) ? parseFloat(priceStr) : effectivePrice;
           const sliderPrecision = getPricePrecision(baseRefPrice);
           const sliderStep = baseRefPrice > 1000 ? '1' : baseRefPrice > 10 ? '0.1' : Math.pow(10, -sliderPrecision).toString();
 
@@ -454,7 +559,7 @@ export const SimulatorTradingPanel = ({
           <div className="flex items-center justify-between text-[11px]">
             <span className="text-[#787b86]">Khối lượng thực tế</span>
             <span className="font-mono text-[#787b86]">
-              {actualQty < 1 ? Number(actualQty.toFixed(6)).toString() : actualQty.toLocaleString('vi-VN')} {assetUnit}
+              {finalLot.toFixed(2)} Lot ({actualQty < 1 ? Number(actualQty.toFixed(6)).toString() : actualQty.toLocaleString('vi-VN')} {assetUnit})
             </span>
           </div>
           <div className="flex items-center justify-between text-[11px]">
@@ -479,24 +584,23 @@ export const SimulatorTradingPanel = ({
 
       {/* Action Buttons LONG / SHORT */}
       <div className="p-3 border-t border-[#e6e8ea] dark:border-[#2a2e39] flex flex-col gap-2 shrink-0 bg-white dark:bg-[#131722]">
-        <div className="flex gap-2">
-          <button
-            disabled={isMarginExceeded}
-            onClick={() => handleTrade('LONG')}
-            className="flex-1 bg-[#089981] hover:bg-[#089981]/85 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded text-sm transition-all flex flex-col items-center justify-center gap-0.5"
-          >
-            <div className="flex items-center gap-1"><ArrowUp className="w-3.5 h-3.5" /> LONG</div>
-            <span className="text-[10px] font-mono opacity-90">{currentExecAsk.toLocaleString('vi-VN')}</span>
-          </button>
-          <button
-            disabled={isMarginExceeded}
-            onClick={() => handleTrade('SHORT')}
-            className="flex-1 bg-[#f23645] hover:bg-[#f23645]/85 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded text-sm transition-all flex flex-col items-center justify-center gap-0.5"
-          >
-            <div className="flex items-center gap-1"><ArrowDown className="w-3.5 h-3.5" /> SHORT</div>
-            <span className="text-[10px] font-mono opacity-90">{currentExecBid.toLocaleString('vi-VN')}</span>
-          </button>
-        </div>
+        <button
+          disabled={isMarginExceeded}
+          onClick={() => handleTrade(tradeSide)}
+          className={`w-full text-white font-bold py-3 rounded text-sm transition-all flex flex-col items-center justify-center gap-0.5 ${
+            tradeSide === 'LONG' 
+              ? 'bg-[#089981] hover:bg-[#089981]/85 active:scale-95 disabled:opacity-50' 
+              : 'bg-[#f23645] hover:bg-[#f23645]/85 active:scale-95 disabled:opacity-50'
+          }`}
+        >
+          <div className="flex items-center gap-1">
+            {tradeSide === 'LONG' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />} 
+            PLACE {tradeSide} {orderType === 'MARKET' ? 'MARKET' : orderType}
+          </div>
+          <span className="text-[11px] font-mono opacity-90">
+            {tradeSide === 'LONG' ? currentExecAsk.toLocaleString('vi-VN') : currentExecBid.toLocaleString('vi-VN')}
+          </span>
+        </button>
 
         {/* Toast */}
         {toast && (

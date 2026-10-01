@@ -252,9 +252,54 @@ export const TradingTerminal = () => {
 
   // Toggles for lower toolbar buttons
   const [magnetMode, setMagnetMode] = useState(false);
+  const [magnetType, setMagnetType] = useState<'weak' | 'strong'>('strong');
   const [stayInDrawingMode, setStayInDrawingMode] = useState(false);
   const [lockDrawing, setLockDrawing] = useState(false);
   const [hideDrawing, setHideDrawing] = useState(false);
+
+  // Keyboard modifiers
+  const [isCtrlPressed, setIsCtrlPressed] = useState(false);
+  const [isShiftPressed, setIsShiftPressed] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Control') setIsCtrlPressed(true);
+      if (e.key === 'Shift') {
+        setIsShiftPressed(true);
+        // Attach to window object for ChartArea to access
+        (window as any)._isShiftPressed = true;
+        setActiveTool(prev => {
+          if (prev === 'cursor') {
+            (window as any)._prevToolBeforeShift = 'cursor';
+            return 'priceLine';
+          }
+          return prev;
+        });
+      }
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Control') setIsCtrlPressed(false);
+      if (e.key === 'Shift') {
+        setIsShiftPressed(false);
+        (window as any)._isShiftPressed = false;
+        setActiveTool(prev => {
+          if (prev === 'priceLine' && (window as any)._prevToolBeforeShift === 'cursor') {
+            (window as any)._prevToolBeforeShift = null;
+            return 'cursor';
+          }
+          return prev;
+        });
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
+  const effectiveMagnetMode = magnetMode !== isCtrlPressed;
 
   const showToast = (msg: string, type: 'info' | 'warning' | 'success' | 'error' = 'info') => {
     setToast({ msg, type });
@@ -1155,8 +1200,10 @@ export const TradingTerminal = () => {
         <LeftToolbar
           activeTool={activeTool}
           onToolSelect={handleToolClick}
-          magnetMode={magnetMode}
+          magnetMode={effectiveMagnetMode}
+          magnetType={magnetType}
           onToggleMagnet={() => setMagnetMode(!magnetMode)}
+          onMagnetTypeSelect={(type) => setMagnetType(type)}
           stayInDrawingMode={stayInDrawingMode}
           onToggleStayInDrawingMode={() => setStayInDrawingMode(!stayInDrawingMode)}
           lockDrawing={lockDrawing}
@@ -1201,7 +1248,8 @@ export const TradingTerminal = () => {
                 <ChartArea
                   activeTool={activeTool}
                   onToolSelect={setActiveTool}
-                  magnetMode={magnetMode}
+                  magnetMode={effectiveMagnetMode}
+                  magnetType={magnetType}
                   stayInDrawingMode={stayInDrawingMode}
                   lockDrawing={lockDrawing}
                   hideDrawing={hideDrawing}
