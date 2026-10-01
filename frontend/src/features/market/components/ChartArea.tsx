@@ -420,7 +420,12 @@ registerOverlay({
           attrs: {
             coordinates: [p0, p2, p1, p3]
           },
-          styles: { style: 'stroke_fill', color: 'rgba(156, 39, 176, 0.15)', borderColor: '#9c27b0', borderSize: 2 }
+          styles: { 
+            style: 'stroke_fill', 
+            color: overlay.styles?.polygon?.color || 'rgba(156, 39, 176, 0.15)', 
+            borderColor: overlay.styles?.polygon?.borderColor || '#9c27b0', 
+            borderSize: overlay.styles?.polygon?.borderSize ?? 2 
+          }
         }
       ];
 
@@ -1640,7 +1645,7 @@ registerOverlay({
   needDefaultPointFigure: true,
   needDefaultXAxisFigure: false,
   needDefaultYAxisFigure: false,
-  createPointFigures: ({ coordinates, bounding }) => {
+  createPointFigures: ({ coordinates, bounding, overlay }) => {
     if (coordinates && coordinates.length >= 2 && coordinates[0] && coordinates[1]) {
       const y1 = coordinates[0].y;
       const y2 = coordinates[1].y;
@@ -1659,7 +1664,7 @@ registerOverlay({
             },
             styles: {
               style: 'fill',
-              color: 'rgba(8, 153, 129, 0.16)'
+              color: overlay.styles?.polygon?.color || 'rgba(8, 153, 129, 0.16)'
             }
           }
         ];
@@ -4523,7 +4528,7 @@ export const ChartArea = ({
       });
     } else if (activeTool === 'priceLine') {
       chart.createOverlay({
-        name: 'measure',
+        name: 'priceLine',
         lock: false,
         onClick: (chart as any).handleOverlayClick,
         onRightClick: () => false
@@ -5219,13 +5224,18 @@ export const ChartArea = ({
       if (orderToDraw && tpToDraw) {
         chart.createOverlay({
           id: 'preview_tp_zone',
-          name: 'rect',
+          name: 'tpslZone',
           lock: true,
           points: [
             { timestamp: allData[0].timestamp, value: orderToDraw },
             { timestamp: allData[lastDataIndex].timestamp, value: tpToDraw }
           ],
-          styles: { polygon: { color: 'rgba(8, 153, 129, 0.1)' } }
+          styles: { 
+            polygon: { 
+              color: 'rgba(8, 153, 129, 0.1)',
+              borderColor: '#089981'
+            } 
+          }
         } as any);
       }
     } else {
@@ -5311,13 +5321,18 @@ export const ChartArea = ({
       if (orderToDraw && slToDraw) {
         chart.createOverlay({
           id: 'preview_sl_zone',
-          name: 'rect',
+          name: 'tpslZone',
           lock: true,
           points: [
             { timestamp: allData[0].timestamp, value: orderToDraw },
             { timestamp: allData[lastDataIndex].timestamp, value: slToDraw }
           ],
-          styles: { polygon: { color: 'rgba(242, 54, 69, 0.1)' } }
+          styles: { 
+            polygon: { 
+              color: 'rgba(242, 54, 69, 0.1)',
+              borderColor: '#f23645'
+            } 
+          }
         } as any);
       }
     } else {
