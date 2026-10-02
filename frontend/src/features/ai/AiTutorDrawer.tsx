@@ -454,7 +454,19 @@ export const AiTutorDrawer = ({
     } catch (err: any) {
       console.error(err);
       const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-      const errMessage = err?.message || '';
+      let errMessage = err?.message || '';
+      
+      // Sanitize raw HTML error pages (e.g. Render/Cloudflare 502/503/504)
+      if (errMessage.includes('<!DOCTYPE html') || errMessage.includes('<html') || errMessage.length > 200) {
+        if (errMessage.includes('502')) {
+          errMessage = 'Máy chủ AI trên Render đang khởi động lại (Cold-start sau 15p nghỉ) hoặc chưa phản hồi. Vui lòng đợi 30-60 giây và gửi lại câu hỏi.';
+        } else if (errMessage.includes('504')) {
+          errMessage = 'Hết thời gian chờ phản hồi từ máy chủ AI (Gateway Timeout). Vui lòng thử lại.';
+        } else {
+          errMessage = 'Máy chủ AI tạm thời không thể truy cập (HTTP Error).';
+        }
+      }
+
       const noticeText = isLocal
         ? '⚠️ Không thể kết nối tới AI Service. Vui lòng đảm bảo `python-service` đang chạy trên cổng 8000.'
         : `⚠️ Không thể kết nối tới AI Service trên máy chủ. ${errMessage ? `(Chi tiết: ${errMessage})` : 'Vui lòng kiểm tra lại dịch vụ python-service trên Render.'}`;

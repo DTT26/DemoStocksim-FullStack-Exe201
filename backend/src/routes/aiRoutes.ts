@@ -28,7 +28,8 @@ function getUserIdFromReq(req: Request): string {
 }
 
 async function forwardToPython(endpoint: string, method: string = 'POST', data?: any) {
-  const url = `${PYTHON_URL}/internal/ai${endpoint}`;
+  const cleanBaseUrl = PYTHON_URL.replace(/\/+$/, '');
+  const url = `${cleanBaseUrl}/internal/ai${endpoint}`;
   const options: RequestInit = {
     method,
     headers: { 'Content-Type': 'application/json' },
@@ -37,22 +38,29 @@ async function forwardToPython(endpoint: string, method: string = 'POST', data?:
   };
 
   let lastError: any = null;
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       const resp = await fetch(url, options);
       if (!resp.ok) {
-        if ((resp.status === 502 || resp.status === 503 || resp.status === 504) && attempt === 1) {
-          await new Promise(r => setTimeout(r, 3000));
+        if ((resp.status === 502 || resp.status === 503 || resp.status === 504) && attempt < maxAttempts) {
+          console.warn(`[AI Route] Python service returned ${resp.status} on attempt ${attempt}. Retrying in 6s for cold-start recovery...`);
+          await new Promise(r => setTimeout(r, 6000));
           continue;
         }
         const errorText = await resp.text();
-        throw new Error(`Python AI Service error (${resp.status}): ${errorText}`);
+        const isHtml = errorText.trim().startsWith('<') || errorText.includes('<!DOCTYPE html');
+        const cleanMsg = isHtml 
+          ? `Dịch vụ AI đang khởi động (Cold-start) hoặc tạm thời không khả dụng trên Render (${resp.status} Bad Gateway). Vui lòng thử lại sau 30-60 giây.`
+          : errorText.slice(0, 300);
+        throw new Error(`Python AI Service error (${resp.status}): ${cleanMsg}`);
       }
       return await resp.json();
     } catch (err: any) {
       lastError = err;
-      if (attempt === 1) {
-        await new Promise(r => setTimeout(r, 3000));
+      if (attempt < maxAttempts) {
+        console.warn(`[AI Route] Python connection error on attempt ${attempt}: ${err?.message}. Retrying...`);
+        await new Promise(r => setTimeout(r, 4000));
       }
     }
   }
