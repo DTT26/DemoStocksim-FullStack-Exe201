@@ -420,6 +420,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
 
       {/* Order Entry */}
       {user ? (
+        challengeBadge ? (
         <div className="border-t border-[#e6e8ea] dark:border-[#2a2e39] p-3 flex flex-col gap-2.5 shrink overflow-y-auto max-h-[55vh] lg:max-h-[60vh] bg-[#f8f9fa] dark:bg-[#131722]">
           {/* Balance row */}
           <div className="flex items-center justify-between text-xs">
@@ -989,6 +990,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
             </div>
           )}
         </div>
+        ) : null
       ) : (
         <div className="border-t border-[#e6e8ea] dark:border-[#2a2e39] p-6 flex flex-col items-center justify-center text-center gap-4 shrink-0 bg-white dark:bg-[#131722]">
           <Wallet className="w-8 h-8 text-[#787b86] dark:text-[#434651]" />

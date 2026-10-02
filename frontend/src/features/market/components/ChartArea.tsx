@@ -1386,15 +1386,9 @@ registerOverlay({
       const lossPercent = entryPrice > 0 ? (lossValue / entryPrice * 100) : 0;
       const rr = lossValue > 0 ? (profitValue / lossValue) : 0;
 
-      // Simulate position sizing (assuming $1000 risk)
-      const qty = lossValue > 0 ? (1000 / lossValue) : 0;
-      const profitAmount = qty * profitValue;
-      const lossAmount = qty * lossValue;
-
-      const targetText = `Mục tiêu: ${profitValue.toFixed(2)} (${profitPercent.toFixed(2)}%) ${tpPrice.toFixed(2)}, Số tiền: ${profitAmount.toFixed(2)}`;
-      const stopText = `Dừng: ${lossValue.toFixed(2)} (${lossPercent.toFixed(2)}%) ${slPrice.toFixed(2)}, Số tiền: ${lossAmount.toFixed(2)}`;
-      const midText1 = `Mở Lợi nhuận & Thua lỗ: 0.00, S.Lg: ${Math.round(qty)}`;
-      const midText2 = `Tỷ lệ Rủi ro/Lợi nhuận: ${rr.toFixed(2)}`;
+      const targetText = `Mục tiêu: ${profitValue.toFixed(2)} (${profitPercent.toFixed(2)}%) ${tpPrice.toFixed(2)}`;
+      const stopText = `Dừng: ${lossValue.toFixed(2)} (${lossPercent.toFixed(2)}%) ${slPrice.toFixed(2)}`;
+      const rrText = `Tỷ lệ Rủi ro/Lợi nhuận: ${rr.toFixed(2)}`;
 
       const centerX = (minX + maxX) / 2;
 
@@ -1412,16 +1406,11 @@ registerOverlay({
         styles: { color: '#ffffff', size: 12, backgroundColor: '#f23645', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4 }
       });
 
-      // Middle Text Box (2 lines)
+      // Middle Text Box (Risk/Reward Ratio)
       figures.push({
         type: 'text',
-        attrs: { x: centerX, y: p0.y - 10, text: midText1, align: 'center', baseline: 'bottom' },
-        styles: { color: '#ffffff', size: 12, backgroundColor: '#089981', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 0 }
-      });
-      figures.push({
-        type: 'text',
-        attrs: { x: centerX, y: p0.y + 10, text: midText2, align: 'center', baseline: 'top' },
-        styles: { color: '#ffffff', size: 12, backgroundColor: '#089981', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 0, paddingBottom: 4 }
+        attrs: { x: centerX, y: p0.y, text: rrText, align: 'center', baseline: 'middle' },
+        styles: { color: '#ffffff', size: 12, backgroundColor: '#089981', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4 }
       });
     }
     return figures;
@@ -1515,15 +1504,9 @@ registerOverlay({
       const lossPercent = entryPrice > 0 ? (lossValue / entryPrice * 100) : 0;
       const rr = lossValue > 0 ? (profitValue / lossValue) : 0;
 
-      // Simulate position sizing (assuming $1000 risk)
-      const qty = lossValue > 0 ? (1000 / lossValue) : 0;
-      const profitAmount = qty * profitValue;
-      const lossAmount = qty * lossValue;
-
-      const targetText = `Mục tiêu: ${profitValue.toFixed(2)} (${profitPercent.toFixed(2)}%) ${tpPrice.toFixed(2)}, Số tiền: ${profitAmount.toFixed(2)}`;
-      const stopText = `Dừng: ${lossValue.toFixed(2)} (${lossPercent.toFixed(2)}%) ${slPrice.toFixed(2)}, Số tiền: ${lossAmount.toFixed(2)}`;
-      const midText1 = `Mở Lợi nhuận & Thua lỗ: 0.00, S.Lg: ${Math.round(qty)}`;
-      const midText2 = `Tỷ lệ Rủi ro/Lợi nhuận: ${rr.toFixed(2)}`;
+      const targetText = `Mục tiêu: ${profitValue.toFixed(2)} (${profitPercent.toFixed(2)}%) ${tpPrice.toFixed(2)}`;
+      const stopText = `Dừng: ${lossValue.toFixed(2)} (${lossPercent.toFixed(2)}%) ${slPrice.toFixed(2)}`;
+      const rrText = `Tỷ lệ Rủi ro/Lợi nhuận: ${rr.toFixed(2)}`;
 
       const centerX = (minX + maxX) / 2;
 
@@ -1541,16 +1524,11 @@ registerOverlay({
         styles: { color: '#ffffff', size: 12, backgroundColor: '#f23645', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4 }
       });
 
-      // Middle Text Box (2 lines)
+      // Middle Text Box (Risk/Reward Ratio)
       figures.push({
         type: 'text',
-        attrs: { x: centerX, y: p0.y - 10, text: midText1, align: 'center', baseline: 'bottom' },
-        styles: { color: '#ffffff', size: 12, backgroundColor: '#089981', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 0 }
-      });
-      figures.push({
-        type: 'text',
-        attrs: { x: centerX, y: p0.y + 10, text: midText2, align: 'center', baseline: 'top' },
-        styles: { color: '#ffffff', size: 12, backgroundColor: '#089981', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 0, paddingBottom: 4 }
+        attrs: { x: centerX, y: p0.y, text: rrText, align: 'center', baseline: 'middle' },
+        styles: { color: '#ffffff', size: 12, backgroundColor: '#089981', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4 }
       });
     }
     return figures;
@@ -3706,6 +3684,9 @@ export const ChartArea = ({
   const onTPSLChangeRef = useRef(onTPSLChange);
   const pendingOrderOverlayIdsRef = useRef<string[]>([]);
   const createdOverlaysRef = useRef<Record<string, boolean>>({});
+  const stayInDrawingModeRef = useRef(stayInDrawingMode);
+  stayInDrawingModeRef.current = stayInDrawingMode;
+  const lastOverlayPointsRef = useRef<Record<string, any>>({});
 
   // Fibonacci & Tool Floating Bar States
   const [isFibModalOpen, setIsFibModalOpen] = useState(false);
@@ -4662,12 +4643,44 @@ export const ChartArea = ({
                 const p1 = pts[pts.length - 1];
                 
                 if (p0.value !== undefined && p1.value !== undefined) {
-                  // Force horizontal line when Shift is held
-                  chart.overrideOverlay({
-                    id: event.overlay.id,
-                    points: [p0, { ...p1, value: p0.value }]
-                  });
-                  return true;
+                  const overlayId = event.overlay.id;
+                  const lastPts = lastOverlayPointsRef.current[overlayId];
+                  
+                  // Initialize for next frame if not present
+                  if (!lastPts || !lastPts[0] || !lastPts[1]) {
+                    lastOverlayPointsRef.current[overlayId] = [{ ...p0 }, { ...p1 }];
+                    return false;
+                  }
+
+                  const p0Changed = p0.timestamp !== lastPts[0].timestamp || p0.value !== lastPts[0].value;
+                  const p1Changed = p1.timestamp !== lastPts[1].timestamp || p1.value !== lastPts[1].value;
+                  
+                  let anchor = 'none';
+                  if (p0Changed && !p1Changed) {
+                    anchor = 'p1'; // Dragging p0, anchor is p1
+                  } else if (p1Changed && !p0Changed) {
+                    anchor = 'p0'; // Dragging p1, anchor is p0
+                  }
+                  
+                  if (anchor !== 'none') {
+                    let overridePoints;
+                    if (anchor === 'p1') {
+                      overridePoints = [{ ...p0, value: p1.value }, p1];
+                    } else {
+                      overridePoints = [p0, { ...p1, value: p0.value }];
+                    }
+                    
+                    chart.overrideOverlay({
+                      id: overlayId,
+                      points: overridePoints
+                    });
+                    
+                    // Update lastPts with the overridden points so next frame computes correctly
+                    lastOverlayPointsRef.current[overlayId] = [{ ...overridePoints[0] }, { ...overridePoints[1] }];
+                    return true;
+                  } else {
+                    lastOverlayPointsRef.current[overlayId] = [{ ...p0 }, { ...p1 }];
+                  }
                 }
               }
             }
@@ -4675,7 +4688,7 @@ export const ChartArea = ({
           },
           onDrawEnd: (event: any) => {
             const isContinuousTool = ['brush', 'highlighter', 'path', 'polyline'].includes(activeToolRef.current);
-            if (stayInDrawingMode || isContinuousTool) {
+            if (stayInDrawingModeRef.current || isContinuousTool) {
               setTimeout(() => {
                 if (chartRef.current && activeToolRef.current === activeTool) {
                   createStandardOverlay();
@@ -4690,7 +4703,7 @@ export const ChartArea = ({
       };
       createStandardOverlay();
     }
-  }, [activeTool, magnetMode, stayInDrawingMode]);
+  }, [activeTool]);
 
   useEffect(() => {
     if (chartRef.current) {
