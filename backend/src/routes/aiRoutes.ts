@@ -32,7 +32,10 @@ async function forwardToPython(endpoint: string, method: string = 'POST', data?:
   const url = `${cleanBaseUrl}/internal/ai${endpoint}`;
   const options: RequestInit = {
     method,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'Connection': 'keep-alive'
+    },
     body: data ? JSON.stringify(data) : undefined,
     signal: AbortSignal.timeout(65000), // Cho phép 65s để Render khởi động nếu đang ngủ (cold-start)
   };
@@ -184,6 +187,183 @@ router.post('/ask', protect, async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     console.error('AI Ask error:', error.message);
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// 1.1 Ask AI Tutor with Server-Sent Events (SSE Streaming)
+router.post('/ask-stream', protect, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user._id.toString();
+    const symbol = req.body?.symbol || 'BTCUSDT';
+    const question = req.body?.question || '';
+
+    // Persist user question in DB
+    if (question && question.trim()) {
+      try {
+        await AiChatMessage.create({
+          userId,
+          symbol,
+          sender: 'user',
+          text: question
+        });
+      } catch (saveErr) {
+        console.warn('Could not save user message to DB:', saveErr);
+      }
+    }
+
+    // Query user live portfolio & DB data to provide full database context to AI
+    let userData: any = null;
+    try {
+      const [wallet, holdings, pendingOrders, activeChallenge, recentOrders] = await Promise.all([
+        Wallet.findOne({ userId }),
+        Holding.find({ userId }),
+        Order.find({ userId, status: 'PENDING' }),
+        Challenge.findOne({ userId, status: { $in: ['ACTIVE', 'PAUSED', 'FAILED', 'PASSED'] } }),
+        Order.find({ userId }).sort({ createdAt: -1 }).limit(5)
+      ]);
+
+      userData = {
+        wallet: {
+          balance: wallet?.balance ?? 10000,
+          availableBalance: wallet?.availableBalance ?? 10000
+        },
+        positions: holdings.map(h => ({
+          symbol: h.symbol,
+          side: h.side,
+          quantity: h.quantity,
+          entryPrice: h.averagePrice,
+          leverage: h.leverage,
+          tp: h.tp,
+          sl: h.sl,
+          accountType: h.accountType
+        })),
+        pendingOrders: pendingOrders.map(o => ({
+          symbol: o.symbol,
+          side: o.side,
+          price: o.price,
+          quantity: o.quantity,
+          type: o.type
+        })),
+        recentOrders: recentOrders.map(o => ({
+          symbol: o.symbol,
+          side: o.side,
+          price: o.price,
+          quantity: o.quantity,
+          status: o.status
+        })),
+        challenge: activeChallenge ? {
+          status: activeChallenge.status,
+          level: activeChallenge.currentLevel,
+          capital: activeChallenge.startingCapitalUSD,
+          currentBalance: activeChallenge.currentBalanceUSD,
+          totalProfit: activeChallenge.totalProfitUSD,
+          dailyLoss: activeChallenge.dailyLossUSD,
+          maxLoss: activeChallenge.maxLossUSD
+        } : null
+      };
+    } catch (dbErr) {
+      console.warn('Could not query user DB portfolio:', dbErr);
+    }
+
+    const payload = {
+      ...req.body,
+      userId,
+      userData: userData || req.body?.userData
+    };
+
+    const cleanBaseUrl = PYTHON_URL.replace(/\/+$/, '');
+    const url = `${cleanBaseUrl}/internal/ai/ask-stream`;
+
+    // Setup SSE response headers for client
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders?.();
+
+    let fullAnswer = '';
+    let doneData: any = null;
+
+    try {
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Connection': 'keep-alive'
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(65000)
+      });
+
+      if (!resp.ok || !resp.body) {
+        const errorText = await resp.text();
+        const cleanMsg = errorText.includes('<!DOCTYPE html') || errorText.length > 200
+          ? `Máy chủ AI Render đang khởi động (${resp.status}). Vui lòng thử lại sau 30-60 giây.`
+          : errorText;
+        res.write(`data: ${JSON.stringify({ type: 'error', message: cleanMsg })}\n\n`);
+        return res.end();
+      }
+
+      // Stream chunks from python service to frontend
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const text = decoder.decode(value, { stream: true });
+        res.write(text);
+        buffer += text;
+
+        // Parse accumulated text to capture tokens for DB persistence
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const parsed = JSON.parse(line.slice(6));
+              if (parsed.type === 'token' && parsed.token) {
+                fullAnswer += parsed.token;
+              } else if (parsed.type === 'done') {
+                doneData = parsed;
+                if (parsed.answer) fullAnswer = parsed.answer;
+              }
+            } catch {
+              // ignore partial line JSON parse errors
+            }
+          }
+        }
+      }
+
+      // Save complete AI response to DB
+      if (fullAnswer.trim()) {
+        try {
+          await AiChatMessage.create({
+            userId,
+            symbol,
+            sender: 'tutor',
+            text: fullAnswer,
+            data: doneData || { answer: fullAnswer }
+          });
+        } catch (saveErr) {
+          console.warn('Could not save streamed tutor message to DB:', saveErr);
+        }
+      }
+
+      res.end();
+    } catch (fetchErr: any) {
+      console.error('Error streaming from Python service:', fetchErr);
+      res.write(`data: ${JSON.stringify({ type: 'error', message: fetchErr.message || 'Lỗi kết nối streaming AI' })}\n\n`);
+      res.end();
+    }
+  } catch (error: any) {
+    console.error('AI Ask Stream error:', error.message);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: error.message });
+    } else {
+      res.end();
+    }
   }
 });
 

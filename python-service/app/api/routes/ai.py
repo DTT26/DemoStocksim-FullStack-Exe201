@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from typing import Dict, Any, List
 from app.rag.schema import (
     AskQuestionRequest,
@@ -21,6 +22,18 @@ router = APIRouter()
 @router.post("/ask")
 def ask_question(req: AskQuestionRequest):
     return ai_tutor_service.answer_question(req)
+
+@router.post("/ask-stream")
+def ask_question_stream(req: AskQuestionRequest):
+    return StreamingResponse(
+        ai_tutor_service.answer_question_stream(req),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
 
 @router.post("/explain-concept")
 def explain_concept(req: ConceptExplainRequest):

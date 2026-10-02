@@ -1,5 +1,6 @@
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Iterator
 import re
+import json
 from app.rag.retriever import retriever
 from app.rag.schema import AskQuestionRequest, ConceptExplainRequest, RetrievalResult
 from app.services.llm_client import llm_client
@@ -427,7 +428,7 @@ class AiTutorService:
                     f"{kb_context}\n\n"
                     "Hãy trả lời súc tích, hoàn chỉnh, chuyên nghiệp và chuẩn xác dựa trên toàn bộ dữ liệu thị trường và database học viên được cung cấp ở trên."
                 )
-            llm_answer = llm_client.generate_text(sys_prompt, user_p, max_tokens=2000 if plan == "PREMIUM" else 1000)
+            llm_answer = llm_client.generate_text(sys_prompt, user_p, max_tokens=2000 if plan == "PREMIUM" else 750)
 
             if llm_answer:
                 # Nếu có rủi ro vi phạm quỹ Hard Breach, đảm bảo khối cảnh báo ở đầu bài
@@ -716,6 +717,392 @@ class AiTutorService:
             framework=req.framework
         )
         return self.answer_question(ask_req)
+
+    def answer_question_stream(self, req: AskQuestionRequest) -> Iterator[str]:
+        query = req.question.strip()
+
+        # 0. User Subscription & Daily Quota Guardrail Check
+        user_id = req.userId or (req.userData and req.userData.get("userId")) or "64f7b1e4a3b9c2d1e8f9a0b1"
+        sub = subscription_service.get_or_create_subscription(user_id)
+        plan = req.plan or sub.get("plan", "FREE")
+        limit = sub.get("daily_ai_limit", FREE_DAILY_LIMIT if plan == "FREE" else PREMIUM_DAILY_LIMIT)
+        used = sub.get("daily_ai_used", 0)
+
+        intent_info = route_question_intent(query)
+        question_intent = intent_info["intent"]
+
+        if used >= limit:
+            limit_str = f"{used}/{limit}"
+            err_payload = {
+                "type": "error",
+                "message": f"⚠️ Bạn đã sử dụng hết {limit_str} lượt tương tác AI miễn phí hôm nay!\nVui lòng nâng cấp lên gói ✨ AI Tutor PRO để tiếp tục phân tích.",
+                "guardrailTriggered": "QUOTA_EXCEEDED",
+                "remainingToday": 0,
+                "plan": plan
+            }
+            yield f"data: {json.dumps(err_payload, ensure_ascii=False)}\n\n"
+            return
+
+        # 1. Kích hoạt Strict Signal Guardrail
+        strict_guard = check_strict_signal_guardrail(query, req.symbol)
+        if strict_guard:
+            err_payload = {
+                "type": "error",
+                "message": strict_guard.get("answer", ""),
+                "guardrailTriggered": strict_guard.get("guardrailTriggered", "NO_BUY_SELL_SIGNAL"),
+                "plan": plan
+            }
+            yield f"data: {json.dumps(err_payload, ensure_ascii=False)}\n\n"
+            return
+
+        # Static Guardrail for Buy/Sell signals (khi không có LLM)
+        if not llm_client.is_configured() and self.is_asking_for_signal(query):
+            symbol = req.symbol or "cổ phiếu này"
+            err_payload = {
+                "type": "error",
+                "message": (
+                    f"⚠️ **Nguyên tắc hệ thống**: AI hoạt động như một Trợ lý Giáo dục & Phân tích Độc lập, "
+                    f"tuyệt đối không đưa ra khuyến nghị Mua (Buy) / Bán (Sell) hay phím lệnh giao dịch cho {symbol}.\n\n"
+                    f"Thay vào đó, tôi có thể hỗ trợ bạn bóc tách các yếu tố kỹ thuật đang ủng hộ hoặc phản đối "
+                    f"một vị thế dựa trên phương pháp Price Action hoặc ICT/SMC để bạn tự đưa ra quyết định độc lập."
+                ),
+                "guardrailTriggered": "NO_BUY_SELL_SIGNAL",
+                "plan": plan
+            }
+            yield f"data: {json.dumps(err_payload, ensure_ascii=False)}\n\n"
+            return
+
+        # 2. Retrieve relevant verified knowledge documents
+        results: List[RetrievalResult] = retriever.retrieve(
+            query=query,
+            framework=req.framework,
+            top_k=3
+        )
+
+        citations = []
+        if results:
+            for r in results:
+                citations.append({
+                    "title": r.document.title,
+                    "concept": r.document.concept,
+                    "framework": r.document.framework,
+                    "source": r.document.source,
+                    "sourceUrl": r.document.sourceUrl,
+                    "author": r.document.author,
+                    "sourceType": r.document.sourceType,
+                    "score": r.score
+                })
+
+        trade_intent = extract_trade_intent(query, active_symbol=req.symbol)
+        risk_eval = evaluate_prop_firm_risk(trade_intent, req.userData or {}) if trade_intent else None
+        time_ctx = get_current_time_context()
+
+        # If LLM is configured, run streaming
+        if llm_client.is_configured():
+            reserved, updated_sub = subscription_service.reserve_quota_slot(user_id)
+            if not reserved:
+                err_payload = {
+                    "type": "error",
+                    "message": f"⚠️ Bạn đã sử dụng hết {limit}/{limit} lượt tương tác AI miễn phí hôm nay!\nVui lòng nâng cấp lên gói ✨ AI Tutor PRO để tiếp tục phân tích.",
+                    "guardrailTriggered": "QUOTA_EXCEEDED",
+                    "remainingToday": 0,
+                    "plan": plan
+                }
+                yield f"data: {json.dumps(err_payload, ensure_ascii=False)}\n\n"
+                return
+
+            active_method = route_query_to_method(
+                query,
+                has_positions=bool(req.userData and req.userData.get("positions"))
+            )
+            intent_guidance = active_method.to_prompt_text()
+
+            risk_tool_instruction = ""
+            if risk_eval:
+                risk_tool_instruction = (
+                    "\n\n==================================================\n"
+                    "⚡ FUNCTION CALLING: KẾT QUẢ ĐO LƯỜNG VỊ THẾ & RỦI RO QUỸ (PROP FIRM RISK TOOL)\n"
+                    "==================================================\n"
+                    "Hệ thống đã tự động chạy Function Calling / Risk Tool tính toán vị thế của học viên với kết quả sau:\n"
+                    f"- Mã: {risk_eval['symbol']} | Lệnh: {risk_eval['side']} | Entry: ${risk_eval['entry']:,.2f} | SL: ${risk_eval['sl']:,.2f}\n"
+                    f"- Khoảng cách SL: {risk_eval['sl_distance']:,.2f} giá\n"
+                    f"- Khối lượng dự kiến: {risk_eval['volume']} lot\n"
+                    f"- Thua lỗ ước tính nếu dính SL: ${risk_eval['estimated_loss']:,.2f}\n"
+                    f"- Giới hạn Daily Loss còn lại trong ngày: ${risk_eval['remaining_daily_loss']:,.2f} (Số dư ví: ${risk_eval['account_balance']:,.2f})\n"
+                    f"- Có vi phạm luật quỹ (Hard Breach) không: {'CÓ (NGUY HIỂM CỰC ĐỘ - TRƯỢT QUỸ NGAY LẬP TỨC)' if risk_eval['is_hard_breach'] else 'KHÔNG'}\n"
+                    f"- Khối lượng tối đa cho phép để không vi phạm quỹ: {risk_eval['max_safe_lot']} lot\n"
+                    f"- Khối lượng khuyến nghị chuẩn 1% rủi ro: {risk_eval['recommended_1pct_lot']} lot\n\n"
+                    "QUY TẮC BẮT BUỘC KHI CÓ KẾT QUẢ RỦI RO:\n"
+                    "1. KHÔNG nói đạo lý chung chung 'hãy quản lý vốn 1%'. Phải dùng chính xác các con số cụ thể đã tính toán ở trên.\n"
+                    "2. Nếu có vi phạm luật quỹ (is_hard_breach = True), BẮT BUỘC đưa khối cảnh báo to rõ lên ngay ĐẦU TIÊN của câu trả lời:\n"
+                    "   🔴 **CẢNH BÁO VI PHẠM LUẬT QUỸ (HARD BREACH RISK)**\n"
+                    f"   - Đi {risk_eval['volume']} lot với SL này, nếu thua bạn mất ${risk_eval['estimated_loss']:,.2f}.\n"
+                    f"   - Daily Drawdown còn lại hôm nay của bạn chỉ là ${risk_eval['remaining_daily_loss']:,.2f}. Lệnh này dính SL đồng nghĩa **TRƯỢT QUỸ NGAY LẬP TỨC**.\n"
+                    f"   - Khối lượng tối đa cho phép vào: **Không quá {risk_eval['max_safe_lot']} lot**.\n"
+                    "3. Sau đó phân tích ngắn gọn lý do kỹ thuật hoặc hướng dẫn đặt lệnh kỷ luật theo quy định quỹ."
+                )
+
+            time_prompt_section = (
+                "\n\n==================================================\n"
+                "🕒 THỜI GIAN THỰC TẾ HỆ THỐNG & PHIÊN GIAO DỊCH (REAL-TIME CLOCK):\n"
+                "==================================================\n"
+                f"- Giờ Việt Nam (Chuẩn chính hệ thống): {time_ctx['vn_time']}\n"
+                f"- Giờ Quốc tế (UTC): {time_ctx['utc_time']}\n"
+                f"- Giờ New York (Wall Street): {time_ctx['ny_time']}\n"
+                f"- Phiên thị trường hiện tại: {time_ctx['active_session']}\n"
+                f"- Trạng thái Killzone ICT: {time_ctx['active_killzone']}"
+            )
+
+            if plan == "PREMIUM":
+                tiered_prompt_section = (
+                    "\n\n==================================================\n"
+                    "✨ CẤU HÌNH PHẢN HỒI CHUYÊN SÂU [TIER: PREMIUM AI TUTOR PRO]\n"
+                    "==================================================\n"
+                    "Học viên đang sử dụng gói PREMIUM AI TUTOR PRO. Cung cấp phân tích chuyên sâu đa chiều khi dữ liệu thị trường hỗ trợ:\n"
+                    "1. Phân tích đa khung thời gian: HTF -> MTF -> LTF.\n"
+                    "2. Cấu trúc thị trường & Dòng tiền thông minh (Market Structure, BOS, CHoCH, MSS).\n"
+                    "3. Quét thanh khoản (Liquidity Pools, BSL/SSL Sweep).\n"
+                    "4. Xung lực giá (Displacement), POI, Fair Value Gap (FVG), Order Block (OB).\n"
+                    "5. Bối cảnh mở vị thế, điểm vô hiệu hóa, mục tiêu và R:R.\n"
+                    "6. Đánh giá rủi ro dựa trên số liệu thực tế.\n"
+                    "Giữ phong thái sắc sảo, kỷ luật của một Senior Prop Firm Funded Trader."
+                )
+            else:
+                tiered_prompt_section = (
+                    "\n\n==================================================\n"
+                    "🎯 CẤU HÌNH PHẢN HỒI GÓI TIÊU CHUẨN [TIER: FREE USER PLAN]\n"
+                    "==================================================\n"
+                    "Học viên đang sử dụng gói FREE.\n"
+                    "Quy chuẩn phản hồi: Ngắn gọn, cô đọng khoảng 2-3 đoạn văn.\n"
+                    "Tập trung chính vào:\n"
+                    f"- Ý định câu hỏi: [{question_intent}]\n"
+                    "- Bằng chứng then chốt (Main Evidence) & Lý do quan trọng nhất.\n"
+                    "- Vùng POI / FVG / Mốc thanh khoản chính.\n"
+                    "- Điểm vô hiệu hóa (Main Invalidation).\n"
+                    "- Đúng 1 câu hỏi dẫn dắt tư duy.\n"
+                    "Tránh giải thích quá dài dòng hoặc lan man."
+                )
+
+            if question_intent in ["BAR_REPLAY", "BACKTEST_HISTORICAL"]:
+                tiered_prompt_section += (
+                    "\n\n==================================================\n"
+                    "⏳ QUY TẮC PHÂN TÍCH REPLAY & BACKTEST (CHỐNG THIÊN KIẾN TƯƠNG LAI):\n"
+                    "==================================================\n"
+                    "- Tuyệt đối KHÔNG sử dụng thông tin hay diễn biến của nến tương lai để phân tích quyết định tại mốc lịch sử.\n"
+                    "- Chỉ sử dụng dữ liệu có sẵn tại đúng thời điểm đó để đánh giá logic vào lệnh."
+                )
+
+            sys_prompt = (
+                "Bạn là Senior Prop Firm Funded Trader & AI Trading Coach của nền tảng StockSim.\n"
+                "Bạn phân tích thị trường với tư duy của một trader chuyên nghiệp theo phương pháp ICT, SMC (Smart Money Concepts) và Price Action thuần túy.\n\n"
+                "Bạn có quyền truy cập ĐẦY ĐỦ VÀO DATABASE HỆ THỐNG gồm:\n"
+                "1. Bảng giá thời gian thực của các mã tài sản trên hệ thống liên quan đến câu hỏi.\n"
+                "2. Toàn bộ dữ liệu tài khoản của học viên trong Database.\n\n"
+                f"{intent_guidance}\n\n"
+                f"{tiered_prompt_section}\n\n"
+                "YÊU CẦU BẮT BUỘC:\n"
+                "1. Tuân thủ nghiêm ngặt phương pháp trên.\n"
+                "2. Tra cứu giá thực và biến động 24h từ dữ liệu cung cấp.\n"
+                "3. Tuyệt đối KHÔNG đưa ra tín hiệu Mua/Bán/Phím lệnh cụ thể (No Buy/Sell signal).\n"
+                "4. TRẢ LỜI NGẮN GỌN, CÔ ĐỌNG, ĐI THẲNG VÀO TRỌNG TÂM, in đậm các mốc giá và POI quan trọng.\n"
+                "5. DUY TRÌ MẠCH HỘI THOẠI LIÊN TIẾP.\n"
+                f"{time_prompt_section}"
+                f"{risk_tool_instruction}\n\n"
+                "QUY TẮC TRẢ LỜI CHỐNG NÓI CHUNG CHUNG:\n"
+                "Cung cấp CÁI GÌ, Ở ĐÂU, TẠI SAO, BẰNG CHỨNG, ĐIỀU GÌ VÔ HIỆU HÓA."
+            )
+
+            chat_history_str = ""
+            if req.chatHistory and len(req.chatHistory) > 0:
+                history_lines = []
+                for turn in req.chatHistory[-6:]:
+                    sender = turn.get("sender") or turn.get("role")
+                    role_label = "Học viên" if sender == "user" else "AI Tutor"
+                    msg_text = str(turn.get("text", "")).strip()
+                    if msg_text:
+                        if len(msg_text) > 400:
+                            msg_text = msg_text[:400] + "..."
+                        history_lines.append(f"{role_label}: {msg_text}")
+                    if history_lines:
+                        chat_history_str = "\n\n💬 [LỊCH SỬ HỘI THOẠI GẦN ĐÂY ĐỂ TRẢ LỜI LIÊN TIẾP]:\n" + "\n".join(history_lines)
+
+            current_chart_str = ""
+            if req.symbol or req.currentPrice is not None:
+                market_lines = []
+                if req.symbol:
+                    market_lines.append(f"- Mã tài sản đang mở biểu đồ: {req.symbol}")
+                if req.currentPrice is not None:
+                    formatted_p = f"{req.currentPrice:,.4f}".rstrip('0').rstrip('.') if req.currentPrice < 1 else f"{req.currentPrice:,.2f}"
+                    market_lines.append(f"- Giá thị trường thực tế: ${formatted_p}")
+                if req.timeframe:
+                    market_lines.append(f"- Khung thời gian: {req.timeframe}")
+                if req.marketContext:
+                    mc = req.marketContext
+                    if mc.get("change24h") is not None:
+                        market_lines.append(f"- Biến động 24h: {mc.get('change24h')}%")
+                    if mc.get("exchange"):
+                        market_lines.append(f"- Sàn giao dịch: {mc.get('exchange')}")
+                current_chart_str = "\n\n📊 [BIỂU ĐỒ ĐANG XEM]:\n" + "\n".join(market_lines)
+
+            all_stocks_str = ""
+            relevant_stocks = extract_relevant_stocks(
+                query=query,
+                chat_history=req.chatHistory,
+                active_symbol=req.symbol,
+                all_stocks=req.allStocks
+            )
+            if relevant_stocks:
+                stock_lines = []
+                for s in relevant_stocks:
+                    sym = s.get("symbol", "")
+                    name = s.get("name", sym)
+                    p = s.get("price")
+                    pct = s.get("percent")
+                    exch = s.get("exchange", "")
+                    mkt = s.get("market", "")
+                    if sym and p is not None:
+                        p_fmt = f"${p:,.4f}".rstrip('0').rstrip('.') if p < 1 else f"${p:,.2f}"
+                        pct_fmt = f" ({pct:+.2f}%)" if pct is not None else ""
+                        stock_lines.append(f"• {sym} ({name} - {exch} [{mkt}]): {p_fmt}{pct_fmt}")
+                if stock_lines:
+                    all_stocks_str = "\n\n📈 [BẢNG GIÁ THỊ TRƯỜNG LIÊN QUAN]:\n" + "\n".join(stock_lines)
+
+            user_data_str = ""
+            if req.userData:
+                ud = req.userData
+                ud_lines = []
+                wallet = ud.get("wallet", {})
+                if wallet:
+                    ud_lines.append(f"- Ví tiền: Tổng số dư ${wallet.get('balance', 0):,.2f} | Khả dụng: ${wallet.get('availableBalance', 0):,.2f}")
+                positions = ud.get("positions", [])
+                if positions:
+                    pos_items = []
+                    for pos in positions:
+                        pos_items.append(f"{pos.get('side')} {pos.get('symbol')} (Entry: ${pos.get('entryPrice')}, x{pos.get('leverage')}, Qty: {pos.get('quantity')})")
+                    ud_lines.append(f"- Vị thế đang mở: " + "; ".join(pos_items))
+                challenge = ud.get("challenge")
+                if challenge:
+                    ud_lines.append(f"- Thử thách Quỹ: Cấp {challenge.get('level')}, Trạng thái: {challenge.get('status')}")
+                if ud_lines:
+                    user_data_str = "\n\n👤 [DỮ LIỆU TÀI KHOẢN HỌC VIÊN]:\n" + "\n".join(ud_lines)
+
+            risk_context = ""
+            if risk_eval:
+                risk_context = f"\n\n🚨 [KẾT QUẢ ĐO LƯỜNG VỊ THẾ TỰ ĐỘNG - RISK TOOL]:\n{risk_eval['alert_markdown']}"
+
+            kb_context = ""
+            if results:
+                kb_context = "\n\nTài liệu tham khảo đối chiếu từ Knowledge Base:\n" + "\n---\n".join([
+                    f"• {r.document.title} [{r.document.sourceType}] ({r.document.author}): {r.document.content}"
+                    for r in results
+                ])
+
+            if is_time_query(query):
+                user_p = (
+                    f"{chat_history_str}\n\n"
+                    f"Câu hỏi của học viên: {query}\n\n"
+                    f"🕒 [DỮ LIỆU ĐỒNG HỒ HỆ THỐNG]:\n"
+                    f"- Giờ Việt Nam (UTC+7): {time_ctx['vn_time']}\n"
+                    f"- Giờ Quốc tế: {time_ctx['utc_time']}\n"
+                    f"- Giờ New York: {time_ctx['ny_time']}\n"
+                    f"- Phiên: {time_ctx['active_session']}\n"
+                    f"- Killzone ICT: {time_ctx['active_killzone']}\n\n"
+                    "Trả lời trực tiếp và thân thiện cho học viên."
+                )
+            else:
+                user_p = (
+                    f"{chat_history_str}\n\n"
+                    f"Câu hỏi của học viên: {query}"
+                    f"{risk_context}"
+                    f"{current_chart_str}"
+                    f"{all_stocks_str}"
+                    f"{user_data_str}"
+                    f"{kb_context}\n\n"
+                    "Hãy trả lời súc tích, hoàn chỉnh, chuyên nghiệp và chuẩn xác dựa trên dữ liệu trên."
+                )
+
+            concept_val = results[0].document.concept if results else ("Session Timing & Real-time Clock" if is_time_query(query) else ("Prop Firm Risk Management" if risk_eval else "AI Trading Tutor"))
+            framework_val = results[0].document.framework if results else "VIP_LLM"
+            new_used = updated_sub.get("daily_ai_used", used + 1)
+            remaining = max(0, limit - new_used)
+
+            meta_data = {
+                "type": "meta",
+                "intent": question_intent,
+                "plan": plan,
+                "dailyAiUsed": new_used,
+                "dailyAiLimit": limit,
+                "remainingToday": remaining,
+                "concept": concept_val,
+                "framework": framework_val,
+                "sources": citations
+            }
+            yield f"data: {json.dumps(meta_data, ensure_ascii=False)}\n\n"
+
+            # If Hard Breach risk detected, stream warning banner first
+            if risk_eval and risk_eval.get("is_hard_breach"):
+                hard_breach_header = f"{risk_eval['alert_markdown']}\n\n---\n\n"
+                yield f"data: {json.dumps({'type': 'token', 'token': hard_breach_header}, ensure_ascii=False)}\n\n"
+
+            streamed_tokens = []
+            max_out = 2000 if plan == "PREMIUM" else 750
+            try:
+                for token in llm_client.stream_text(sys_prompt, user_p, max_tokens=max_out):
+                    if token:
+                        streamed_tokens.append(token)
+                        yield f"data: {json.dumps({'type': 'token', 'token': token}, ensure_ascii=False)}\n\n"
+            except Exception as stream_err:
+                print(f"Error during stream generation: {stream_err}")
+
+            # If stream produced no tokens, fallback to regular generate_text
+            if not streamed_tokens:
+                fallback_text = llm_client.generate_text(sys_prompt, user_p, max_tokens=max_out)
+                if fallback_text:
+                    streamed_tokens.append(fallback_text)
+                    yield f"data: {json.dumps({'type': 'token', 'token': fallback_text}, ensure_ascii=False)}\n\n"
+                else:
+                    subscription_service.rollback_quota_slot(user_id)
+                    yield f"data: {json.dumps({'type': 'error', 'message': 'Không thể kết nối tới mô hình AI. Vui lòng thử lại.'}, ensure_ascii=False)}\n\n"
+                    return
+
+            full_answer = "".join(streamed_tokens)
+            done_payload = {
+                "type": "done",
+                "answer": full_answer,
+                "concept": concept_val,
+                "framework": framework_val,
+                "sources": citations,
+                "socraticQuestions": []
+            }
+            yield f"data: {json.dumps(done_payload, ensure_ascii=False)}\n\n"
+            return
+
+        # 4. Fallback when LLM is offline: Call static answer_question and stream it as a single chunk
+        offline_res = self.answer_question(req)
+        ans = offline_res.get("answer", "")
+        meta_data = {
+            "type": "meta",
+            "intent": offline_res.get("intent", question_intent),
+            "plan": offline_res.get("plan", plan),
+            "dailyAiUsed": offline_res.get("dailyAiUsed", used),
+            "dailyAiLimit": limit,
+            "remainingToday": offline_res.get("remainingToday", max(0, limit - used)),
+            "concept": offline_res.get("concept", "AI Trading Tutor"),
+            "framework": offline_res.get("framework", "OFFLINE"),
+            "sources": offline_res.get("sources", citations)
+        }
+        yield f"data: {json.dumps(meta_data, ensure_ascii=False)}\n\n"
+        if ans:
+            yield f"data: {json.dumps({'type': 'token', 'token': ans}, ensure_ascii=False)}\n\n"
+        done_payload = {
+            "type": "done",
+            "answer": ans,
+            "concept": offline_res.get("concept"),
+            "framework": offline_res.get("framework"),
+            "sources": offline_res.get("sources", []),
+            "socraticQuestions": offline_res.get("socraticQuestions", [])
+        }
+        yield f"data: {json.dumps(done_payload, ensure_ascii=False)}\n\n"
 
     def inspect_chart_vision(
         self,

@@ -309,6 +309,84 @@ export const aiService = {
     return json.data;
   },
 
+  async askQuestionStream(
+    params: {
+      question: string;
+      framework?: string;
+      symbol?: string;
+      currentPrice?: number;
+      timeframe?: string;
+      marketContext?: any;
+      chatHistory?: Array<{ sender: string; text: string }>;
+      allStocks?: any[];
+    },
+    onChunk: (token: string, currentFullText: string) => void,
+    onMeta?: (meta: any) => void
+  ): Promise<AskResponse> {
+    const res = await fetch(`${API_BASE}/ask-stream`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      credentials: 'include',
+      body: JSON.stringify(params),
+    });
+
+    if (!res.ok || !res.body) {
+      throw new Error(`HTTP Error ${res.status}`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let accumulatedText = '';
+    let buffer = '';
+    let metaInfo: any = {};
+    let doneData: any = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunkStr = decoder.decode(value, { stream: true });
+      buffer += chunkStr;
+
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('data: ')) {
+          try {
+            const parsed = JSON.parse(trimmed.slice(6));
+            if (parsed.type === 'error') {
+              throw new Error(parsed.message || 'Lỗi xử lý AI');
+            } else if (parsed.type === 'meta') {
+              metaInfo = parsed;
+              onMeta?.(parsed);
+            } else if (parsed.type === 'token') {
+              accumulatedText += parsed.token;
+              onChunk(parsed.token, accumulatedText);
+            } else if (parsed.type === 'done') {
+              doneData = parsed;
+              if (parsed.answer) accumulatedText = parsed.answer;
+            }
+          } catch (e: any) {
+            if (e.message && !e.message.includes('JSON')) {
+              throw e;
+            }
+          }
+        }
+      }
+    }
+
+    return {
+      answer: accumulatedText || doneData?.answer || 'Không nhận được câu trả lời từ AI.',
+      concept: doneData?.concept || metaInfo?.concept || 'AI Trading Tutor',
+      framework: doneData?.framework || metaInfo?.framework || 'VIP_LLM',
+      sources: doneData?.sources || metaInfo?.sources || [],
+      socraticQuestions: doneData?.socraticQuestions || [],
+      guardrailTriggered: metaInfo?.guardrailTriggered || null
+    };
+  },
+
   async explainConcept(concept: string, framework?: string): Promise<AskResponse> {
     const res = await fetch(`${API_BASE}/explain-concept`, {
       method: 'POST',

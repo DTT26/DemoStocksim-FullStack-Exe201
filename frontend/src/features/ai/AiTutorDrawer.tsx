@@ -176,7 +176,47 @@ export const AiTutorDrawer = ({
   // Chat Q&A State
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingSeconds, setLoadingSeconds] = useState(0);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Dynamic Loading Status UX (1-3s, 4-7s, 8s+)
+  useEffect(() => {
+    let timer: any = null;
+    if (loading) {
+      setLoadingSeconds(1);
+      timer = setInterval(() => {
+        setLoadingSeconds(prev => prev + 1);
+      }, 1000);
+    } else {
+      setLoadingSeconds(0);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [loading]);
+
+  const getDynamicLoadingStatus = (sec: number) => {
+    if (sec <= 3) {
+      return {
+        icon: '🔍',
+        text: 'Đang rà soát dữ liệu thị trường & tài khoản...',
+        subtext: 'Thu thập giá sàn real-time, số dư ví và dữ liệu nến OHLCV...'
+      };
+    }
+    if (sec <= 7) {
+      return {
+        icon: '⚡',
+        text: 'Đang đối chiếu cấu trúc SMC / Liquidity...',
+        subtext: 'Nhận diện nhịp Displacement, vùng FVG, Order Block và quét thanh khoản...'
+      };
+    }
+    return {
+      icon: '✍️',
+      text: 'Đang hoàn thiện lời khuyên cho bạn...',
+      subtext: 'Tổng hợp luận điểm phân tích kỹ thuật và phương án quản trị rủi ro...'
+    };
+  };
 
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -413,6 +453,9 @@ export const AiTutorDrawer = ({
     setQuery('');
     setLoading(true);
 
+    const streamingId = 'tutor-stream-' + (Date.now() + 1);
+    let hasStartedStreaming = false;
+
     try {
       // Pass recent conversation context (last 6 messages) for multi-turn conversational memory
       const chatHistory = messages
@@ -433,24 +476,76 @@ export const AiTutorDrawer = ({
         exchange: s.exchange
       }));
 
-      const res = await aiService.askQuestion(
-        q, 
-        undefined, 
-        currentSymbol, 
-        currentPrice, 
-        timeframe, 
-        marketContext,
-        chatHistory,
-        allStocks
-      );
-      const tutorMsg: ChatMessage = {
-        id: String(Date.now() + 1),
-        sender: 'tutor',
-        text: res.answer,
-        data: res
-      };
-      setMessages(prev => [...prev, tutorMsg]);
-      fetchSubscription();
+      // 1. Try Server-Sent Events (SSE Streaming) first for real-time word-by-word delivery
+      let streamSucceeded = false;
+      try {
+        setIsStreaming(true);
+        const res = await aiService.askQuestionStream(
+          {
+            question: q,
+            symbol: currentSymbol,
+            currentPrice,
+            timeframe,
+            marketContext,
+            chatHistory,
+            allStocks
+          },
+          (_token, fullText) => {
+            if (!hasStartedStreaming) {
+              hasStartedStreaming = true;
+              setLoading(false); // Token arrived, hide waiting box!
+              setMessages(prev => [
+                ...prev,
+                {
+                  id: streamingId,
+                  sender: 'tutor',
+                  text: fullText
+                }
+              ]);
+            } else {
+              setMessages(prev => prev.map(m => m.id === streamingId ? { ...m, text: fullText } : m));
+            }
+          }
+        );
+
+        // Finalize message with complete metadata & citations
+        setMessages(prev => {
+          const exists = prev.some(m => m.id === streamingId);
+          if (exists) {
+            return prev.map(m => m.id === streamingId ? { ...m, text: res.answer, data: res } : m);
+          }
+          return [...prev, { id: streamingId, sender: 'tutor', text: res.answer, data: res }];
+        });
+        streamSucceeded = true;
+        fetchSubscription();
+      } catch (streamErr) {
+        console.warn('Streaming error, checking fallback:', streamErr);
+        if (hasStartedStreaming) {
+          throw streamErr;
+        }
+      }
+
+      // 2. Fallback to standard request if streaming failed before sending any tokens
+      if (!streamSucceeded && !hasStartedStreaming) {
+        const res = await aiService.askQuestion(
+          q, 
+          undefined, 
+          currentSymbol, 
+          currentPrice, 
+          timeframe, 
+          marketContext,
+          chatHistory,
+          allStocks
+        );
+        const tutorMsg: ChatMessage = {
+          id: String(Date.now() + 1),
+          sender: 'tutor',
+          text: res.answer,
+          data: res
+        };
+        setMessages(prev => [...prev, tutorMsg]);
+        fetchSubscription();
+      }
     } catch (err: any) {
       console.error(err);
       const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
@@ -481,6 +576,7 @@ export const AiTutorDrawer = ({
       ]);
     } finally {
       setLoading(false);
+      setIsStreaming(false);
     }
   };
 
@@ -768,8 +864,11 @@ export const AiTutorDrawer = ({
                         )}
 
                         {/* Rendered Formatted Content */}
-                        <div>
+                        <div className="relative">
                           {renderFormattedText(msg.text)}
+                          {isStreaming && idx === messages.length - 1 && msg.sender === 'tutor' && (
+                            <span className="inline-block w-2 h-4 ml-1 bg-amber-500 animate-pulse align-middle rounded-[1px]" />
+                          )}
                         </div>
 
                         {/* Quota Exceeded Guardrail Callout */}
@@ -821,19 +920,34 @@ export const AiTutorDrawer = ({
               );
             })}
 
-              {/* Loading Indicator */}
+              {/* Dynamic Waiting Status Indicator UX (Giây 1-3, 4-7, 8+) */}
               {loading && (
-                <div className="flex items-start gap-2.5">
+                <div className="flex items-start gap-2.5 transition-all duration-300">
                   <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500/20 to-blue-500/20 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 shadow-xs">
                     <Sparkles className="w-4 h-4 animate-spin text-amber-500" />
                   </div>
-                  <div className="p-3.5 rounded-2xl rounded-tl-sm bg-[#f8f9fc] dark:bg-[#181d2a] border border-[#e2e8f0] dark:border-[#2b3347] flex items-center gap-2.5 text-slate-700 dark:text-slate-300 text-xs shadow-sm">
-                    <div className="flex gap-1">
-                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <div className="p-3.5 rounded-2xl rounded-tl-sm bg-[#f8f9fc] dark:bg-[#181d2a] border border-[#e2e8f0] dark:border-[#2b3347] space-y-2 text-slate-700 dark:text-slate-300 text-xs shadow-sm max-w-[88%]">
+                    <div className="flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-100">
+                      <span className="text-base select-none">{getDynamicLoadingStatus(loadingSeconds).icon}</span>
+                      <span className="text-[12.5px] text-amber-600 dark:text-amber-400 font-medium">
+                        {getDynamicLoadingStatus(loadingSeconds).text}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono ml-auto">
+                        {loadingSeconds}s
+                      </span>
                     </div>
-                    <span>AI đang phân tích và chuẩn bị câu trả lời...</span>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                      {getDynamicLoadingStatus(loadingSeconds).subtext}
+                    </p>
+                    {/* Visual stage dots */}
+                    <div className="flex items-center gap-1.5 pt-0.5">
+                      <div className={`h-1.5 rounded-full transition-all duration-300 ${loadingSeconds >= 1 ? 'w-6 bg-amber-500 shadow-xs shadow-amber-500/50' : 'w-2 bg-slate-200 dark:bg-slate-700'}`} />
+                      <div className={`h-1.5 rounded-full transition-all duration-300 ${loadingSeconds >= 4 ? 'w-6 bg-amber-500 shadow-xs shadow-amber-500/50' : 'w-2 bg-slate-200 dark:bg-slate-700'}`} />
+                      <div className={`h-1.5 rounded-full transition-all duration-300 ${loadingSeconds >= 8 ? 'w-6 bg-amber-500 shadow-xs shadow-amber-500/50' : 'w-2 bg-slate-200 dark:bg-slate-700'}`} />
+                      <span className="text-[10px] text-slate-400 ml-1">
+                        {loadingSeconds <= 3 ? 'Giai đoạn 1/3' : loadingSeconds <= 7 ? 'Giai đoạn 2/3' : 'Giai đoạn 3/3'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
