@@ -234,13 +234,13 @@ export const TradeReviewModal = ({
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] text-slate-400">Stop Loss:</span>
               <span className={`font-mono font-semibold ${tradeData.stopLoss ? 'text-rose-400' : 'text-slate-500 italic'}`}>
-                {tradeData.stopLoss ? `$${tradeData.stopLoss.toLocaleString('en-US')}` : 'Not Set'}
+                {tradeData.stopLoss ? `$${tradeData.stopLoss.toLocaleString('en-US')}` : (isEn ? 'Not Set' : 'Chưa đặt')}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] text-slate-400">Take Profit:</span>
               <span className={`font-mono font-semibold ${tradeData.takeProfit ? 'text-emerald-400' : 'text-slate-500 italic'}`}>
-                {tradeData.takeProfit ? `$${tradeData.takeProfit.toLocaleString('en-US')}` : 'Not Set'}
+                {tradeData.takeProfit ? `$${tradeData.takeProfit.toLocaleString('en-US')}` : (isEn ? 'Not Set' : 'Chưa đặt')}
               </span>
             </div>
           </div>
@@ -292,8 +292,12 @@ export const TradeReviewModal = ({
               <div className="relative w-12 h-12 mx-auto">
                 <Sparkles className="w-12 h-12 text-amber-400 animate-spin" />
               </div>
-              <p className="text-slate-200 font-semibold text-sm">Đang kiểm toán quy trình &amp; bối cảnh lệnh...</p>
-              <p className="text-xs text-slate-500">Đối chiếu Rubric tuân thủ, tính toán MFE/MAE và bối cảnh Market Context</p>
+              <p className="text-slate-200 font-semibold text-sm">
+                {isEn ? 'Auditing execution process & trade context...' : 'Đang kiểm toán quy trình & bối cảnh lệnh...'}
+              </p>
+              <p className="text-xs text-slate-500">
+                {isEn ? 'Evaluating compliance rubric, computing MFE/MAE and market context' : 'Đối chiếu Rubric tuân thủ, tính toán MFE/MAE và bối cảnh Market Context'}
+              </p>
             </div>
           ) : review ? (
             <>
@@ -336,8 +340,10 @@ export const TradeReviewModal = ({
                     {rubric && (
                       <div className="pt-2 border-t border-white/10 space-y-1.5">
                         <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
-                          <span>Chi tiết Rubric đánh giá quy trình:</span>
-                          <span className="text-[10px] text-slate-400 italic">Không đánh giá dựa trên thắng hay thua</span>
+                          <span>{isEn ? 'Process evaluation rubric breakdown:' : 'Chi tiết Rubric đánh giá quy trình:'}</span>
+                          <span className="text-[10px] text-slate-400 italic">
+                            {isEn ? 'Evaluated independently of trade win/loss outcome' : 'Không đánh giá dựa trên thắng hay thua'}
+                          </span>
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[11px]">
                           <div className="p-2 rounded-lg bg-black/25 border border-white/5 flex items-center justify-between">
@@ -380,11 +386,11 @@ export const TradeReviewModal = ({
                       <Sparkles className="w-3.5 h-3.5" />
                     </div>
                     <span className="text-xs font-bold text-amber-300 tracking-wide uppercase">
-                      GÓP Ý TỪ AI TRADING COACH (MENTOR TƯ DUY)
+                      {isEn ? 'AI TRADING COACH FEEDBACK (MINDSET MENTOR)' : 'GÓP Ý TỪ AI TRADING COACH (MENTOR TƯ DUY)'}
                     </span>
                   </div>
                   <span className="text-[10px] text-slate-400 italic hidden sm:inline">
-                    Process-First Mentorship • Khách quan &amp; Bằng chứng
+                    {isEn ? 'Process-First Mentorship • Objective & Evidence-Based' : 'Process-First Mentorship • Khách quan & Bằng chứng'}
                   </span>
                 </div>
                 <p className="text-slate-200 text-xs sm:text-[13px] leading-relaxed pl-1">
@@ -394,7 +400,7 @@ export const TradeReviewModal = ({
                   <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/25 flex items-start gap-2 text-xs text-amber-200">
                     <Zap className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                     <div>
-                      <strong className="text-amber-300">Hành động khắc phục:</strong> {review.aiCoach.actionItem}
+                      <strong className="text-amber-300">{isEn ? 'Actionable Correction:' : 'Hành động khắc phục:'}</strong> {review.aiCoach.actionItem}
                     </div>
                   </div>
                 )}
@@ -402,7 +408,7 @@ export const TradeReviewModal = ({
                   <div className="p-2.5 rounded-lg bg-indigo-500/10 border border-indigo-500/25 flex items-start gap-2 text-xs text-indigo-200">
                     <Scale className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
                     <div>
-                      <strong className="text-indigo-300">Câu hỏi gợi mở tư duy (Reflection Question):</strong> {review.aiCoach.reflectionQuestion}
+                      <strong className="text-indigo-300">{isEn ? 'Reflection Question:' : 'Câu hỏi gợi mở tư duy (Reflection Question):'}</strong> {review.aiCoach.reflectionQuestion}
                     </div>
                   </div>
                 )}
@@ -415,7 +421,9 @@ export const TradeReviewModal = ({
                 <div className="space-y-3.5">
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-300 uppercase tracking-wider pb-1 border-b border-[#232838]">
                     <Compass className="w-4 h-4 text-cyan-400" />
-                    1. Bối Cảnh Thị Trường &amp; Thẩm Định Setup (Market Context &amp; Setup Validation)
+                    {isEn 
+                      ? '1. Market Context & Setup Validation' 
+                      : '1. Bối Cảnh Thị Trường & Thẩm Định Setup (Market Context & Setup Validation)'}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -423,9 +431,9 @@ export const TradeReviewModal = ({
                     <div className="p-4 rounded-xl bg-[#141822] border border-[#232838] space-y-3">
                       <div className="flex items-center justify-between pb-1 border-b border-[#232838]">
                         <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                          <Compass className="w-4 h-4 text-cyan-400" /> Bối Cảnh Thị Trường (Market Context)
+                          <Compass className="w-4 h-4 text-cyan-400" /> {isEn ? 'Market Context' : 'Bối Cảnh Thị Trường (Market Context)'}
                         </span>
-                        <span className="text-[10px] text-slate-400 font-mono">Tại thời điểm Entry</span>
+                        <span className="text-[10px] text-slate-400 font-mono">{isEn ? 'At Entry Timestamp' : 'Tại thời điểm Entry'}</span>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2.5 text-xs">
@@ -446,17 +454,17 @@ export const TradeReviewModal = ({
                           <span className="font-semibold text-cyan-300">{review.marketContext.tradingSession || 'London Session'}</span>
                         </div>
                         <div className="p-2 rounded-lg bg-[#191e2b] border border-[#232838]">
-                          <span className="text-[10px] text-slate-400 block">Thanh khoản (Liquidity):</span>
+                          <span className="text-[10px] text-slate-400 block">{isEn ? 'Liquidity Context:' : 'Thanh khoản (Liquidity):'}</span>
                           <span className="font-semibold text-slate-200">{review.marketContext.liquidity || 'Sell-side swept'}</span>
                         </div>
                         <div className="p-2 rounded-lg bg-[#191e2b] border border-[#232838]">
-                          <span className="text-[10px] text-slate-400 block">Biến động (Volatility) &amp; Khối lượng:</span>
+                          <span className="text-[10px] text-slate-400 block">{isEn ? 'Volatility & Volume:' : 'Biến động (Volatility) & Khối lượng:'}</span>
                           <span className="font-semibold text-slate-200">{review.marketContext.volatility || 'Medium'} • {review.marketContext.volumeContext || 'Above average'}</span>
                         </div>
                       </div>
 
                       <div className="text-[11px] text-slate-400 pt-1.5 border-t border-[#232838] flex items-center justify-between">
-                        <span>Cản then chốt: <strong className="text-slate-300">{review.marketContext.supportResistance}</strong></span>
+                        <span>{isEn ? 'Key Levels:' : 'Cản then chốt:'} <strong className="text-slate-300">{review.marketContext.supportResistance}</strong></span>
                       </div>
                     </div>
 
@@ -464,7 +472,7 @@ export const TradeReviewModal = ({
                     <div className="p-4 rounded-xl bg-[#141822] border border-[#232838] space-y-3">
                       <div className="flex items-center justify-between pb-1 border-b border-[#232838]">
                         <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Thẩm Định Điều Kiện Setup (Setup Validation)
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" /> {isEn ? 'Setup Conditions Validation' : 'Thẩm Định Điều Kiện Setup (Setup Validation)'}
                         </span>
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/10 text-cyan-300 border border-cyan-500/25">
                           {review.setupValidation?.completeness || '6 / 8 conditions'}
@@ -481,15 +489,15 @@ export const TradeReviewModal = ({
                             <div className="shrink-0 pt-0.5">
                               {item.met === true ? (
                                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
-                                  ✓ Đạt
+                                  {isEn ? '✓ Met' : '✓ Đạt'}
                                 </span>
                               ) : item.met === false ? (
                                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-400 text-[10px] font-bold border border-rose-500/30">
-                                  ✗ Vi phạm
+                                  {isEn ? '✗ Violated' : '✗ Vi phạm'}
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-700/30 text-slate-400 text-[10px] font-semibold border border-slate-600/30">
-                                  Not evaluated
+                                  {isEn ? 'Not evaluated' : 'Chưa đánh giá'}
                                 </span>
                               )}
                             </div>
@@ -498,7 +506,9 @@ export const TradeReviewModal = ({
                       </div>
 
                       <p className="text-[10px] text-slate-500 italic pt-1 border-t border-[#232838]">
-                        * Điều kiện được thẩm định theo quy tắc chiến lược {review.summary.strategy}, không tự áp đặt điều kiện ngoài chiến lược.
+                        {isEn 
+                          ? `* Conditions validated strictly against ${review.summary.strategy} rules without external bias.`
+                          : `* Điều kiện được thẩm định theo quy tắc chiến lược ${review.summary.strategy}, không tự áp đặt điều kiện ngoài chiến lược.`}
                       </p>
                     </div>
                   </div>
@@ -512,7 +522,7 @@ export const TradeReviewModal = ({
                 <div className="space-y-3.5">
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-300 uppercase tracking-wider pb-1 border-b border-[#232838]">
                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    2. Phân Tích Rủi Ro &amp; Đường Giá Thực Tế (Risk Analysis &amp; MFE / MAE)
+                    {isEn ? '2. Risk Analysis & Price Excursion (MFE / MAE)' : '2. Phân Tích Rủi Ro & Đường Giá Thực Tế (Risk Analysis & MFE / MAE)'}
                   </div>
 
                   {/* Warning banner if Stop Loss is missing */}
@@ -520,12 +530,18 @@ export const TradeReviewModal = ({
                     <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/35 flex items-start gap-3 text-rose-200">
                       <ShieldAlert className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
                       <div className="space-y-1">
-                        <strong className="text-rose-300 text-xs block">CẢNH BÁO RỦI RO CỐT LÕI:</strong>
+                        <strong className="text-rose-300 text-xs block">
+                          {isEn ? 'CORE RISK WARNING:' : 'CẢNH BÁO RỦI RO CỐT LÕI:'}
+                        </strong>
                         <p className="text-xs text-rose-200 leading-relaxed font-semibold">
-                          Risk cannot be determined because Stop Loss is not defined. (Mức rủi ro không thể xác định vì chưa đặt Stop Loss).
+                          {isEn 
+                            ? 'Risk cannot be determined because Stop Loss is not defined.' 
+                            : 'Risk cannot be determined because Stop Loss is not defined. (Mức rủi ro không thể xác định vì chưa đặt Stop Loss).'}
                         </p>
                         <p className="text-[11px] text-rose-300/80">
-                          Thả nổi vị thế mà không có điểm Invalidation Point cứng sẽ khiến tài khoản đối mặt với nguy cơ thua lỗ không giới hạn khi thị trường xuất hiện nến giật mạnh.
+                          {isEn 
+                            ? 'Leaving an open position without a strict invalidation point exposes your account to unbounded loss during sharp market volatility.'
+                            : 'Thả nổi vị thế mà không có điểm Invalidation Point cứng sẽ khiến tài khoản đối mặt với nguy cơ thua lỗ không giới hạn khi thị trường xuất hiện nến giật mạnh.'}
                         </p>
                       </div>
                     </div>
@@ -534,54 +550,68 @@ export const TradeReviewModal = ({
                   {/* 4 Risk Metrics Cards */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     <div className="p-3 rounded-xl bg-[#141822] border border-[#232838] flex flex-col justify-between">
-                      <span className="text-[10px] text-slate-400 font-medium">Tỷ lệ Risk : Reward</span>
+                      <span className="text-[10px] text-slate-400 font-medium">
+                        {isEn ? 'Risk : Reward Ratio' : 'Tỷ lệ Risk : Reward'}
+                      </span>
                       <div className="my-1 font-mono font-bold text-white text-base">
                         {review.summary.plannedRR === 'Chưa thiết lập' ? (
                           <span className="text-amber-400 text-xs flex items-center gap-1 font-sans">
-                            <AlertTriangle className="w-3 h-3" /> Chưa đặt
+                            <AlertTriangle className="w-3 h-3" /> {isEn ? 'Not Set' : 'Chưa đặt'}
                           </span>
                         ) : (
                           review.summary.plannedRR
                         )}
                       </div>
                       <span className="text-[10px] text-slate-500 truncate">
-                        {review.summary.isOpen ? 'Đang chạy' : `Thực tế: ${review.summary.actualRR}`}
+                        {review.summary.isOpen 
+                          ? (isEn ? 'Active' : 'Đang chạy') 
+                          : `${isEn ? 'Actual: ' : 'Thực tế: '}${review.summary.actualRR}`}
                       </span>
                     </div>
 
                     <div className="p-3 rounded-xl bg-[#141822] border border-[#232838] flex flex-col justify-between">
-                      <span className="text-[10px] text-slate-400 font-medium">Capital at Risk (Mức Lỗ Tối Đa)</span>
+                      <span className="text-[10px] text-slate-400 font-medium">
+                        {isEn ? 'Capital at Risk (Max Potential Loss)' : 'Capital at Risk (Mức Lỗ Tối Đa)'}
+                      </span>
                       <div className="my-1 font-mono font-bold text-base">
                         {review.riskAnalysis?.hasStopLoss ? (
                           <span className="text-emerald-400">${review.riskAnalysis.maxPotentialLoss?.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                         ) : (
-                          <span className="text-rose-400 text-xs font-sans">Chưa xác định</span>
+                          <span className="text-rose-400 text-xs font-sans">{isEn ? 'Undefined' : 'Chưa xác định'}</span>
                         )}
                       </div>
                       <span className="text-[10px] text-slate-500">
-                        {review.riskAnalysis?.hasStopLoss ? `Rủi ro: ${review.summary.riskPctOfAccount}` : 'Thiếu SL bảo vệ vốn'}
+                        {review.riskAnalysis?.hasStopLoss 
+                          ? `${isEn ? 'Risk: ' : 'Rủi ro: '}${review.summary.riskPctOfAccount}` 
+                          : (isEn ? 'Missing SL protection' : 'Thiếu SL bảo vệ vốn')}
                       </span>
                     </div>
 
                     <div className="p-3 rounded-xl bg-[#141822] border border-[#232838] flex flex-col justify-between">
-                      <span className="text-[10px] text-slate-400 font-medium">Khoảng cách Stop Loss</span>
+                      <span className="text-[10px] text-slate-400 font-medium">
+                        {isEn ? 'Stop Loss Distance' : 'Khoảng cách Stop Loss'}
+                      </span>
                       <div className="my-1 font-mono font-bold text-rose-400 text-base">
                         {review.riskAnalysis?.hasStopLoss ? (
                           <span>${review.riskAnalysis.stopLossDistanceUsd.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({review.riskAnalysis.stopLossDistancePct}%)</span>
                         ) : (
-                          <span className="text-slate-500 text-xs font-sans italic">Not Defined</span>
+                          <span className="text-slate-500 text-xs font-sans italic">{isEn ? 'Not Defined' : 'Chưa xác định'}</span>
                         )}
                       </div>
-                      <span className="text-[10px] text-slate-500">Khoảng cách từ Entry</span>
+                      <span className="text-[10px] text-slate-500">{isEn ? 'Distance from Entry' : 'Khoảng cách từ Entry'}</span>
                     </div>
 
                     <div className="p-3 rounded-xl bg-[#141822] border border-[#232838] flex flex-col justify-between">
-                      <span className="text-[10px] text-slate-400 font-medium">Quy mô vị thế (Position Size)</span>
+                      <span className="text-[10px] text-slate-400 font-medium">
+                        {isEn ? 'Position Size' : 'Quy mô vị thế (Position Size)'}
+                      </span>
                       <div className="my-1 font-mono font-bold text-cyan-300 text-base">
                         ${review.riskAnalysis?.positionSizeValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </div>
                       <span className="text-[10px] text-slate-500">
-                        Chiếm {review.riskAnalysis?.positionSizeRiskPct}% vốn tài khoản
+                        {isEn 
+                          ? `${review.riskAnalysis?.positionSizeRiskPct}% of account equity` 
+                          : `Chiếm ${review.riskAnalysis?.positionSizeRiskPct}% vốn tài khoản`}
                       </span>
                     </div>
                   </div>
@@ -624,10 +654,13 @@ export const TradeReviewModal = ({
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-[#232838] gap-2">
                           <div>
                             <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                              <Activity className="w-4 h-4 text-cyan-400" /> Thước Đo Biên Độ Giá &amp; Drawdown (MFE / MAE Excursion)
+                              <Activity className="w-4 h-4 text-cyan-400" /> 
+                              {isEn ? 'Price Excursion & Drawdown Gauge (MFE / MAE)' : 'Thước Đo Biên Độ Giá & Drawdown (MFE / MAE Excursion)'}
                             </span>
                             <p className="text-[11px] text-slate-400 mt-0.5">
-                              Đo lường mức lãi tiềm năng cao nhất (MFE) vs mức sụt giảm sâu nhất (MAE) trong suốt vòng đời lệnh.
+                              {isEn 
+                                ? 'Measures maximum favorable potential profit (MFE) vs maximum adverse drawdown (MAE) throughout the trade.' 
+                                : 'Đo lường mức lãi tiềm năng cao nhất (MFE) vs mức sụt giảm sâu nhất (MAE) trong suốt vòng đời lệnh.'}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
@@ -636,10 +669,12 @@ export const TradeReviewModal = ({
                                 ? 'bg-amber-500/10 text-amber-300 border-amber-500/25' 
                                 : 'bg-blue-500/10 text-blue-300 border-blue-500/25'
                             }`}>
-                              {isShort ? 'LỆNH BÁN (SHORT) — GIÁ GIẢM LÀ CÓ LÃI' : 'LỆNH MUA (LONG) — GIÁ TĂNG LÀ CÓ LÃI'}
+                              {isShort 
+                                ? (isEn ? 'SHORT — PROFIT ON DROP' : 'LỆNH BÁN (SHORT) — GIÁ GIẢM LÀ CÓ LÃI') 
+                                : (isEn ? 'LONG — PROFIT ON RALLY' : 'LỆNH MUA (LONG) — GIÁ TĂNG LÀ CÓ LÃI')}
                             </span>
                             <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/25 shrink-0">
-                              {isLive ? 'VỊ THẾ LIVE' : 'LỆNH ĐÃ ĐÓNG'}
+                              {isLive ? (isEn ? 'LIVE POSITION' : 'VỊ THẾ LIVE') : (isEn ? 'CLOSED TRADE' : 'LỆNH ĐÃ ĐÓNG')}
                             </span>
                           </div>
                         </div>
@@ -648,13 +683,13 @@ export const TradeReviewModal = ({
                         <div className="rounded-xl bg-[#0d111a] border border-[#202738] p-4 space-y-3">
                           <div className="flex items-center justify-between text-[11px] font-semibold">
                             <span className="text-amber-400 flex items-center gap-1">
-                              ◀ VÙNG SỤT GIẢM (MAE DRAWDOWN)
+                              {isEn ? '◀ ADVERSE DRAWDOWN (MAE)' : '◀ VÙNG SỤT GIẢM (MAE DRAWDOWN)'}
                             </span>
                             <span className="text-slate-300 font-mono text-[10px] bg-[#161c28] px-2 py-0.5 rounded border border-slate-700/60">
-                              MỐC VÀO LỆNH (ENTRY: ${entryPrice.toLocaleString('en-US')})
+                              {isEn ? 'ENTRY BENCHMARK' : 'MỐC VÀO LỆNH'} (ENTRY: ${entryPrice.toLocaleString('en-US')})
                             </span>
                             <span className="text-cyan-400 flex items-center gap-1">
-                              VÙNG LÃI TỐI ĐA (MFE PROFIT) ▶
+                              {isEn ? 'PEAK PROFIT ZONE (MFE) ▶' : 'VÙNG LÃI TỐI ĐA (MFE PROFIT) ▶'}
                             </span>
                           </div>
 
@@ -671,7 +706,7 @@ export const TradeReviewModal = ({
                                 </div>
                               ) : (
                                 <div className="text-[10px] text-emerald-400 font-semibold px-2 flex items-center gap-1">
-                                  <span>✓ 0 pts Drawdown (Không bị lỗ)</span>
+                                  <span>{isEn ? '✓ 0 pts Drawdown (No adverse drift)' : '✓ 0 pts Drawdown (Không bị lỗ)'}</span>
                                 </div>
                               )}
                             </div>
@@ -703,7 +738,7 @@ export const TradeReviewModal = ({
                                 </div>
                               ) : (
                                 <div className="text-[10px] text-slate-500 italic px-2">
-                                  Chưa bứt phá thuận lợi
+                                  {isEn ? 'No favorable run yet' : 'Chưa bứt phá thuận lợi'}
                                 </div>
                               )}
                             </div>
@@ -712,13 +747,13 @@ export const TradeReviewModal = ({
                           {/* Gauge Footnotes */}
                           <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
                             <span className="font-mono text-amber-300">
-                              Đáy giá bất lợi: <strong>${maePrice.toLocaleString('en-US')}</strong> ({cleanMaeStr})
+                              {isEn ? 'Adverse low: ' : 'Đáy giá bất lợi: '}<strong>${maePrice.toLocaleString('en-US')}</strong> ({cleanMaeStr})
                             </span>
                             <span className="text-slate-400">
-                              Mức giữ lãi hiện tại: <strong className={capturePct >= 70 ? 'text-emerald-400' : 'text-amber-300'}>{capturePct}% của đỉnh sóng</strong>
+                              {isEn ? 'Profit retained: ' : 'Mức giữ lãi hiện tại: '}<strong className={capturePct >= 70 ? 'text-emerald-400' : 'text-amber-300'}>{capturePct}% {isEn ? 'of peak MFE' : 'của đỉnh sóng'}</strong>
                             </span>
                             <span className="font-mono text-cyan-300">
-                              Đỉnh giá có lợi: <strong>${mfePrice.toLocaleString('en-US')}</strong> ({cleanMfeStr})
+                              {isEn ? 'Favorable high: ' : 'Đỉnh giá có lợi: '}<strong>${mfePrice.toLocaleString('en-US')}</strong> ({cleanMfeStr})
                             </span>
                           </div>
                         </div>
@@ -726,22 +761,28 @@ export const TradeReviewModal = ({
                         {/* TRỰC QUAN HÓA 2: LỘ TRÌNH 4 BƯỚC DIỄN BIẾN LỆNH (4-STEP MILESTONES) */}
                         <div className="space-y-1.5">
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                            Diễn Biến Lệnh Theo Trình Tự Thực Tế:
+                            {isEn ? 'Chronological Trade Progression:' : 'Diễn Biến Lệnh Theo Trình Tự Thực Tế:'}
                           </span>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                             {/* Step 1: Entry */}
                             <div className="p-3 rounded-lg bg-[#161b26] border border-slate-700/60 relative flex flex-col justify-between">
                               <div>
                                 <div className="flex items-center justify-between">
-                                  <span className="text-[10px] font-extrabold text-slate-400">1. ĐIỂM VÀO (ENTRY)</span>
-                                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono font-bold">GỐC</span>
+                                  <span className="text-[10px] font-extrabold text-slate-400">
+                                    {isEn ? '1. ENTRY POINT' : '1. ĐIỂM VÀO (ENTRY)'}
+                                  </span>
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono font-bold">
+                                    {isEn ? 'ORIGIN' : 'GỐC'}
+                                  </span>
                                 </div>
                                 <div className="font-mono text-sm font-bold text-white mt-1.5">
                                   ${entryPrice.toLocaleString('en-US')}
                                 </div>
                               </div>
                               <p className="text-[10px] text-slate-400 mt-2 pt-2 border-t border-slate-800">
-                                Mở vị thế {isShort ? 'BÁN (Sell)' : 'MUA (Buy)'}. Mốc quy chiếu 0.00 PnL.
+                                {isEn 
+                                  ? `Opened ${isShort ? 'SELL' : 'BUY'} position. Benchmark 0.00 PnL.` 
+                                  : `Mở vị thế ${isShort ? 'BÁN (Sell)' : 'MUA (Buy)'}. Mốc quy chiếu 0.00 PnL.`}
                               </p>
                             </div>
 
@@ -754,12 +795,12 @@ export const TradeReviewModal = ({
                               <div>
                                 <div className="flex items-center justify-between">
                                   <span className={`text-[10px] font-extrabold ${maePts === 0 ? 'text-emerald-300' : 'text-amber-400'}`}>
-                                    2. SỤT GIẢM (MAE)
+                                    {isEn ? '2. DRAWDOWN (MAE)' : '2. SỤT GIẢM (MAE)'}
                                   </span>
                                   <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold ${
                                     maePts === 0 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
                                   }`}>
-                                    {maePts === 0 ? 'AN TOÀN' : 'RỦI RO'}
+                                    {maePts === 0 ? (isEn ? 'SAFE' : 'AN TOÀN') : (isEn ? 'RISK' : 'RỦI RO')}
                                   </span>
                                 </div>
                                 <div className="font-mono text-sm font-bold text-white mt-1.5">
@@ -771,8 +812,8 @@ export const TradeReviewModal = ({
                               </div>
                               <p className="text-[10px] text-slate-400 mt-2 pt-2 border-t border-slate-800">
                                 {maePts === 0 
-                                  ? 'Vào lệnh cực chuẩn, giá không hề kéo âm.' 
-                                  : 'Mức giật ngược sâu nhất mà bạn phải gồng chịu.'}
+                                  ? (isEn ? 'Flawless entry timing, zero negative drift.' : 'Vào lệnh cực chuẩn, giá không hề kéo âm.') 
+                                  : (isEn ? 'Deepest adverse drawdown endured during trade.' : 'Mức giật ngược sâu nhất mà bạn phải gồng chịu.')}
                               </p>
                             </div>
 
@@ -781,10 +822,10 @@ export const TradeReviewModal = ({
                               <div>
                                 <div className="flex items-center justify-between">
                                   <span className="text-[10px] font-extrabold text-cyan-300">
-                                    3. ĐỈNH LÃI (MFE)
+                                    {isEn ? '3. PEAK PROFIT (MFE)' : '3. ĐỈNH LÃI (MFE)'}
                                   </span>
                                   <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono font-bold">
-                                    TIỀM NĂNG
+                                    {isEn ? 'POTENTIAL' : 'TIỀM NĂNG'}
                                   </span>
                                 </div>
                                 <div className="font-mono text-sm font-bold text-white mt-1.5">
@@ -796,8 +837,8 @@ export const TradeReviewModal = ({
                               </div>
                               <p className="text-[10px] text-slate-400 mt-2 pt-2 border-t border-slate-800">
                                 {mfePts > 0 
-                                  ? 'Mức lợi nhuận tối đa thị trường từng đem lại cho bạn.' 
-                                  : 'Chưa có nhịp sóng thuận lợi rõ ràng.'}
+                                  ? (isEn ? 'Maximum unrealized profit market offered to this position.' : 'Mức lợi nhuận tối đa thị trường từng đem lại cho bạn.') 
+                                  : (isEn ? 'No substantial favorable expansion occurred.' : 'Chưa có nhịp sóng thuận lợi rõ ràng.')}
                               </p>
                             </div>
 
@@ -810,12 +851,12 @@ export const TradeReviewModal = ({
                               <div>
                                 <div className="flex items-center justify-between">
                                   <span className={`text-[10px] font-extrabold ${isProfit ? 'text-emerald-300' : 'text-rose-300'}`}>
-                                    4. {isLive ? 'HIỆN TẠI (LIVE)' : 'THOÁT LỆNH'}
+                                    4. {isLive ? (isEn ? 'CURRENT (LIVE)' : 'HIỆN TẠI (LIVE)') : (isEn ? 'EXIT REALIZED' : 'THOÁT LỆNH')}
                                   </span>
                                   <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold ${
                                     isProfit ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
                                   }`}>
-                                    THỰC TẾ
+                                    {isEn ? 'ACTUAL' : 'THỰC TẾ'}
                                   </span>
                                 </div>
                                 <div className="font-mono text-sm font-bold text-white mt-1.5">
@@ -827,8 +868,8 @@ export const TradeReviewModal = ({
                               </div>
                               <p className="text-[10px] text-slate-400 mt-2 pt-2 border-t border-slate-800">
                                 {isProfit 
-                                  ? `Đang giữ lại được ${capturePct}% từ đỉnh MFE cao nhất.` 
-                                  : 'Lệnh đã trượt khỏi vùng có lãi.'}
+                                  ? (isEn ? `Retained ${capturePct}% of peak favorable MFE move.` : `Đang giữ lại được ${capturePct}% từ đỉnh MFE cao nhất.`) 
+                                  : (isEn ? 'Position drifted out of profitability.' : 'Lệnh đã trượt khỏi vùng có lãi.')}
                               </p>
                             </div>
                           </div>
@@ -840,19 +881,27 @@ export const TradeReviewModal = ({
                             <div className="flex items-center justify-between text-xs">
                               <span className="font-bold text-cyan-300 flex items-center gap-1.5">
                                 <TrendingUp className="w-3.5 h-3.5 text-cyan-400" />
-                                Đánh Giá Tận Dụng Lợi Nhuận (MFE):
+                                {isEn ? 'Profit Capture Assessment (MFE):' : 'Đánh Giá Tận Dụng Lợi Nhuận (MFE):'}
                               </span>
                               <span className="font-mono font-bold text-cyan-300 text-[11px]">{cleanMfeStr}</span>
                             </div>
                             <p className="text-[11px] text-slate-300 leading-relaxed">
                               {review.excursionFlow.mfePts > 0 ? (
                                 isProfit ? (
-                                  <>Vị thế từng đạt đỉnh lãi tối đa <strong className="text-cyan-300">{cleanMfeStr}</strong> và bạn đã giữ lại được <strong className="text-emerald-400">{capturePct}%</strong> tiềm năng sóng. {capturePct >= 70 ? 'Đây là hiệu suất chốt/giữ lệnh rất xuất sắc.' : 'Cân nhắc dời Trailing Stop để khóa bớt lợi nhuận khi giá gần đỉnh.'}</>
+                                  isEn ? (
+                                    <>Position achieved peak profit of <strong className="text-cyan-300">{cleanMfeStr}</strong> and retained <strong className="text-emerald-400">{capturePct}%</strong> of expansion potential. {capturePct >= 70 ? 'Outstanding profit locking execution.' : 'Consider dynamic trailing stops to preserve open gains.'}</>
+                                  ) : (
+                                    <>Vị thế từng đạt đỉnh lãi tối đa <strong className="text-cyan-300">{cleanMfeStr}</strong> và bạn đã giữ lại được <strong className="text-emerald-400">{capturePct}%</strong> tiềm năng sóng. {capturePct >= 70 ? 'Đây là hiệu suất chốt/giữ lệnh rất xuất sắc.' : 'Cân nhắc dời Trailing Stop để khóa bớt lợi nhuận khi giá gần đỉnh.'}</>
+                                  )
                                 ) : (
-                                  <>Giá từng chạy đúng hướng cho mức lãi <strong className="text-cyan-300">{cleanMfeStr}</strong> nhưng bạn để mất toàn bộ lợi nhuận và quay về thua lỗ. Bài học: Luôn kéo SL về Breakeven (hòa vốn) khi lệnh đã đi đúng kỳ vọng.</>
+                                  isEn ? (
+                                    <>Position ran in profit up to <strong className="text-cyan-300">{cleanMfeStr}</strong> but gave it all back to end in loss. Takeaway: move Stop Loss to breakeven once price moves favorably.</>
+                                  ) : (
+                                    <>Giá từng chạy đúng hướng cho mức lãi <strong className="text-cyan-300">{cleanMfeStr}</strong> nhưng bạn để mất toàn bộ lợi nhuận và quay về thua lỗ. Bài học: Luôn kéo SL về Breakeven (hòa vốn) khi lệnh đã đi đúng kỳ vọng.</>
+                                  )
                                 )
                               ) : (
-                                <>Chưa xuất hiện nhịp bứt phá thuận lợi rõ rệt sau khi mở vị thế.</>
+                                <>{isEn ? 'No significant favorable expansion occurred after trade entry.' : 'Chưa xuất hiện nhịp bứt phá thuận lợi rõ rệt sau khi mở vị thế.'}</>
                               )}
                             </p>
                           </div>
@@ -861,15 +910,23 @@ export const TradeReviewModal = ({
                             <div className="flex items-center justify-between text-xs">
                               <span className="font-bold text-amber-300 flex items-center gap-1.5">
                                 <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
-                                Đánh Giá Áp Lực Sụt Giảm (MAE):
+                                {isEn ? 'Adverse Pressure Assessment (MAE):' : 'Đánh Giá Áp Lực Sụt Giảm (MAE):'}
                               </span>
                               <span className="font-mono font-bold text-amber-300 text-[11px]">{cleanMaeStr}</span>
                             </div>
                             <p className="text-[11px] text-slate-300 leading-relaxed">
                               {review.excursionFlow.maePts === 0 ? (
-                                <>Điểm vào lệnh (Entry) <strong className="text-emerald-400">cực kỳ chuẩn xác</strong> — giá không hề bị giật ngược vào vùng âm (Drawdown = 0). Bạn không phải chịu bất kỳ áp lực tâm lý nào khi gồng lệnh.</>
+                                isEn ? (
+                                  <>Entry execution was <strong className="text-emerald-400">razor-sharp</strong> — zero adverse excursion (Drawdown = 0). No psychological heat was endured.</>
+                                ) : (
+                                  <>Điểm vào lệnh (Entry) <strong className="text-emerald-400">cực kỳ chuẩn xác</strong> — giá không hề bị giật ngược vào vùng âm (Drawdown = 0). Bạn không phải chịu bất kỳ áp lực tâm lý nào khi gồng lệnh.</>
+                                )
                               ) : (
-                                <>Lệnh từng bị giật ngược âm tối đa <strong className="text-amber-300">{cleanMaeStr}</strong>. Kiểm tra xem điểm vào có bị sớm (fomo) hay không để tối ưu điểm mở lệnh an toàn hơn.</>
+                                isEn ? (
+                                  <>Position absorbed maximum adverse drift of <strong className="text-amber-300">{cleanMaeStr}</strong>. Review whether entry suffered from FOMO to optimize tighter fills.</>
+                                ) : (
+                                  <>Lệnh từng bị giật ngược âm tối đa <strong className="text-amber-300">{cleanMaeStr}</strong>. Kiểm tra xem điểm vào có bị sớm (fomo) hay không để tối ưu điểm mở lệnh an toàn hơn.</>
+                                )
                               )}
                             </p>
                           </div>
@@ -883,7 +940,7 @@ export const TradeReviewModal = ({
                     <div className="p-4 rounded-xl bg-[#141822] border border-[#232838] space-y-3">
                       <div className="flex items-center justify-between pb-1 border-b border-[#232838]">
                         <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                          <Layers className="w-4 h-4 text-cyan-400" /> Kế Hoạch vs Thực Thi (Plan vs Execution)
+                          <Layers className="w-4 h-4 text-cyan-400" /> {isEn ? 'Plan vs Execution Audit' : 'Kế Hoạch vs Thực Thi (Plan vs Execution)'}
                         </span>
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                           review.planVsExecution.status === 'RULE_FOLLOWED' 
@@ -900,10 +957,10 @@ export const TradeReviewModal = ({
                         <table className="w-full text-left border-collapse text-xs">
                           <thead>
                             <tr className="border-b border-[#232838] text-slate-400 text-[11px]">
-                              <th className="py-2 px-3">Tham số</th>
-                              <th className="py-2 px-3 text-cyan-300">Kế Hoạch (Plan)</th>
-                              <th className="py-2 px-3 text-amber-300">Thực Tế (Actual)</th>
-                              <th className="py-2 px-3 text-right">Đánh Giá Tuân Thủ</th>
+                              <th className="py-2 px-3">{isEn ? 'Parameter' : 'Tham số'}</th>
+                              <th className="py-2 px-3 text-cyan-300">{isEn ? 'Planned (Plan)' : 'Kế Hoạch (Plan)'}</th>
+                              <th className="py-2 px-3 text-amber-300">{isEn ? 'Actual' : 'Thực Tế (Actual)'}</th>
+                              <th className="py-2 px-3 text-right">{isEn ? 'Audit Verdict' : 'Đánh Giá Tuân Thủ'}</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-[#232838]/60 font-mono">
@@ -911,17 +968,17 @@ export const TradeReviewModal = ({
                               <td className="py-2 px-3 text-slate-400 font-sans">Entry Price</td>
                               <td className="py-2 px-3 text-white">{review.planVsExecution.plan.entry}</td>
                               <td className="py-2 px-3 text-white">{review.planVsExecution.actual.entry}</td>
-                              <td className="py-2 px-3 text-right font-sans text-emerald-400 font-semibold">✓ Khớp chuẩn</td>
+                              <td className="py-2 px-3 text-right font-sans text-emerald-400 font-semibold">{isEn ? '✓ Matched' : '✓ Khớp chuẩn'}</td>
                             </tr>
                             <tr>
                               <td className="py-2 px-3 text-slate-400 font-sans">Stop Loss</td>
                               <td className="py-2 px-3 text-slate-300">{review.planVsExecution.plan.stopLoss}</td>
                               <td className="py-2 px-3 text-slate-300">{review.planVsExecution.actual.stopLoss}</td>
                               <td className="py-2 px-3 text-right font-sans">
-                                {review.planVsExecution.actual.stopLoss !== 'Not Set' ? (
-                                  <span className="text-emerald-400 font-semibold">✓ Đã cài đặt</span>
+                                {review.planVsExecution.actual.stopLoss !== 'Not Set' && review.planVsExecution.actual.stopLoss !== 'Chưa đặt' ? (
+                                  <span className="text-emerald-400 font-semibold">{isEn ? '✓ Set' : '✓ Đã cài đặt'}</span>
                                 ) : (
-                                  <span className="text-rose-400 font-semibold">✗ Vi phạm (Thiếu SL)</span>
+                                  <span className="text-rose-400 font-semibold">{isEn ? '✗ Missing SL (Violation)' : '✗ Vi phạm (Thiếu SL)'}</span>
                                 )}
                               </td>
                             </tr>
@@ -930,22 +987,22 @@ export const TradeReviewModal = ({
                               <td className="py-2 px-3 text-slate-300">{review.planVsExecution.plan.takeProfit}</td>
                               <td className="py-2 px-3 text-slate-300">{review.planVsExecution.actual.takeProfit}</td>
                               <td className="py-2 px-3 text-right font-sans">
-                                {review.planVsExecution.actual.takeProfit !== 'Not Set' ? (
-                                  <span className="text-emerald-400 font-semibold">✓ Đã cài đặt</span>
+                                {review.planVsExecution.actual.takeProfit !== 'Not Set' && review.planVsExecution.actual.takeProfit !== 'Chưa đặt' ? (
+                                  <span className="text-emerald-400 font-semibold">{isEn ? '✓ Set' : '✓ Đã cài đặt'}</span>
                                 ) : (
-                                  <span className="text-amber-400 font-semibold">⚠ Chưa đặt TP cố định</span>
+                                  <span className="text-amber-400 font-semibold">{isEn ? '⚠ Floating TP (Discretionary)' : '⚠ Chưa đặt TP cố định'}</span>
                                 )}
                               </td>
                             </tr>
                             <tr>
-                              <td className="py-2 px-3 text-slate-400 font-sans">Risk Quản Trị</td>
+                              <td className="py-2 px-3 text-slate-400 font-sans">{isEn ? 'Risk Management' : 'Risk Quản Trị'}</td>
                               <td className="py-2 px-3 text-slate-300">{review.planVsExecution.plan.risk}</td>
                               <td className="py-2 px-3 text-slate-300">{review.planVsExecution.actual.risk}</td>
                               <td className="py-2 px-3 text-right font-sans">
-                                {review.planVsExecution.actual.risk !== 'Undefined' ? (
-                                  <span className="text-emerald-400 font-semibold">✓ Kiểm soát tốt</span>
+                                {review.planVsExecution.actual.risk !== 'Undefined' && !review.planVsExecution.actual.risk.includes('Chưa') ? (
+                                  <span className="text-emerald-400 font-semibold">{isEn ? '✓ Controlled' : '✓ Kiểm soát tốt'}</span>
                                 ) : (
-                                  <span className="text-rose-400 font-semibold">✗ Không thể xác định</span>
+                                  <span className="text-rose-400 font-semibold">{isEn ? '✗ Undefined' : '✗ Không thể xác định'}</span>
                                 )}
                               </td>
                             </tr>
@@ -968,7 +1025,7 @@ export const TradeReviewModal = ({
                 <div className="space-y-3.5">
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-300 uppercase tracking-wider pb-1 border-b border-[#232838]">
                     <Zap className="w-4 h-4 text-amber-400" />
-                    3. Đánh Giá Thực Thi &amp; Bài Học Rút Ra (What Was Done Well &amp; Needs Improvement)
+                    {isEn ? '3. Execution Evaluation & Learning Takeaways' : '3. Đánh Giá Thực Thi & Bài Học Rút Ra (What Was Done Well & Needs Improvement)'}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -976,7 +1033,7 @@ export const TradeReviewModal = ({
                     <div className="p-4 rounded-xl bg-[#141822] border border-[#232838] space-y-3">
                       <div className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 pb-1 border-b border-[#232838]">
                         <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        Điểm Đã Làm Tốt (Evidence-Based Strengths)
+                        {isEn ? 'Evidence-Based Strengths' : 'Điểm Đã Làm Tốt (Evidence-Based Strengths)'}
                       </div>
                       <div className="space-y-2 pl-1">
                         {review.strengths && review.strengths.length > 0 ? (
@@ -987,7 +1044,9 @@ export const TradeReviewModal = ({
                             </div>
                           ))
                         ) : (
-                          <div className="text-slate-400 italic">Vào lệnh đúng nhịp phiên thị trường</div>
+                          <div className="text-slate-400 italic">
+                            {isEn ? 'Execution aligned with market session volume' : 'Vào lệnh đúng nhịp phiên thị trường'}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -996,7 +1055,7 @@ export const TradeReviewModal = ({
                     <div className="p-4 rounded-xl bg-[#141822] border border-[#232838] space-y-3">
                       <div className="text-xs font-bold text-amber-300 flex items-center gap-1.5 pb-1 border-b border-[#232838]">
                         <AlertTriangle className="w-4 h-4 text-amber-400" />
-                        Hành Động Cải Thiện (Categorized Improvement Issues)
+                        {isEn ? 'Categorized Improvement Issues' : 'Hành Động Cải Thiện (Categorized Improvement Issues)'}
                       </div>
 
                       <div className="space-y-2.5 text-xs">
@@ -1004,7 +1063,7 @@ export const TradeReviewModal = ({
                         {review.categorizedImprovements?.ruleViolations && review.categorizedImprovements.ruleViolations.length > 0 && (
                           <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/25 space-y-1">
                             <span className="font-bold text-rose-300 flex items-center gap-1 text-[11px]">
-                              <ShieldAlert className="w-3 h-3" /> A. Rule Violations (Vi phạm nguyên tắc):
+                              <ShieldAlert className="w-3 h-3" /> {isEn ? 'A. Rule Violations:' : 'A. Rule Violations (Vi phạm nguyên tắc):'}
                             </span>
                             {review.categorizedImprovements.ruleViolations.map((v, i) => (
                               <div key={i} className="text-rose-200 text-[11px] pl-3 flex items-start gap-1">
@@ -1019,7 +1078,7 @@ export const TradeReviewModal = ({
                         {review.categorizedImprovements?.riskIssues && review.categorizedImprovements.riskIssues.length > 0 && (
                           <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/25 space-y-1">
                             <span className="font-bold text-amber-300 flex items-center gap-1 text-[11px]">
-                              <AlertCircle className="w-3 h-3" /> B. Risk Issues (Vấn đề quản trị rủi ro):
+                              <AlertCircle className="w-3 h-3" /> {isEn ? 'B. Risk Management Issues:' : 'B. Risk Issues (Vấn đề quản trị rủi ro):'}
                             </span>
                             {review.categorizedImprovements.riskIssues.map((v, i) => (
                               <div key={i} className="text-amber-200 text-[11px] pl-3 flex items-start gap-1">
@@ -1034,7 +1093,7 @@ export const TradeReviewModal = ({
                         {review.categorizedImprovements?.executionIssues && review.categorizedImprovements.executionIssues.length > 0 && (
                           <div className="p-2.5 rounded-lg bg-[#1a202e] border border-[#2d3448] space-y-1">
                             <span className="font-bold text-slate-300 flex items-center gap-1 text-[11px]">
-                              <Activity className="w-3 h-3 text-cyan-400" /> C. Execution Issues (Vấn đề thực thi):
+                              <Activity className="w-3 h-3 text-cyan-400" /> {isEn ? 'C. Execution Issues:' : 'C. Execution Issues (Vấn đề thực thi):'}
                             </span>
                             {review.categorizedImprovements.executionIssues.map((v, i) => (
                               <div key={i} className="text-slate-300 text-[11px] pl-3 flex items-start gap-1">
@@ -1049,7 +1108,7 @@ export const TradeReviewModal = ({
                         {review.categorizedImprovements?.strategyIssues && review.categorizedImprovements.strategyIssues.length > 0 && (
                           <div className="p-2.5 rounded-lg bg-[#1a202e] border border-[#2d3448] space-y-1">
                             <span className="font-bold text-slate-300 flex items-center gap-1 text-[11px]">
-                              <Compass className="w-3 h-3 text-indigo-400" /> D. Strategy Issues (Vấn đề chiến lược):
+                              <Compass className="w-3 h-3 text-indigo-400" /> {isEn ? 'D. Strategy Fit Issues:' : 'D. Strategy Issues (Vấn đề chiến lược):'}
                             </span>
                             {review.categorizedImprovements.strategyIssues.map((v, i) => (
                               <div key={i} className="text-slate-300 text-[11px] pl-3 flex items-start gap-1">
@@ -1068,7 +1127,7 @@ export const TradeReviewModal = ({
                     <div className="p-4 rounded-xl bg-gradient-to-r from-[#141a27] via-[#161a25] to-[#141a27] border border-cyan-500/30 space-y-2.5">
                       <div className="text-xs font-bold text-cyan-300 flex items-center gap-1.5 pb-1 border-b border-[#232838]">
                         <BookOpen className="w-4 h-4 text-cyan-400" />
-                        Bài Học Đúc Kết Cho Sinh Viên (Learning Takeaways)
+                        {isEn ? 'Student Learning Takeaways' : 'Bài Học Đúc Kết Cho Sinh Viên (Learning Takeaways)'}
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                         {review.learningTakeaways.map((takeaway, idx) => (
@@ -1095,10 +1154,10 @@ export const TradeReviewModal = ({
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] pb-1 border-b border-[#232838]/60">
                     <div className="flex items-center gap-1.5 font-bold text-slate-300">
                       <BookOpen className="w-3.5 h-3.5 text-blue-400" />
-                      <span>Tài liệu kiểm chứng đối chiếu (Evidence &amp; Academic Sources):</span>
+                      <span>{isEn ? 'Academic & Citational Verification Sources:' : 'Tài liệu kiểm chứng đối chiếu (Evidence & Academic Sources):'}</span>
                     </div>
                     <span className="text-[10px] text-cyan-400 font-mono">
-                      Primary / Secondary Academic Verified • Nhấp vào để xem nguồn gốc
+                      {isEn ? 'Primary / Secondary Academic Verified • Click to inspect source' : 'Primary / Secondary Academic Verified • Nhấp vào để xem nguồn gốc'}
                     </span>
                   </div>
 
@@ -1119,7 +1178,9 @@ export const TradeReviewModal = ({
                                 : 'bg-[#181d29] hover:bg-cyan-500/15 border-[#282f42] hover:border-cyan-500/40 text-slate-300 hover:text-cyan-300 cursor-pointer shadow-sm'
                               : 'bg-[#181d29] border-[#282f42] text-slate-400 cursor-default'
                           }`}
-                          title={isYouTube ? `Nhấp để xem video bài giảng trực tiếp trên YouTube: ${s.source}` : `Tài liệu gốc: ${s.source} (${s.author})`}
+                          title={isYouTube 
+                            ? (isEn ? `Click to watch lecture video directly on YouTube: ${s.source}` : `Nhấp để xem video bài giảng trực tiếp trên YouTube: ${s.source}`)
+                            : (isEn ? `Primary Source: ${s.source} (${s.author})` : `Tài liệu gốc: ${s.source} (${s.author})`)}
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             {isYouTube ? (
@@ -1142,7 +1203,7 @@ export const TradeReviewModal = ({
                                 ? 'bg-rose-500/15 text-rose-300 border-rose-500/30' 
                                 : 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20'
                             }`}>
-                              {isYouTube ? '▶ VIDEO BÀI GIẢNG' : (s.sourceType || 'TÀI LIỆU GỐC')}
+                              {isYouTube ? (isEn ? '▶ LECTURE VIDEO' : '▶ VIDEO BÀI GIẢNG') : (s.sourceType || (isEn ? 'PRIMARY SOURCE' : 'TÀI LIỆU GỐC'))}
                             </span>
                             {hasLink && (
                               <ExternalLink className={`w-3.5 h-3.5 shrink-0 ${isYouTube ? 'text-rose-400 group-hover:text-rose-300' : 'text-slate-500 group-hover:text-cyan-300'}`} />
@@ -1156,7 +1217,7 @@ export const TradeReviewModal = ({
               )}
             </>
           ) : (
-            <div className="py-16 text-center text-slate-400">Không có dữ liệu phân tích lệnh này</div>
+            <div className="py-16 text-center text-slate-400">{isEn ? 'No review data available for this trade' : 'Không có dữ liệu phân tích lệnh này'}</div>
           )}
         </div>
       </div>
