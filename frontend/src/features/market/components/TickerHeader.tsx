@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, BarChart2, Play, Pause, Square, ChevronRight, ChevronDown, CandlestickChart, RefreshCcw, Undo2, Redo2 } from 'lucide-react';
 import { TIMEFRAMES, getPricePrecision, type Stock } from '../data';
-import { AssetAvatar } from './AssetAvatar';
+import { AssetAvatar, ExchangeBadge } from './AssetAvatar';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useMarketStore } from '../../../stores/useMarketStore';
 
@@ -164,10 +164,11 @@ export const TickerHeader = ({
           className="flex items-center gap-2 sm:gap-4 pr-3 sm:pr-6 border-r border-[#e6e8ea] dark:border-[#2a2e39] shrink-0 cursor-pointer hover:bg-[#f5f5f5] dark:hover:bg-[#2a2e39]/50 rounded p-1 -ml-1 transition-colors group"
         >
           <div className="flex items-center gap-2">
-            <AssetAvatar stock={stock} size="md" showExchangeBadge={false} />
+            <AssetAvatar stock={stock} size="md" showExchangeBadge={true} />
             <div className="flex flex-col">
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <span className="text-base sm:text-xl font-bold text-[#1e2329] dark:text-[#d1d4dc] group-hover:text-blue-500 dark:group-hover:text-blue-400">{stock.symbol}</span>
+                <ExchangeBadge exchange={stock.exchange} size="sm" />
               </div>
               <span className="text-[#787b86] text-[10px] sm:text-[11px] truncate max-w-[80px] sm:max-w-none">
                 {stock.name}

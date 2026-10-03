@@ -927,12 +927,25 @@ export const TradingTerminal = () => {
           return { success: true, message: res.message };
         }
       } else if (type === 'buy') {
+        const qty = (margin * leverage) / price;
+        // Optimistic update so activePosition and chart overlays don't flicker or disappear
+        setPositions(prev => ({
+          ...prev,
+          [selectedStock.symbol]: {
+            quantity: qty,
+            averagePrice: price,
+            side: 'LONG',
+            leverage,
+            tp,
+            sl
+          }
+        }));
         const res = await tradingApi.buyStock(selectedStock.symbol, margin, leverage, price, sl, tp, user._id);
         if (res.success) {
           await fetchPortfolio();
           const order: TradeOrder = {
             id: `${Date.now()}-${Math.random()}`,
-            type, symbol: selectedStock.symbol, price, qty: (margin * leverage) / price, timestamp: Date.now(), tp, sl,
+            type, symbol: selectedStock.symbol, price, qty, timestamp: Date.now(), tp, sl,
           };
           setTradeOrders(prev => [...prev, order]);
           setTradeCount(c => c + 1);
@@ -940,12 +953,25 @@ export const TradingTerminal = () => {
           return { success: true, message: `✅ Mở LONG ${selectedStock.symbol} thành công` };
         }
       } else if (type === 'sell') {
-        const res = await tradingApi.sellStock(selectedStock.symbol, margin, leverage, price, user._id);
+        const qty = (margin * leverage) / price;
+        // Optimistic update so activePosition and chart overlays don't flicker or disappear
+        setPositions(prev => ({
+          ...prev,
+          [selectedStock.symbol]: {
+            quantity: qty,
+            averagePrice: price,
+            side: 'SHORT',
+            leverage,
+            tp,
+            sl
+          }
+        }));
+        const res = await tradingApi.sellStock(selectedStock.symbol, margin, leverage, price, sl, tp, user._id);
         if (res.success) {
           await fetchPortfolio();
           const order: TradeOrder = {
             id: `${Date.now()}-${Math.random()}`,
-            type, symbol: selectedStock.symbol, price, qty: (margin * leverage) / price, timestamp: Date.now(), tp, sl,
+            type, symbol: selectedStock.symbol, price, qty, timestamp: Date.now(), tp, sl,
           };
           setTradeOrders(prev => [...prev, order]);
           setTradeCount(c => c + 1);
@@ -1438,7 +1464,7 @@ export const TradingTerminal = () => {
                         quantity: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.lot,
                         averagePrice: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.entryPrice,
                         side: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.side,
-                        leverage: store.session!.config.leverage,
+                        leverage: store.session?.config?.leverage || 1,
                         tp: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.tp,
                         sl: store.positions.find(p => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase())!.sl
                       } : undefined)

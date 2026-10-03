@@ -43,13 +43,13 @@ export const tradingApi = {
     return await res.json();
   },
 
-  sellStock: async (symbol: string, margin: number, leverage: number, currentPrice: number, userId?: string) => {
+  sellStock: async (symbol: string, margin: number, leverage: number, currentPrice: number, sl?: number, tp?: number, userId?: string) => {
     const actualUserId = getActiveUserId(userId);
     const res = await fetch(`${API_BASE_URL}/sell`, {
       credentials: 'include',
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ userId: actualUserId, symbol, margin, leverage, currentPrice })
+      body: JSON.stringify({ userId: actualUserId, symbol, margin, leverage, currentPrice, stopLoss: sl, takeProfit: tp })
     });
     if (!res.ok) {
       const error = await res.json();

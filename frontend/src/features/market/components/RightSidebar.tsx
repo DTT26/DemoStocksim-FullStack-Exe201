@@ -64,6 +64,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
   const [showTPSL, setShowTPSL] = useState(false);
   const [sizingMode, setSizingMode] = useState<'qty' | 'amount' | 'percent'>('qty');
   const prevTpslRef = useRef<string>('');
+  const prevSymbolRef = useRef<string>(selectedStock.symbol);
   const [sizingDropdownOpen, setSizingDropdownOpen] = useState(false);
   const [amountStr, setAmountStr] = useState<string>('');
   const [percentVal, setPercentVal] = useState<number>(0);
@@ -75,20 +76,26 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
     }
   }, [isEditing]);
 
-  // Bỏ sync price vì chỉ dùng Market Price
+  // Synchronize TP/SL with active position or stock changes
   useEffect(() => {
+    const symbolChanged = prevSymbolRef.current !== selectedStock.symbol;
+    prevSymbolRef.current = selectedStock.symbol;
+
     // Pre-fill TP/SL from active position if it exists
     const pos = positions[selectedStock.symbol];
     if (pos) {
-      setTp(pos.tp ? pos.tp.toString() : '');
-      setSl(pos.sl ? pos.sl.toString() : '');
-    } else {
+      if (pos.tp !== undefined && pos.tp !== null) setTp(pos.tp.toString());
+      if (pos.sl !== undefined && pos.sl !== null) setSl(pos.sl.toString());
+      if (pos.tp || pos.sl) {
+        setShowTPSL(true);
+      }
+    } else if (symbolChanged) {
       setTp('');
       setSl('');
       setShowTPSL(false);
     }
-    // Pre-fill limit price string if empty
-    if (!limitPriceStr || parseFloat(limitPriceStr) <= 0) {
+    // Pre-fill limit price string if empty or symbol changed
+    if (symbolChanged || !limitPriceStr || parseFloat(limitPriceStr) <= 0) {
       setLimitPriceStr(selectedStock.price.toString());
     }
   }, [selectedStock.symbol, positions]);
