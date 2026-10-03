@@ -1406,7 +1406,17 @@ export const AiTutorDrawer = ({
                   >
                     {STOCKS.map(s => {
                       const marketLabel = isEn
-                        ? (s.market === 'Cổ phiếu' ? 'Stocks' : s.market === 'Tiền điện tử' ? 'Crypto' : s.market === 'Ngoại hối (Forex)' ? 'Forex' : s.market === 'Hàng hóa' ? 'Commodities' : s.market === 'Chỉ số' ? 'Indices' : s.market)
+                        ? (s.market.includes('Tiền điện tử') || s.market.toLowerCase().includes('crypto')
+                            ? 'Crypto'
+                            : s.market === 'Cổ phiếu'
+                            ? 'Stocks'
+                            : s.market.includes('Ngoại hối') || s.market.toLowerCase().includes('forex')
+                            ? 'Forex'
+                            : s.market.includes('Hàng hóa') || s.market.toLowerCase().includes('commodit')
+                            ? 'Commodities'
+                            : s.market.includes('Chỉ số') || s.market.toLowerCase().includes('indice')
+                            ? 'Indices'
+                            : s.market)
                         : s.market;
                       return (
                         <option key={s.symbol} value={s.symbol}>
