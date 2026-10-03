@@ -58,7 +58,7 @@ def submit_reflection(req: StudentReflectionRequest):
 
 @router.post("/compare-strategies")
 def compare_strategies(req: StrategyComparisonRequest):
-    return strategy_comparator.compare(req.trade)
+    return strategy_comparator.compare(req.trade, req.lang or "vi")
 
 @router.post("/backtest-assistant")
 def backtest_assist(req: BacktestAssistantRequest):
@@ -93,13 +93,15 @@ async def inspect_chart_data(request: Request):
     timeframe = data.get("timeframe")
     user_notes = data.get("userNotes", "")
     user_id = request.headers.get("x-user-id") or data.get("userId")
+    lang = data.get("lang", "vi")
     return ai_tutor_service.inspect_chart_data(
         drawings=drawings,
         klines=klines,
         symbol=symbol,
         timeframe=timeframe,
         user_notes=user_notes,
-        user_id=user_id
+        user_id=user_id,
+        lang=lang
     )
 
 @router.get("/sources")

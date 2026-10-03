@@ -74,6 +74,7 @@ class StudentReflectionRequest(BaseModel):
 class StrategyComparisonRequest(BaseModel):
     trade: TradeInput
     strategies: List[str] = ["PRICE_ACTION", "ICT"]
+    lang: Optional[str] = "vi"
 
 class BacktestAssistantRequest(BaseModel):
     strategy: str = "FVG"

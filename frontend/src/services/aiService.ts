@@ -547,6 +547,7 @@ export const aiService = {
     drawings: any[];
     klines: any[];
     userNotes?: string;
+    lang?: string;
   }): Promise<{
     success: boolean;
     symbol?: string;

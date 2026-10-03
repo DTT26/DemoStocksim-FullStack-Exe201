@@ -1332,13 +1332,15 @@ class AiTutorService:
         symbol: Optional[str] = None,
         timeframe: Optional[str] = None,
         user_notes: str = "",
-        user_id: Optional[str] = None
+        user_id: Optional[str] = None,
+        lang: str = "vi"
     ) -> Dict[str, Any]:
         """
         Pure Data Analysis of User Chart Drawings + Real KLine Data.
         Evaluates coordinates, prices, and candle patterns (ICT / SMC) directly
         without requiring screenshots.
         """
+        is_en = lang == "en"
         remaining_today = PREMIUM_DAILY_LIMIT
         is_premium = False
         if user_id:
@@ -1352,8 +1354,9 @@ class AiTutorService:
                         "success": False,
                         "quotaExceeded": True,
                         "message": (
-                            f"Bạn đã sử dụng hết hạn mức AI hôm nay ({used}/{daily_limit} lượt). "
-                            "Hãy nâng cấp lên gói PRO để mở khóa 500 lượt soi chart mỗi ngày!"
+                            f"You have reached your daily AI quota ({used}/{daily_limit}). Upgrade to PRO to unlock 500 chart evaluations per day!"
+                            if is_en else
+                            f"Bạn đã sử dụng hết hạn mức AI hôm nay ({used}/{daily_limit} lượt). Hãy nâng cấp lên gói PRO để mở khóa 500 lượt soi chart mỗi ngày!"
                         )
                     }
                 subscription_service.increment_ai_usage(user_id)
@@ -1369,6 +1372,8 @@ class AiTutorService:
             p_low = d.get("priceLow")
             pts = d.get("points", [])
             drawings_summary.append(
+                f"- Figure {idx} ({name}): Price range from {p_low} to {p_high}, with {len(pts)} anchor points."
+                if is_en else
                 f"- Hình {idx} ({name}): Vùng giá từ {p_low} đến {p_high}, gồm {len(pts)} điểm neo."
             )
         drawings_str = "\n".join(drawings_summary)
@@ -1391,38 +1396,70 @@ class AiTutorService:
         wave_max = max(highs) if highs else 0
         wave_min = min(lows) if lows else 0
 
-        system_prompt = (
-            "Bạn là Chuyên gia Cao cấp Đào tạo Phân tích Kỹ thuật và Huấn luyện viên Chiến lược Thực chiến "
-            "(Senior Quantitative & Technical Analyst Tutor, chuyên sâu về Price Action, ICT - Inner Circle Trader, SMC - Smart Money Concepts).\n"
-            "Nhiệm vụ của bạn là kiểm tra trực tiếp DỮ LIỆU TỌA ĐỘ VÙNG VẼ HỌC VIÊN ĐÃ VẼ TRÊN BIỂU ĐỒ đối chiếu với DỮ LIỆU NẾN THẬT (OHLCV).\n\n"
-            "Hãy trả lời theo cấu trúc Markdown rõ ràng, chuẩn sư phạm, truyền cảm hứng và sắc sảo như sau:\n\n"
-            "### 1. Đánh giá sơ bộ về hình thức lý thuyết\n"
-            "- Kết luận rõ ràng: Về mặt hình thức lý thuyết, bạn vẽ **ĐÚNG** hay **SAI / CHƯA CHUẨN**?\n"
-            "- Nhận diện đúng học viên đã khoanh vùng mức giá nào (ví dụ: cây nến tăng cuối cùng trước khi nhịp sập Bearish Displacement diễn ra, hoặc vùng FVG).\n\n"
-            "### 2. Lăng kính thực chiến chuyên sâu (Độ tin cậy & Xác suất)\n"
-            "- **Phân loại vùng:** Đây là vùng Tiếp diễn (Continuation OB/FVG) hay vùng Cực trị / Gốc (Extreme / Original OB)?\n"
-            "- **Chất lượng sóng đẩy:** Nhịp Displacement có đủ mạnh không? Có tạo FVG (Imbalance) đi kèm không?\n"
-            "- **Thanh khoản & Bẫy giá:** Có hiện tượng Quét thanh khoản (Liquidity Sweep) không? Cảnh báo nguy cơ bẫy Smart Money Trap (SMT) hoặc thanh khoản dụ dỗ (Inducement).\n\n"
-            "### 3. Vùng chuẩn xác nhất theo Smart Money\n"
-            "- Chỉ rõ mức giá đỉnh/đáy cực trị và vùng nến chuẩn nhất của con sóng này.\n\n"
-            "### 4. 💡 Bài học thực chiến cốt lõi\n"
-            "- Lời khuyên hành động thực chiến ngắn gọn giúp học viên không bị bẫy thị trường.\n\n"
-            "### 5. Điểm số đánh giá\n"
-            "- Cho điểm theo thang điểm 100 (Ví dụ: **Điểm đánh giá: 85/100**)."
-        )
-
-        user_prompt = (
-            f"Mã tài sản: {symbol or 'N/A'}, Khung thời gian: {timeframe or 'N/A'}.\n"
-            f"DỮ LIỆU HÌNH VẼ CỦA HỌC VIÊN TRÊN BIỂU ĐỒ:\n{drawings_str}\n\n"
-            f"CHUỖI NẾN THỰC TẾ TRÊN BIỂU ĐỒ (OHLCV):\n{klines_str}\n"
-            f"Đỉnh cao nhất của sóng: {wave_max}, Đáy thấp nhất: {wave_min}.\n"
-        )
-        if user_notes:
-            user_prompt += f"\nGhi chú học viên: {user_notes}\n"
+        if is_en:
+            system_prompt = (
+                "You are a Senior Quantitative & Technical Analyst Tutor specializing in Price Action and ICT / Smart Money Concepts.\n"
+                "Your objective is to inspect direct COORDINATE DRAWING DATA drawn by the trader on the chart against REAL OHLCV CANDLESTICK DATA.\n\n"
+                "Please respond strictly in English using clean, structured, encouraging Markdown:\n\n"
+                "### 1. Theoretical Accuracy Assessment\n"
+                "- Clear conclusion: Theoretically, is this drawing **CORRECT**, **PARTIALLY CORRECT**, or **INCORRECT**?\n"
+                "- Identify the exact price level and candle the trader marked (e.g., last up-candle before Bearish Displacement, or FVG).\n\n"
+                "### 2. Deep Practical Market Lens (Reliability & Probability)\n"
+                "- **Zone classification:** Is this a Continuation OB/FVG or an Extreme / Origin OB?\n"
+                "- **Impulse displacement quality:** Was the displacement impulsive enough? Did it leave an unmitigated FVG?\n"
+                "- **Liquidity & Market Traps:** Was there a Liquidity Sweep? Warn against Smart Money Traps (SMT) or Inducement.\n\n"
+                "### 3. Optimal Smart Money Zone\n"
+                "- State the precise extreme high/low levels and the ideal institutional mitigation zone for this swing.\n\n"
+                "### 4. 💡 Core Trading Takeaway\n"
+                "- Actionable advice to avoid getting trapped.\n\n"
+                "### 5. Final Evaluation Score\n"
+                "- Provide a numerical score on a 100-point scale (e.g., **Evaluation Score: 85/100**)."
+            )
+            user_prompt = (
+                f"Asset: {symbol or 'N/A'}, Timeframe: {timeframe or 'N/A'}.\n"
+                f"STUDENT CHART DRAWINGS DATA:\n{drawings_str}\n\n"
+                f"REAL CANDLESTICK DATA (OHLCV):\n{klines_str}\n"
+                f"Swing High: {wave_max}, Swing Low: {wave_min}.\n"
+            )
+            if user_notes:
+                user_prompt += f"\nTrader's notes: {user_notes}\n"
+            user_prompt += "\nPlease evaluate and grade this drawing now in English."
+        else:
+            system_prompt = (
+                "Bạn là Chuyên gia Cao cấp Đào tạo Phân tích Kỹ thuật và Huấn luyện viên Chiến lược Thực chiến "
+                "(Senior Quantitative & Technical Analyst Tutor, chuyên sâu về Price Action, ICT - Inner Circle Trader, SMC - Smart Money Concepts).\n"
+                "Nhiệm vụ của bạn là kiểm tra trực tiếp DỮ LIỆU TỌA ĐỘ VÙNG VẼ HỌC VIÊN ĐÃ VẼ TRÊN BIỂU ĐỒ đối chiếu với DỮ LIỆU NẾN THẬT (OHLCV).\n\n"
+                "Hãy trả lời theo cấu trúc Markdown rõ ràng, chuẩn sư phạm, truyền cảm hứng và sắc sảo như sau:\n\n"
+                "### 1. Đánh giá sơ bộ về hình thức lý thuyết\n"
+                "- Kết luận rõ ràng: Về mặt hình thức lý thuyết, bạn vẽ **ĐÚNG** hay **SAI / CHƯA CHUẨN**?\n"
+                "- Nhận diện đúng học viên đã khoanh vùng mức giá nào (ví dụ: cây nến tăng cuối cùng trước khi nhịp sập Bearish Displacement diễn ra, hoặc vùng FVG).\n\n"
+                "### 2. Lăng kính thực chiến chuyên sâu (Độ tin cậy & Xác suất)\n"
+                "- **Phân loại vùng:** Đây là vùng Tiếp diễn (Continuation OB/FVG) hay vùng Cực trị / Gốc (Extreme / Original OB)?\n"
+                "- **Chất lượng sóng đẩy:** Nhịp Displacement có đủ mạnh không? Có tạo FVG (Imbalance) đi kèm không?\n"
+                "- **Thanh khoản & Bẫy giá:** Có hiện tượng Quét thanh khoản (Liquidity Sweep) không? Cảnh báo nguy cơ bẫy Smart Money Trap (SMT) hoặc thanh khoản dụ dỗ (Inducement).\n\n"
+                "### 3. Vùng chuẩn xác nhất theo Smart Money\n"
+                "- Chỉ rõ mức giá đỉnh/đáy cực trị và vùng nến chuẩn nhất của con sóng này.\n\n"
+                "### 4. 💡 Bài học thực chiến cốt lõi\n"
+                "- Lời khuyên hành động thực chiến ngắn gọn giúp học viên không bị bẫy thị trường.\n\n"
+                "### 5. Điểm số đánh giá\n"
+                "- Cho điểm theo thang điểm 100 (Ví dụ: **Điểm đánh giá: 85/100**)."
+            )
+            user_prompt = (
+                f"Mã tài sản: {symbol or 'N/A'}, Khung thời gian: {timeframe or 'N/A'}.\n"
+                f"DỮ LIỆU HÌNH VẼ CỦA HỌC VIÊN TRÊN BIỂU ĐỒ:\n{drawings_str}\n\n"
+                f"CHUỖI NẾN THỰC TẾ TRÊN BIỂU ĐỒ (OHLCV):\n{klines_str}\n"
+                f"Đỉnh cao nhất của sóng: {wave_max}, Đáy thấp nhất: {wave_min}.\n"
+            )
+            if user_notes:
+                user_prompt += f"\nGhi chú học viên: {user_notes}\n"
 
         analysis = llm_client.generate_text(system_prompt, user_prompt, max_tokens=2000)
         if not analysis:
-            analysis = "Không thể phân tích dữ liệu lúc này. Vui lòng thử lại sau."
+            analysis = (
+                "Unable to analyze data at this time. Please try again later."
+                if is_en else
+                "Không thể phân tích dữ liệu lúc này. Vui lòng thử lại sau."
+            )
 
         score = 80
         score_match = re.search(r'(?:Điểm\s*(?:đánh giá|số)?|Score)[:\s*]+(\d{1,3})\s*(?:/\s*100)?', analysis, re.IGNORECASE)
@@ -1432,7 +1469,10 @@ class AiTutorService:
             except:
                 pass
 
-        verdict = "CORRECT" if "ĐÚNG" in analysis.upper() and "SAI" not in analysis[:300].upper() else "PARTIALLY_CORRECT"
+        if is_en:
+            verdict = "CORRECT" if ("CORRECT" in analysis.upper() and "INCORRECT" not in analysis[:300].upper()) else ("INCORRECT" if "INCORRECT" in analysis[:300].upper() else "PARTIALLY_CORRECT")
+        else:
+            verdict = "CORRECT" if "ĐÚNG" in analysis.upper() and "SAI" not in analysis[:300].upper() else "PARTIALLY_CORRECT"
         if "CHƯA ĐÚNG" in analysis[:300].upper() or "SAI" in analysis[:300].upper():
             verdict = "INCORRECT"
 

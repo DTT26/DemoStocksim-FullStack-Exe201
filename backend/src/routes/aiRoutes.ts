@@ -682,12 +682,14 @@ router.post('/inspect-chart', optionalProtect, async (req: any, res: Response) =
 router.post('/inspect-chart-data', optionalProtect, async (req: any, res: Response) => {
   try {
     const userId = req.user?._id?.toString() || req.body?.userId || 'guest_user';
-    const { drawings, klines, symbol, timeframe, userNotes } = req.body;
+    const { drawings, klines, symbol, timeframe, userNotes, lang } = req.body;
 
     if (!drawings || !Array.isArray(drawings) || drawings.length === 0) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Bạn chưa vẽ vùng phân tích nào trên biểu đồ. Hãy dùng thanh công cụ bên trái (Hộp chữ nhật, Đường kẻ) để đánh dấu vùng Order Block / FVG trước nhé!' 
+        message: lang === 'en' 
+          ? 'No drawings detected on chart. Please use the left toolbar (Rectangle, Line) to mark Order Block / FVG first!' 
+          : 'Bạn chưa vẽ vùng phân tích nào trên biểu đồ. Hãy dùng thanh công cụ bên trái (Hộp chữ nhật, Đường kẻ) để đánh dấu vùng Order Block / FVG trước nhé!' 
       });
     }
 
@@ -697,7 +699,8 @@ router.post('/inspect-chart-data', optionalProtect, async (req: any, res: Respon
       symbol: symbol || '',
       timeframe: timeframe || '',
       userNotes: userNotes || '',
-      userId
+      userId,
+      lang: lang || 'vi'
     });
 
     return res.json(result);

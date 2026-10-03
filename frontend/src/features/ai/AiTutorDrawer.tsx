@@ -422,7 +422,11 @@ export const AiTutorDrawer = ({
     }
     const currentData = handleScanDrawings();
     if (!currentData.drawings || currentData.drawings.length === 0) {
-      setInspectError('Chưa tìm thấy vùng vẽ nào trên biểu đồ. Hãy dùng thanh công cụ bên trái biểu đồ (Hộp chữ nhật, Đường kẻ) để vẽ vùng Order Block / FVG trước nhé!');
+      setInspectError(
+        isEn
+          ? 'No drawings found on chart. Please use the left toolbar (Rectangle, Trend Line) to mark Order Block / FVG first!'
+          : 'Chưa tìm thấy vùng vẽ nào trên biểu đồ. Hãy dùng thanh công cụ bên trái biểu đồ (Hộp chữ nhật, Đường kẻ) để vẽ vùng Order Block / FVG trước nhé!'
+      );
       return;
     }
     setInspectLoading(true);
@@ -434,16 +438,17 @@ export const AiTutorDrawer = ({
         klines: currentData.klines,
         symbol: activeSymbol,
         timeframe: timeframe || '15m',
-        userNotes: inspectNotes
+        userNotes: inspectNotes,
+        lang: isEn ? 'en' : 'vi'
       });
       if (res.quotaExceeded) {
-        setInspectError(res.message || 'Bạn đã sử dụng hết hạn mức AI hôm nay.');
+        setInspectError(res.message || (isEn ? 'You have reached your daily AI quota.' : 'Bạn đã sử dụng hết hạn mức AI hôm nay.'));
       } else {
         setInspectResult(res);
         fetchSubscription();
       }
     } catch (err: any) {
-      setInspectError(err.message || 'Lỗi khi gửi dữ liệu hình vẽ cho AI chấm');
+      setInspectError(err.message || (isEn ? 'Failed to submit drawings for AI evaluation.' : 'Lỗi khi gửi dữ liệu hình vẽ cho AI chấm'));
     } finally {
       setInspectLoading(false);
     }
@@ -631,11 +636,15 @@ export const AiTutorDrawer = ({
         takeProfit: price * 1.06,
         quantity: 1,
         timeframe: timeframe || '15m'
-      });
+      }, isEn ? 'en' : 'vi');
       setCompareData(res);
     } catch (err: any) {
       console.error(err);
-      setCompareError('Không thể tải dữ liệu so sánh chiến lược. Vui lòng bấm thử lại.');
+      setCompareError(
+        isEn
+          ? 'Unable to load strategy comparison data. Please click to retry.'
+          : 'Không thể tải dữ liệu so sánh chiến lược. Vui lòng bấm thử lại.'
+      );
     } finally {
       setCompareLoading(false);
     }
@@ -696,15 +705,21 @@ export const AiTutorDrawer = ({
                   type="button"
                   onClick={() => setIsUpgradeModalOpen(true)}
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-purple-500/15 border border-amber-500/35 hover:border-amber-500/60 text-amber-600 dark:text-amber-400 font-bold text-xs whitespace-nowrap shadow-xs transition-all cursor-pointer hover:scale-[1.02]"
-                  title={subscription.premiumExpiresAt ? `Tài khoản PRO VIP • Còn ${subscription.remainingToday}/500 lượt hôm nay • Hạn dùng đến: ${new Date(subscription.premiumExpiresAt).toLocaleString('vi-VN')} (Bấm xem chi tiết / gia hạn)` : 'Tài khoản PRO VIP (Bấm xem chi tiết)'}
+                  title={
+                    subscription.premiumExpiresAt
+                      ? (isEn
+                          ? `PRO VIP Account • ${subscription.remainingToday}/500 requests remaining today • Expires: ${new Date(subscription.premiumExpiresAt).toLocaleDateString('en-US')} (Click to view / extend)`
+                          : `Tài khoản PRO VIP • Còn ${subscription.remainingToday}/500 lượt hôm nay • Hạn dùng đến: ${new Date(subscription.premiumExpiresAt).toLocaleString('vi-VN')} (Bấm xem chi tiết / gia hạn)`)
+                      : (isEn ? 'PRO VIP Account (Click for details)' : 'Tài khoản PRO VIP (Bấm xem chi tiết)')
+                  }
                 >
                   <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                   <span>PRO</span>
                   <span className="font-mono text-[11px] opacity-85">({subscription.remainingToday}/500)</span>
                   {subscription.premiumExpiresAt && (
                     <span className="hidden sm:inline-flex items-center text-[10px] text-amber-700 dark:text-amber-300 font-normal ml-0.5 border-l border-amber-500/30 pl-1.5 gap-1">
-                      <span>HSD:</span>
-                      <strong className="font-mono font-medium">{new Date(subscription.premiumExpiresAt).toLocaleDateString('vi-VN')}</strong>
+                      <span>{isEn ? 'EXP:' : 'HSD:'}</span>
+                      <strong className="font-mono font-medium">{new Date(subscription.premiumExpiresAt).toLocaleDateString(isEn ? 'en-US' : 'vi-VN')}</strong>
                     </span>
                   )}
                 </button>
@@ -712,7 +727,7 @@ export const AiTutorDrawer = ({
                 <div className="flex items-center gap-1.5 shrink-0">
                   <span 
                     className="hidden sm:inline-flex items-center px-2 py-1 rounded-lg bg-slate-100 dark:bg-[#1a1f2c] text-slate-600 dark:text-slate-300 text-xs font-mono border border-slate-200 dark:border-[#2b3347] whitespace-nowrap"
-                    title="Lượt hỏi AI miễn phí còn lại hôm nay"
+                    title={isEn ? 'Remaining free AI requests today' : 'Lượt hỏi AI miễn phí còn lại hôm nay'}
                   >
                     <span className="text-slate-400 text-[11px] mr-1">Free:</span>
                     <strong className="text-amber-600 dark:text-amber-400">{subscription ? subscription.remainingToday : 10}</strong>
@@ -721,10 +736,10 @@ export const AiTutorDrawer = ({
                   <button
                     onClick={() => setIsUpgradeModalOpen(true)}
                     className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs shadow-xs transition-all cursor-pointer whitespace-nowrap hover:scale-[1.02]"
-                    title="Nâng cấp lên gói PRO 500 lượt/ngày qua PayOS"
+                    title={isEn ? 'Upgrade to PRO 500 requests/day' : 'Nâng cấp lên gói PRO 500 lượt/ngày qua PayOS'}
                   >
                     <Crown className="w-3.5 h-3.5 shrink-0" />
-                    <span>Nâng cấp PRO</span>
+                    <span>{isEn ? 'Upgrade PRO' : 'Nâng cấp PRO'}</span>
                   </button>
                 </div>
               )}
@@ -736,7 +751,7 @@ export const AiTutorDrawer = ({
             <button 
               onClick={handleClearChat}
               className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0 cursor-pointer"
-              title="Xóa lịch sử đoạn chat này"
+              title={isEn ? 'Clear this chat history' : 'Xóa lịch sử đoạn chat này'}
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -745,7 +760,7 @@ export const AiTutorDrawer = ({
           <button 
             onClick={onClose}
             className="p-1.5 rounded-lg text-slate-400 hover:text-[#1e2329] dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#2a2e39] transition-colors shrink-0 cursor-pointer"
-            title="Đóng bảng AI Tutor"
+            title={isEn ? 'Close AI Tutor' : 'Đóng bảng AI Tutor'}
           >
             <X className="w-4 h-4" />
           </button>
@@ -774,7 +789,7 @@ export const AiTutorDrawer = ({
           }`}
         >
           <Target className="w-3.5 h-3.5 text-amber-500" />
-          <span>{isEn ? '🎯 Zone Evaluation' : '🎯 Chấm Bài Vùng Vẽ'}</span>
+          <span>{isEn ? 'Zone Evaluation' : 'Chấm Bài Vùng Vẽ'}</span>
         </button>
         <button
           onClick={() => {
@@ -1021,13 +1036,15 @@ export const AiTutorDrawer = ({
                   </div>
                   <div>
                     <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                      AI Chấm Bài Vùng Vẽ Trực Tiếp
+                      {isEn ? 'AI Direct Chart Drawing Evaluation' : 'AI Chấm Bài Vùng Vẽ Trực Tiếp'}
                       <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400">
                         SMC & ICT DATA PRO
                       </span>
                     </h3>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Tự động trích xuất tọa độ vùng hộp, đường kẻ bạn vẽ trên biểu đồ để AI phân tích mà không cần chụp ảnh
+                      {isEn
+                        ? 'Automatically extracts coordinates of boxes and lines drawn on your chart for AI analysis without screenshots'
+                        : 'Tự động trích xuất tọa độ vùng hộp, đường kẻ bạn vẽ trên biểu đồ để AI phân tích mà không cần chụp ảnh'}
                     </p>
                   </div>
                 </div>
@@ -1035,10 +1052,10 @@ export const AiTutorDrawer = ({
                 <button
                   onClick={handleScanDrawings}
                   className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-[#1f2430] hover:bg-slate-200 dark:hover:bg-[#2b3347] text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
-                  title="Quét lại hình vẽ mới nhất trên biểu đồ"
+                  title={isEn ? 'Rescan latest drawings on chart' : 'Quét lại hình vẽ mới nhất trên biểu đồ'}
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Quét lại hình</span>
+                  <span>{isEn ? 'Rescan' : 'Quét lại hình'}</span>
                 </button>
               </div>
             </div>
@@ -1054,7 +1071,7 @@ export const AiTutorDrawer = ({
                       onClick={() => setIsUpgradeModalOpen(true)}
                       className="block mt-1 font-bold underline cursor-pointer text-amber-600 dark:text-amber-400"
                     >
-                      Nâng cấp gói PRO ngay &rarr;
+                      {isEn ? 'Upgrade to PRO now →' : 'Nâng cấp gói PRO ngay →'}
                     </button>
                   )}
                 </div>
@@ -1069,10 +1086,12 @@ export const AiTutorDrawer = ({
                 </div>
                 <div className="space-y-1">
                   <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                    Chưa phát hiện vùng vẽ nào trên biểu đồ
+                    {isEn ? 'No drawings detected on chart' : 'Chưa phát hiện vùng vẽ nào trên biểu đồ'}
                   </h4>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
-                    Hãy dùng thanh công cụ vẽ bên trái biểu đồ để vẽ vùng phân tích của bạn, sau đó AI sẽ tự động đọc tọa độ để chấm điểm:
+                    {isEn
+                      ? 'Use the drawing toolbar on the left of the chart to outline your analysis zone. AI will automatically read coordinates to evaluate:'
+                      : 'Hãy dùng thanh công cụ vẽ bên trái biểu đồ để vẽ vùng phân tích của bạn, sau đó AI sẽ tự động đọc tọa độ để chấm điểm:'}
                   </p>
                 </div>
 
@@ -1080,19 +1099,31 @@ export const AiTutorDrawer = ({
                   <div className="flex items-start gap-2">
                     <span className="w-4 h-4 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">1</span>
                     <span className="text-slate-700 dark:text-slate-300">
-                      Chọn công cụ <strong>Hộp chữ nhật (Rectangle)</strong> hoặc <strong>Đường kẻ (Line)</strong> ở thanh công cụ vẽ bên trái biểu đồ.
+                      {isEn ? (
+                        <>Select the <strong>Rectangle</strong> or <strong>Trend Line</strong> tool from the left drawing toolbar.</>
+                      ) : (
+                        <>Chọn công cụ <strong>Hộp chữ nhật (Rectangle)</strong> hoặc <strong>Đường kẻ (Line)</strong> ở thanh công cụ vẽ bên trái biểu đồ.</>
+                      )}
                     </span>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="w-4 h-4 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">2</span>
                     <span className="text-slate-700 dark:text-slate-300">
-                      Khoanh vùng nến bạn xác định là <strong>Order Block (OB)</strong>, <strong>Fair Value Gap (FVG)</strong> hoặc <strong>Vùng Cung/Cầu</strong>.
+                      {isEn ? (
+                        <>Mark the candle zone you identify as an <strong>Order Block (OB)</strong>, <strong>Fair Value Gap (FVG)</strong>, or <strong>Supply/Demand zone</strong>.</>
+                      ) : (
+                        <>Khoanh vùng nến bạn xác định là <strong>Order Block (OB)</strong>, <strong>Fair Value Gap (FVG)</strong> hoặc <strong>Vùng Cung/Cầu</strong>.</>
+                      )}
                     </span>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="w-4 h-4 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">3</span>
                     <span className="text-slate-700 dark:text-slate-300">
-                      Bấm nút <strong>"Quét lại hình vẽ"</strong> để AI nạp dữ liệu tọa độ và chấm bài ngay lập tức!
+                      {isEn ? (
+                        <>Click <strong>"Rescan drawings"</strong> for AI to load coordinates and evaluate instantly!</>
+                      ) : (
+                        <>Bấm nút <strong>"Quét lại hình vẽ"</strong> để AI nạp dữ liệu tọa độ và chấm bài ngay lập tức!</>
+                      )}
                     </span>
                   </div>
                 </div>
@@ -1102,7 +1133,7 @@ export const AiTutorDrawer = ({
                   className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-bold text-xs shadow-xs transition-all cursor-pointer inline-flex items-center gap-2"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Quét lại hình vẽ trên biểu đồ</span>
+                  <span>{isEn ? 'Rescan drawings on chart' : 'Quét lại hình vẽ trên biểu đồ'}</span>
                 </button>
               </div>
             )}
@@ -1114,7 +1145,9 @@ export const AiTutorDrawer = ({
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                     <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
-                      Đã phát hiện {detectedDrawings.length} vùng vẽ trên {activeSymbol} ({timeframe}):
+                      {isEn
+                        ? `Detected ${detectedDrawings.length} drawing(s) on ${activeSymbol} (${timeframe}):`
+                        : `Đã phát hiện ${detectedDrawings.length} vùng vẽ trên ${activeSymbol} (${timeframe}):`}
                     </span>
                   </div>
                   <button
@@ -1122,7 +1155,7 @@ export const AiTutorDrawer = ({
                     className="text-[11px] text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 cursor-pointer font-medium"
                   >
                     <RefreshCw className="w-3 h-3" />
-                    Cập nhật
+                    {isEn ? 'Update' : 'Cập nhật'}
                   </button>
                 </div>
 
@@ -1139,17 +1172,17 @@ export const AiTutorDrawer = ({
                         </div>
                         <div className="truncate">
                           <span className="font-semibold text-slate-900 dark:text-white capitalize">
-                            {d.name === 'rect' ? 'Hộp vùng giá (Rectangle)' : d.name}
+                            {d.name === 'rect' ? (isEn ? 'Price Zone Box (Rectangle)' : 'Hộp vùng giá (Rectangle)') : d.name}
                           </span>
                           <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-mono">
                             {d.priceLow !== undefined && d.priceHigh !== undefined
                               ? `$${d.priceLow.toLocaleString('en-US')} → $${d.priceHigh.toLocaleString('en-US')}`
-                              : `${d.points?.length || 0} điểm neo`}
+                              : `${d.points?.length || 0} ${isEn ? 'anchor points' : 'điểm neo'}`}
                           </span>
                         </div>
                       </div>
                       <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0 font-medium">
-                        Sẵn sàng chấm
+                        {isEn ? 'Ready to evaluate' : 'Sẵn sàng chấm'}
                       </span>
                     </div>
                   ))}
@@ -1158,12 +1191,16 @@ export const AiTutorDrawer = ({
                 {/* User Notes Input */}
                 <div className="space-y-1 pt-1">
                   <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                    Luận điểm / Nhận định của bạn (Tùy chọn):
+                    {isEn ? 'Your rationale / trading thesis (Optional):' : 'Luận điểm / Nhận định của bạn (Tùy chọn):'}
                   </label>
                   <textarea
                     value={inspectNotes}
                     onChange={(e) => setInspectNotes(e.target.value)}
-                    placeholder="Ví dụ: Tôi vừa vẽ Bearish Order Block ở cây nến tăng cuối cùng trước khi có nhịp sập mạnh. Tôi định Sell khi giá hồi về test..."
+                    placeholder={
+                      isEn
+                        ? 'e.g., I marked a Bearish Order Block at the last up-candle before strong displacement drop. Planning to Sell on retest...'
+                        : 'Ví dụ: Tôi vừa vẽ Bearish Order Block ở cây nến tăng cuối cùng trước khi có nhịp sập mạnh. Tôi định Sell khi giá hồi về test...'
+                    }
                     rows={2}
                     className="w-full p-2.5 rounded-lg bg-slate-50 dark:bg-[#131722] border border-slate-300 dark:border-[#2b3347] text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden focus:border-amber-500 resize-none"
                   />
@@ -1176,7 +1213,11 @@ export const AiTutorDrawer = ({
                   className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:from-amber-600 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   <Sparkles className={`w-4 h-4 ${inspectLoading ? 'animate-spin' : ''}`} />
-                  <span>{inspectLoading ? 'AI đang đối chiếu dữ liệu nến...' : '🚀 Gửi AI Phân Tích & Chấm Điểm Bài Vẽ'}</span>
+                  <span>
+                    {inspectLoading
+                      ? (isEn ? 'AI is comparing candle data...' : 'AI đang đối chiếu dữ liệu nến...')
+                      : (isEn ? '🚀 Submit for AI Analysis & Grading' : '🚀 Gửi AI Phân Tích & Chấm Điểm Bài Vẽ')}
+                  </span>
                 </button>
               </div>
             )}
@@ -1188,10 +1229,14 @@ export const AiTutorDrawer = ({
                   <Sparkles className="w-4 h-4 animate-spin" />
                 </div>
                 <div className="text-xs font-bold text-slate-800 dark:text-slate-100">
-                  AI đang đối chiếu dữ liệu tọa độ hình vẽ với cấu trúc nến OHLCV...
+                  {isEn
+                    ? 'AI is comparing drawing coordinates against OHLCV candlestick structure...'
+                    : 'AI đang đối chiếu dữ liệu tọa độ hình vẽ với cấu trúc nến OHLCV...'}
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Xác định nhịp Displacement, cấu trúc FVG / Imbalance và bẫy thanh khoản Smart Money Trap...
+                  {isEn
+                    ? 'Detecting Displacement moves, FVG / Imbalance gaps, and Smart Money liquidity sweeps...'
+                    : 'Xác định nhịp Displacement, cấu trúc FVG / Imbalance và bẫy thanh khoản Smart Money Trap...'}
                 </p>
               </div>
             )}
@@ -1214,16 +1259,16 @@ export const AiTutorDrawer = ({
                       {inspectResult.verdict === 'INCORRECT' && <X className="w-3.5 h-3.5" />}
                       <span>
                         {inspectResult.verdict === 'CORRECT' 
-                          ? 'VẼ ĐÚNG LÝ THUYẾT' 
+                          ? (isEn ? 'THEORETICALLY ACCURATE' : 'VẼ ĐÚNG LÝ THUYẾT')
                           : inspectResult.verdict === 'PARTIALLY_CORRECT'
-                          ? 'ĐÚNG MỘT PHẦN / CẦN LƯU Ý'
-                          : 'CHƯA ĐÚNG'}
+                          ? (isEn ? 'PARTIALLY ACCURATE / REVIEW NEEDED' : 'ĐÚNG MỘT PHẦN / CẦN LƯU Ý')
+                          : (isEn ? 'INCORRECT' : 'CHƯA ĐÚNG')}
                       </span>
                     </span>
                   </div>
 
                   <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30">
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Điểm:</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{isEn ? 'Score:' : 'Điểm:'}</span>
                     <span className="text-sm font-black font-mono text-amber-600 dark:text-amber-400">
                       {inspectResult.score}/100
                     </span>
@@ -1237,7 +1282,7 @@ export const AiTutorDrawer = ({
                       <div className="flex items-center gap-2">
                         <Target className="w-4 h-4 text-amber-500" />
                         <span className="text-xs font-bold text-slate-900 dark:text-white">
-                          AI Đề Xuất Vùng Vẽ Chuẩn Xác Nhất:
+                          {isEn ? 'AI Suggested Optimal Zone:' : 'AI Đề Xuất Vùng Vẽ Chuẩn Xác Nhất:'}
                         </span>
                       </div>
                       <span className="text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400">
@@ -1257,12 +1302,12 @@ export const AiTutorDrawer = ({
                       {hasDrawnCorrection ? (
                         <>
                           <CheckCheck className="w-4 h-4" />
-                          <span>Đã vẽ vùng AI sửa lại lên biểu đồ!</span>
+                          <span>{isEn ? 'AI corrected zone plotted on chart!' : 'Đã vẽ vùng AI sửa lại lên biểu đồ!'}</span>
                         </>
                       ) : (
                         <>
                           <PenTool className="w-3.5 h-3.5" />
-                          <span>🎯 Tự động vẽ vùng AI sửa lại lên biểu đồ</span>
+                          <span>{isEn ? '🎯 Plot AI corrected zone onto chart' : '🎯 Tự động vẽ vùng AI sửa lại lên biểu đồ'}</span>
                         </>
                       )}
                     </button>
@@ -1284,7 +1329,7 @@ export const AiTutorDrawer = ({
                     }}
                     className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-[#1f2430] hover:bg-slate-200 dark:hover:bg-[#2b3347] text-slate-700 dark:text-slate-200 text-xs font-semibold cursor-pointer transition-colors"
                   >
-                    Chấm bài vẽ khác &rarr;
+                    {isEn ? 'Evaluate another drawing →' : 'Chấm bài vẽ khác →'}
                   </button>
                 </div>
               </div>
@@ -1304,12 +1349,12 @@ export const AiTutorDrawer = ({
                     <Scale className="w-3.5 h-3.5" />
                   </div>
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wide">
-                    Chọn Cặp Coin / Cổ phiếu Phân Tích:
+                    {isEn ? 'Select Asset for Strategy Comparison:' : 'Chọn Cặp Coin / Cổ phiếu Phân Tích:'}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Giá Sàn:</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{isEn ? 'Live Price:' : 'Giá Sàn:'}</span>
                   <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
                     ${activePrice >= 100 ? activePrice.toLocaleString('en-US') : activePrice.toFixed(4)}
                   </span>
@@ -1333,11 +1378,16 @@ export const AiTutorDrawer = ({
                     }}
                     className="w-full bg-[#f8f9fc] dark:bg-[#1e222d] border border-slate-300 dark:border-[#2f3545] hover:border-amber-400 dark:hover:border-amber-500/60 rounded-lg px-3 py-2 text-xs font-bold text-slate-800 dark:text-white cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-amber-500/30 transition-all pr-8"
                   >
-                    {STOCKS.map(s => (
-                      <option key={s.symbol} value={s.symbol}>
-                        {s.symbol} — {s.exchange} ({s.market})
-                      </option>
-                    ))}
+                    {STOCKS.map(s => {
+                      const marketLabel = isEn
+                        ? (s.market === 'Cổ phiếu' ? 'Stocks' : s.market === 'Tiền điện tử' ? 'Crypto' : s.market === 'Ngoại hối (Forex)' ? 'Forex' : s.market === 'Hàng hóa' ? 'Commodities' : s.market === 'Chỉ số' ? 'Indices' : s.market)
+                        : s.market;
+                      return (
+                        <option key={s.symbol} value={s.symbol}>
+                          {s.symbol} — {s.exchange} ({marketLabel})
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
 
@@ -1345,16 +1395,22 @@ export const AiTutorDrawer = ({
                   onClick={() => handleRunComparison()}
                   disabled={compareLoading}
                   className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all disabled:opacity-50 shrink-0 cursor-pointer"
-                  title="Gửi dữ liệu giá thị trường mới nhất để AI đối chiếu lại chiến lược Price Action vs ICT"
+                  title={isEn ? 'Send latest market price data for AI to compare Price Action vs ICT strategies' : 'Gửi dữ liệu giá thị trường mới nhất để AI đối chiếu lại chiến lược Price Action vs ICT'}
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${compareLoading ? 'animate-spin' : ''}`} />
-                  <span>{compareLoading ? 'Đang phân tích...' : 'Phân tích lại'}</span>
+                  <span>
+                    {compareLoading 
+                      ? (isEn ? 'Analyzing...' : 'Đang phân tích...') 
+                      : (isEn ? 'Re-analyze' : 'Phân tích lại')}
+                  </span>
                 </button>
               </div>
 
               {/* Helper Micro-copy */}
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed pt-0.5">
-                💡 AI sẽ quét giá thị trường hiện tại để đối chiếu song song: vùng cản Cung-Cầu (Price Action) vs Khối Order Block / FVG (ICT/SMC).
+                {isEn
+                  ? '💡 AI scans current market prices to benchmark: Support & Demand zones (Price Action) vs Order Blocks / FVG (ICT/SMC).'
+                  : '💡 AI sẽ quét giá thị trường hiện tại để đối chiếu song song: vùng cản Cung-Cầu (Price Action) vs Khối Order Block / FVG (ICT/SMC).'}
               </p>
             </div>
 
@@ -1363,10 +1419,14 @@ export const AiTutorDrawer = ({
               <div className="p-8 rounded-xl bg-[#f8f9fa] dark:bg-[#181b24] border border-[#e6e8ea] dark:border-[#2a2e39] flex flex-col items-center justify-center space-y-3 text-center">
                 <Sparkles className="w-8 h-8 text-amber-500 animate-spin" />
                 <p className="text-xs font-semibold text-[#1e2329] dark:text-white">
-                  AI đang đối chiếu đa chiều Price Action vs ICT cho {activeSymbol}...
+                  {isEn
+                    ? `AI is multi-dimensionally comparing Price Action vs ICT for ${activeSymbol}...`
+                    : `AI đang đối chiếu đa chiều Price Action vs ICT cho ${activeSymbol}...`}
                 </p>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Đang tính toán vùng cản, điểm quét thanh khoản và tối ưu tỷ lệ Risk:Reward...
+                  {isEn
+                    ? 'Calculating key levels, liquidity sweeps, and optimizing Risk:Reward ratio...'
+                    : 'Đang tính toán vùng cản, điểm quét thanh khoản và tối ưu tỷ lệ Risk:Reward...'}
                 </span>
               </div>
             )}
@@ -1377,9 +1437,9 @@ export const AiTutorDrawer = ({
                 <span>{compareError}</span>
                 <button 
                   onClick={() => handleRunComparison()}
-                  className="px-2.5 py-1 rounded bg-red-500 text-white font-semibold text-xs"
+                  className="px-2.5 py-1 rounded bg-red-500 text-white font-semibold text-xs cursor-pointer"
                 >
-                  Thử lại
+                  {isEn ? 'Retry' : 'Thử lại'}
                 </button>
               </div>
             )}
@@ -1392,10 +1452,10 @@ export const AiTutorDrawer = ({
                   <div className="text-xs font-bold text-[#1e2329] dark:text-white flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
                       <Scale className="w-3.5 h-3.5 text-blue-500" />
-                      1. Góc Nhìn Phân Tích Kỹ Thuật (Dual Perspective)
+                      {isEn ? '1. Technical Analysis Perspectives (Dual Perspective)' : '1. Góc Nhìn Phân Tích Kỹ Thuật (Dual Perspective)'}
                     </span>
                     <span className="text-[10px] text-slate-400 font-normal">
-                      Cặp: {compareData.symbol} • Vị thế: {compareData.side}
+                      {isEn ? `Pair: ${compareData.symbol} • Side: ${compareData.side}` : `Cặp: ${compareData.symbol} • Vị thế: ${compareData.side}`}
                     </span>
                   </div>
 
@@ -1409,7 +1469,7 @@ export const AiTutorDrawer = ({
                             {compareData.priceAction.frameworkName}
                           </span>
                           <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 font-mono font-semibold">
-                            Cổ điển &amp; Theo Trend
+                            {isEn ? 'Classical & Trend' : 'Cổ điển & Theo Trend'}
                           </span>
                         </div>
                         <p className="text-[#1e2329] dark:text-slate-300 leading-relaxed text-xs">
@@ -1422,7 +1482,7 @@ export const AiTutorDrawer = ({
                         <div>🎯 <strong>Take Profit:</strong> {compareData.priceAction.takeProfitTarget}</div>
                         {compareData.priceAction.evidenceRequired && (
                           <div className="text-[10px] text-blue-600/80 dark:text-blue-400/80 pt-0.5">
-                            🔎 <em>Xác nhận:</em> {compareData.priceAction.evidenceRequired}
+                            🔎 <em>{isEn ? 'Confirmation:' : 'Xác nhận:'}</em> {compareData.priceAction.evidenceRequired}
                           </div>
                         )}
                       </div>
@@ -1437,7 +1497,7 @@ export const AiTutorDrawer = ({
                             {compareData.ict.frameworkName}
                           </span>
                           <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 font-mono font-semibold">
-                            Dòng tiền Thông minh (SMC)
+                            {isEn ? 'Smart Money (SMC)' : 'Dòng tiền Thông minh (SMC)'}
                           </span>
                         </div>
                         <p className="text-[#1e2329] dark:text-slate-300 leading-relaxed text-xs">
@@ -1450,7 +1510,7 @@ export const AiTutorDrawer = ({
                         <div>🎯 <strong>Take Profit:</strong> {compareData.ict.takeProfitTarget}</div>
                         {compareData.ict.evidenceRequired && (
                           <div className="text-[10px] text-amber-600/80 dark:text-amber-400/80 pt-0.5">
-                            🔎 <em>Xác nhận:</em> {compareData.ict.evidenceRequired}
+                            🔎 <em>{isEn ? 'Confirmation:' : 'Xác nhận:'}</em> {compareData.ict.evidenceRequired}
                           </div>
                         )}
                       </div>
@@ -1464,10 +1524,10 @@ export const AiTutorDrawer = ({
                     <div className="text-xs font-bold text-[#1e2329] dark:text-white flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
                         <Target className="w-3.5 h-3.5 text-emerald-500" />
-                        2. Mô Phỏng Thiết Lập Lệnh Số Học (Simulated Setups)
+                        {isEn ? '2. Simulated Numerical Trade Setups' : '2. Mô Phỏng Thiết Lập Lệnh Số Học (Simulated Setups)'}
                       </span>
                       <span className="text-[10px] text-emerald-500 font-mono font-semibold">
-                        Giá tham chiếu: ${compareData.entryPrice < 100 ? compareData.entryPrice.toFixed(2) : compareData.entryPrice.toLocaleString()}
+                        {isEn ? 'Ref Price:' : 'Giá tham chiếu:'} ${compareData.entryPrice < 100 ? compareData.entryPrice.toFixed(2) : compareData.entryPrice.toLocaleString()}
                       </span>
                     </div>
 
@@ -1485,7 +1545,7 @@ export const AiTutorDrawer = ({
 
                         <div className="grid grid-cols-3 gap-1.5 text-center">
                           <div className="p-1.5 rounded-lg bg-white dark:bg-[#1e222d] border border-slate-200 dark:border-slate-800">
-                            <span className="text-[10px] text-slate-400 block">Entry (Vào)</span>
+                            <span className="text-[10px] text-slate-400 block">{isEn ? 'Entry' : 'Entry (Vào)'}</span>
                             <span className="text-xs font-mono font-bold text-[#1e2329] dark:text-white">
                               {compareData.simulatedSetups.priceAction.entry}
                             </span>
@@ -1522,7 +1582,7 @@ export const AiTutorDrawer = ({
                             ⚡ {compareData.simulatedSetups.ict.framework}
                           </span>
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                            R:R {compareData.simulatedSetups.ict.rr} (Tối ưu)
+                            R:R {compareData.simulatedSetups.ict.rr} {isEn ? '(Optimized)' : '(Tối ưu)'}
                           </span>
                         </div>
 
@@ -1534,7 +1594,7 @@ export const AiTutorDrawer = ({
                             </span>
                           </div>
                           <div className="p-1.5 rounded-lg bg-red-500/5 border border-red-500/20">
-                            <span className="text-[10px] text-red-500 block">Stop Loss (Chặt)</span>
+                            <span className="text-[10px] text-red-500 block">{isEn ? 'Stop Loss (Tight)' : 'Stop Loss (Chặt)'}</span>
                             <span className="text-xs font-mono font-bold text-red-500">
                               {compareData.simulatedSetups.ict.stopLoss}
                             </span>
@@ -1566,17 +1626,17 @@ export const AiTutorDrawer = ({
                   <div className="space-y-2">
                     <div className="text-xs font-bold text-[#1e2329] dark:text-white flex items-center gap-1.5">
                       <Layers className="w-3.5 h-3.5 text-purple-500" />
-                      3. Ma Trận So Sánh Chỉ Số Kỹ Thuật (Metric Matrix)
+                      {isEn ? '3. Technical Metric Comparison Matrix' : '3. Ma Trận So Sánh Chỉ Số Kỹ Thuật (Metric Matrix)'}
                     </div>
 
                     <div className="overflow-x-auto rounded-xl border border-[#e6e8ea] dark:border-[#2a2e39] bg-white dark:bg-[#181b24]">
                       <table className="w-full text-left text-xs">
                         <thead>
                           <tr className="bg-slate-50 dark:bg-[#1e222d] border-b border-[#e6e8ea] dark:border-[#2a2e39] text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                            <th className="py-2 px-3">Tiêu chí</th>
+                            <th className="py-2 px-3">{isEn ? 'Criterion' : 'Tiêu chí'}</th>
                             <th className="py-2 px-3 text-blue-600 dark:text-blue-400">Price Action</th>
                             <th className="py-2 px-3 text-amber-600 dark:text-amber-400">ICT / SMC</th>
-                            <th className="py-2 px-2.5 text-center">Đặc tính</th>
+                            <th className="py-2 px-2.5 text-center">{isEn ? 'Characteristic' : 'Đặc tính'}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#e6e8ea] dark:divide-[#2a2e39] text-[11px]">
@@ -1615,13 +1675,13 @@ export const AiTutorDrawer = ({
                   <div className="p-3.5 rounded-xl bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-pink-500/5 border border-indigo-500/20 space-y-2.5">
                     <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
                       <TrendingUp className="w-3.5 h-3.5" />
-                      4. Lời Khuyên Ứng Dụng Theo Trạng Thái Thị Trường (Market Regime)
+                      {isEn ? '4. Market Regime Application Advisory' : '4. Lời Khuyên Ứng Dụng Theo Trạng Thái Thị Trường (Market Regime)'}
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
                       <div className="p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/15 space-y-1">
                         <span className="font-bold text-blue-600 dark:text-blue-400 block">
-                          📈 Thị trường SÓNG MẠNH (Trending):
+                          {isEn ? '📈 TRENDING Market:' : '📈 Thị trường SÓNG MẠNH (Trending):'}
                         </span>
                         <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
                           {compareData.marketRegimeAdvisory.trending}
@@ -1630,7 +1690,7 @@ export const AiTutorDrawer = ({
 
                       <div className="p-2.5 rounded-lg bg-amber-500/5 border border-amber-500/15 space-y-1">
                         <span className="font-bold text-amber-600 dark:text-amber-400 block">
-                          🔄 Thị trường ĐI NGANG &amp; BẪY GIÁ (Ranging):
+                          {isEn ? '🔄 RANGING & Chop Market:' : '🔄 Thị trường ĐI NGANG & BẪY GIÁ (Ranging):'}
                         </span>
                         <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
                           {compareData.marketRegimeAdvisory.ranging}
@@ -1640,7 +1700,7 @@ export const AiTutorDrawer = ({
 
                     <div className="p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/20 text-[11px] space-y-1">
                       <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                        ⚡ Công thức Kết hợp Chuyên nghiệp (Hybrid Synergy):
+                        {isEn ? '⚡ Professional Hybrid Synergy:' : '⚡ Công thức Kết hợp Chuyên nghiệp (Hybrid Synergy):'}
                       </span>
                       <p className="text-slate-700 dark:text-slate-200 leading-relaxed">
                         {compareData.marketRegimeAdvisory.recommendation}
@@ -1653,16 +1713,16 @@ export const AiTutorDrawer = ({
                 <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#181b24] border border-[#e6e8ea] dark:border-[#2a2e39] space-y-2.5">
                   <div className="font-bold text-[#1e2329] dark:text-white text-xs flex items-center gap-1.5">
                     <Scale className="w-3.5 h-3.5 text-slate-400" />
-                    5. Điểm Tương Đồng &amp; Khác Biệt Cốt Lõi:
+                    {isEn ? '5. Core Similarities & Contrasting Viewpoints:' : '5. Điểm Tương Đồng & Khác Biệt Cốt Lõi:'}
                   </div>
                   <div className="space-y-1 text-[11px]">
-                    <div className="text-emerald-600 dark:text-emerald-400 font-semibold">Tương đồng:</div>
+                    <div className="text-emerald-600 dark:text-emerald-400 font-semibold">{isEn ? 'Similarities:' : 'Tương đồng:'}</div>
                     {compareData.similarities.map((s, i) => (
                       <div key={i} className="text-slate-600 dark:text-slate-300 pl-2 border-l border-emerald-500/30">• {s}</div>
                     ))}
                   </div>
                   <div className="space-y-1 text-[11px] pt-1">
-                    <div className="text-amber-600 dark:text-amber-400 font-semibold">Khác biệt góc nhìn:</div>
+                    <div className="text-amber-600 dark:text-amber-400 font-semibold">{isEn ? 'Contrasting viewpoints:' : 'Khác biệt góc nhìn:'}</div>
                     {compareData.differences.map((d, i) => (
                       <div key={i} className="text-slate-600 dark:text-slate-300 pl-2 border-l border-amber-500/30">• {d}</div>
                     ))}
@@ -1675,7 +1735,7 @@ export const AiTutorDrawer = ({
                     <div className="flex items-center justify-between">
                       <div className="text-xs font-bold text-[#1e2329] dark:text-white flex items-center gap-1.5">
                         <BookOpen className="w-3.5 h-3.5 text-blue-500" />
-                        6. Tài Liệu Đối Chiếu &amp; Video Bài Giảng Gốc (Verified Citations)
+                        {isEn ? '6. Verified Citations & Original Video Lectures' : '6. Tài Liệu Đối Chiếu & Video Bài Giảng Gốc (Verified Citations)'}
                       </div>
                       <span className="text-[10px] text-cyan-500 font-mono">
                         Academic Verified
@@ -1699,7 +1759,11 @@ export const AiTutorDrawer = ({
                                   : 'bg-cyan-500/5 hover:bg-cyan-500/10 border-cyan-500/25 hover:border-cyan-500/50 text-slate-800 dark:text-slate-200'
                                 : 'bg-slate-100 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/50 text-slate-500'
                             }`}
-                            title={isYouTube ? `Xem video bài giảng trực tiếp trên YouTube: ${s.source}` : `Tài liệu gốc: ${s.source}`}
+                            title={
+                              isYouTube 
+                                ? (isEn ? `Watch video lecture directly on YouTube: ${s.source}` : `Xem video bài giảng trực tiếp trên YouTube: ${s.source}`)
+                                : (isEn ? `Original reference: ${s.source}` : `Tài liệu gốc: ${s.source}`)
+                            }
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               {isYouTube ? (
@@ -1721,7 +1785,7 @@ export const AiTutorDrawer = ({
                                 ? 'bg-rose-500/15 text-rose-500 dark:text-rose-300 border-rose-500/30'
                                 : 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border-cyan-500/30'
                             }`}>
-                              {isYouTube ? '▶ VIDEO BÀI GIẢNG' : 'GIÁO TRÌNH'}
+                              {isYouTube ? (isEn ? '▶ VIDEO LECTURE' : '▶ VIDEO BÀI GIẢNG') : (isEn ? 'CURRICULUM' : 'GIÁO TRÌNH')}
                             </span>
                           </a>
                         );
@@ -1739,6 +1803,10 @@ export const AiTutorDrawer = ({
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        )}
               </div>
             )}
           </div>
