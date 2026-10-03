@@ -21,7 +21,7 @@ interface SimulatorState {
   endSession: () => void;
   
   // Replay Tick (Called heavily)
-  tick: (price: number, time: string) => void;
+  tick: (price: number, time: string, high?: number, low?: number) => void;
 
   // Trading Actions
   executeMarketOrder: (side: 'LONG' | 'SHORT', lot: number, sl?: number, tp?: number, setupTag?: string) => void;
@@ -284,7 +284,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
     set({ session: finalSession, isActive: false });
   },
 
-  tick: (price: number, time: string) => {
+  tick: (price: number, time: string, high?: number, low?: number) => {
     const state = get();
     if (!state.isActive || !state.session) return;
 
@@ -295,6 +295,8 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
     // To make it simple, let's treat `spread` config as exact price value (e.g. spread=0.2).
     const bid = price; 
     const ask = price + config.spread;
+    const barHigh = high !== undefined ? Math.max(high, price) : price;
+    const barLow = low !== undefined ? Math.min(low, price) : price;
 
     set(draft => {
       const positions = [...draft.positions];
@@ -335,18 +337,34 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
 
         // Check SL / TP
         let closeReason: SimHistory['closeReason'] | null = null;
+        let execPrice = currentExecPrice;
         
         if (pos.side === 'LONG') {
-          if (pos.sl && bid <= pos.sl) closeReason = 'STOP_LOSS';
-          if (pos.tp && bid >= pos.tp) closeReason = 'TAKE_PROFIT';
+          if (pos.sl && barLow <= pos.sl) {
+            closeReason = 'STOP_LOSS';
+            execPrice = pos.sl;
+          } else if (pos.tp && barHigh >= pos.tp) {
+            closeReason = 'TAKE_PROFIT';
+            execPrice = pos.tp;
+          }
         } else {
-          if (pos.sl && ask >= pos.sl) closeReason = 'STOP_LOSS';
-          if (pos.tp && ask <= pos.tp) closeReason = 'TAKE_PROFIT';
+          if (pos.sl && (barHigh + config.spread) >= pos.sl) {
+            closeReason = 'STOP_LOSS';
+            execPrice = pos.sl;
+          } else if (pos.tp && (barLow + config.spread) <= pos.tp) {
+            closeReason = 'TAKE_PROFIT';
+            execPrice = pos.tp;
+          }
         }
 
         if (closeReason) {
-          // Close position
-          balance += netPnL;
+          // Recalculate realized PnL at exact trigger price
+          const finalRawPnL = pos.side === 'LONG'
+            ? (execPrice - pos.entryPrice) * actualQty
+            : (pos.entryPrice - execPrice) * actualQty;
+          const finalNetPnL = finalRawPnL - pos.commission + pos.accumulatedSwap;
+
+          balance += finalNetPnL;
           
           history.push({
             id: Date.now().toString() + Math.random(),
@@ -354,10 +372,10 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
             side: pos.side,
             lot: pos.lot,
             entryPrice: pos.entryPrice,
-            exitPrice: currentExecPrice,
+            exitPrice: execPrice,
             closeReason,
-            grossPnL: rawPnL,
-            netPnL,
+            grossPnL: finalRawPnL,
+            netPnL: finalNetPnL,
             setupTag: pos.setupTag,
             openTime: pos.createdAt,
             closeTime: time
@@ -429,11 +447,11 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
         let execPrice = ord.limitPrice;
 
         if (ord.side === 'LONG') {
-          if (ord.type === 'LIMIT' && ask <= ord.limitPrice) { triggered = true; execPrice = ask; } // Slippage to ask
-          if (ord.type === 'STOP' && ask >= ord.limitPrice) { triggered = true; execPrice = ask; }
+          if (ord.type === 'LIMIT' && (barLow + config.spread) <= ord.limitPrice) { triggered = true; execPrice = ord.limitPrice; }
+          if (ord.type === 'STOP' && (barHigh + config.spread) >= ord.limitPrice) { triggered = true; execPrice = ord.limitPrice; }
         } else {
-          if (ord.type === 'LIMIT' && bid >= ord.limitPrice) { triggered = true; execPrice = bid; }
-          if (ord.type === 'STOP' && bid <= ord.limitPrice) { triggered = true; execPrice = bid; }
+          if (ord.type === 'LIMIT' && barHigh >= ord.limitPrice) { triggered = true; execPrice = ord.limitPrice; }
+          if (ord.type === 'STOP' && barLow <= ord.limitPrice) { triggered = true; execPrice = ord.limitPrice; }
         }
 
         if (triggered) {

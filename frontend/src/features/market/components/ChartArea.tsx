@@ -3722,7 +3722,7 @@ interface ChartAreaProps {
   activeIndicators?: string[];
   activePosition?: { quantity: number; averagePrice: number; side: 'LONG' | 'SHORT'; leverage: number; tp?: number; sl?: number };
   onPriceChange?: (price: number) => void;
-  onPriceUpdate?: (price: number, timestamp?: number) => void;
+  onPriceUpdate?: (price: number, timestamp?: number, bar?: { open: number; high: number; low: number; close: number; timestamp: number }) => void;
   isSelectingReplayStart?: boolean;
   onSelectReplayStart?: (timestamp: number, price?: number) => void;
   goToRealtimeTrigger?: number;
@@ -4834,7 +4834,7 @@ export const ChartArea = ({
       replayTimeRef.current = nextBar.timestamp;
       replayPriceRef.current = nextBar.close;
       onReplayPriceChangeRef.current?.(nextBar.close);
-      if (onPriceUpdate) onPriceUpdate(nextBar.close, nextBar.timestamp);
+      if (onPriceUpdate) onPriceUpdate(nextBar.close, nextBar.timestamp, nextBar);
       onReplayTimeChangeRef.current?.(nextBar.timestamp);
     }
   }, [replayStepTrigger]);
@@ -4949,9 +4949,9 @@ export const ChartArea = ({
           onReplayPriceChangeRef.current?.(lastCandle.close);
         }
 
-        if (onPriceUpdate) onPriceUpdate(targetPrice, effectiveTime);
+        if (onPriceUpdate) onPriceUpdate(targetPrice, effectiveTime, visibleData[visibleData.length - 1]);
       } else if (!isReplaying && allData.length > 0 && onPriceUpdate) {
-        onPriceUpdate(allData[allData.length - 1].close, allData[allData.length - 1].timestamp);
+        onPriceUpdate(allData[allData.length - 1].close, allData[allData.length - 1].timestamp, allData[allData.length - 1]);
       }
 
       const precision = getPricePrecision(selectedStock.price);
@@ -5032,7 +5032,7 @@ export const ChartArea = ({
               if (chart && typeof (chart as any).updateData === 'function') {
                 (chart as any).updateData(newCandle);
               }
-              if (onPriceUpdate) onPriceUpdate(newCandle.close, newCandle.timestamp);
+              if (onPriceUpdate) onPriceUpdate(newCandle.close, newCandle.timestamp, newCandle);
             }
           );
         },
