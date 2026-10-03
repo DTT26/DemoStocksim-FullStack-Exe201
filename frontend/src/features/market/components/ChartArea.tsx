@@ -15,6 +15,7 @@ import { measureOverlay } from './MeasureOverlay';
 import { zoomInOverlay } from './ZoomInOverlay';
 import { FibonacciSettingsModal, DEFAULT_FIBONACCI_CONFIG, type FibonacciConfig } from './FibonacciSettingsModal';
 import { useI18n } from '../../../contexts/I18nContext';
+import { useAuth } from '../../../contexts/AuthContext';
 
 const COLOR_PALETTE_GRID = [
   ['#ffffff', '#e0e0e0', '#d6d6d6', '#c2c2c2', '#a8a8a8', '#8f8f8f', '#666666', '#000000'],
@@ -4144,6 +4145,21 @@ export const ChartArea = ({
   onUndoRedoChange
 }: ChartAreaProps) => {
   const { t } = useI18n();
+  const { user } = useAuth();
+  const userKey = user?._id || user?.email || 'guest';
+  const userKeyRef = useRef(userKey);
+  userKeyRef.current = userKey;
+
+  const saveDrawingsRef = useRef<() => void>(() => {});
+  const loadDrawingsRef = useRef<() => void>(() => {});
+
+  const debouncedSaveTimerRef = useRef<any>(null);
+  const triggerAutoSaveDrawings = () => {
+    if (debouncedSaveTimerRef.current) clearTimeout(debouncedSaveTimerRef.current);
+    debouncedSaveTimerRef.current = setTimeout(() => {
+      saveDrawingsRef.current?.();
+    }, 150);
+  };
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<Chart | null>(null);
   const activeToolRef = useRef<string>('cursor');
@@ -4205,6 +4221,7 @@ export const ChartArea = ({
       });
       redoStackRef.current = [];
       updateUndoRedo();
+      triggerAutoSaveDrawings();
 
       if (ov.name === 'fibonacciLine') {
         const bounding = chartRef.current?.getSize();
@@ -4288,6 +4305,7 @@ export const ChartArea = ({
         extendData: newConfig
       });
       setSelectedOverlay(prev => prev ? { ...prev, extendData: newConfig } : null);
+      triggerAutoSaveDrawings();
     }
   };
 
@@ -4301,6 +4319,7 @@ export const ChartArea = ({
     setSelectedOverlay(prev => prev ? { ...prev, extendData: updated } : null);
     setFibConfig(updated);
     fibConfigRef.current = updated;
+    triggerAutoSaveDrawings();
   };
   useEffect(() => {
     onTPSLChangeRef.current = onTPSLChange;
@@ -4727,6 +4746,7 @@ export const ChartArea = ({
 
     // Listen for overlay finished event to re-activate same tool
     chart.subscribeAction('onOverlayDrawEnd' as any, () => {
+      triggerAutoSaveDrawings();
       const currentTool = activeToolRef.current;
       if (currentTool !== 'cursor' && currentTool !== 'clear') {
         // Small delay then re-create overlay to keep tool active
@@ -4922,10 +4942,16 @@ export const ChartArea = ({
       }
     };
 
+    const handleContainerPointerUp = () => {
+      triggerAutoSaveDrawings();
+    };
+
     const container = chartContainerRef.current;
     container?.addEventListener('click', handleChartClick);
     container?.addEventListener('contextmenu', handleChartContextMenu, { capture: true });
     container?.addEventListener('mousedown', handleRightClickMousedown, { capture: true });
+    container?.addEventListener('pointerup', handleContainerPointerUp);
+    container?.addEventListener('mouseup', handleContainerPointerUp);
 
     const handleResize = () => chart?.resize();
     window.addEventListener('resize', handleResize);
@@ -4935,6 +4961,8 @@ export const ChartArea = ({
       container?.removeEventListener('click', handleChartClick);
       container?.removeEventListener('contextmenu', handleChartContextMenu, { capture: true });
       container?.removeEventListener('mousedown', handleRightClickMousedown, { capture: true });
+      container?.removeEventListener('pointerup', handleContainerPointerUp);
+      container?.removeEventListener('mouseup', handleContainerPointerUp);
       if (chartContainerRef.current) {
         dispose(chartContainerRef.current);
       }
@@ -4949,6 +4977,7 @@ export const ChartArea = ({
     const chart = chartRef.current;
     if (!chart || !selectedOverlayId) return;
 
+    triggerAutoSaveDrawings();
     chart.overrideOverlay({
       id: selectedOverlayId,
       extendData: settings.textContent || settings.enableText ? settings.textContent : '',
@@ -5205,12 +5234,14 @@ export const ChartArea = ({
             return false;
           },
           onPressedMoveEnd: (event: any) => {
+            triggerAutoSaveDrawings();
             const allowedNames = ['rect', 'gannBox', 'priceRange', 'timeRange', 'timePriceRange'];
             if (allowedNames.includes(event.overlay?.name)) {
               handleRectPressedMoveEnd(event);
             }
           },
           onDrawEnd: (event: any) => {
+            triggerAutoSaveDrawings();
             const isContinuousTool = ['brush', 'highlighter', 'path', 'polyline'].includes(activeToolRef.current);
             if (stayInDrawingModeRef.current || isContinuousTool) {
               setTimeout(() => {
@@ -5433,6 +5464,9 @@ export const ChartArea = ({
 
           // Gá»i láº§n Ä‘áº§u (type === 'init')
           params.callback(visibleData, true);
+          setTimeout(() => {
+            loadDrawingsRef.current?.();
+          }, 80);
         },
         subscribeBar: (params: DataLoaderSubscribeBarParams) => {
           subscriberCallbackRef.current = params.callback;
@@ -6119,6 +6153,7 @@ export const ChartArea = ({
             styles: data.styles,
             extendData: data.extendData
           });
+          triggerAutoSaveDrawings();
         }
         return;
       }
@@ -6129,6 +6164,7 @@ export const ChartArea = ({
           chartRef.current.removeOverlay({ id: targetId });
           setFloatingToolbar(null);
           setSelectedOverlay(null);
+          triggerAutoSaveDrawings();
         }
       }
     };
@@ -6136,10 +6172,11 @@ export const ChartArea = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [floatingToolbar, selectedOverlay]);
 
-  // Persist user overlays per symbol across reloads (F5) and clean up when switching symbol/sĂ n
+  // Persist user overlays per symbol and per account across reloads (F5) and clean up when switching symbol/user
   useEffect(() => {
     const symbol = selectedStock?.symbol;
     if (!symbol) return;
+    const currentUserKey = userKeyRef.current;
 
     // Helper: remove only user drawings and AI correction zone from chart
     const clearDrawingsFromChart = () => {
@@ -6162,7 +6199,7 @@ export const ChartArea = ({
       }
     };
 
-    // Helper: save only user drawings for the given symbol to localStorage
+    // Helper: save only user drawings for the given symbol to localStorage scoped by userKey
     const saveDrawingsForSymbol = (targetSymbol: string) => {
       const activeChart = chartRef.current;
       if (!activeChart || !targetSymbol) return;
@@ -6181,24 +6218,46 @@ export const ChartArea = ({
             zLevel: ov.zLevel
           }));
 
+        const storageKey = `saved-overlays-${userKeyRef.current}-${targetSymbol}`;
         if (userOverlays.length > 0) {
-          localStorage.setItem(`saved-overlays-${targetSymbol}`, JSON.stringify(userOverlays));
+          localStorage.setItem(storageKey, JSON.stringify(userOverlays));
         } else {
-          localStorage.removeItem(`saved-overlays-${targetSymbol}`);
+          localStorage.removeItem(storageKey);
         }
       } catch (err) {
         console.error('Error saving drawings for symbol:', targetSymbol, err);
       }
     };
 
-    // Helper: load saved drawings for current symbol
-    const loadDrawingsForSymbol = () => {
+    saveDrawingsRef.current = () => saveDrawingsForSymbol(symbol);
+
+    // Helper: load saved drawings for current symbol and userKey
+    const loadDrawingsForSymbol = (force = false) => {
       const activeChart = chartRef.current;
       if (!activeChart) return;
 
+      const currentOverlays = typeof activeChart.getOverlays === 'function' ? activeChart.getOverlays() : [];
+      const hasUserOverlays = Array.isArray(currentOverlays) && currentOverlays.some(isUserDrawingOverlay);
+      if (hasUserOverlays && !force) {
+        return;
+      }
+
       clearDrawingsFromChart();
 
-      const saved = localStorage.getItem(`saved-overlays-${symbol}`);
+      const userStorageKey = `saved-overlays-${userKeyRef.current}-${symbol}`;
+      let saved = localStorage.getItem(userStorageKey);
+
+      // Auto-migration: If not found under userKey, check legacy global key and migrate
+      if (!saved && userKeyRef.current !== 'guest') {
+        const legacyKey = `saved-overlays-${symbol}`;
+        const legacySaved = localStorage.getItem(legacyKey);
+        if (legacySaved) {
+          saved = legacySaved;
+          localStorage.setItem(userStorageKey, legacySaved);
+          localStorage.removeItem(legacyKey);
+        }
+      }
+
       if (saved) {
         try {
           const overlays = JSON.parse(saved);
@@ -6213,7 +6272,7 @@ export const ChartArea = ({
                   const val = p.value !== undefined ? p.value : p.price;
                   if (typeof val !== 'number' || val <= 0) return true;
                   const ratio = Math.max(val / currentPrice, currentPrice / val);
-                  return ratio < 8; // If price difference is > 8x, it belongs to another coin/sĂ n!
+                  return ratio < 8; // If price difference is > 8x, it belongs to another coin/market!
                 });
                 if (!hasValidPrice) return;
               }
@@ -6231,11 +6290,13 @@ export const ChartArea = ({
       }
     };
 
-    // Immediately clear drawings when switching to new symbol so old drawings never linger
+    loadDrawingsRef.current = () => loadDrawingsForSymbol(false);
+
+    // Immediately clear drawings when switching to new symbol or switching user so old drawings never linger
     clearDrawingsFromChart();
 
-    // Load saved drawings for the new symbol after brief tick
-    const timer = setTimeout(loadDrawingsForSymbol, 60);
+    // Load saved drawings for the new symbol/user after brief tick
+    const timer = setTimeout(() => loadDrawingsForSymbol(true), 60);
 
     const handleBeforeUnload = () => {
       saveDrawingsForSymbol(symbol);
@@ -6245,13 +6306,13 @@ export const ChartArea = ({
 
     return () => {
       clearTimeout(timer);
-      // 1. Save drawings for the symbol we are leaving
+      // 1. Save drawings for the symbol/user we are leaving
       saveDrawingsForSymbol(symbol);
-      // 2. Immediately strip user drawings from canvas so the next symbol starts completely clean
+      // 2. Immediately strip user drawings from canvas so the next symbol/user starts completely clean
       clearDrawingsFromChart();
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [selectedStock?.symbol]);
+  }, [selectedStock?.symbol, userKey]);
 
 
   const priceColor = selectedStock.percent > 0 ? 'text-[#089981]' : selectedStock.percent < 0 ? 'text-[#f23645]' : 'text-[#787b86]';
@@ -6392,6 +6453,7 @@ export const ChartArea = ({
               const newLock = !selectedOverlay.lock;
               chartRef.current?.overrideOverlay({ id: selectedOverlay.id, lock: newLock });
               setSelectedOverlay(prev => prev ? { ...prev, lock: newLock } : null);
+              triggerAutoSaveDrawings();
             }}
             className={`p-1.5 rounded transition-colors ${selectedOverlay.lock ? 'text-amber-400 bg-amber-500/10' : 'text-[#787b86] hover:text-white hover:bg-[#2a2e39]'
               }`}
@@ -6405,6 +6467,7 @@ export const ChartArea = ({
             onClick={() => {
               chartRef.current?.removeOverlay({ id: selectedOverlay.id });
               setSelectedOverlay(null);
+              triggerAutoSaveDrawings();
             }}
             className="p-1.5 rounded hover:bg-red-500/20 text-[#787b86] hover:text-red-400 transition-colors"
             title="XĂ³a Fibonacci nĂ y"
@@ -6542,6 +6605,7 @@ export const ChartArea = ({
                 const newLockStatus = !floatingToolbar.overlay.lock;
                 chartRef.current?.overrideOverlay({ id: floatingToolbar.overlayId, lock: newLockStatus });
                 setFloatingToolbar(prev => prev ? { ...prev, overlay: { ...prev.overlay, lock: newLockStatus } } : null);
+                triggerAutoSaveDrawings();
               }}
               className={`p-1.5 rounded transition-colors ${floatingToolbar.overlay.lock ? 'text-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'text-[#787b86] hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] hover:text-blue-500'}`}
             >
@@ -6554,6 +6618,7 @@ export const ChartArea = ({
               onClick={() => {
                 chartRef.current?.removeOverlay({ id: floatingToolbar.overlayId });
                 setFloatingToolbar(null);
+                triggerAutoSaveDrawings();
               }}
               className="p-1.5 text-[#787b86] hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] hover:text-red-500 rounded transition-colors"
             >
