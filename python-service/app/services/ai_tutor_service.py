@@ -1399,18 +1399,34 @@ class AiTutorService:
             else:
                 remaining_today = max(0, sub_record.get("daily_inspect_limit", 2) - sub_record.get("daily_inspect_used", 0))
 
-        # Summarize drawings
+        # Summarize drawings with student labels & SMC concepts
         drawings_summary = []
         for idx, d in enumerate(drawings, 1):
             name = d.get("name", "Vùng vẽ")
+            label = d.get("label") or d.get("userLabel") or name
+            tag = d.get("tag") or ""
+            concept = d.get("detectedConcept") or tag
             p_high = d.get("priceHigh")
             p_low = d.get("priceLow")
+            p_mid = d.get("priceMid")
+            range_amt = d.get("rangeAmount")
             pts = d.get("points", [])
-            drawings_summary.append(
-                f"- Figure {idx} ({name}): Price range from {p_low} to {p_high}, with {len(pts)} anchor points."
-                if is_en else
-                f"- Hình {idx} ({name}): Vùng giá từ {p_low} đến {p_high}, gồm {len(pts)} điểm neo."
-            )
+
+            tag_part = f" [SMC Tag: {tag}]" if tag else ""
+            concept_part = f" - Khái niệm: {concept}" if concept and concept != label else ""
+            mid_part = f" (Giá tâm: {p_mid})" if p_mid is not None else ""
+            range_part = f" (Biên độ: {range_amt})" if range_amt is not None else ""
+
+            if is_en:
+                drawings_summary.append(
+                    f"- Figure #{idx}: Student Label/Annotation: '{label}'{tag_part}, Tool Type: {name}, "
+                    f"Price Range: {p_low} -> {p_high}{mid_part}{range_part}, with {len(pts)} anchor points."
+                )
+            else:
+                drawings_summary.append(
+                    f"- Hình #{idx}: Ký hiệu / Tên học viên đặt: '{label}'{tag_part}{concept_part}, Loại công cụ: {name}, "
+                    f"Vùng giá: {p_low} -> {p_high}{mid_part}{range_part}, gồm {len(pts)} điểm neo."
+                )
         drawings_str = "\n".join(drawings_summary)
 
         # Summarize recent candles (last 25 candles)

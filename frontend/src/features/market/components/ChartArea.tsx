@@ -86,9 +86,13 @@ export const isUserDrawingOverlay = (ov: any): boolean => {
 
 };
 
-export interface UserChartDrawing {
+﻿export interface UserChartDrawing {
   id?: string;
   name: string;
+  label?: string;            // Display title: e.g. "Order Block (OB)" or user-defined text
+  userLabel?: string;        // Raw text annotated on the chart
+  tag?: string;              // Normalized SMC tag: 'OB' | 'FVG' | 'BOS' | 'CHOCH' | 'LIQUIDITY' | 'BREAKER' | 'SUPPLY_DEMAND' | ''
+  detectedConcept?: string;  // Detailed SMC concept classification
   points: Array<{
     timestamp?: number;
     price?: number;
@@ -96,9 +100,112 @@ export interface UserChartDrawing {
   }>;
   priceHigh?: number;
   priceLow?: number;
+  priceMid?: number;
+  rangeAmount?: number;
   priceStart?: number;
   priceEnd?: number;
+  timeStart?: number;
+  timeEnd?: number;
 }
+
+export const extractOverlayText = (ov: any): string => {
+  if (!ov) return '';
+  if (typeof ov.extendData === 'string' && ov.extendData.trim()) {
+    return ov.extendData.trim();
+  }
+  if (typeof ov.extendData === 'object' && ov.extendData !== null) {
+    const txt = ov.extendData.textContent || ov.extendData.text || ov.extendData.label || ov.extendData.name || ov.extendData.note;
+    if (typeof txt === 'string' && txt.trim()) return txt.trim();
+  }
+  if (typeof ov.text === 'string' && ov.text.trim()) {
+    return ov.text.trim();
+  }
+  const styleTxt = (ov.styles as any)?.text?.content || (ov.styles as any)?.text;
+  if (typeof styleTxt === 'string' && styleTxt.trim()) {
+    return styleTxt.trim();
+  }
+  return '';
+};
+
+export const detectSmcConcept = (text: string, overlayName: string): { tag: string; detectedConcept: string; displayLabel: string } => {
+  const clean = (text || '').trim();
+  const lower = clean.toLowerCase();
+
+  if (/\b(fvg|fair\s*value\s*gap|imbalance|khoảng\s*trống|mất\s*cân\s*bằng)\b/i.test(lower)) {
+    return {
+      tag: 'FVG',
+      detectedConcept: 'Fair Value Gap (FVG)',
+      displayLabel: clean ? `Fair Value Gap (${clean})` : 'Fair Value Gap (FVG)'
+    };
+  }
+  if (/\b(ob|order\s*block|orderblock|khối\s*lệnh|khe\s*lệnh)\b/i.test(lower)) {
+    return {
+      tag: 'OB',
+      detectedConcept: 'Order Block (OB)',
+      displayLabel: clean ? `Order Block (${clean})` : 'Order Block (OB)'
+    };
+  }
+  if (/\b(bos|break\s*of\s*structure|phá\s*vỡ\s*cấu\s*trúc)\b/i.test(lower)) {
+    return {
+      tag: 'BOS',
+      detectedConcept: 'Break of Structure (BOS)',
+      displayLabel: clean ? `Break of Structure (${clean})` : 'Break of Structure (BOS)'
+    };
+  }
+  if (/\b(choch|ch|change\s*of\s*character|đổi\s*tính\s*chất)\b/i.test(lower)) {
+    return {
+      tag: 'CHOCH',
+      detectedConcept: 'Change of Character (CHoCH)',
+      displayLabel: clean ? `Change of Character (${clean})` : 'Change of Character (CHoCH)'
+    };
+  }
+  if (/\b(liq|liquidity|bsl|ssl|pool|thanh\s*khoản)\b/i.test(lower)) {
+    return {
+      tag: 'LIQUIDITY',
+      detectedConcept: 'Liquidity Pool (Thanh khoản)',
+      displayLabel: clean ? `Liquidity (${clean})` : 'Liquidity Pool (Thanh khoản)'
+    };
+  }
+  if (/\b(bb|breaker|breaker\s*block)\b/i.test(lower)) {
+    return {
+      tag: 'BREAKER',
+      detectedConcept: 'Breaker Block',
+      displayLabel: clean ? `Breaker Block (${clean})` : 'Breaker Block'
+    };
+  }
+  if (/\b(mb|mitigation|mitigation\s*block)\b/i.test(lower)) {
+    return {
+      tag: 'MITIGATION',
+      detectedConcept: 'Mitigation Block',
+      displayLabel: clean ? `Mitigation Block (${clean})` : 'Mitigation Block'
+    };
+  }
+  if (/\b(sd|supply|demand|cung|cầu)\b/i.test(lower)) {
+    return {
+      tag: 'SUPPLY_DEMAND',
+      detectedConcept: 'Vùng Cung / Cầu (Supply / Demand)',
+      displayLabel: clean ? `Supply/Demand (${clean})` : 'Vùng Cung / Cầu (Supply/Demand)'
+    };
+  }
+
+  const nameMap: Record<string, string> = {
+    rect: 'Hộp Vùng Giá (Rectangle)',
+    segment: 'Đường Xu Hướng (Trendline)',
+    straightLine: 'Đường Kẻ Dài (Straight Line)',
+    rayLine: 'Tia Xu Hướng (Ray Line)',
+    horizontalStraightLine: 'Mức Giá Ngang (Support/Resistance)',
+    fibonacciLine: 'Mức Hồi Quy Fibonacci (Fibonacci)',
+    priceChannelLine: 'Kênh Giá Song Song (Parallel Channel)',
+    simpleAnnotation: 'Văn Bản Chú Thích (Annotation)',
+  };
+
+  const defaultName = nameMap[overlayName] || overlayName;
+  return {
+    tag: clean ? 'CUSTOM' : '',
+    detectedConcept: clean || defaultName,
+    displayLabel: clean ? `${defaultName}: "${clean}"` : defaultName
+  };
+};
 
 export const getChartDrawingsData = (): { drawings: UserChartDrawing[]; klines: any[] } => {
   if (!globalChartInstance) return { drawings: [], klines: [] };
@@ -111,31 +218,66 @@ export const getChartDrawingsData = (): { drawings: UserChartDrawing[]; klines: 
       ? (globalChartInstance.getDataList() || []).slice(-60)
       : [];
 
+    const allUserOverlays = (Array.isArray(rawOverlays) ? rawOverlays : []).filter(isUserDrawingOverlay);
+    const annotationOverlays = allUserOverlays.filter((ov: any) =>
+      ['simpleAnnotation', 'comment', 'note', 'callout', 'priceNote', 'signpost'].includes(ov.name)
+    );
+
     const drawings: UserChartDrawing[] = [];
-    if (Array.isArray(rawOverlays)) {
-      rawOverlays.forEach((ov: any) => {
-        if (!isUserDrawingOverlay(ov)) return;
-        const pts = (ov.points || []).map((p: any) => ({
-          timestamp: p.timestamp,
-          price: p.value !== undefined ? p.value : p.price,
-          dataIndex: p.dataIndex
-        }));
-        if (pts.length > 0) {
-          const prices = pts.map((p: any) => p.price).filter((v: any) => typeof v === 'number');
-          const priceHigh = prices.length > 0 ? Math.max(...prices) : undefined;
-          const priceLow = prices.length > 0 ? Math.min(...prices) : undefined;
-          drawings.push({
-            id: ov.id,
-            name: ov.name,
-            points: pts,
-            priceHigh,
-            priceLow,
-            priceStart: pts[0]?.price,
-            priceEnd: pts[pts.length - 1]?.price
+    allUserOverlays.forEach((ov: any) => {
+      const pts = (ov.points || []).map((p: any) => ({
+        timestamp: p.timestamp,
+        price: p.value !== undefined ? p.value : p.price,
+        dataIndex: p.dataIndex
+      }));
+      if (pts.length > 0) {
+        const prices = pts.map((p: any) => p.price).filter((v: any) => typeof v === 'number');
+        const priceHigh = prices.length > 0 ? Math.max(...prices) : undefined;
+        const priceLow = prices.length > 0 ? Math.min(...prices) : undefined;
+        const priceMid = (priceHigh !== undefined && priceLow !== undefined) ? (priceHigh + priceLow) / 2 : undefined;
+        const rangeAmount = (priceHigh !== undefined && priceLow !== undefined) ? Math.abs(priceHigh - priceLow) : undefined;
+
+        // 1. Extract text from overlay's own extendData / text / style
+        let rawText = extractOverlayText(ov);
+
+        // 2. If no direct text, check if any annotation overlay sits near or inside this zone
+        if (!rawText && priceHigh !== undefined && priceLow !== undefined) {
+          const margin = rangeAmount ? rangeAmount * 0.35 : (priceHigh * 0.015);
+          const nearbyAnn = annotationOverlays.find((ann: any) => {
+            if (ann.id === ov.id) return false;
+            const annPts = ann.points || [];
+            const annPrice = annPts[0]?.value !== undefined ? annPts[0].value : annPts[0]?.price;
+            if (typeof annPrice === 'number') {
+              return annPrice >= (priceLow - margin) && annPrice <= (priceHigh + margin);
+            }
+            return false;
           });
+          if (nearbyAnn) {
+            rawText = extractOverlayText(nearbyAnn);
+          }
         }
-      });
-    }
+
+        const { tag, detectedConcept, displayLabel } = detectSmcConcept(rawText, ov.name);
+
+        drawings.push({
+          id: ov.id,
+          name: ov.name,
+          label: displayLabel,
+          userLabel: rawText,
+          tag,
+          detectedConcept,
+          points: pts,
+          priceHigh,
+          priceLow,
+          priceMid,
+          rangeAmount,
+          priceStart: pts[0]?.price,
+          priceEnd: pts[pts.length - 1]?.price,
+          timeStart: pts[0]?.timestamp,
+          timeEnd: pts[pts.length - 1]?.timestamp
+        });
+      }
+    });
 
     return { drawings, klines };
   } catch (err) {
@@ -144,7 +286,7 @@ export const getChartDrawingsData = (): { drawings: UserChartDrawing[]; klines: 
   }
 };
 
-// ÄÄƒng kĂ½ VĂ¹ng AI Sá»­a Láº¡i (aiCorrectionZone) vá»›i nhĂ£n tĂªn vĂ¹ng trá»±c quan trĂªn biá»ƒu Ä‘á»“
+
 registerOverlay({
   name: 'aiCorrectionZone',
   totalStep: 3,

@@ -415,6 +415,46 @@ export const AiTutorDrawer = ({
     return data;
   };
 
+  const handleTagDrawing = (index: number, tagType: string) => {
+    setDetectedDrawings(prev => {
+      const updated = [...prev];
+      if (updated[index]) {
+        const item = updated[index];
+        const tagMap: Record<string, { label: string; concept: string }> = {
+          OB: { label: isEn ? 'Order Block (OB)' : 'Khối Lệnh (Order Block - OB)', concept: 'Order Block (OB)' },
+          FVG: { label: isEn ? 'Fair Value Gap (FVG)' : 'Khoảng Trống Giá (Fair Value Gap - FVG)', concept: 'Fair Value Gap (FVG)' },
+          BOS: { label: isEn ? 'Break of Structure (BOS)' : 'Phá Vỡ Cấu Trúc (BOS)', concept: 'Break of Structure (BOS)' },
+          CHOCH: { label: isEn ? 'Change of Character (CHoCH)' : 'Đổi Tính Chất (CHoCH)', concept: 'Change of Character (CHoCH)' },
+          LIQUIDITY: { label: isEn ? 'Liquidity Pool' : 'Thanh Khoản (Liquidity Pool)', concept: 'Liquidity Pool' },
+        };
+        const info = tagMap[tagType] || { label: tagType, concept: tagType };
+        updated[index] = {
+          ...item,
+          tag: tagType,
+          userLabel: tagType,
+          label: info.label,
+          detectedConcept: info.concept
+        };
+      }
+      return updated;
+    });
+  };
+
+  const handleEditDrawingLabel = (index: number, newLabel: string) => {
+    setDetectedDrawings(prev => {
+      const updated = [...prev];
+      if (updated[index]) {
+        const item = updated[index];
+        updated[index] = {
+          ...item,
+          userLabel: newLabel,
+          label: newLabel || item.name
+        };
+      }
+      return updated;
+    });
+  };
+
   // Auto scan when switching to inspect tab
   useEffect(() => {
     if (activeTab === 'inspect') {
@@ -427,8 +467,14 @@ export const AiTutorDrawer = ({
       login();
       return;
     }
-    const currentData = handleScanDrawings();
-    if (!currentData.drawings || currentData.drawings.length === 0) {
+    let currentDrawings = detectedDrawings;
+    let currentKlines = detectedKlines;
+    if (!currentDrawings || currentDrawings.length === 0) {
+      const currentData = handleScanDrawings();
+      currentDrawings = currentData.drawings;
+      currentKlines = currentData.klines;
+    }
+    if (!currentDrawings || currentDrawings.length === 0) {
       setInspectError(
         isEn
           ? 'No drawings found on chart. Please use the left toolbar (Rectangle, Trend Line) to mark Order Block / FVG first!'
@@ -441,8 +487,8 @@ export const AiTutorDrawer = ({
     setHasDrawnCorrection(false);
     try {
       const res = await aiService.inspectChartDrawings({
-        drawings: currentData.drawings,
-        klines: currentData.klines,
+        drawings: currentDrawings,
+        klines: currentKlines,
         symbol: activeSymbol,
         timeframe: timeframe || '15m',
         userNotes: inspectNotes,
@@ -1234,32 +1280,81 @@ export const AiTutorDrawer = ({
                 </div>
 
                 {/* List detected drawing data items */}
-                <div className="space-y-2">
-                  {detectedDrawings.map((d, idx) => (
-                    <div
-                      key={d.id || idx}
-                      className="p-2.5 rounded-lg bg-slate-50 dark:bg-[#131722] border border-slate-200 dark:border-[#232938] flex items-center justify-between gap-2 text-xs"
-                    >
-                      <div className="flex items-center gap-2 overflow-hidden">
-                        <div className="w-5 h-5 rounded bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold text-[10px] shrink-0">
-                          #{idx + 1}
+                <div className="space-y-2.5">
+                  {detectedDrawings.map((d, idx) => {
+                    const tagColors: Record<string, string> = {
+                      OB: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
+                      FVG: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border-cyan-500/30',
+                      BOS: 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30',
+                      CHOCH: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/30',
+                      LIQUIDITY: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+                      CUSTOM: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                    };
+                    const badgeClass = tagColors[d.tag || ''] || 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20';
+
+                    return (
+                      <div
+                        key={d.id || idx}
+                        className="p-3 rounded-xl bg-slate-50 dark:bg-[#131722] border border-slate-200 dark:border-[#232938] hover:border-amber-500/40 transition-all flex flex-col gap-2 text-xs"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 overflow-hidden">
+                            <div className="w-5 h-5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-[10px] shrink-0 border border-amber-500/20">
+                              #{idx + 1}
+                            </div>
+                            <div className="truncate flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold text-slate-900 dark:text-white">
+                                {d.label || (d.name === 'rect' ? (isEn ? 'Price Zone (Rectangle)' : 'Hộp Vùng Giá (Rectangle)') : d.name)}
+                              </span>
+                              {d.tag && (
+                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider border ${badgeClass}`}>
+                                  {d.tag}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0 font-semibold border border-emerald-500/20">
+                            {isEn ? 'Ready to evaluate' : 'Sẵn sàng chấm'}
+                          </span>
                         </div>
-                        <div className="truncate">
-                          <span className="font-semibold text-slate-900 dark:text-white capitalize">
-                            {d.name === 'rect' ? (isEn ? 'Price Zone Box (Rectangle)' : 'Hộp vùng giá (Rectangle)') : d.name}
-                          </span>
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-mono">
+
+                        {/* Price Details */}
+                        <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-mono px-0.5">
+                          <span>
                             {d.priceLow !== undefined && d.priceHigh !== undefined
-                              ? `$${d.priceLow.toLocaleString('en-US')} → $${d.priceHigh.toLocaleString('en-US')}`
-                              : `${d.points?.length || 0} ${isEn ? 'anchor points' : 'điểm neo'}`}
+                              ? `$${d.priceLow.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 3 })} → $${d.priceHigh.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 3 })}`
+                              : `${d.points?.length || 0} ${isEn ? 'points' : 'điểm neo'}`}
                           </span>
+                          {d.rangeAmount !== undefined && (
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                              {isEn ? 'Range:' : 'Biên độ:'} {d.rangeAmount >= 1 ? d.rangeAmount.toLocaleString('en-US', { maximumFractionDigits: 2 }) : d.rangeAmount.toFixed(4)}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Quick SMC Tag Pill Selection */}
+                        <div className="flex items-center gap-1.5 pt-1.5 border-t border-slate-200/60 dark:border-[#1e2330] overflow-x-auto pb-0.5">
+                          <span className="text-[10px] font-medium text-slate-400 shrink-0">
+                            {isEn ? 'SMC Tag:' : 'Ký hiệu:'}
+                          </span>
+                          {(['OB', 'FVG', 'BOS', 'LIQUIDITY'] as const).map(tTag => (
+                            <button
+                              key={tTag}
+                              type="button"
+                              onClick={() => handleTagDrawing(idx, tTag)}
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer border ${
+                                d.tag === tTag
+                                  ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-xs'
+                                  : 'bg-white dark:bg-[#1a1f2e] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#2b3347] hover:border-amber-400 hover:text-amber-500'
+                              }`}
+                            >
+                              {tTag === 'OB' ? 'Order Block' : tTag === 'FVG' ? 'Fair Value Gap' : tTag === 'BOS' ? 'BOS Cấu Trúc' : 'Thanh Khoản'}
+                            </button>
+                          ))}
                         </div>
                       </div>
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0 font-medium">
-                        {isEn ? 'Ready to evaluate' : 'Sẵn sàng chấm'}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* User Notes Input */}
