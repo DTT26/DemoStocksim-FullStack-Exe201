@@ -296,7 +296,7 @@ export const SimulatorTradingPanel = ({
                   className="bg-[#f0f1f3] dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded px-3 py-1.5 text-sm text-[#1e2329] dark:text-white font-mono focus:outline-none focus:border-blue-500 transition-colors w-full"
                 />
                 <span className="text-[10px] text-blue-500 dark:text-blue-400 mt-1 italic">
-                  * Kéo thả đường đứt nét trên biểu đồ để chọn giá
+                  {t('order.dragToSelectPrice')}
                 </span>
               </div>
             )}

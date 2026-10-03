@@ -585,7 +585,7 @@ export const RightSidebar = ({ selectedStock, positions, balance, totalEquity, m
                   />
                   {!isEditing && (
                     <span className="text-[10px] text-blue-500 dark:text-blue-400 mt-1 italic">
-                      * Kéo thả đường đứt nét trên biểu đồ để chọn giá
+                      {t('order.dragToSelectPrice')}
                     </span>
                   )}
                 </div>

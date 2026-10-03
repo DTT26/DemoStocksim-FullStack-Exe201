@@ -1843,10 +1843,7 @@ export const AiTutorDrawer = ({
             )}
           </div>
         )}
-              </div>
-            )}
-          </div>
-        )}
+
       </div>
 
       {/* Footer / Input (For Tutor Tab) */}
