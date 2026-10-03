@@ -60,8 +60,8 @@ export interface UserChartDrawing {
 export const getChartDrawingsData = (): { drawings: UserChartDrawing[]; klines: any[] } => {
   if (!globalChartInstance) return { drawings: [], klines: [] };
   try {
-    const rawOverlays = typeof globalChartInstance.getOverlays === 'function' 
-      ? globalChartInstance.getOverlays() 
+    const rawOverlays = typeof globalChartInstance.getOverlays === 'function'
+      ? globalChartInstance.getOverlays()
       : [];
 
     const klines = typeof globalChartInstance.getDataList === 'function'
@@ -395,6 +395,171 @@ registerOverlay({
 
 
 
+// Quản lý trạng thái kéo co giãn 4 cạnh của Hình chữ nhật (rect)
+const rectDragStateMap: Record<string, {
+  handle: 'midTop' | 'midBottom' | 'midLeft' | 'midRight';
+  orig0: { timestamp?: number; value?: number; dataIndex?: number };
+  orig1: { timestamp?: number; value?: number; dataIndex?: number };
+  isP0Top: boolean;
+  isP0Left: boolean;
+}> = {};
+
+export const handleRectPressedMoveStart = (event: any) => {
+  if (!event.overlay || event.overlay.name !== 'rect' || !event.overlay.points || event.overlay.points.length < 2) return;
+  const chart = event.chart || (window as any).__currentKlineChart;
+  if (!chart) return;
+
+  const pts = event.overlay.points;
+  const orig0 = { ...pts[0] };
+  const orig1 = { ...pts[1] };
+
+  const coords = chart.convertToPixel([orig0, orig1], { paneId: 'candle_pane' });
+  if (!coords || coords.length < 2) return;
+
+  const minX = Math.min(coords[0].x, coords[1].x);
+  const maxX = Math.max(coords[0].x, coords[1].x);
+  const minY = Math.min(coords[0].y, coords[1].y);
+  const maxY = Math.max(coords[0].y, coords[1].y);
+
+  const midTop = { x: (minX + maxX) / 2, y: minY };
+  const midBottom = { x: (minX + maxX) / 2, y: maxY };
+  const midLeft = { x: minX, y: (minY + maxY) / 2 };
+  const midRight = { x: maxX, y: (minY + maxY) / 2 };
+
+  const mouseX = event.x ?? event.clientX;
+  const mouseY = event.y ?? event.clientY;
+  if (typeof mouseX !== 'number' || typeof mouseY !== 'number') return;
+
+  const distToCorners = [
+    Math.hypot(mouseX - coords[0].x, mouseY - coords[0].y),
+    Math.hypot(mouseX - coords[1].x, mouseY - coords[1].y),
+    Math.hypot(mouseX - coords[0].x, mouseY - coords[1].y),
+    Math.hypot(mouseX - coords[1].x, mouseY - coords[0].y)
+  ];
+  const minCornerDist = Math.min(...distToCorners);
+
+  const dist = (p: { x: number; y: number }) => Math.hypot(mouseX - p.x, mouseY - p.y);
+  const dTop = dist(midTop);
+  const dBottom = dist(midBottom);
+  const dLeft = dist(midLeft);
+  const dRight = dist(midRight);
+
+  const minDist = Math.min(dTop, dBottom, dLeft, dRight);
+  const HIT_THRESHOLD = 25; // 25px vùng chạm quanh ô vuông
+
+  if (minDist <= HIT_THRESHOLD && minDist < minCornerDist) {
+    let handle: 'midTop' | 'midBottom' | 'midLeft' | 'midRight' = 'midTop';
+    if (minDist === dTop) handle = 'midTop';
+    else if (minDist === dBottom) handle = 'midBottom';
+    else if (minDist === dLeft) handle = 'midLeft';
+    else if (minDist === dRight) handle = 'midRight';
+
+    rectDragStateMap[event.overlay.id] = {
+      handle,
+      orig0,
+      orig1,
+      isP0Top: (orig0.value ?? 0) >= (orig1.value ?? 0),
+      isP0Left: (orig0.timestamp ?? 0) <= (orig1.timestamp ?? 0)
+    };
+  } else {
+    delete rectDragStateMap[event.overlay.id];
+  }
+};
+
+export const handleRectPressedMoving = (event: any) => {
+  if (!event.overlay || event.overlay.name !== 'rect') return false;
+  const state = rectDragStateMap[event.overlay.id];
+  if (!state) return false;
+
+  const chart = event.chart || (window as any).__currentKlineChart;
+  if (!chart) return false;
+
+  const { handle, orig0, orig1, isP0Top, isP0Left } = state;
+
+  const mouseX = event.x;
+  const mouseY = event.y;
+  let mousePrice = event.value;
+  let mouseTimestamp = event.timestamp;
+
+  if (typeof mouseX === 'number' && typeof mouseY === 'number') {
+    const converted = chart.convertFromPixel([{ x: mouseX, y: mouseY }], { paneId: 'candle_pane' });
+    if (converted && converted[0]) {
+      if (typeof converted[0].value === 'number') mousePrice = converted[0].value;
+      if (typeof converted[0].timestamp === 'number') mouseTimestamp = converted[0].timestamp;
+    }
+  }
+
+  if (typeof mousePrice !== 'number' || typeof mouseTimestamp !== 'number') return false;
+
+  const p0 = { ...orig0 };
+  const p1 = { ...orig1 };
+
+  if (handle === 'midTop') {
+    if (isP0Top) {
+      p0.value = mousePrice;
+      p1.value = orig1.value;
+    } else {
+      p1.value = mousePrice;
+      p0.value = orig0.value;
+    }
+    p0.timestamp = orig0.timestamp;
+    p1.timestamp = orig1.timestamp;
+  } else if (handle === 'midBottom') {
+    if (isP0Top) {
+      p1.value = mousePrice;
+      p0.value = orig0.value;
+    } else {
+      p0.value = mousePrice;
+      p1.value = orig1.value;
+    }
+    p0.timestamp = orig0.timestamp;
+    p1.timestamp = orig1.timestamp;
+  } else if (handle === 'midLeft') {
+    if (isP0Left) {
+      p0.timestamp = mouseTimestamp;
+      p1.timestamp = orig1.timestamp;
+    } else {
+      p1.timestamp = mouseTimestamp;
+      p0.timestamp = orig0.timestamp;
+    }
+    p0.value = orig0.value;
+    p1.value = orig1.value;
+  } else if (handle === 'midRight') {
+    if (isP0Left) {
+      p1.timestamp = mouseTimestamp;
+      p0.timestamp = orig0.timestamp;
+    } else {
+      p0.timestamp = mouseTimestamp;
+      p1.timestamp = orig1.timestamp;
+    }
+    p0.value = orig0.value;
+    p1.value = orig1.value;
+  }
+
+  event.overlay.points[0] = p0;
+  event.overlay.points[1] = p1;
+
+  chart.overrideOverlay({
+    id: event.overlay.id,
+    points: [p0, p1]
+  });
+
+  return true;
+};
+
+export const handleRectPressedMoveEnd = (event: any) => {
+  if (event.overlay && rectDragStateMap[event.overlay.id]) {
+    const chart = event.chart || (window as any).__currentKlineChart;
+    if (chart && event.overlay.points) {
+      chart.overrideOverlay({
+        id: event.overlay.id,
+        points: event.overlay.points
+      });
+    }
+    delete rectDragStateMap[event.overlay.id];
+  }
+};
+
 // Đăng ký công cụ vẽ Hình chữ nhật (rect)
 registerOverlay({
   name: 'rect',
@@ -402,17 +567,25 @@ registerOverlay({
   needDefaultPointFigure: true,
   needDefaultXAxisFigure: true,
   needDefaultYAxisFigure: true,
+  onPressedMoveStart: handleRectPressedMoveStart,
+  onPressedMoving: handleRectPressedMoving,
+  onPressedMoveEnd: handleRectPressedMoveEnd,
   createPointFigures: ({ coordinates, overlay }) => {
     if (coordinates.length > 1) {
       const p0 = coordinates[0];
       const p1 = coordinates[1];
       const p2 = { x: p1.x, y: p0.y };
       const p3 = { x: p0.x, y: p1.y };
-      
-      const midTop = { x: (p0.x + p1.x) / 2, y: p0.y };
-      const midRight = { x: p1.x, y: (p0.y + p1.y) / 2 };
-      const midBottom = { x: (p0.x + p1.x) / 2, y: p1.y };
-      const midLeft = { x: p0.x, y: (p0.y + p1.y) / 2 };
+
+      const minX = Math.min(p0.x, p1.x);
+      const maxX = Math.max(p0.x, p1.x);
+      const minY = Math.min(p0.y, p1.y);
+      const maxY = Math.max(p0.y, p1.y);
+
+      const midTop = { x: (minX + maxX) / 2, y: minY };
+      const midRight = { x: maxX, y: (minY + maxY) / 2 };
+      const midBottom = { x: (minX + maxX) / 2, y: maxY };
+      const midLeft = { x: minX, y: (minY + maxY) / 2 };
 
       const figures: any[] = [
         {
@@ -420,11 +593,11 @@ registerOverlay({
           attrs: {
             coordinates: [p0, p2, p1, p3]
           },
-          styles: { 
-            style: 'stroke_fill', 
-            color: overlay.styles?.polygon?.color || 'rgba(156, 39, 176, 0.15)', 
-            borderColor: overlay.styles?.polygon?.borderColor || '#9c27b0', 
-            borderSize: overlay.styles?.polygon?.borderSize ?? 2 
+          styles: {
+            style: 'stroke_fill',
+            color: overlay.styles?.polygon?.color || 'rgba(156, 39, 176, 0.15)',
+            borderColor: overlay.styles?.polygon?.borderColor || '#9c27b0',
+            borderSize: overlay.styles?.polygon?.borderSize ?? 2
           }
         }
       ];
@@ -440,16 +613,23 @@ registerOverlay({
       });
 
       // Draw the 4 midpoints (squares)
-      [midTop, midRight, midBottom, midLeft].forEach(p => {
+      [
+        { p: midTop, key: 'midTop' },
+        { p: midRight, key: 'midRight' },
+        { p: midBottom, key: 'midBottom' },
+        { p: midLeft, key: 'midLeft' }
+      ].forEach(({ p, key }) => {
         figures.push({
+          key,
           type: 'polygon',
-          ignoreEvent: true,
+          ignoreEvent: false,
           attrs: {
+            isHandle: key,
             coordinates: [
-              { x: p.x - 5, y: p.y - 5 },
-              { x: p.x + 5, y: p.y - 5 },
-              { x: p.x + 5, y: p.y + 5 },
-              { x: p.x - 5, y: p.y + 5 }
+              { x: p.x - 6, y: p.y - 6 },
+              { x: p.x + 6, y: p.y - 6 },
+              { x: p.x + 6, y: p.y + 6 },
+              { x: p.x - 6, y: p.y + 6 }
             ]
           },
           styles: { style: 'stroke_fill', color: '#131722', borderColor: '#2962ff', borderSize: 2 }
@@ -1311,7 +1491,7 @@ registerOverlay({
     const figures: any[] = [];
     if (coordinates.length >= 2) {
       const p0 = coordinates[0]; // Entry
-      
+
       let p1 = { x: p0.x, y: p0.y }; // TP
       let p2 = { x: p0.x, y: p0.y }; // SL
       let minX = p0.x;
@@ -1322,7 +1502,7 @@ registerOverlay({
         if (!pt) continue;
         minX = Math.min(minX, pt.x);
         maxX = Math.max(maxX, pt.x);
-        
+
         if (pt.y < p0.y) {
           // TP is above entry (smaller Y)
           if (p1.y === p0.y || pt.y < p1.y) p1 = { ...pt };
@@ -1428,7 +1608,7 @@ registerOverlay({
     const figures: any[] = [];
     if (coordinates.length >= 2) {
       const p0 = coordinates[0]; // Entry
-      
+
       let p1 = { x: p0.x, y: p0.y }; // TP
       let p2 = { x: p0.x, y: p0.y }; // SL
       let minX = p0.x;
@@ -1439,7 +1619,7 @@ registerOverlay({
         if (!pt) continue;
         minX = Math.min(minX, pt.x);
         maxX = Math.max(maxX, pt.x);
-        
+
         if (pt.y > p0.y) {
           // TP is below entry (larger Y)
           if (p1.y === p0.y || pt.y > p1.y) p1 = { ...pt };
@@ -4401,11 +4581,11 @@ export const ChartArea = ({
 
       const points = chart.convertFromPixel([{ x, y }], { paneId: 'candle_pane' });
       const price = (Array.isArray(points) ? points[0]?.value : (points as any)?.value) || 0;
-      
+
       console.log('Right click detected:', { x: e.clientX, y: e.clientY, price });
 
-      setChartContextMenu({ 
-        x: e.clientX, 
+      setChartContextMenu({
+        x: e.clientX,
         y: e.clientY,
         price
       });
@@ -4633,58 +4813,79 @@ export const ChartArea = ({
           visible: !hideDrawing,
           mode: magnetMode ? (magnetType === 'weak' ? 'weak_magnet' : 'strong_magnet') : 'normal',
           onClick: (chart as any).handleOverlayClick,
+          onPressedMoveStart: (event: any) => {
+            if (event.overlay?.name === 'rect') {
+              handleRectPressedMoveStart(event);
+            }
+          },
           onPressedMoving: (event: any) => {
-            if ((window as any)._isShiftPressed && event.overlay && event.overlay.points && event.overlay.points.length > 1) {
+            if (event.overlay && event.overlay.points && event.overlay.points.length > 1) {
               const pts = event.overlay.points;
-              const isLineTool = ['segment', 'rayLine', 'arrow', 'trendAngle', 'straightLine'].includes(event.overlay.name);
               
+              if (event.overlay.name === 'rect') {
+                if (handleRectPressedMoving(event)) return true;
+              }
+
+              const isLineTool = ['segment', 'rayLine', 'arrow', 'trendAngle', 'straightLine', 'measure'].includes(event.overlay.name);
+
               if (isLineTool) {
                 const p0 = pts[0];
                 const p1 = pts[pts.length - 1];
-                
+
                 if (p0.value !== undefined && p1.value !== undefined) {
                   const overlayId = event.overlay.id;
                   const lastPts = lastOverlayPointsRef.current[overlayId];
-                  
-                  // Initialize for next frame if not present
-                  if (!lastPts || !lastPts[0] || !lastPts[1]) {
-                    lastOverlayPointsRef.current[overlayId] = [{ ...p0 }, { ...p1 }];
-                    return false;
+
+                  // Compute what changed since last frame
+                  let p0Changed = false;
+                  let p1Changed = false;
+                  if (lastPts && lastPts[0] && lastPts[1]) {
+                    p0Changed = p0.timestamp !== lastPts[0].timestamp || p0.value !== lastPts[0].value;
+                    p1Changed = p1.timestamp !== lastPts[1].timestamp || p1.value !== lastPts[1].value;
                   }
 
-                  const p0Changed = p0.timestamp !== lastPts[0].timestamp || p0.value !== lastPts[0].value;
-                  const p1Changed = p1.timestamp !== lastPts[1].timestamp || p1.value !== lastPts[1].value;
-                  
-                  let anchor = 'none';
-                  if (p0Changed && !p1Changed) {
-                    anchor = 'p1'; // Dragging p0, anchor is p1
-                  } else if (p1Changed && !p0Changed) {
-                    anchor = 'p0'; // Dragging p1, anchor is p0
-                  }
-                  
-                  if (anchor !== 'none') {
-                    let overridePoints;
-                    if (anchor === 'p1') {
-                      overridePoints = [{ ...p0, value: p1.value }, p1];
-                    } else {
-                      overridePoints = [p0, { ...p1, value: p0.value }];
+                  if ((window as any)._isShiftPressed) {
+                    if (!lastPts || !lastPts[0] || !lastPts[1]) {
+                      lastOverlayPointsRef.current[overlayId] = [{ ...p0 }, { ...p1 }];
+                      return false;
                     }
-                    
-                    chart.overrideOverlay({
-                      id: overlayId,
-                      points: overridePoints
-                    });
-                    
-                    // Update lastPts with the overridden points so next frame computes correctly
-                    lastOverlayPointsRef.current[overlayId] = [{ ...overridePoints[0] }, { ...overridePoints[1] }];
-                    return true;
-                  } else {
-                    lastOverlayPointsRef.current[overlayId] = [{ ...p0 }, { ...p1 }];
+
+                    let anchor = 'p0';
+                    if (p0Changed && !p1Changed) {
+                      anchor = 'p1';
+                    }
+
+                    if (anchor !== 'none') {
+                      let overridePoints;
+                      if (anchor === 'p1') {
+                        event.overlay.points[0].value = event.overlay.points[event.overlay.points.length - 1].value;
+                        overridePoints = event.overlay.points;
+                      } else {
+                        event.overlay.points[event.overlay.points.length - 1].value = event.overlay.points[0].value;
+                        overridePoints = event.overlay.points;
+                      }
+
+                      chart.overrideOverlay({
+                        id: overlayId,
+                        points: overridePoints
+                      });
+
+                      lastOverlayPointsRef.current[overlayId] = [{ ...overridePoints[0] }, { ...overridePoints[1] }];
+                      return true;
+                    }
                   }
+
+                  // Update points tracker for next frame
+                  lastOverlayPointsRef.current[overlayId] = [{ ...p0 }, { ...p1 }];
                 }
               }
             }
             return false;
+          },
+          onPressedMoveEnd: (event: any) => {
+            if (event.overlay?.name === 'rect') {
+              handleRectPressedMoveEnd(event);
+            }
           },
           onDrawEnd: (event: any) => {
             const isContinuousTool = ['brush', 'highlighter', 'path', 'polyline'].includes(activeToolRef.current);
@@ -4918,8 +5119,8 @@ export const ChartArea = ({
 
     loadData();
 
-    // Pass the correct period so the chart tooltip displays it correctly
-    chart.setPeriod({ timespan, text: activeTimeframe } as any);
+    // Pass the correct period so the chart tooltip displays it correctly and extrapolates into future timestamps
+    chart.setPeriod({ type: timespan as any, span: multiplier });
 
     return () => {
       isMounted = false;
@@ -5232,7 +5433,7 @@ export const ChartArea = ({
 
       chart.removeOverlay({ id: 'preview_tp_line' });
       chart.createOverlay({ id: 'preview_tp_line', ...overlayProps } as any);
-      
+
       chart.removeOverlay({ id: 'preview_tp_zone' });
       if (orderToDraw && tpToDraw) {
         chart.createOverlay({
@@ -5243,11 +5444,11 @@ export const ChartArea = ({
             { timestamp: allData[0].timestamp, value: orderToDraw },
             { timestamp: allData[lastDataIndex].timestamp, value: tpToDraw }
           ],
-          styles: { 
-            polygon: { 
+          styles: {
+            polygon: {
               color: 'rgba(8, 153, 129, 0.1)',
               borderColor: '#089981'
-            } 
+            }
           }
         } as any);
       }
@@ -5329,7 +5530,7 @@ export const ChartArea = ({
 
       chart.removeOverlay({ id: 'preview_sl_line' });
       chart.createOverlay({ id: 'preview_sl_line', ...overlayProps } as any);
-      
+
       chart.removeOverlay({ id: 'preview_sl_zone' });
       if (orderToDraw && slToDraw) {
         chart.createOverlay({
@@ -5340,11 +5541,11 @@ export const ChartArea = ({
             { timestamp: allData[0].timestamp, value: orderToDraw },
             { timestamp: allData[lastDataIndex].timestamp, value: slToDraw }
           ],
-          styles: { 
-            polygon: { 
+          styles: {
+            polygon: {
               color: 'rgba(242, 54, 69, 0.1)',
               borderColor: '#f23645'
-            } 
+            }
           }
         } as any);
       }
@@ -5424,17 +5625,17 @@ export const ChartArea = ({
           const dataList = chart.getDataList();
           const candle = dataList[rawPoint.dataIndex || 0];
           if (candle && rawPoint.value !== undefined) {
-             const prices = [candle.open, candle.high, candle.low, candle.close];
-             let closestPrice = prices[0];
-             let minDiff = Math.abs(rawPoint.value - closestPrice);
-             for(let i = 1; i < 4; i++) {
-               const diff = Math.abs(rawPoint.value - prices[i]);
-               if(diff < minDiff) {
-                 minDiff = diff;
-                 closestPrice = prices[i];
-               }
-             }
-             rawPoint.value = closestPrice;
+            const prices = [candle.open, candle.high, candle.low, candle.close];
+            let closestPrice = prices[0];
+            let minDiff = Math.abs(rawPoint.value - closestPrice);
+            for (let i = 1; i < 4; i++) {
+              const diff = Math.abs(rawPoint.value - prices[i]);
+              if (diff < minDiff) {
+                minDiff = diff;
+                closestPrice = prices[i];
+              }
+            }
+            rawPoint.value = closestPrice;
           }
           // ---------------------------
 
@@ -5470,17 +5671,17 @@ export const ChartArea = ({
           const dataList = chart.getDataList();
           const candle = dataList[rawPoint.dataIndex || 0];
           if (candle && rawPoint.value !== undefined) {
-             const prices = [candle.open, candle.high, candle.low, candle.close];
-             let closestPrice = prices[0];
-             let minDiff = Math.abs(rawPoint.value - closestPrice);
-             for(let i = 1; i < 4; i++) {
-               const diff = Math.abs(rawPoint.value - prices[i]);
-               if(diff < minDiff) {
-                 minDiff = diff;
-                 closestPrice = prices[i];
-               }
-             }
-             rawPoint.value = closestPrice;
+            const prices = [candle.open, candle.high, candle.low, candle.close];
+            let closestPrice = prices[0];
+            let minDiff = Math.abs(rawPoint.value - closestPrice);
+            for (let i = 1; i < 4; i++) {
+              const diff = Math.abs(rawPoint.value - prices[i]);
+              if (diff < minDiff) {
+                minDiff = diff;
+                closestPrice = prices[i];
+              }
+            }
+            rawPoint.value = closestPrice;
           }
           // ---------------------------
 
@@ -5550,8 +5751,8 @@ export const ChartArea = ({
           // Offset the points slightly so it's visible
           const newPoints = data.points?.map((p: any) => {
             const np = { ...p };
-            if (np.timestamp !== undefined) np.timestamp += shiftMs; 
-            if (np.dataIndex !== undefined) np.dataIndex += 5; 
+            if (np.timestamp !== undefined) np.timestamp += shiftMs;
+            if (np.dataIndex !== undefined) np.dataIndex += 5;
             if (np.value !== undefined) np.value *= 1.02; // Shift price by 2%
             return np;
           });
@@ -5593,40 +5794,40 @@ export const ChartArea = ({
           try {
             const overlays = JSON.parse(saved);
             if (Array.isArray(overlays)) {
-               overlays.forEach(ov => {
-                 chart.createOverlay({
-                   ...ov,
-                   onClick: (chart as any).handleOverlayClick,
-                   onRightClick: () => false
-                 });
-               });
+              overlays.forEach(ov => {
+                chart.createOverlay({
+                  ...ov,
+                  onClick: (chart as any).handleOverlayClick,
+                  onRightClick: () => false
+                });
+              });
             }
-          } catch(e) {}
+          } catch (e) { }
         }
       }
     };
-    
+
     // Wait slightly for chart init on first mount
     const timer = setTimeout(loadOverlays, 100);
 
     const handleBeforeUnload = () => {
       const chart = chartRef.current;
       if (chart) {
-         const overlays = chart.getOverlays();
-         if (overlays && overlays.length > 0) {
-            localStorage.setItem(`saved-overlays-${symbol}`, JSON.stringify(overlays));
-         } else {
-            localStorage.removeItem(`saved-overlays-${symbol}`);
-         }
+        const overlays = chart.getOverlays();
+        if (overlays && overlays.length > 0) {
+          localStorage.setItem(`saved-overlays-${symbol}`, JSON.stringify(overlays));
+        } else {
+          localStorage.removeItem(`saved-overlays-${symbol}`);
+        }
       }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
-       clearTimeout(timer);
-       handleBeforeUnload();
-       window.removeEventListener('beforeunload', handleBeforeUnload);
+      clearTimeout(timer);
+      handleBeforeUnload();
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [selectedStock?.symbol]);
 
@@ -6113,21 +6314,21 @@ export const ChartArea = ({
                       onClick={() => {
                         const name = window.prompt("Nhập tên bản mẫu mới:");
                         if (name) {
-                           const currentOverlay = floatingToolbar.overlay;
-                           const templates = JSON.parse(localStorage.getItem(`overlay-templates-${currentOverlay.name}`) || '{}');
-                           templates[name] = { styles: currentOverlay.styles, extendData: currentOverlay.extendData };
-                           localStorage.setItem(`overlay-templates-${currentOverlay.name}`, JSON.stringify(templates));
-                           setOverlayPopup(null);
+                          const currentOverlay = floatingToolbar.overlay;
+                          const templates = JSON.parse(localStorage.getItem(`overlay-templates-${currentOverlay.name}`) || '{}');
+                          templates[name] = { styles: currentOverlay.styles, extendData: currentOverlay.extendData };
+                          localStorage.setItem(`overlay-templates-${currentOverlay.name}`, JSON.stringify(templates));
+                          setOverlayPopup(null);
                         }
                       }}
                       className="w-full text-left px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc] border-b border-[#e6e8ea] dark:border-[#2a2e39] font-medium"
                     >
                       Lưu thành...
                     </button>
-                    
+
                     {Object.keys(JSON.parse(localStorage.getItem(`overlay-templates-${floatingToolbar.overlay.name}`) || '{}')).map((tplName) => (
                       <div key={tplName} className="w-full flex items-center justify-between px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc] group/tpl cursor-pointer">
-                        <span 
+                        <span
                           className="truncate flex-1"
                           onClick={() => {
                             const templates = JSON.parse(localStorage.getItem(`overlay-templates-${floatingToolbar.overlay.name}`) || '{}');
@@ -6369,64 +6570,64 @@ export const ChartArea = ({
       {/* Chart Context Menu Popup */}
       {chartContextMenu && (
         <div
-              className="fixed z-50 bg-white dark:bg-[#1e222d] shadow-2xl rounded-lg border border-[#e6e8ea] dark:border-[#2a2e39] py-1.5 w-64 flex flex-col text-xs text-[#1e2329] dark:text-[#d1d4dc] select-none"
-              style={{ 
-                top: Math.min(chartContextMenu.y, window.innerHeight - 200), 
-                left: Math.min(chartContextMenu.x, window.innerWidth - 264) 
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => {
-                  if (chartRef.current) {
-                    chartRef.current.setBarSpace(6);
-                    chartRef.current.setOffsetRightDistance(50);
-                    // Force re-calc Y axis by overriding with autoMinMax (if supported) or clearing
-                    const anyChart = chartRef.current as any;
-                    if (anyChart.overrideYAxis) {
-                      anyChart.overrideYAxis({ autoMinMax: true });
-                    }
-                  }
-                  setChartContextMenu(null);
-                }}
-                className="w-full flex items-center px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] transition-colors"
-              >
-                <div className="mr-2">🔄</div> 
-                <span>Làm mới biểu đồ</span>
-              </button>
+          className="fixed z-50 bg-white dark:bg-[#1e222d] shadow-2xl rounded-lg border border-[#e6e8ea] dark:border-[#2a2e39] py-1.5 w-64 flex flex-col text-xs text-[#1e2329] dark:text-[#d1d4dc] select-none"
+          style={{
+            top: Math.min(chartContextMenu.y, window.innerHeight - 200),
+            left: Math.min(chartContextMenu.x, window.innerWidth - 264)
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => {
+              if (chartRef.current) {
+                chartRef.current.setBarSpace(6);
+                chartRef.current.setOffsetRightDistance(50);
+                // Force re-calc Y axis by overriding with autoMinMax (if supported) or clearing
+                const anyChart = chartRef.current as any;
+                if (anyChart.overrideYAxis) {
+                  anyChart.overrideYAxis({ autoMinMax: true });
+                }
+              }
+              setChartContextMenu(null);
+            }}
+            className="w-full flex items-center px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] transition-colors"
+          >
+            <div className="mr-2">🔄</div>
+            <span>Làm mới biểu đồ</span>
+          </button>
 
-              <button
-                onClick={() => {
-                  const priceStr = chartContextMenu.price.toFixed(getPricePrecision(selectedStock.price));
-                  navigator.clipboard.writeText(priceStr).then(() => {
-                    console.log("Đã copy giá:", priceStr);
-                  });
-                  setChartContextMenu(null);
-                }}
-                className="w-full flex items-center justify-between px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] transition-colors"
-              >
-                <div className="flex items-center">
-                  <Copy className="w-3.5 h-3.5 mr-2 text-[#787b86]" />
-                  <span>Sao chép giá {chartContextMenu.price.toFixed(getPricePrecision(selectedStock.price))}</span>
-                </div>
-              </button>
-
-              <button
-                onClick={() => {
-                  const event = new KeyboardEvent('keydown', { key: 'v', ctrlKey: true });
-                  window.dispatchEvent(event);
-                  setChartContextMenu(null);
-                }}
-                className="w-full flex items-center justify-between px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] transition-colors"
-              >
-                <div className="flex items-center">
-                  <div className="mr-2">📋</div>
-                  <span>Dán (Paste)</span>
-                </div>
-                <span className="text-[10px] text-[#787b86]">Ctrl + V</span>
-              </button>
+          <button
+            onClick={() => {
+              const priceStr = chartContextMenu.price.toFixed(getPricePrecision(selectedStock.price));
+              navigator.clipboard.writeText(priceStr).then(() => {
+                console.log("Đã copy giá:", priceStr);
+              });
+              setChartContextMenu(null);
+            }}
+            className="w-full flex items-center justify-between px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] transition-colors"
+          >
+            <div className="flex items-center">
+              <Copy className="w-3.5 h-3.5 mr-2 text-[#787b86]" />
+              <span>Sao chép giá {chartContextMenu.price.toFixed(getPricePrecision(selectedStock.price))}</span>
             </div>
-          )}
+          </button>
+
+          <button
+            onClick={() => {
+              const event = new KeyboardEvent('keydown', { key: 'v', ctrlKey: true });
+              window.dispatchEvent(event);
+              setChartContextMenu(null);
+            }}
+            className="w-full flex items-center justify-between px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] transition-colors"
+          >
+            <div className="flex items-center">
+              <div className="mr-2">📋</div>
+              <span>Dán (Paste)</span>
+            </div>
+            <span className="text-[10px] text-[#787b86]">Ctrl + V</span>
+          </button>
+        </div>
+      )}
 
       {/* Overlay Settings Modal */}
       <OverlaySettingsModal

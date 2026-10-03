@@ -262,19 +262,16 @@ export const TradingTerminal = () => {
   const [isShiftPressed, setIsShiftPressed] = useState(false);
 
   useEffect(() => {
+    let isMouseDown = false;
+    const handleMouseDown = () => { isMouseDown = true; };
+    const handleMouseUp = () => { isMouseDown = false; };
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Control') setIsCtrlPressed(true);
       if (e.key === 'Shift') {
         setIsShiftPressed(true);
         // Attach to window object for ChartArea to access
         (window as any)._isShiftPressed = true;
-        setActiveTool(prev => {
-          if (prev === 'cursor') {
-            (window as any)._prevToolBeforeShift = 'cursor';
-            return 'priceLine';
-          }
-          return prev;
-        });
       }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -282,18 +279,16 @@ export const TradingTerminal = () => {
       if (e.key === 'Shift') {
         setIsShiftPressed(false);
         (window as any)._isShiftPressed = false;
-        setActiveTool(prev => {
-          if (prev === 'priceLine' && (window as any)._prevToolBeforeShift === 'cursor') {
-            (window as any)._prevToolBeforeShift = null;
-            return 'cursor';
-          }
-          return prev;
-        });
       }
     };
+    
+    window.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mouseup', handleMouseUp);
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     return () => {
+      window.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mouseup', handleMouseUp);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
