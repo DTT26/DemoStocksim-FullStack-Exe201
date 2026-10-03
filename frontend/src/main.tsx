@@ -10,7 +10,7 @@ import { I18nProvider } from "./contexts/I18nContext";
 import App from "./App.tsx";
 import "./index.css";
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "220677271966-28i0e11894dih6n04t82pdtstc7k5uif.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "1000999025932-o4ihs1bugi281inv0laoq6jbcj1290th.apps.googleusercontent.com";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
