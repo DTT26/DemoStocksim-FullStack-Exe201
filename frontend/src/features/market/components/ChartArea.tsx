@@ -14,6 +14,7 @@ import { emojiMark } from './EmojiOverlay';
 import { measureOverlay } from './MeasureOverlay';
 import { zoomInOverlay } from './ZoomInOverlay';
 import { FibonacciSettingsModal, DEFAULT_FIBONACCI_CONFIG, type FibonacciConfig } from './FibonacciSettingsModal';
+import { useI18n } from '../../../contexts/I18nContext';
 
 const COLOR_PALETTE_GRID = [
   ['#ffffff', '#e0e0e0', '#d6d6d6', '#c2c2c2', '#a8a8a8', '#8f8f8f', '#666666', '#000000'],
@@ -43,6 +44,25 @@ const hexToRgba = (hex: string, alpha: number = 1) => {
 let globalChartInstance: any = null;
 export const getChartInstance = () => globalChartInstance;
 
+const getTr = (key: string, fallback: string) => {
+  const lang = localStorage.getItem('app_lang') || 'vi';
+  const dict: Record<string, Record<string, string>> = {
+    vi: {
+      'chart.target': 'Mục tiêu',
+      'chart.stop': 'Dừng',
+      'chart.rr': 'Tỷ lệ Rủi ro/Lợi nhuận',
+      'chart.addText': 'Thêm văn bản',
+    },
+    en: {
+      'chart.target': 'Target',
+      'chart.stop': 'Stop',
+      'chart.rr': 'Risk/Reward Ratio',
+      'chart.addText': 'Add text',
+    }
+  };
+  return dict[lang]?.[key] || fallback;
+};
+
 export const isUserDrawingOverlay = (ov: any): boolean => {
   if (!ov) return false;
   const id = typeof ov.id === 'string' ? ov.id : '';
@@ -62,6 +82,7 @@ export const isUserDrawingOverlay = (ov: any): boolean => {
     return false;
   }
   return true;
+
 };
 
 export interface UserChartDrawing {
@@ -81,8 +102,8 @@ export interface UserChartDrawing {
 export const getChartDrawingsData = (): { drawings: UserChartDrawing[]; klines: any[] } => {
   if (!globalChartInstance) return { drawings: [], klines: [] };
   try {
-    const rawOverlays = typeof globalChartInstance.getOverlays === 'function' 
-      ? globalChartInstance.getOverlays() 
+    const rawOverlays = typeof globalChartInstance.getOverlays === 'function'
+      ? globalChartInstance.getOverlays()
       : [];
 
     const klines = typeof globalChartInstance.getDataList === 'function'
@@ -122,7 +143,7 @@ export const getChartDrawingsData = (): { drawings: UserChartDrawing[]; klines: 
   }
 };
 
-// Đăng ký Vùng AI Sửa Lại (aiCorrectionZone) với nhãn tên vùng trực quan trên biểu đồ
+// ÄÄƒng kĂ½ VĂ¹ng AI Sá»­a Láº¡i (aiCorrectionZone) vá»›i nhĂ£n tĂªn vĂ¹ng trá»±c quan trĂªn biá»ƒu Ä‘á»“
 registerOverlay({
   name: 'aiCorrectionZone',
   totalStep: 3,
@@ -160,8 +181,8 @@ registerOverlay({
       }
     ];
 
-    // 2. High-visibility Badge Note on the Zone (e.g. "🎯 AI: Order Block (OB) | 4,398.25 - 4,433.72")
-    const label = overlay?.extendData?.label || overlay?.extendData?.name || overlay?.text || '🎯 AI: Order Block (OB)';
+    // 2. High-visibility Badge Note on the Zone (e.g. "đŸ¯ AI: Order Block (OB) | 4,398.25 - 4,433.72")
+    const label = overlay?.extendData?.label || overlay?.extendData?.name || overlay?.text || 'đŸ¯ AI: Order Block (OB)';
     const priceText = overlay?.extendData?.priceText ? ` (${overlay.extendData.priceText})` : '';
     const badgeText = `${label}${priceText}`;
 
@@ -225,7 +246,7 @@ export const drawAiCorrectionOverlay = (suggestedZone: {
     const t1 = suggestedZone.startTimestamp || prevKline?.timestamp || (Date.now() - 3600000 * 4);
     const t2 = suggestedZone.endTimestamp || lastKline?.timestamp || Date.now();
 
-    const zoneLabel = suggestedZone.label || (suggestedZone.type ? `🎯 AI: ${suggestedZone.type}` : (suggestedZone.name ? `🎯 AI: ${suggestedZone.name}` : '🎯 AI: Vùng Chuẩn'));
+    const zoneLabel = suggestedZone.label || (suggestedZone.type ? `đŸ¯ AI: ${suggestedZone.type}` : (suggestedZone.name ? `đŸ¯ AI: ${suggestedZone.name}` : 'đŸ¯ AI: VĂ¹ng Chuáº©n'));
     const priceText = `$${suggestedZone.priceLow?.toLocaleString('en-US')} - $${suggestedZone.priceHigh?.toLocaleString('en-US')}`;
 
     const newId = globalChartInstance.createOverlay({
@@ -260,7 +281,7 @@ export const drawAiCorrectionOverlay = (suggestedZone: {
     return null;
   }
 };
-// Đăng ký các công cụ Sóng Elliott
+// ÄÄƒng kĂ½ cĂ¡c cĂ´ng cá»¥ SĂ³ng Elliott
 const createElliottOverlay = (name: string, step: number, labels: string[]) => ({
   name,
   totalStep: step,
@@ -291,13 +312,16 @@ registerOverlay(createElliottOverlay('elliottTriangle', 7, ['', 'A', 'B', 'C', '
 registerOverlay(createElliottOverlay('elliottDoubleCombo', 5, ['', 'W', 'X', 'Y']));
 registerOverlay(createElliottOverlay('elliottTripleCombo', 7, ['', 'W', 'X', 'Y', 'X', 'Z']));
 
-// Đăng ký Hộp Gann (Gann Box)
+// ÄÄƒng kĂ½ Há»™p Gann (Gann Box)
 registerOverlay({
   name: 'gannBox',
   totalStep: 3,
   needDefaultPointFigure: true,
   needDefaultXAxisFigure: true,
   needDefaultYAxisFigure: true,
+  onPressedMoveStart: handleRectPressedMoveStart,
+  onPressedMoving: handleRectPressedMoving,
+  onPressedMoveEnd: handleRectPressedMoveEnd,
   createPointFigures: ({ coordinates, overlay }: any) => {
     if (coordinates.length < 2) return [];
     const p1 = coordinates[0];
@@ -307,8 +331,13 @@ registerOverlay({
     const minY = Math.min(p1.y, p2.y);
     const maxY = Math.max(p1.y, p2.y);
 
+    const borderStyles = { color: '#2962ff', size: 1 };
     const figures: any[] = [
-      { type: 'polygon', attrs: { coordinates: [{ x: minX, y: minY }, { x: maxX, y: minY }, { x: maxX, y: maxY }, { x: minX, y: maxY }] }, styles: { style: 'stroke_fill', color: 'rgba(41, 98, 255, 0.05)', borderColor: '#2962ff' } },
+      { type: 'polygon', ignoreEvent: true, attrs: { coordinates: [{ x: minX, y: minY }, { x: maxX, y: minY }, { x: maxX, y: maxY }, { x: minX, y: maxY }] }, styles: { style: 'fill', color: 'rgba(41, 98, 255, 0.05)' } },
+      { type: 'line', attrs: { coordinates: [{ x: minX, y: minY }, { x: maxX, y: minY }] }, styles: borderStyles },
+      { type: 'line', attrs: { coordinates: [{ x: maxX, y: minY }, { x: maxX, y: maxY }] }, styles: borderStyles },
+      { type: 'line', attrs: { coordinates: [{ x: maxX, y: maxY }, { x: minX, y: maxY }] }, styles: borderStyles },
+      { type: 'line', attrs: { coordinates: [{ x: minX, y: maxY }, { x: minX, y: minY }] }, styles: borderStyles },
       // X cross lines
       { type: 'line', attrs: { coordinates: [{ x: minX, y: minY }, { x: maxX, y: maxY }] }, styles: { color: 'rgba(41, 98, 255, 0.5)' } },
       { type: 'line', attrs: { coordinates: [{ x: maxX, y: minY }, { x: minX, y: maxY }] }, styles: { color: 'rgba(41, 98, 255, 0.5)' } },
@@ -323,6 +352,34 @@ registerOverlay({
       figures.push({ type: 'line', attrs: { coordinates: [{ x: minX, y }, { x: maxX, y }] }, styles: { color: 'rgba(41, 98, 255, 0.3)', style: 'dashed' } });
       const x = minX + (maxX - minX) * f;
       figures.push({ type: 'line', attrs: { coordinates: [{ x, y: minY }, { x, y: maxY }] }, styles: { color: 'rgba(41, 98, 255, 0.3)', style: 'dashed' } });
+    });
+
+    const midTop = { x: (minX + maxX) / 2, y: minY };
+    const midRight = { x: maxX, y: (minY + maxY) / 2 };
+    const midBottom = { x: (minX + maxX) / 2, y: maxY };
+    const midLeft = { x: minX, y: (minY + maxY) / 2 };
+
+    [
+      { p: midTop, key: 'midTop' },
+      { p: midRight, key: 'midRight' },
+      { p: midBottom, key: 'midBottom' },
+      { p: midLeft, key: 'midLeft' }
+    ].forEach(({ p, key }) => {
+      figures.push({
+        key,
+        type: 'polygon',
+        ignoreEvent: false,
+        attrs: {
+          isHandle: key,
+          coordinates: [
+            { x: p.x - 6, y: p.y - 6 },
+            { x: p.x + 6, y: p.y - 6 },
+            { x: p.x + 6, y: p.y + 6 },
+            { x: p.x - 6, y: p.y + 6 }
+          ]
+        },
+        styles: { style: 'stroke_fill', color: '#131722', borderColor: '#2962ff', borderSize: 2 }
+      });
     });
 
     // Support text overlay if user types on the gannBox
@@ -346,20 +403,23 @@ registerOverlay({
 
 
 
-// Đăng ký Khoảng Giá (priceRange)
+// ÄÄƒng kĂ½ Khoáº£ng GiĂ¡ (priceRange)
 registerOverlay({
   name: 'priceRange',
   totalStep: 3,
   needDefaultPointFigure: true,
   needDefaultXAxisFigure: true,
   needDefaultYAxisFigure: true,
+  onPressedMoveStart: handleRectPressedMoveStart,
+  onPressedMoving: handleRectPressedMoving,
+  onPressedMoveEnd: handleRectPressedMoveEnd,
   createPointFigures: ({ coordinates, yAxis }) => {
     try {
       if (coordinates.length >= 2) {
         const p1 = coordinates[0];
         const p2 = coordinates[1];
-        const leftX = Math.min(p1.x, p2.x) - 20;
-        const rightX = Math.max(p1.x, p2.x) + 20;
+        const leftX = Math.min(p1.x, p2.x);
+        const rightX = Math.max(p1.x, p2.x);
         const topY = Math.min(p1.y, p2.y);
         const btmY = Math.max(p1.y, p2.y);
 
@@ -373,11 +433,19 @@ registerOverlay({
         }
 
         const figures: any[] = [];
+        const borderStyles = { color: '#2196f3', size: 1 };
         figures.push({
           type: 'polygon',
+          ignoreEvent: true,
           attrs: { coordinates: [{ x: leftX, y: topY }, { x: rightX, y: topY }, { x: rightX, y: btmY }, { x: leftX, y: btmY }] },
-          styles: { style: 'stroke_fill', color: 'rgba(33, 150, 243, 0.2)', borderColor: '#2196f3' }
+          styles: { style: 'fill', color: 'rgba(33, 150, 243, 0.2)' }
         });
+        figures.push(
+          { type: 'line', attrs: { coordinates: [{ x: leftX, y: topY }, { x: rightX, y: topY }] }, styles: borderStyles },
+          { type: 'line', attrs: { coordinates: [{ x: rightX, y: topY }, { x: rightX, y: btmY }] }, styles: borderStyles },
+          { type: 'line', attrs: { coordinates: [{ x: rightX, y: btmY }, { x: leftX, y: btmY }] }, styles: borderStyles },
+          { type: 'line', attrs: { coordinates: [{ x: leftX, y: btmY }, { x: leftX, y: topY }] }, styles: borderStyles }
+        );
         figures.push({ type: 'line', attrs: { coordinates: [{ x: leftX, y: p1.y }, { x: rightX, y: p1.y }] }, styles: { color: '#2196f3', style: 'dashed' } });
         figures.push({ type: 'line', attrs: { coordinates: [{ x: leftX, y: p2.y }, { x: rightX, y: p2.y }] }, styles: { color: '#2196f3', style: 'dashed' } });
 
@@ -387,24 +455,56 @@ registerOverlay({
           attrs: { x: (leftX + rightX) / 2, y: topY - 10, text, align: 'center', baseline: 'bottom' },
           styles: { color: '#ffffff', backgroundColor: '#2196f3', borderRadius: 4, paddingLeft: 4, paddingRight: 4, paddingTop: 2, paddingBottom: 2 }
         });
+
+        const midTop = { x: (leftX + rightX) / 2, y: topY };
+        const midRight = { x: rightX, y: (topY + btmY) / 2 };
+        const midBottom = { x: (leftX + rightX) / 2, y: btmY };
+        const midLeft = { x: leftX, y: (topY + btmY) / 2 };
+
+        [
+          { p: midTop, key: 'midTop' },
+          { p: midRight, key: 'midRight' },
+          { p: midBottom, key: 'midBottom' },
+          { p: midLeft, key: 'midLeft' }
+        ].forEach(({ p, key }) => {
+          figures.push({
+            key,
+            type: 'polygon',
+            ignoreEvent: false,
+            attrs: {
+              isHandle: key,
+              coordinates: [
+                { x: p.x - 6, y: p.y - 6 },
+                { x: p.x + 6, y: p.y - 6 },
+                { x: p.x + 6, y: p.y + 6 },
+                { x: p.x - 6, y: p.y + 6 }
+              ]
+            },
+            styles: { style: 'stroke_fill', color: '#131722', borderColor: '#2196f3', borderSize: 2 }
+          });
+        });
+
         return figures;
       }
     } catch (e: any) {
       if (coordinates.length > 0) {
-        return [{ type: 'text', attrs: { x: coordinates[0].x, y: coordinates[0].y, text: 'Lỗi: ' + e.message } }];
+        return [{ type: 'text', attrs: { x: coordinates[0].x, y: coordinates[0].y, text: 'Lá»—i: ' + e.message } }];
       }
     }
     return [];
   }
 });
 
-// Đăng ký Khoảng thời gian (timeRange)
+// ÄÄƒng kĂ½ Khoáº£ng thá»i gian (timeRange)
 registerOverlay({
   name: 'timeRange',
   totalStep: 3,
   needDefaultPointFigure: true,
   needDefaultXAxisFigure: true,
   needDefaultYAxisFigure: true,
+  onPressedMoveStart: handleRectPressedMoveStart,
+  onPressedMoving: handleRectPressedMoving,
+  onPressedMoveEnd: handleRectPressedMoveEnd,
   createPointFigures: ({ coordinates, xAxis, overlay }: any) => {
     try {
       if (coordinates.length >= 2) {
@@ -412,8 +512,8 @@ registerOverlay({
         const p2 = coordinates[1];
         const leftX = Math.min(p1.x, p2.x);
         const rightX = Math.max(p1.x, p2.x);
-        const topY = Math.min(p1.y, p2.y) - 40;
-        const btmY = Math.max(p1.y, p2.y) + 40;
+        const topY = Math.min(p1.y, p2.y);
+        const btmY = Math.max(p1.y, p2.y);
 
         let barCount = 0;
         if (xAxis?.convertFromPixel) {
@@ -428,11 +528,19 @@ registerOverlay({
         }
 
         const figures: any[] = [];
+        const borderStyles = { color: '#9c27b0', size: 1 };
         figures.push({
           type: 'polygon',
+          ignoreEvent: true,
           attrs: { coordinates: [{ x: leftX, y: topY }, { x: rightX, y: topY }, { x: rightX, y: btmY }, { x: leftX, y: btmY }] },
-          styles: { style: 'stroke_fill', color: 'rgba(156, 39, 176, 0.2)', borderColor: '#9c27b0' }
+          styles: { style: 'fill', color: 'rgba(156, 39, 176, 0.2)' }
         });
+        figures.push(
+          { type: 'line', attrs: { coordinates: [{ x: leftX, y: topY }, { x: rightX, y: topY }] }, styles: borderStyles },
+          { type: 'line', attrs: { coordinates: [{ x: rightX, y: topY }, { x: rightX, y: btmY }] }, styles: borderStyles },
+          { type: 'line', attrs: { coordinates: [{ x: rightX, y: btmY }, { x: leftX, y: btmY }] }, styles: borderStyles },
+          { type: 'line', attrs: { coordinates: [{ x: leftX, y: btmY }, { x: leftX, y: topY }] }, styles: borderStyles }
+        );
 
         const text = `${barCount} Thanh`;
         figures.push({
@@ -440,24 +548,56 @@ registerOverlay({
           attrs: { x: (leftX + rightX) / 2, y: topY - 10, text, align: 'center', baseline: 'bottom' },
           styles: { color: '#ffffff', backgroundColor: '#9c27b0', borderRadius: 4, paddingLeft: 4, paddingRight: 4, paddingTop: 2, paddingBottom: 2 }
         });
+
+        const midTop = { x: (leftX + rightX) / 2, y: topY };
+        const midRight = { x: rightX, y: (topY + btmY) / 2 };
+        const midBottom = { x: (leftX + rightX) / 2, y: btmY };
+        const midLeft = { x: leftX, y: (topY + btmY) / 2 };
+
+        [
+          { p: midTop, key: 'midTop' },
+          { p: midRight, key: 'midRight' },
+          { p: midBottom, key: 'midBottom' },
+          { p: midLeft, key: 'midLeft' }
+        ].forEach(({ p, key }) => {
+          figures.push({
+            key,
+            type: 'polygon',
+            ignoreEvent: false,
+            attrs: {
+              isHandle: key,
+              coordinates: [
+                { x: p.x - 6, y: p.y - 6 },
+                { x: p.x + 6, y: p.y - 6 },
+                { x: p.x + 6, y: p.y + 6 },
+                { x: p.x - 6, y: p.y + 6 }
+              ]
+            },
+            styles: { style: 'stroke_fill', color: '#131722', borderColor: '#9c27b0', borderSize: 2 }
+          });
+        });
+
         return figures;
       }
     } catch (e: any) {
       if (coordinates.length > 0) {
-        return [{ type: 'text', attrs: { x: coordinates[0].x, y: coordinates[0].y, text: 'Lỗi: ' + e.message } }];
+        return [{ type: 'text', attrs: { x: coordinates[0].x, y: coordinates[0].y, text: 'Lá»—i: ' + e.message } }];
       }
     }
     return [];
   }
 });
 
-// Đăng ký Khoảng thời gian & Giá (timePriceRange)
+// ÄÄƒng kĂ½ Khoáº£ng thá»i gian & GiĂ¡ (timePriceRange)
 registerOverlay({
   name: 'timePriceRange',
   totalStep: 3,
   needDefaultPointFigure: true,
   needDefaultXAxisFigure: true,
   needDefaultYAxisFigure: true,
+  onPressedMoveStart: handleRectPressedMoveStart,
+  onPressedMoving: handleRectPressedMoving,
+  onPressedMoveEnd: handleRectPressedMoveEnd,
   createPointFigures: ({ coordinates, overlay, xAxis, yAxis }: any) => {
     try {
       if (coordinates.length >= 2) {
@@ -490,11 +630,19 @@ registerOverlay({
         }
 
         const figures: any[] = [];
+        const borderStyles = { color: '#e91e63', size: 1 };
         figures.push({
           type: 'polygon',
+          ignoreEvent: true,
           attrs: { coordinates: [{ x: leftX, y: topY }, { x: rightX, y: topY }, { x: rightX, y: btmY }, { x: leftX, y: btmY }] },
-          styles: { style: 'stroke_fill', color: 'rgba(233, 30, 99, 0.2)', borderColor: '#e91e63' }
+          styles: { style: 'fill', color: 'rgba(233, 30, 99, 0.2)' }
         });
+        figures.push(
+          { type: 'line', attrs: { coordinates: [{ x: leftX, y: topY }, { x: rightX, y: topY }] }, styles: borderStyles },
+          { type: 'line', attrs: { coordinates: [{ x: rightX, y: topY }, { x: rightX, y: btmY }] }, styles: borderStyles },
+          { type: 'line', attrs: { coordinates: [{ x: rightX, y: btmY }, { x: leftX, y: btmY }] }, styles: borderStyles },
+          { type: 'line', attrs: { coordinates: [{ x: leftX, y: btmY }, { x: leftX, y: topY }] }, styles: borderStyles }
+        );
 
         const text = `${barCount} Thanh | ${valDif > 0 ? '+' : ''}${valDif.toFixed(2)} (${valDif > 0 ? '+' : ''}${pctDif.toFixed(2)}%)`;
         figures.push({
@@ -502,11 +650,40 @@ registerOverlay({
           attrs: { x: (leftX + rightX) / 2, y: topY - 10, text, align: 'center', baseline: 'bottom' },
           styles: { color: '#ffffff', backgroundColor: '#e91e63', borderRadius: 4, paddingLeft: 4, paddingRight: 4, paddingTop: 2, paddingBottom: 2 }
         });
+
+        const midTop = { x: (leftX + rightX) / 2, y: topY };
+        const midRight = { x: rightX, y: (topY + btmY) / 2 };
+        const midBottom = { x: (leftX + rightX) / 2, y: btmY };
+        const midLeft = { x: leftX, y: (topY + btmY) / 2 };
+
+        [
+          { p: midTop, key: 'midTop' },
+          { p: midRight, key: 'midRight' },
+          { p: midBottom, key: 'midBottom' },
+          { p: midLeft, key: 'midLeft' }
+        ].forEach(({ p, key }) => {
+          figures.push({
+            key,
+            type: 'polygon',
+            ignoreEvent: false,
+            attrs: {
+              isHandle: key,
+              coordinates: [
+                { x: p.x - 6, y: p.y - 6 },
+                { x: p.x + 6, y: p.y - 6 },
+                { x: p.x + 6, y: p.y + 6 },
+                { x: p.x - 6, y: p.y + 6 }
+              ]
+            },
+            styles: { style: 'stroke_fill', color: '#131722', borderColor: '#e91e63', borderSize: 2 }
+          });
+        });
+
         return figures;
       }
     } catch (e: any) {
       if (coordinates.length > 0) {
-        return [{ type: 'text', attrs: { x: coordinates[0].x, y: coordinates[0].y, text: 'Lỗi: ' + e.message } }];
+        return [{ type: 'text', attrs: { x: coordinates[0].x, y: coordinates[0].y, text: 'Lá»—i: ' + e.message } }];
       }
     }
     return [];
@@ -515,38 +692,212 @@ registerOverlay({
 
 
 
-// Đăng ký công cụ vẽ Hình chữ nhật (rect)
+// Quáº£n lĂ½ tráº¡ng thĂ¡i kĂ©o co giĂ£n 4 cáº¡nh cá»§a HĂ¬nh chá»¯ nháº­t (rect)
+const rectDragStateMap: Record<string, {
+  handle: 'midTop' | 'midBottom' | 'midLeft' | 'midRight';
+  orig0: { timestamp?: number; value?: number; dataIndex?: number };
+  orig1: { timestamp?: number; value?: number; dataIndex?: number };
+  isP0Top: boolean;
+  isP0Left: boolean;
+}> = {};
+
+export function handleRectPressedMoveStart(event: any) {
+  const allowedNames = ['rect', 'gannBox', 'priceRange', 'timeRange', 'timePriceRange'];
+  if (!event.overlay || !allowedNames.includes(event.overlay.name) || !event.overlay.points || event.overlay.points.length < 2) return;
+  const chart = event.chart || (window as any).__currentKlineChart;
+  if (!chart) return;
+
+  const pts = event.overlay.points;
+  const orig0 = { ...pts[0] };
+  const orig1 = { ...pts[1] };
+
+  const coords = chart.convertToPixel([orig0, orig1], { paneId: 'candle_pane' });
+  if (!coords || coords.length < 2) return;
+
+  const minX = Math.min(coords[0].x, coords[1].x);
+  const maxX = Math.max(coords[0].x, coords[1].x);
+  const minY = Math.min(coords[0].y, coords[1].y);
+  const maxY = Math.max(coords[0].y, coords[1].y);
+
+  const midTop = { x: (minX + maxX) / 2, y: minY };
+  const midBottom = { x: (minX + maxX) / 2, y: maxY };
+  const midLeft = { x: minX, y: (minY + maxY) / 2 };
+  const midRight = { x: maxX, y: (minY + maxY) / 2 };
+
+  const mouseX = event.x ?? event.clientX;
+  const mouseY = event.y ?? event.clientY;
+  if (typeof mouseX !== 'number' || typeof mouseY !== 'number') return;
+
+  const distToCorners = [
+    Math.hypot(mouseX - coords[0].x, mouseY - coords[0].y),
+    Math.hypot(mouseX - coords[1].x, mouseY - coords[1].y),
+    Math.hypot(mouseX - coords[0].x, mouseY - coords[1].y),
+    Math.hypot(mouseX - coords[1].x, mouseY - coords[0].y)
+  ];
+  const minCornerDist = Math.min(...distToCorners);
+
+  const dist = (p: { x: number; y: number }) => Math.hypot(mouseX - p.x, mouseY - p.y);
+  const dTop = dist(midTop);
+  const dBottom = dist(midBottom);
+  const dLeft = dist(midLeft);
+  const dRight = dist(midRight);
+
+  const minDist = Math.min(dTop, dBottom, dLeft, dRight);
+  const HIT_THRESHOLD = 25; // 25px vĂ¹ng cháº¡m quanh Ă´ vuĂ´ng
+
+  if (minDist <= HIT_THRESHOLD && minDist < minCornerDist) {
+    let handle: 'midTop' | 'midBottom' | 'midLeft' | 'midRight' = 'midTop';
+    if (minDist === dTop) handle = 'midTop';
+    else if (minDist === dBottom) handle = 'midBottom';
+    else if (minDist === dLeft) handle = 'midLeft';
+    else if (minDist === dRight) handle = 'midRight';
+
+    rectDragStateMap[event.overlay.id] = {
+      handle,
+      orig0,
+      orig1,
+      isP0Top: (orig0.value ?? 0) >= (orig1.value ?? 0),
+      isP0Left: (orig0.timestamp ?? 0) <= (orig1.timestamp ?? 0)
+    };
+  } else {
+    delete rectDragStateMap[event.overlay.id];
+  }
+};
+
+export function handleRectPressedMoving(event: any) {
+  const allowedNames = ['rect', 'gannBox', 'priceRange', 'timeRange', 'timePriceRange'];
+  if (!event.overlay || !allowedNames.includes(event.overlay.name)) return false;
+  const state = rectDragStateMap[event.overlay.id];
+  if (!state) return false;
+
+  const chart = event.chart || (window as any).__currentKlineChart;
+  if (!chart) return false;
+
+  const { handle, orig0, orig1, isP0Top, isP0Left } = state;
+
+  const mouseX = event.x;
+  const mouseY = event.y;
+  let mousePrice = event.value;
+  let mouseTimestamp = event.timestamp;
+
+  if (typeof mouseX === 'number' && typeof mouseY === 'number') {
+    const converted = chart.convertFromPixel([{ x: mouseX, y: mouseY }], { paneId: 'candle_pane' });
+    if (converted && converted[0]) {
+      if (typeof converted[0].value === 'number') mousePrice = converted[0].value;
+      if (typeof converted[0].timestamp === 'number') mouseTimestamp = converted[0].timestamp;
+    }
+  }
+
+  if (typeof mousePrice !== 'number' || typeof mouseTimestamp !== 'number') return false;
+
+  const p0 = { ...orig0 };
+  const p1 = { ...orig1 };
+
+  if (handle === 'midTop') {
+    if (isP0Top) {
+      p0.value = mousePrice;
+      p1.value = orig1.value;
+    } else {
+      p1.value = mousePrice;
+      p0.value = orig0.value;
+    }
+    p0.timestamp = orig0.timestamp;
+    p1.timestamp = orig1.timestamp;
+  } else if (handle === 'midBottom') {
+    if (isP0Top) {
+      p1.value = mousePrice;
+      p0.value = orig0.value;
+    } else {
+      p0.value = mousePrice;
+      p1.value = orig1.value;
+    }
+    p0.timestamp = orig0.timestamp;
+    p1.timestamp = orig1.timestamp;
+  } else if (handle === 'midLeft') {
+    if (isP0Left) {
+      p0.timestamp = mouseTimestamp;
+      p1.timestamp = orig1.timestamp;
+    } else {
+      p1.timestamp = mouseTimestamp;
+      p0.timestamp = orig0.timestamp;
+    }
+    p0.value = orig0.value;
+    p1.value = orig1.value;
+  } else if (handle === 'midRight') {
+    if (isP0Left) {
+      p1.timestamp = mouseTimestamp;
+      p0.timestamp = orig0.timestamp;
+    } else {
+      p0.timestamp = mouseTimestamp;
+      p1.timestamp = orig1.timestamp;
+    }
+    p0.value = orig0.value;
+    p1.value = orig1.value;
+  }
+
+  event.overlay.points[0] = p0;
+  event.overlay.points[1] = p1;
+
+  chart.overrideOverlay({
+    id: event.overlay.id,
+    points: [p0, p1]
+  });
+
+  return true;
+};
+
+export function handleRectPressedMoveEnd(event: any) {
+  if (event.overlay && rectDragStateMap[event.overlay.id]) {
+    const chart = event.chart || (window as any).__currentKlineChart;
+    if (chart && event.overlay.points) {
+      chart.overrideOverlay({
+        id: event.overlay.id,
+        points: event.overlay.points
+      });
+    }
+    delete rectDragStateMap[event.overlay.id];
+  }
+};
+
+// ÄÄƒng kĂ½ cĂ´ng cá»¥ váº½ HĂ¬nh chá»¯ nháº­t (rect)
 registerOverlay({
   name: 'rect',
   totalStep: 3,
   needDefaultPointFigure: true,
   needDefaultXAxisFigure: true,
   needDefaultYAxisFigure: true,
+  onPressedMoveStart: handleRectPressedMoveStart,
+  onPressedMoving: handleRectPressedMoving,
+  onPressedMoveEnd: handleRectPressedMoveEnd,
   createPointFigures: ({ coordinates, overlay }) => {
     if (coordinates.length > 1) {
       const p0 = coordinates[0];
       const p1 = coordinates[1];
       const p2 = { x: p1.x, y: p0.y };
       const p3 = { x: p0.x, y: p1.y };
-      
-      const midTop = { x: (p0.x + p1.x) / 2, y: p0.y };
-      const midRight = { x: p1.x, y: (p0.y + p1.y) / 2 };
-      const midBottom = { x: (p0.x + p1.x) / 2, y: p1.y };
-      const midLeft = { x: p0.x, y: (p0.y + p1.y) / 2 };
 
+      const minX = Math.min(p0.x, p1.x);
+      const maxX = Math.max(p0.x, p1.x);
+      const minY = Math.min(p0.y, p1.y);
+      const maxY = Math.max(p0.y, p1.y);
+
+      const midTop = { x: (minX + maxX) / 2, y: minY };
+      const midRight = { x: maxX, y: (minY + maxY) / 2 };
+      const midBottom = { x: (minX + maxX) / 2, y: maxY };
+      const midLeft = { x: minX, y: (minY + maxY) / 2 };
+
+      const borderStyles = { color: overlay.styles?.polygon?.borderColor || '#9c27b0', size: overlay.styles?.polygon?.borderSize ?? 2 };
       const figures: any[] = [
         {
           type: 'polygon',
-          attrs: {
-            coordinates: [p0, p2, p1, p3]
-          },
-          styles: { 
-            style: 'stroke_fill', 
-            color: overlay.styles?.polygon?.color || 'rgba(156, 39, 176, 0.15)', 
-            borderColor: overlay.styles?.polygon?.borderColor || '#9c27b0', 
-            borderSize: overlay.styles?.polygon?.borderSize ?? 2 
-          }
-        }
+          ignoreEvent: true,
+          attrs: { coordinates: [p0, p2, p1, p3] },
+          styles: { style: 'fill', color: overlay.styles?.polygon?.color || 'rgba(156, 39, 176, 0.15)' }
+        },
+        { type: 'line', attrs: { coordinates: [p0, p2] }, styles: borderStyles },
+        { type: 'line', attrs: { coordinates: [p2, p1] }, styles: borderStyles },
+        { type: 'line', attrs: { coordinates: [p1, p3] }, styles: borderStyles },
+        { type: 'line', attrs: { coordinates: [p3, p0] }, styles: borderStyles }
       ];
 
       // Draw the other 2 corners (circles)
@@ -560,16 +911,23 @@ registerOverlay({
       });
 
       // Draw the 4 midpoints (squares)
-      [midTop, midRight, midBottom, midLeft].forEach(p => {
+      [
+        { p: midTop, key: 'midTop' },
+        { p: midRight, key: 'midRight' },
+        { p: midBottom, key: 'midBottom' },
+        { p: midLeft, key: 'midLeft' }
+      ].forEach(({ p, key }) => {
         figures.push({
+          key,
           type: 'polygon',
-          ignoreEvent: true,
+          ignoreEvent: false,
           attrs: {
+            isHandle: key,
             coordinates: [
-              { x: p.x - 5, y: p.y - 5 },
-              { x: p.x + 5, y: p.y - 5 },
-              { x: p.x + 5, y: p.y + 5 },
-              { x: p.x - 5, y: p.y + 5 }
+              { x: p.x - 6, y: p.y - 6 },
+              { x: p.x + 6, y: p.y - 6 },
+              { x: p.x + 6, y: p.y + 6 },
+              { x: p.x - 6, y: p.y + 6 }
             ]
           },
           styles: { style: 'stroke_fill', color: '#131722', borderColor: '#2962ff', borderSize: 2 }
@@ -599,7 +957,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký công cụ vẽ Mô hình XABCD
+// ÄÄƒng kĂ½ cĂ´ng cá»¥ váº½ MĂ´ hĂ¬nh XABCD
 registerOverlay({
   name: 'xabcd',
   totalStep: 6,
@@ -648,7 +1006,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký công cụ vẽ ABCD
+// ÄÄƒng kĂ½ cĂ´ng cá»¥ váº½ ABCD
 registerOverlay({
   name: 'abcd',
   totalStep: 5,
@@ -687,7 +1045,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký công cụ vẽ Mô hình Cypher
+// ÄÄƒng kĂ½ cĂ´ng cá»¥ váº½ MĂ´ hĂ¬nh Cypher
 registerOverlay({
   name: 'cypher',
   totalStep: 6,
@@ -736,7 +1094,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký công cụ vẽ Mô hình Three Drives
+// ÄÄƒng kĂ½ cĂ´ng cá»¥ váº½ MĂ´ hĂ¬nh Three Drives
 registerOverlay({
   name: 'threeDrives',
   totalStep: 6,
@@ -766,7 +1124,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký công cụ vẽ Vai Đầu Vai (Head and Shoulders)
+// ÄÄƒng kĂ½ cĂ´ng cá»¥ váº½ Vai Äáº§u Vai (Head and Shoulders)
 registerOverlay({
   name: 'headAndShoulders',
   totalStep: 8,
@@ -788,17 +1146,17 @@ registerOverlay({
       figures.push({ type: 'polygon', attrs: { coordinates: [coordinates[4], coordinates[5], coordinates[6]] }, styles: { style: 'fill', color: 'rgba(76, 175, 80, 0.2)' } });
     }
 
-    // Thêm Text Labels
+    // ThĂªm Text Labels
     if (coordinates[0]) {
-      figures.push({ type: 'text', attrs: { x: coordinates[0].x, y: coordinates[0].y - 30, text: 'Vai trái' }, styles: { color: '#fff', backgroundColor: '#4caf50', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4 } });
+      figures.push({ type: 'text', attrs: { x: coordinates[0].x, y: coordinates[0].y - 30, text: 'Vai trĂ¡i' }, styles: { color: '#fff', backgroundColor: '#4caf50', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4 } });
       figures.push({ type: 'line', attrs: { coordinates: [coordinates[0], { x: coordinates[0].x, y: coordinates[0].y - 20 }] }, styles: { color: '#4caf50' } });
     }
     if (coordinates[2]) {
-      figures.push({ type: 'text', attrs: { x: coordinates[2].x, y: coordinates[2].y - 30, text: 'Đầu' }, styles: { color: '#fff', backgroundColor: '#4caf50', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4 } });
+      figures.push({ type: 'text', attrs: { x: coordinates[2].x, y: coordinates[2].y - 30, text: 'Äáº§u' }, styles: { color: '#fff', backgroundColor: '#4caf50', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4 } });
       figures.push({ type: 'line', attrs: { coordinates: [coordinates[2], { x: coordinates[2].x, y: coordinates[2].y - 20 }] }, styles: { color: '#4caf50' } });
     }
     if (coordinates[4]) {
-      figures.push({ type: 'text', attrs: { x: coordinates[4].x, y: coordinates[4].y - 30, text: 'Vai Phải' }, styles: { color: '#fff', backgroundColor: '#4caf50', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4 } });
+      figures.push({ type: 'text', attrs: { x: coordinates[4].x, y: coordinates[4].y - 30, text: 'Vai Pháº£i' }, styles: { color: '#fff', backgroundColor: '#4caf50', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4 } });
       figures.push({ type: 'line', attrs: { coordinates: [coordinates[4], { x: coordinates[4].x, y: coordinates[4].y - 20 }] }, styles: { color: '#4caf50' } });
     }
 
@@ -806,7 +1164,7 @@ registerOverlay({
   }
 });
 
-// Đường dẫn (path)
+// ÄÆ°á»ng dáº«n (path)
 registerOverlay({
   name: 'path',
   totalStep: 0,
@@ -824,7 +1182,7 @@ registerOverlay({
   }
 });
 
-// Hình chữ nhật xoay (rotatedRect)
+// HĂ¬nh chá»¯ nháº­t xoay (rotatedRect)
 registerOverlay({
   name: 'rotatedRect',
   totalStep: 4,
@@ -867,7 +1225,7 @@ registerOverlay({
   }
 });
 
-// Hình elip (ellipse)
+// HĂ¬nh elip (ellipse)
 registerOverlay({
   name: 'ellipse',
   totalStep: 3,
@@ -899,7 +1257,7 @@ registerOverlay({
   }
 });
 
-// Vòng tròn (circleMark)
+// VĂ²ng trĂ²n (circleMark)
 registerOverlay({
   name: 'circleMark',
   totalStep: 3,
@@ -921,7 +1279,7 @@ registerOverlay({
   }
 });
 
-// Hình vòng cung (arc)
+// HĂ¬nh vĂ²ng cung (arc)
 registerOverlay({
   name: 'arc',
   totalStep: 4,
@@ -944,7 +1302,7 @@ registerOverlay({
   }
 });
 
-// Đường cong (curve) - Quadratic Bezier
+// ÄÆ°á»ng cong (curve) - Quadratic Bezier
 registerOverlay({
   name: 'curve',
   totalStep: 4,
@@ -967,7 +1325,7 @@ registerOverlay({
   }
 });
 
-// Đường cong đôi (doubleCurve) - Cubic Bezier
+// ÄÆ°á»ng cong Ä‘Ă´i (doubleCurve) - Cubic Bezier
 registerOverlay({
   name: 'doubleCurve',
   totalStep: 5,
@@ -992,7 +1350,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Tam giác
+// ÄÄƒng kĂ½ Tam giĂ¡c
 registerOverlay({
   name: 'triangle',
   totalStep: 4,
@@ -1017,7 +1375,7 @@ registerOverlay({
 
 
 
-// Đăng ký Các đường chu kỳ (cycleLines) - Screenshot 2
+// ÄÄƒng kĂ½ CĂ¡c Ä‘Æ°á»ng chu ká»³ (cycleLines) - Screenshot 2
 registerOverlay({
   name: 'cycleLines',
   totalStep: 3,
@@ -1065,7 +1423,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Vòng thời gian (timeCycles) - Screenshot 3
+// ÄÄƒng kĂ½ VĂ²ng thá»i gian (timeCycles) - Screenshot 3
 registerOverlay({
   name: 'timeCycles',
   totalStep: 3,
@@ -1118,7 +1476,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Đường Sine (sineLine) - Screenshots 2 & 3
+// ÄÄƒng kĂ½ ÄÆ°á»ng Sine (sineLine) - Screenshots 2 & 3
 registerOverlay({
   name: 'sineLine',
   totalStep: 3,
@@ -1172,7 +1530,7 @@ registerOverlay({
 
 
 
-// Đăng ký Dự đoán (forecast) - Screenshot 3
+// ÄÄƒng kĂ½ Dá»± Ä‘oĂ¡n (forecast) - Screenshot 3
 registerOverlay({
   name: 'forecast',
   totalStep: 2,
@@ -1254,7 +1612,7 @@ registerOverlay({
         attrs: {
           x: p2.x,
           y: p2.y + 10,
-          text: `${diffStr} (${pctStr}) trong ${timeText}\n${val2.toLocaleString(undefined, { minimumFractionDigits: 2 })} 🕒 ${date2Str}`,
+          text: `${diffStr} (${pctStr}) trong ${timeText}\n${val2.toLocaleString(undefined, { minimumFractionDigits: 2 })} đŸ•’ ${date2Str}`,
           align: 'center',
           baseline: 'top'
         },
@@ -1268,7 +1626,7 @@ registerOverlay({
         }
       });
 
-      // 4. Status Badge (Red THẤT BẠI or Green THÀNH CÔNG - Screenshot 3)
+      // 4. Status Badge (Red THáº¤T Báº I or Green THĂ€NH CĂ”NG - Screenshot 3)
       const latestPrice = kLineDataList?.[kLineDataList.length - 1]?.close ?? val2;
       const isSuccess = (diff >= 0 && latestPrice >= val1) || (diff < 0 && latestPrice <= val1);
 
@@ -1277,7 +1635,7 @@ registerOverlay({
         attrs: {
           x: p2.x,
           y: p2.y + 58,
-          text: isSuccess ? ':) THÀNH CÔNG' : ':( THẤT BẠI',
+          text: isSuccess ? ':) THĂ€NH CĂ”NG' : ':( THáº¤T Báº I',
           align: 'center',
           baseline: 'top'
         },
@@ -1295,7 +1653,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Mẫu hình thanh (barsPattern) - Screenshot 4
+// ÄÄƒng kĂ½ Máº«u hĂ¬nh thanh (barsPattern) - Screenshot 4
 registerOverlay({
   name: 'barsPattern',
   totalStep: 4,
@@ -1359,7 +1717,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Mô hình Ghost (ghostFeed) - Screenshot 5
+// ÄÄƒng kĂ½ MĂ´ hĂ¬nh Ghost (ghostFeed) - Screenshot 5
 registerOverlay({
   name: 'ghostFeed',
   totalStep: 6,
@@ -1420,7 +1778,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký công cụ vẽ Thế giá lên (Long Position) - Phép chiếu
+// ÄÄƒng kĂ½ cĂ´ng cá»¥ váº½ Tháº¿ giĂ¡ lĂªn (Long Position) - PhĂ©p chiáº¿u
 registerOverlay({
   name: 'longPosition',
   totalStep: 4,
@@ -1431,7 +1789,7 @@ registerOverlay({
     const figures: any[] = [];
     if (coordinates.length >= 2) {
       const p0 = coordinates[0]; // Entry
-      
+
       let p1 = { x: p0.x, y: p0.y }; // TP
       let p2 = { x: p0.x, y: p0.y }; // SL
       let minX = p0.x;
@@ -1442,7 +1800,7 @@ registerOverlay({
         if (!pt) continue;
         minX = Math.min(minX, pt.x);
         maxX = Math.max(maxX, pt.x);
-        
+
         if (pt.y < p0.y) {
           // TP is above entry (smaller Y)
           if (p1.y === p0.y || pt.y < p1.y) p1 = { ...pt };
@@ -1506,15 +1864,9 @@ registerOverlay({
       const lossPercent = entryPrice > 0 ? (lossValue / entryPrice * 100) : 0;
       const rr = lossValue > 0 ? (profitValue / lossValue) : 0;
 
-      // Simulate position sizing (assuming $1000 risk)
-      const qty = lossValue > 0 ? (1000 / lossValue) : 0;
-      const profitAmount = qty * profitValue;
-      const lossAmount = qty * lossValue;
-
-      const targetText = `Mục tiêu: ${profitValue.toFixed(2)} (${profitPercent.toFixed(2)}%) ${tpPrice.toFixed(2)}, Số tiền: ${profitAmount.toFixed(2)}`;
-      const stopText = `Dừng: ${lossValue.toFixed(2)} (${lossPercent.toFixed(2)}%) ${slPrice.toFixed(2)}, Số tiền: ${lossAmount.toFixed(2)}`;
-      const midText1 = `Mở Lợi nhuận & Thua lỗ: 0.00, S.Lg: ${Math.round(qty)}`;
-      const midText2 = `Tỷ lệ Rủi ro/Lợi nhuận: ${rr.toFixed(2)}`;
+      const targetText = `${getTr('chart.target', 'Má»¥c tiĂªu')}: ${profitValue.toFixed(2)} (${profitPercent.toFixed(2)}%) ${tpPrice.toFixed(2)}`;
+      const stopText = `${getTr('chart.stop', 'Dá»«ng')}: ${lossValue.toFixed(2)} (${lossPercent.toFixed(2)}%) ${slPrice.toFixed(2)}`;
+      const rrText = `${getTr('chart.rr', 'Tá»· lá»‡ Rá»§i ro/Lá»£i nhuáº­n')}: ${rr.toFixed(2)}`;
 
       const centerX = (minX + maxX) / 2;
 
@@ -1532,23 +1884,18 @@ registerOverlay({
         styles: { color: '#ffffff', size: 12, backgroundColor: '#f23645', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4 }
       });
 
-      // Middle Text Box (2 lines)
+      // Middle Text Box (Risk/Reward Ratio)
       figures.push({
         type: 'text',
-        attrs: { x: centerX, y: p0.y - 10, text: midText1, align: 'center', baseline: 'bottom' },
-        styles: { color: '#ffffff', size: 12, backgroundColor: '#089981', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 0 }
-      });
-      figures.push({
-        type: 'text',
-        attrs: { x: centerX, y: p0.y + 10, text: midText2, align: 'center', baseline: 'top' },
-        styles: { color: '#ffffff', size: 12, backgroundColor: '#089981', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 0, paddingBottom: 4 }
+        attrs: { x: centerX, y: p0.y, text: rrText, align: 'center', baseline: 'middle' },
+        styles: { color: '#ffffff', size: 12, backgroundColor: '#089981', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4 }
       });
     }
     return figures;
   }
 });
 
-// Đăng ký công cụ vẽ Thế giá xuống (Short Position) - Phép chiếu
+// ÄÄƒng kĂ½ cĂ´ng cá»¥ váº½ Tháº¿ giĂ¡ xuá»‘ng (Short Position) - PhĂ©p chiáº¿u
 registerOverlay({
   name: 'shortPosition',
   totalStep: 4,
@@ -1559,7 +1906,7 @@ registerOverlay({
     const figures: any[] = [];
     if (coordinates.length >= 2) {
       const p0 = coordinates[0]; // Entry
-      
+
       let p1 = { x: p0.x, y: p0.y }; // TP
       let p2 = { x: p0.x, y: p0.y }; // SL
       let minX = p0.x;
@@ -1570,7 +1917,7 @@ registerOverlay({
         if (!pt) continue;
         minX = Math.min(minX, pt.x);
         maxX = Math.max(maxX, pt.x);
-        
+
         if (pt.y > p0.y) {
           // TP is below entry (larger Y)
           if (p1.y === p0.y || pt.y > p1.y) p1 = { ...pt };
@@ -1635,15 +1982,9 @@ registerOverlay({
       const lossPercent = entryPrice > 0 ? (lossValue / entryPrice * 100) : 0;
       const rr = lossValue > 0 ? (profitValue / lossValue) : 0;
 
-      // Simulate position sizing (assuming $1000 risk)
-      const qty = lossValue > 0 ? (1000 / lossValue) : 0;
-      const profitAmount = qty * profitValue;
-      const lossAmount = qty * lossValue;
-
-      const targetText = `Mục tiêu: ${profitValue.toFixed(2)} (${profitPercent.toFixed(2)}%) ${tpPrice.toFixed(2)}, Số tiền: ${profitAmount.toFixed(2)}`;
-      const stopText = `Dừng: ${lossValue.toFixed(2)} (${lossPercent.toFixed(2)}%) ${slPrice.toFixed(2)}, Số tiền: ${lossAmount.toFixed(2)}`;
-      const midText1 = `Mở Lợi nhuận & Thua lỗ: 0.00, S.Lg: ${Math.round(qty)}`;
-      const midText2 = `Tỷ lệ Rủi ro/Lợi nhuận: ${rr.toFixed(2)}`;
+      const targetText = `${getTr('chart.target', 'Má»¥c tiĂªu')}: ${profitValue.toFixed(2)} (${profitPercent.toFixed(2)}%) ${tpPrice.toFixed(2)}`;
+      const stopText = `${getTr('chart.stop', 'Dá»«ng')}: ${lossValue.toFixed(2)} (${lossPercent.toFixed(2)}%) ${slPrice.toFixed(2)}`;
+      const rrText = `${getTr('chart.rr', 'Tá»· lá»‡ Rá»§i ro/Lá»£i nhuáº­n')}: ${rr.toFixed(2)}`;
 
       const centerX = (minX + maxX) / 2;
 
@@ -1661,23 +2002,18 @@ registerOverlay({
         styles: { color: '#ffffff', size: 12, backgroundColor: '#f23645', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4 }
       });
 
-      // Middle Text Box (2 lines)
+      // Middle Text Box (Risk/Reward Ratio)
       figures.push({
         type: 'text',
-        attrs: { x: centerX, y: p0.y - 10, text: midText1, align: 'center', baseline: 'bottom' },
-        styles: { color: '#ffffff', size: 12, backgroundColor: '#089981', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 0 }
-      });
-      figures.push({
-        type: 'text',
-        attrs: { x: centerX, y: p0.y + 10, text: midText2, align: 'center', baseline: 'top' },
-        styles: { color: '#ffffff', size: 12, backgroundColor: '#089981', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 0, paddingBottom: 4 }
+        attrs: { x: centerX, y: p0.y, text: rrText, align: 'center', baseline: 'middle' },
+        styles: { color: '#ffffff', size: 12, backgroundColor: '#089981', borderRadius: 4, paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4 }
       });
     }
     return figures;
   }
 });
 
-// 1. Anchored VWAP (Dựa trên khối lượng)
+// 1. Anchored VWAP (Dá»±a trĂªn khá»‘i lÆ°á»£ng)
 registerOverlay({
   name: 'anchoredVWAP',
   totalStep: 1,
@@ -1702,7 +2038,7 @@ registerOverlay({
   }
 });
 
-// 2. Khối lượng Giao dịch Phạm vi Cố định (fixedRangeVolumeProfile)
+// 2. Khá»‘i lÆ°á»£ng Giao dá»‹ch Pháº¡m vi Cá»‘ Ä‘á»‹nh (fixedRangeVolumeProfile)
 registerOverlay({
   name: 'fixedRangeVolumeProfile',
   totalStep: 3,
@@ -1728,7 +2064,7 @@ registerOverlay({
 
 // Removed duplicate priceRange, dateRange, dateAndPriceRange
 
-// 8. Phép chiếu (projection)
+// 8. PhĂ©p chiáº¿u (projection)
 registerOverlay({
   name: 'projection',
   totalStep: 3,
@@ -1795,7 +2131,7 @@ registerOverlay({
 });
 
 
-// Đăng ký Đường thông tin (infoLine)
+// ÄÄƒng kĂ½ ÄÆ°á»ng thĂ´ng tin (infoLine)
 registerOverlay({
   name: 'infoLine',
   totalStep: 3,
@@ -1871,21 +2207,21 @@ registerOverlay({
       // Line 1: Price difference
       figures.push({
         type: 'text',
-        attrs: { x: cardX + 10, y: cardY + 10, text: `↕  ${priceDiff} (${pctChange}), ${valDiff}` },
+        attrs: { x: cardX + 10, y: cardY + 10, text: `â†•  ${priceDiff} (${pctChange}), ${valDiff}` },
         styles: { color: '#ffffff', size: 12, weight: 'bold', backgroundColor: 'transparent' }
       });
 
       // Line 2: Bar count & Time & Distance px
       figures.push({
         type: 'text',
-        attrs: { x: cardX + 10, y: cardY + 32, text: `↔  ${barCount} thanh (${timeText}), khoảng cách: ${distPx} px` },
+        attrs: { x: cardX + 10, y: cardY + 32, text: `â†”  ${barCount} thanh (${timeText}), khoáº£ng cĂ¡ch: ${distPx} px` },
         styles: { color: '#d1d4dc', size: 11, backgroundColor: 'transparent' }
       });
 
       // Line 3: Angle
       figures.push({
         type: 'text',
-        attrs: { x: cardX + 10, y: cardY + 52, text: `∠  ${angleDeg}°` },
+        attrs: { x: cardX + 10, y: cardY + 52, text: `âˆ   ${angleDeg}Â°` },
         styles: { color: '#d1d4dc', size: 11, backgroundColor: 'transparent' }
       });
     }
@@ -1893,7 +2229,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Góc xu hướng (trendAngle)
+// ÄÄƒng kĂ½ GĂ³c xu hÆ°á»›ng (trendAngle)
 registerOverlay({
   name: 'trendAngle',
   totalStep: 3,
@@ -1952,7 +2288,7 @@ registerOverlay({
         attrs: {
           x: p1.x + (radius + 20) * Math.cos(midAngle),
           y: p1.y - (radius + 20) * Math.sin(midAngle),
-          text: `${angleDeg}°`
+          text: `${angleDeg}Â°`
         },
         styles: {
           color: '#2962ff',
@@ -1970,7 +2306,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Đường xu hướng có chữ dọc theo đường (segment)
+// ÄÄƒng kĂ½ ÄÆ°á»ng xu hÆ°á»›ng cĂ³ chá»¯ dá»c theo Ä‘Æ°á»ng (segment)
 registerOverlay({
   name: 'segment',
   totalStep: 3,
@@ -2004,7 +2340,7 @@ registerOverlay({
         }
       });
 
-      // Custom Text along the trend line (e.g. "đggg")
+      // Custom Text along the trend line (e.g. "Ä‘ggg")
       const textContent = overlay.extendData || (textStyle as any)?.text;
       if (textContent && typeof textContent === 'string') {
         const dx = p2.x - p1.x;
@@ -2042,7 +2378,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Văn bản (simpleAnnotation) - Render text directly without vertical pin
+// ÄÄƒng kĂ½ VÄƒn báº£n (simpleAnnotation) - Render text directly without vertical pin
 registerOverlay({
   name: 'simpleAnnotation',
   totalStep: 2,
@@ -2052,7 +2388,7 @@ registerOverlay({
   createPointFigures: ({ coordinates, overlay }: any) => {
     if (coordinates.length < 1) return [];
     const p = coordinates[0];
-    const textContent = String(overlay.extendData || 'Thêm văn bản');
+    const textContent = String(overlay.extendData || getTr('chart.addText', 'ThĂªm vÄƒn báº£n'));
     const styles = overlay.styles || {};
     const textStyle = styles.text || {};
 
@@ -2079,7 +2415,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Ghi chú Giá (priceNote) - Screenshot 1
+// ÄÄƒng kĂ½ Ghi chĂº GiĂ¡ (priceNote) - Screenshot 1
 registerOverlay({
   name: 'priceNote',
   totalStep: 3,
@@ -2115,7 +2451,7 @@ registerOverlay({
 
       // 4. Price Badge Pill at p2
       let priceVal = '';
-      if (typeof overlay.extendData === 'string' && overlay.extendData && overlay.extendData !== '85,470.59' && overlay.extendData !== 'Thêm văn bản' && overlay.extendData !== '0.00') {
+      if (typeof overlay.extendData === 'string' && overlay.extendData && overlay.extendData !== '85,470.59' && overlay.extendData !== getTr('chart.addText', 'ThĂªm vÄƒn báº£n') && overlay.extendData !== '0.00') {
         priceVal = overlay.extendData;
       } else {
         const pt = (points && (points[1] || points[0])) || null;
@@ -2156,7 +2492,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Ghi chú (note) - Screenshot 2
+// ÄÄƒng kĂ½ Ghi chĂº (note) - Screenshot 2
 registerOverlay({
   name: 'note',
   totalStep: 3,
@@ -2191,7 +2527,7 @@ registerOverlay({
       });
 
       // Text box container at p1
-      const textContent = String(overlay.extendData || 'Thêm văn bản');
+      const textContent = String(overlay.extendData || getTr('chart.addText', 'ThĂªm vÄƒn báº£n'));
       const boxWidth = Math.max(120, textContent.length * 8 + 24);
       const boxHeight = 34;
       const boxX = p1.x - boxWidth - 10;
@@ -2220,7 +2556,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Mã Pin (pinMark) - Screenshot 3
+// ÄÄƒng kĂ½ MĂ£ Pin (pinMark) - Screenshot 3
 registerOverlay({
   name: 'pinMark',
   totalStep: 2,
@@ -2231,7 +2567,7 @@ registerOverlay({
     const figures: any[] = [];
     if (coordinates.length >= 1) {
       const p = coordinates[0];
-      const textContent = String(overlay.extendData || 'Thêm văn bản');
+      const textContent = String(overlay.extendData || getTr('chart.addText', 'ThĂªm vÄƒn báº£n'));
 
       // 1. Blue Map Drop Pin Shape at p
       figures.push({
@@ -2299,7 +2635,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Bảng (tableMark) - Screenshot 4
+// ÄÄƒng kĂ½ Báº£ng (tableMark) - Screenshot 4
 registerOverlay({
   name: 'tableMark',
   totalStep: 3,
@@ -2378,7 +2714,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Chú thích (callout) - Screenshot 5
+// ÄÄƒng kĂ½ ChĂº thĂ­ch (callout) - Screenshot 5
 registerOverlay({
   name: 'callout',
   totalStep: 3,
@@ -2390,7 +2726,7 @@ registerOverlay({
     if (coordinates.length >= 2) {
       const p1 = coordinates[0];
       const p2 = coordinates[1];
-      const textContent = String(overlay.extendData || 'Thêm văn bản');
+      const textContent = String(overlay.extendData || getTr('chart.addText', 'ThĂªm vÄƒn báº£n'));
 
       // 1. Target handle at p1
       figures.push({
@@ -2443,7 +2779,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Bình luận (comment) - Image 1
+// ÄÄƒng kĂ½ BĂ¬nh luáº­n (comment) - Image 1
 registerOverlay({
   name: 'comment',
   totalStep: 2,
@@ -2454,7 +2790,7 @@ registerOverlay({
     const figures: any[] = [];
     if (coordinates.length >= 1) {
       const p = coordinates[0];
-      const textContent = String(overlay.extendData || 'Thêm văn bản');
+      const textContent = String(overlay.extendData || getTr('chart.addText', 'ThĂªm vÄƒn báº£n'));
       const boxWidth = Math.max(130, textContent.length * 9 + 28);
       const boxHeight = 36;
       const boxX = p.x + 8;
@@ -2492,7 +2828,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Nhãn Giá (priceLabel) - Image 2
+// ÄÄƒng kĂ½ NhĂ£n GiĂ¡ (priceLabel) - Image 2
 registerOverlay({
   name: 'priceLabel',
   totalStep: 2,
@@ -2504,7 +2840,7 @@ registerOverlay({
     if (coordinates.length >= 1) {
       const p = coordinates[0];
       let priceVal = '';
-      if (typeof overlay.extendData === 'string' && overlay.extendData && overlay.extendData !== '83,218.92' && overlay.extendData !== 'Thêm văn bản' && overlay.extendData !== '0.00') {
+      if (typeof overlay.extendData === 'string' && overlay.extendData && overlay.extendData !== '83,218.92' && overlay.extendData !== getTr('chart.addText', 'ThĂªm vÄƒn báº£n') && overlay.extendData !== '0.00') {
         priceVal = overlay.extendData;
       } else {
         const pt = points && points[0];
@@ -2567,7 +2903,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Biển chỉ dẫn (signpost) - Image 3
+// ÄÄƒng kĂ½ Biá»ƒn chá»‰ dáº«n (signpost) - Image 3
 registerOverlay({
   name: 'signpost',
   totalStep: 2,
@@ -2578,7 +2914,7 @@ registerOverlay({
     const figures: any[] = [];
     if (coordinates.length >= 1) {
       const p = coordinates[0];
-      const textContent = String(overlay.extendData || 'Thêm văn bản');
+      const textContent = String(overlay.extendData || getTr('chart.addText', 'ThĂªm vÄƒn báº£n'));
 
       const poleHeight = 110;
       const topY = p.y - poleHeight;
@@ -2626,7 +2962,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Cờ đánh dấu (flagMark) - Image 4
+// ÄÄƒng kĂ½ Cá» Ä‘Ă¡nh dáº¥u (flagMark) - Image 4
 registerOverlay({
   name: 'flagMark',
   totalStep: 2,
@@ -2671,7 +3007,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Đường giao nhau (crossLine)
+// ÄÄƒng kĂ½ ÄÆ°á»ng giao nhau (crossLine)
 registerOverlay({
   name: 'crossLine',
   totalStep: 2,
@@ -2688,7 +3024,7 @@ registerOverlay({
     return figures;
   }
 });
-// Đăng ký Mũi tên đánh dấu (arrowMarker) - 2-click thick pointer arrow
+// ÄÄƒng kĂ½ MÅ©i tĂªn Ä‘Ă¡nh dáº¥u (arrowMarker) - 2-click thick pointer arrow
 registerOverlay({
   name: 'arrowMarker',
   totalStep: 3,
@@ -2730,7 +3066,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Mũi tên (arrow) - Standard line arrow
+// ÄÄƒng kĂ½ MÅ©i tĂªn (arrow) - Standard line arrow
 registerOverlay({
   name: 'arrow',
   totalStep: 3,
@@ -2771,7 +3107,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Mũi tên chỉ lên (arrowUp)
+// ÄÄƒng kĂ½ MÅ©i tĂªn chá»‰ lĂªn (arrowUp)
 registerOverlay({
   name: 'arrowUp',
   totalStep: 2,
@@ -2802,7 +3138,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Mũi tên chỉ xuống (arrowDown)
+// ÄÄƒng kĂ½ MÅ©i tĂªn chá»‰ xuá»‘ng (arrowDown)
 registerOverlay({
   name: 'arrowDown',
   totalStep: 2,
@@ -2833,7 +3169,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Mũi tên chỉ sang trái (arrowLeft)
+// ÄÄƒng kĂ½ MÅ©i tĂªn chá»‰ sang trĂ¡i (arrowLeft)
 registerOverlay({
   name: 'arrowLeft',
   totalStep: 2,
@@ -2864,7 +3200,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Mũi tên chỉ sang phải (arrowRight)
+// ÄÄƒng kĂ½ MÅ©i tĂªn chá»‰ sang pháº£i (arrowRight)
 registerOverlay({
   name: 'arrowRight',
   totalStep: 2,
@@ -2900,7 +3236,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Hình Polyline (polyline & path) - Image 1
+// ÄÄƒng kĂ½ HĂ¬nh Polyline (polyline & path) - Image 1
 registerOverlay({
   name: 'polyline',
   totalStep: 10,
@@ -2953,7 +3289,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Đường cong (curve) - Image 2
+// ÄÄƒng kĂ½ ÄÆ°á»ng cong (curve) - Image 2
 registerOverlay({
   name: 'curve',
   totalStep: 4,
@@ -2997,7 +3333,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Đường cong đôi (doubleCurve) - Image 3
+// ÄÄƒng kĂ½ ÄÆ°á»ng cong Ä‘Ă´i (doubleCurve) - Image 3
 registerOverlay({
   name: 'doubleCurve',
   totalStep: 5,
@@ -3070,7 +3406,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Hình vòng cung (arc) - Image 4
+// ÄÄƒng kĂ½ HĂ¬nh vĂ²ng cung (arc) - Image 4
 registerOverlay({
   name: 'arc',
   totalStep: 4,
@@ -3116,7 +3452,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Kênh Song song (priceChannelLine) - Image 1
+// ÄÄƒng kĂ½ KĂªnh Song song (priceChannelLine) - Image 1
 registerOverlay({
   name: 'priceChannelLine',
   totalStep: 4,
@@ -3162,7 +3498,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Xu hướng hồi quy (regressionTrend) - Image 2
+// ÄÄƒng kĂ½ Xu hÆ°á»›ng há»“i quy (regressionTrend) - Image 2
 registerOverlay({
   name: 'regressionTrend',
   totalStep: 3,
@@ -3178,7 +3514,7 @@ registerOverlay({
       let channelHeight = Math.abs(p1.y - p0.y) * 0.4;
       if (channelHeight < 25) channelHeight = 35;
 
-      let rSquaredText = 'R² = 0.984';
+      let rSquaredText = 'RÂ² = 0.984';
       let deltaText = '';
 
       if (points && points.length >= 2 && kLineDataList && kLineDataList.length > 0) {
@@ -3268,7 +3604,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Mặt phẳng đỉnh/đáy (flatTopBottom) - Image 1 & 3
+// ÄÄƒng kĂ½ Máº·t pháº³ng Ä‘á»‰nh/Ä‘Ă¡y (flatTopBottom) - Image 1 & 3
 registerOverlay({
   name: 'flatTopBottom',
   totalStep: 3,
@@ -3376,7 +3712,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Thước đo Fibonacci (fibonacciLine)
+// ÄÄƒng kĂ½ ThÆ°á»›c Ä‘o Fibonacci (fibonacciLine)
 registerOverlay({
   name: 'fibonacciLine',
   totalStep: 3,
@@ -3422,7 +3758,7 @@ registerOverlay({
       const startX = Math.min(p0x, p1x);
       const endX = config.extendRight ? (overlay.bounding?.width || 3000) : Math.max(p0x, p1x);
 
-      // 1. Dải nền màu giữa các mức Fibonacci liên tiếp
+      // 1. Dáº£i ná»n mĂ u giá»¯a cĂ¡c má»©c Fibonacci liĂªn tiáº¿p
       if (config.showBackground && activeLevels.length > 1) {
         for (let i = 0; i < activeLevels.length - 1; i++) {
           const topLevel = activeLevels[i];
@@ -3448,14 +3784,14 @@ registerOverlay({
         }
       }
 
-      // 2. Đường xu hướng nét đứt
+      // 2. ÄÆ°á»ng xu hÆ°á»›ng nĂ©t Ä‘á»©t
       figures.push({
         type: 'line',
         attrs: { coordinates: [coordinates[0], coordinates[1]] },
         styles: { style: 'dashed', color: '#787b86', size: 1, dashedValue: [4, 4] }
       });
 
-      // 3. Đường kẻ ngang mức Fibonacci và Text nhãn hiển thị số liệu
+      // 3. ÄÆ°á»ng káº» ngang má»©c Fibonacci vĂ  Text nhĂ£n hiá»ƒn thá»‹ sá»‘ liá»‡u
       activeLevels.forEach(item => {
         const y = coordinates[1].y + yDif * item.level;
         const priceVal = price1 + valDif * item.level;
@@ -3463,7 +3799,7 @@ registerOverlay({
           ? priceVal.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 2 })
           : priceVal.toFixed(getPricePrecision(priceVal));
 
-        // Đường kẻ ngang
+        // ÄÆ°á»ng káº» ngang
         figures.push({
           type: 'line',
           attrs: {
@@ -3479,7 +3815,7 @@ registerOverlay({
           }
         });
 
-        // Nhãn text: e.g. "0.618 (81,270.3)" chuẩn TradingView
+        // NhĂ£n text: e.g. "0.618 (81,270.3)" chuáº©n TradingView
         let labelText = '';
         if (config.showLabels && config.showPrices) {
           labelText = `${item.level} (${formattedPrice})`;
@@ -3528,7 +3864,7 @@ registerOverlay({
   }
 });
 
-// Đăng ký Không kết nối Kênh (disjointChannel) - Image 5
+// ÄÄƒng kĂ½ KhĂ´ng káº¿t ná»‘i KĂªnh (disjointChannel) - Image 5
 registerOverlay({
   name: 'disjointChannel',
   totalStep: 5,
@@ -3686,7 +4022,7 @@ const drawPitchforkFigures = (coordinates: any[], type: 'standard' | 'schiff' | 
   return figures;
 };
 
-// Đăng ký Mô hình Pitchfork (Image 1)
+// ÄÄƒng kĂ½ MĂ´ hĂ¬nh Pitchfork (Image 1)
 registerOverlay({
   name: 'pitchfork',
   totalStep: 4,
@@ -3696,7 +4032,7 @@ registerOverlay({
   createPointFigures: ({ coordinates }) => drawPitchforkFigures(coordinates, 'standard')
 });
 
-// Đăng ký Mô hình Schiff Pitchfork (Image 2)
+// ÄÄƒng kĂ½ MĂ´ hĂ¬nh Schiff Pitchfork (Image 2)
 registerOverlay({
   name: 'schiffPitchfork',
   totalStep: 4,
@@ -3706,7 +4042,7 @@ registerOverlay({
   createPointFigures: ({ coordinates }) => drawPitchforkFigures(coordinates, 'schiff')
 });
 
-// Đăng ký Mô hình Schiff Pitchfork Biến đổi (Image 3)
+// ÄÄƒng kĂ½ MĂ´ hĂ¬nh Schiff Pitchfork Biáº¿n Ä‘á»•i (Image 3)
 registerOverlay({
   name: 'modifiedSchiffPitchfork',
   totalStep: 4,
@@ -3716,7 +4052,7 @@ registerOverlay({
   createPointFigures: ({ coordinates }) => drawPitchforkFigures(coordinates, 'modified')
 });
 
-// Đăng ký Mô hình Pitchfork mặt trong (Image 4)
+// ÄÄƒng kĂ½ MĂ´ hĂ¬nh Pitchfork máº·t trong (Image 4)
 registerOverlay({
   name: 'insidePitchfork',
   totalStep: 4,
@@ -3807,6 +4143,7 @@ export const ChartArea = ({
   redoTrigger,
   onUndoRedoChange
 }: ChartAreaProps) => {
+  const { t } = useI18n();
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<Chart | null>(null);
   const activeToolRef = useRef<string>('cursor');
@@ -3834,6 +4171,9 @@ export const ChartArea = ({
   const onTPSLChangeRef = useRef(onTPSLChange);
   const pendingOrderOverlayIdsRef = useRef<string[]>([]);
   const createdOverlaysRef = useRef<Record<string, boolean>>({});
+  const stayInDrawingModeRef = useRef(stayInDrawingMode);
+  stayInDrawingModeRef.current = stayInDrawingMode;
+  const lastOverlayPointsRef = useRef<Record<string, any>>({});
 
   // Fibonacci & Tool Floating Bar States
   const [isFibModalOpen, setIsFibModalOpen] = useState(false);
@@ -3986,7 +4326,7 @@ export const ChartArea = ({
   const mousePosRef = useRef({ x: 0, y: 0 });
   const isOverlayClickRef = useRef(false);
 
-  // Map: indicator name → sub-pane id (undefined = on main pane)
+  // Map: indicator name â†’ sub-pane id (undefined = on main pane)
   const indicatorPaneRef = useRef<Map<string, string | undefined>>(new Map());
 
   useEffect(() => {
@@ -4100,7 +4440,7 @@ export const ChartArea = ({
           showType: 'standard',
           title: {
             show: true,
-            template: '{ticker} · {period}'
+            template: '{ticker} Â· {period}'
           },
           legend: {
             template: [
@@ -4440,56 +4780,56 @@ export const ChartArea = ({
       const points = overlay.points || [];
 
       const titleMap: Record<string, string> = {
-        segment: 'Đường Xu hướng',
+        segment: 'ÄÆ°á»ng Xu hÆ°á»›ng',
         rayLine: 'Tia',
-        infoLine: 'Đường Thông tin',
-        straightLine: 'Đường Mở rộng',
-        trendAngle: 'Góc Xu hướng',
-        horizontalStraightLine: 'Đường nằm ngang',
-        horizontalRayLine: 'Tia nằm ngang',
-        verticalStraightLine: 'Đường thẳng đứng',
-        crossLine: 'Đường giao nhau',
-        priceChannelLine: 'Kênh Song song',
-        pitchfork: 'Mô hình Pitchfork',
-        schiffPitchfork: 'Mô hình Schiff Pitchfork',
-        modifiedSchiffPitchfork: 'Mô hình Schiff Pitchfork Biến đổi',
-        insidePitchfork: 'Mô hình Pitchfork mặt trong',
-        simpleAnnotation: 'Văn bản',
-        callout: 'Chú thích',
-        note: 'Ghi chú',
-        priceNote: 'Ghi chú Giá',
-        pinMark: 'Mã Pin',
-        tableMark: 'Bảng',
-        arrow: 'Mũi tên',
-        arrowMarker: 'Mũi tên đánh dấu',
-        arrowUp: 'Mũi tên chỉ lên',
-        arrowDown: 'Mũi tên chỉ xuống',
-        arrowLeft: 'Mũi tên chỉ sang trái',
-        arrowRight: 'Mũi tên chỉ sang phải',
-        rect: 'Hình chữ nhật',
-        circle: 'Vòng tròn',
-        polyline: 'Hình Polyline',
-        triangle: 'Hình tam giác',
-        xabcd: 'Mẫu hình XABCD',
-        abcd: 'Mẫu hình ABCD',
-        elliottImpulse: 'Sóng đẩy Elliott (12345)',
-        elliottTriangle: 'Sóng điều chỉnh Elliott (ABC)',
-        elliottABCDE: 'Sóng Elliott Tam giác (ABCDE)',
-        elliottWXY: 'Sóng đôi kết hợp Elliott (WXY)',
-        elliottTriple: 'Sóng Elliott kết hợp ba (WXYXZ)',
-        cycleLines: 'Các đường chu kỳ',
-        timeCycles: 'Vòng thời gian',
-        sineLine: 'Đường Sine',
-        longPosition: 'Thế giá lên',
-        shortPosition: 'Thế giá xuống',
-        forecast: 'Dự đoán',
-        barsPattern: 'Mẫu hình Thanh',
-        ghostFeed: 'Mô hình Ghost Feed',
-        measure: 'Đo lường'
+        infoLine: 'ÄÆ°á»ng ThĂ´ng tin',
+        straightLine: 'ÄÆ°á»ng Má»Ÿ rá»™ng',
+        trendAngle: 'GĂ³c Xu hÆ°á»›ng',
+        horizontalStraightLine: 'ÄÆ°á»ng náº±m ngang',
+        horizontalRayLine: 'Tia náº±m ngang',
+        verticalStraightLine: 'ÄÆ°á»ng tháº³ng Ä‘á»©ng',
+        crossLine: 'ÄÆ°á»ng giao nhau',
+        priceChannelLine: 'KĂªnh Song song',
+        pitchfork: 'MĂ´ hĂ¬nh Pitchfork',
+        schiffPitchfork: 'MĂ´ hĂ¬nh Schiff Pitchfork',
+        modifiedSchiffPitchfork: 'MĂ´ hĂ¬nh Schiff Pitchfork Biáº¿n Ä‘á»•i',
+        insidePitchfork: 'MĂ´ hĂ¬nh Pitchfork máº·t trong',
+        simpleAnnotation: 'VÄƒn báº£n',
+        callout: 'ChĂº thĂ­ch',
+        note: 'Ghi chĂº',
+        priceNote: 'Ghi chĂº GiĂ¡',
+        pinMark: 'MĂ£ Pin',
+        tableMark: 'Báº£ng',
+        arrow: 'MÅ©i tĂªn',
+        arrowMarker: 'MÅ©i tĂªn Ä‘Ă¡nh dáº¥u',
+        arrowUp: 'MÅ©i tĂªn chá»‰ lĂªn',
+        arrowDown: 'MÅ©i tĂªn chá»‰ xuá»‘ng',
+        arrowLeft: 'MÅ©i tĂªn chá»‰ sang trĂ¡i',
+        arrowRight: 'MÅ©i tĂªn chá»‰ sang pháº£i',
+        rect: 'HĂ¬nh chá»¯ nháº­t',
+        circle: 'VĂ²ng trĂ²n',
+        polyline: 'HĂ¬nh Polyline',
+        triangle: 'HĂ¬nh tam giĂ¡c',
+        xabcd: 'Máº«u hĂ¬nh XABCD',
+        abcd: 'Máº«u hĂ¬nh ABCD',
+        elliottImpulse: 'SĂ³ng Ä‘áº©y Elliott (12345)',
+        elliottTriangle: 'SĂ³ng Ä‘iá»u chá»‰nh Elliott (ABC)',
+        elliottABCDE: 'SĂ³ng Elliott Tam giĂ¡c (ABCDE)',
+        elliottWXY: 'SĂ³ng Ä‘Ă´i káº¿t há»£p Elliott (WXY)',
+        elliottTriple: 'SĂ³ng Elliott káº¿t há»£p ba (WXYXZ)',
+        cycleLines: 'CĂ¡c Ä‘Æ°á»ng chu ká»³',
+        timeCycles: 'VĂ²ng thá»i gian',
+        sineLine: 'ÄÆ°á»ng Sine',
+        longPosition: 'Tháº¿ giĂ¡ lĂªn',
+        shortPosition: 'Tháº¿ giĂ¡ xuá»‘ng',
+        forecast: 'Dá»± Ä‘oĂ¡n',
+        barsPattern: 'Máº«u hĂ¬nh Thanh',
+        ghostFeed: 'MĂ´ hĂ¬nh Ghost Feed',
+        measure: 'Äo lÆ°á»ng'
       };
 
       setSelectedOverlaySettings({
-        title: titleMap[overlay.name] || overlay.name || 'Cài đặt hình vẽ',
+        title: titleMap[overlay.name] || overlay.name || 'CĂ i Ä‘áº·t hĂ¬nh váº½',
         lineColor: line.color || '#2962ff',
         lineSize: line.size || 1,
         lineStyle: line.style === 'dashed' ? 'dashed' : 'solid',
@@ -4506,7 +4846,7 @@ export const ChartArea = ({
             : (
               points && (points[1] || points[0]) && typeof (points[1] || points[0]).dataIndex === 'number' && chartRef.current?.getDataList()?.[(points[1] || points[0]).dataIndex]?.close
                 ? chartRef.current.getDataList()[(points[1] || points[0]).dataIndex].close.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                : 'Thêm văn bản'
+                : getTr('chart.addText', 'ThĂªm vÄƒn báº£n')
             )
         ),
         textColor: text.color || '#2962ff',
@@ -4561,11 +4901,11 @@ export const ChartArea = ({
 
       const points = chart.convertFromPixel([{ x, y }], { paneId: 'candle_pane' });
       const price = (Array.isArray(points) ? points[0]?.value : (points as any)?.value) || 0;
-      
+
       console.log('Right click detected:', { x: e.clientX, y: e.clientY, price });
 
-      setChartContextMenu({ 
-        x: e.clientX, 
+      setChartContextMenu({
+        x: e.clientX,
         y: e.clientY,
         price
       });
@@ -4696,7 +5036,7 @@ export const ChartArea = ({
             const offset = (dataList.length - 1 - maxIdx) * space;
             chart.setOffsetRightDistance(offset);
 
-            // Xóa hộp zoom đi sau khi zoom xong
+            // XĂ³a há»™p zoom Ä‘i sau khi zoom xong
             chart.removeOverlay(overlay.id);
             onToolSelect?.('cursor');
           }
@@ -4793,30 +5133,86 @@ export const ChartArea = ({
           visible: !hideDrawing,
           mode: magnetMode ? (magnetType === 'weak' ? 'weak_magnet' : 'strong_magnet') : 'normal',
           onClick: (chart as any).handleOverlayClick,
+          onPressedMoveStart: (event: any) => {
+            const allowedNames = ['rect', 'gannBox', 'priceRange', 'timeRange', 'timePriceRange'];
+            if (allowedNames.includes(event.overlay?.name)) {
+              handleRectPressedMoveStart(event);
+            }
+          },
           onPressedMoving: (event: any) => {
-            if ((window as any)._isShiftPressed && event.overlay && event.overlay.points && event.overlay.points.length > 1) {
+            if (event.overlay && event.overlay.points && event.overlay.points.length > 1) {
               const pts = event.overlay.points;
-              const isLineTool = ['segment', 'rayLine', 'arrow', 'trendAngle', 'straightLine'].includes(event.overlay.name);
               
+              const allowedNames = ['rect', 'gannBox', 'priceRange', 'timeRange', 'timePriceRange'];
+              if (allowedNames.includes(event.overlay.name)) {
+                if (handleRectPressedMoving(event)) return true;
+              }
+
+              const isLineTool = ['segment', 'rayLine', 'arrow', 'trendAngle', 'straightLine', 'measure'].includes(event.overlay.name);
+
               if (isLineTool) {
                 const p0 = pts[0];
                 const p1 = pts[pts.length - 1];
-                
+
                 if (p0.value !== undefined && p1.value !== undefined) {
-                  // Force horizontal line when Shift is held
-                  chart.overrideOverlay({
-                    id: event.overlay.id,
-                    points: [p0, { ...p1, value: p0.value }]
-                  });
-                  return true;
+                  const overlayId = event.overlay.id;
+                  const lastPts = lastOverlayPointsRef.current[overlayId];
+
+                  // Compute what changed since last frame
+                  let p0Changed = false;
+                  let p1Changed = false;
+                  if (lastPts && lastPts[0] && lastPts[1]) {
+                    p0Changed = p0.timestamp !== lastPts[0].timestamp || p0.value !== lastPts[0].value;
+                    p1Changed = p1.timestamp !== lastPts[1].timestamp || p1.value !== lastPts[1].value;
+                  }
+
+                  if ((window as any)._isShiftPressed) {
+                    if (!lastPts || !lastPts[0] || !lastPts[1]) {
+                      lastOverlayPointsRef.current[overlayId] = [{ ...p0 }, { ...p1 }];
+                      return false;
+                    }
+
+                    let anchor = 'p0';
+                    if (p0Changed && !p1Changed) {
+                      anchor = 'p1';
+                    }
+
+                    if (anchor !== 'none') {
+                      let overridePoints;
+                      if (anchor === 'p1') {
+                        event.overlay.points[0].value = event.overlay.points[event.overlay.points.length - 1].value;
+                        overridePoints = event.overlay.points;
+                      } else {
+                        event.overlay.points[event.overlay.points.length - 1].value = event.overlay.points[0].value;
+                        overridePoints = event.overlay.points;
+                      }
+
+                      chart.overrideOverlay({
+                        id: overlayId,
+                        points: overridePoints
+                      });
+
+                      lastOverlayPointsRef.current[overlayId] = [{ ...overridePoints[0] }, { ...overridePoints[1] }];
+                      return true;
+                    }
+                  }
+
+                  // Update points tracker for next frame
+                  lastOverlayPointsRef.current[overlayId] = [{ ...p0 }, { ...p1 }];
                 }
               }
             }
             return false;
           },
+          onPressedMoveEnd: (event: any) => {
+            const allowedNames = ['rect', 'gannBox', 'priceRange', 'timeRange', 'timePriceRange'];
+            if (allowedNames.includes(event.overlay?.name)) {
+              handleRectPressedMoveEnd(event);
+            }
+          },
           onDrawEnd: (event: any) => {
             const isContinuousTool = ['brush', 'highlighter', 'path', 'polyline'].includes(activeToolRef.current);
-            if (stayInDrawingMode || isContinuousTool) {
+            if (stayInDrawingModeRef.current || isContinuousTool) {
               setTimeout(() => {
                 if (chartRef.current && activeToolRef.current === activeTool) {
                   createStandardOverlay();
@@ -4831,7 +5227,7 @@ export const ChartArea = ({
       };
       createStandardOverlay();
     }
-  }, [activeTool, magnetMode, stayInDrawingMode]);
+  }, [activeTool]);
 
   useEffect(() => {
     if (chartRef.current) {
@@ -4893,7 +5289,7 @@ export const ChartArea = ({
 
       let allData: KLineData[] = [];
 
-      // Lấy dữ liệu nến thật từ tất cả các sàn (BingX cho Vàng/Forex/Hàng hóa/Cổ phiếu, Binance cho Crypto)
+      // Láº¥y dá»¯ liá»‡u náº¿n tháº­t tá»« táº¥t cáº£ cĂ¡c sĂ n (BingX cho VĂ ng/Forex/HĂ ng hĂ³a/Cá»• phiáº¿u, Binance cho Crypto)
       try {
         if (isReplaying && currentReplayTime) {
           const targetEndTime = Math.min(Date.now(), currentReplayTime + 300 * intervalMs);
@@ -4916,13 +5312,13 @@ export const ChartArea = ({
         allData = [];
       }
 
-      // NẾU allData rỗng (hoặc thị trường không phải Crypto, hoặc API lỗi)
+      // Náº¾U allData rá»—ng (hoáº·c thá»‹ trÆ°á»ng khĂ´ng pháº£i Crypto, hoáº·c API lá»—i)
       if (!allData || allData.length === 0) {
         const targetEndTime = (isReplaying && currentReplayTime)
           ? Math.min(Date.now(), currentReplayTime + 500 * intervalMs)
           : undefined;
 
-        // Kiểm tra xem cache hiện có bao phủ được mốc replayTime không
+        // Kiá»ƒm tra xem cache hiá»‡n cĂ³ bao phá»§ Ä‘Æ°á»£c má»‘c replayTime khĂ´ng
         const cached = dataCache.get(cacheKey);
         const cacheValid = cached && cached.length > 0 && (!isReplaying || !currentReplayTime || (cached[0].timestamp <= currentReplayTime && cached[cached.length - 1].timestamp >= currentReplayTime));
 
@@ -4950,12 +5346,12 @@ export const ChartArea = ({
         const lastCandle = visibleData[visibleData.length - 1];
         const effectiveTime = currentReplayTime || lastCandle.timestamp;
 
-        // Neo mức giá chuẩn (currentReplayPrice) khi chuyển khung thời gian
+        // Neo má»©c giĂ¡ chuáº©n (currentReplayPrice) khi chuyá»ƒn khung thá»i gian
         const targetPrice = (replayPriceRef.current && !isNaN(replayPriceRef.current))
           ? replayPriceRef.current
           : lastCandle.close;
 
-        // Đồng bộ nến cuối cùng để nó không chứa giá tương lai của khung lớn
+        // Äá»“ng bá»™ náº¿n cuá»‘i cĂ¹ng Ä‘á»ƒ nĂ³ khĂ´ng chá»©a giĂ¡ tÆ°Æ¡ng lai cá»§a khung lá»›n
         if (targetPrice && targetPrice !== lastCandle.close) {
           const lastIdx = visibleData.length - 1;
           const orig = visibleData[lastIdx];
@@ -4985,12 +5381,12 @@ export const ChartArea = ({
       });
       chart.setDataLoader({
         getBars: async (params: DataLoaderGetBarsParams) => {
-          // Khi người dùng cuộn sang trái (kéo về quá khứ)
-          // CHÚ Ý: Trong KlineCharts v10, 'forward' là cuộn về quá khứ (prepend data)
+          // Khi ngÆ°á»i dĂ¹ng cuá»™n sang trĂ¡i (kĂ©o vá» quĂ¡ khá»©)
+          // CHĂ Ă: Trong KlineCharts v10, 'forward' lĂ  cuá»™n vá» quĂ¡ khá»© (prepend data)
           if (params.type === 'forward') {
             if (!params.timestamp) return params.callback([], true);
 
-            // Lấy nến cũ hơn dựa vào timestamp của nến đầu tiên hiện tại
+            // Láº¥y náº¿n cÅ© hÆ¡n dá»±a vĂ o timestamp cá»§a náº¿n Ä‘áº§u tiĂªn hiá»‡n táº¡i
             const oldestTime = params.timestamp;
             try {
               let olderData = await fetchUnifiedKlines({
@@ -4998,20 +5394,20 @@ export const ChartArea = ({
                 timeframe: activeTimeframe,
                 limit: 1000,
                 isFutures: selectedStock.isFutures,
-                endTime: oldestTime - 1, // Tránh lấy trùng nến đầu tiên
+                endTime: oldestTime - 1, // TrĂ¡nh láº¥y trĂ¹ng náº¿n Ä‘áº§u tiĂªn
               });
 
               olderData = olderData.filter(d => d.timestamp < oldestTime);
               if (olderData.length > 0) {
-                // Nối dữ liệu cũ vào mảng allData
+                // Ná»‘i dá»¯ liá»‡u cÅ© vĂ o máº£ng allData
                 allData = [...olderData, ...allData];
                 dataCache.set(cacheKey, allData);
                 onDataLoaded?.(allData.length);
-                params.callback(olderData, true); // Luôn cho phép cuộn tiếp
+                params.callback(olderData, true); // LuĂ´n cho phĂ©p cuá»™n tiáº¿p
                 return;
               }
             } catch (err) {
-              // Fallback nếu lỗi kết nối
+              // Fallback náº¿u lá»—i káº¿t ná»‘i
             }
 
             const oldestCandle = allData[0];
@@ -5029,20 +5425,20 @@ export const ChartArea = ({
             return;
           }
 
-          // Khi người dùng cuộn sang phải (về tương lai)
+          // Khi ngÆ°á»i dĂ¹ng cuá»™n sang pháº£i (vá» tÆ°Æ¡ng lai)
           if (params.type === 'backward') {
             params.callback([], false);
             return;
           }
 
-          // Gọi lần đầu (type === 'init')
+          // Gá»i láº§n Ä‘áº§u (type === 'init')
           params.callback(visibleData, true);
         },
         subscribeBar: (params: DataLoaderSubscribeBarParams) => {
           subscriberCallbackRef.current = params.callback;
           if (isReplaying) return;
 
-          // Lấy dữ liệu thật realtime cho TẤT CẢ các sàn (Binance WebSocket cho Crypto, BingX Polling cho Vàng, Hàng hóa, Forex, Cổ phiếu...)
+          // Láº¥y dá»¯ liá»‡u tháº­t realtime cho Táº¤T Cáº¢ cĂ¡c sĂ n (Binance WebSocket cho Crypto, BingX Polling cho VĂ ng, HĂ ng hĂ³a, Forex, Cá»• phiáº¿u...)
           wsUnsubscribe = subscribeUnifiedBar(
             selectedStock.symbol,
             activeTimeframe,
@@ -5069,8 +5465,8 @@ export const ChartArea = ({
 
     loadData();
 
-    // Pass the correct period so the chart tooltip displays it correctly
-    chart.setPeriod({ timespan, text: activeTimeframe } as any);
+    // Pass the correct period so the chart tooltip displays it correctly and extrapolates into future timestamps
+    chart.setPeriod({ type: timespan as any, span: multiplier });
 
     return () => {
       isMounted = false;
@@ -5111,7 +5507,7 @@ export const ChartArea = ({
             chart.createIndicator({ name, paneId: 'candle_pane' } as any, true);
             paneMap.set(name, undefined);
           } else {
-            // Create a new sub pane — returns the new pane id
+            // Create a new sub pane â€” returns the new pane id
             const paneId = chart.createIndicator(name, false);
             paneMap.set(name, paneId ?? undefined);
           }
@@ -5216,7 +5612,7 @@ export const ChartArea = ({
               weight: 'bold',
             },
           },
-          extendData: `${isBuy ? '▲ LONG' : '▼ SHORT'} ${pos.quantity.toFixed(2)} @ $${pos.averagePrice.toLocaleString('en-US')}`,
+          extendData: `${isBuy ? 'â–² LONG' : 'â–¼ SHORT'} ${pos.quantity.toFixed(2)} @ $${pos.averagePrice.toLocaleString('en-US')}`,
         };
 
         chart.removeOverlay({ id: overlayId });
@@ -5268,7 +5664,7 @@ export const ChartArea = ({
             weight: 'bold',
           },
         },
-        extendData: `${previewTPSL.orderType} ${currentSide} (Xem trước) @ $${previewTPSL.orderPrice.toLocaleString('en-US')} ↕ Kéo`,
+        extendData: `${previewTPSL.orderType} ${currentSide} (Xem trÆ°á»›c) @ $${previewTPSL.orderPrice.toLocaleString('en-US')} â†• KĂ©o`,
         onPressedMoveStart: () => {
           isDraggingRef.current = true;
         },
@@ -5280,7 +5676,7 @@ export const ChartArea = ({
             currentOrderPriceRef.current = cleanPrice;
             chart.overrideOverlay({
               id: 'preview_order_line',
-              extendData: `${previewTPSL.orderType} ${currentSide} (Xem trước) @ $${cleanPrice.toLocaleString('en-US')} ↕ Kéo`
+              extendData: `${previewTPSL.orderType} ${currentSide} (Xem trÆ°á»›c) @ $${cleanPrice.toLocaleString('en-US')} â†• KĂ©o`
             });
             if (currentTpRef.current) {
               chart.overrideOverlay({
@@ -5355,7 +5751,7 @@ export const ChartArea = ({
             weight: 'bold',
           },
         },
-        extendData: `${isPreview ? 'TP (Xem trước)' : 'TP (Chốt lời)'} @ $${tpToDraw.toLocaleString('en-US')} ↕ Kéo`,
+        extendData: `${isPreview ? 'TP (Xem trÆ°á»›c)' : 'TP (Chá»‘t lá»i)'} @ $${tpToDraw.toLocaleString('en-US')} â†• KĂ©o`,
         onPressedMoveStart: () => {
           isDraggingRef.current = true;
         },
@@ -5375,7 +5771,7 @@ export const ChartArea = ({
             });
             chart.overrideOverlay({
               id: 'preview_tp_line',
-              extendData: `TP (Chốt lời) @ $${cleanPrice.toLocaleString('en-US')} ↕ Kéo`
+              extendData: `TP (Chá»‘t lá»i) @ $${cleanPrice.toLocaleString('en-US')} â†• KĂ©o`
             });
             onTPSLChangeRef.current?.('tp', cleanPrice);
           }
@@ -5393,7 +5789,7 @@ export const ChartArea = ({
 
       chart.removeOverlay({ id: 'preview_tp_line' });
       chart.createOverlay({ id: 'preview_tp_line', ...overlayProps } as any);
-      
+
       chart.removeOverlay({ id: 'preview_tp_zone' });
       if (orderToDraw && tpToDraw) {
         chart.createOverlay({
@@ -5404,11 +5800,11 @@ export const ChartArea = ({
             { timestamp: allData[0].timestamp, value: orderToDraw },
             { timestamp: allData[lastDataIndex].timestamp, value: tpToDraw }
           ],
-          styles: { 
-            polygon: { 
+          styles: {
+            polygon: {
               color: 'rgba(8, 153, 129, 0.1)',
               borderColor: '#089981'
-            } 
+            }
           }
         } as any);
       }
@@ -5452,7 +5848,7 @@ export const ChartArea = ({
             weight: 'bold',
           },
         },
-        extendData: `${isPreview ? 'SL (Xem trước)' : 'SL (Cắt lỗ)'} @ $${slToDraw.toLocaleString('en-US')} ↕ Kéo`,
+        extendData: `${isPreview ? 'SL (Xem trÆ°á»›c)' : 'SL (Cáº¯t lá»—)'} @ $${slToDraw.toLocaleString('en-US')} â†• KĂ©o`,
         onPressedMoveStart: () => {
           isDraggingRef.current = true;
         },
@@ -5472,7 +5868,7 @@ export const ChartArea = ({
             });
             chart.overrideOverlay({
               id: 'preview_sl_line',
-              extendData: `SL (Cắt lỗ) @ $${cleanPrice.toLocaleString('en-US')} ↕ Kéo`
+              extendData: `SL (Cáº¯t lá»—) @ $${cleanPrice.toLocaleString('en-US')} â†• KĂ©o`
             });
             onTPSLChangeRef.current?.('sl', cleanPrice);
           }
@@ -5490,7 +5886,7 @@ export const ChartArea = ({
 
       chart.removeOverlay({ id: 'preview_sl_line' });
       chart.createOverlay({ id: 'preview_sl_line', ...overlayProps } as any);
-      
+
       chart.removeOverlay({ id: 'preview_sl_zone' });
       if (orderToDraw && slToDraw) {
         chart.createOverlay({
@@ -5501,11 +5897,11 @@ export const ChartArea = ({
             { timestamp: allData[0].timestamp, value: orderToDraw },
             { timestamp: allData[lastDataIndex].timestamp, value: slToDraw }
           ],
-          styles: { 
-            polygon: { 
+          styles: {
+            polygon: {
               color: 'rgba(242, 54, 69, 0.1)',
               borderColor: '#f23645'
-            } 
+            }
           }
         } as any);
       }
@@ -5554,7 +5950,7 @@ export const ChartArea = ({
     }
   }, [activePosition, simulatorPositions, pendingOrders, isReplaying, replayTime, replayPrice, replayStepTrigger, selectedStock, previewTPSL]);
 
-  // Handle Alt + Drag to draw Rectangle (Khối lượng/Vùng hỗ trợ kháng cự)
+  // Handle Alt + Drag to draw Rectangle (Khá»‘i lÆ°á»£ng/VĂ¹ng há»— trá»£ khĂ¡ng cá»±)
   useEffect(() => {
     const container = chartContainerRef.current;
     if (!container) return;
@@ -5581,21 +5977,21 @@ export const ChartArea = ({
         if (points && Array.isArray(points) && points.length > 0) {
           const rawPoint = points[0];
 
-          // --- LOGIC NAM CHÂM (MAGNET) ---
+          // --- LOGIC NAM CHĂ‚M (MAGNET) ---
           const dataList = chart.getDataList();
           const candle = dataList[rawPoint.dataIndex || 0];
           if (candle && rawPoint.value !== undefined) {
-             const prices = [candle.open, candle.high, candle.low, candle.close];
-             let closestPrice = prices[0];
-             let minDiff = Math.abs(rawPoint.value - closestPrice);
-             for(let i = 1; i < 4; i++) {
-               const diff = Math.abs(rawPoint.value - prices[i]);
-               if(diff < minDiff) {
-                 minDiff = diff;
-                 closestPrice = prices[i];
-               }
-             }
-             rawPoint.value = closestPrice;
+            const prices = [candle.open, candle.high, candle.low, candle.close];
+            let closestPrice = prices[0];
+            let minDiff = Math.abs(rawPoint.value - closestPrice);
+            for (let i = 1; i < 4; i++) {
+              const diff = Math.abs(rawPoint.value - prices[i]);
+              if (diff < minDiff) {
+                minDiff = diff;
+                closestPrice = prices[i];
+              }
+            }
+            rawPoint.value = closestPrice;
           }
           // ---------------------------
 
@@ -5627,21 +6023,21 @@ export const ChartArea = ({
         if (points && Array.isArray(points) && points.length > 0) {
           const rawPoint = points[0];
 
-          // --- LOGIC NAM CHÂM (MAGNET) ---
+          // --- LOGIC NAM CHĂ‚M (MAGNET) ---
           const dataList = chart.getDataList();
           const candle = dataList[rawPoint.dataIndex || 0];
           if (candle && rawPoint.value !== undefined) {
-             const prices = [candle.open, candle.high, candle.low, candle.close];
-             let closestPrice = prices[0];
-             let minDiff = Math.abs(rawPoint.value - closestPrice);
-             for(let i = 1; i < 4; i++) {
-               const diff = Math.abs(rawPoint.value - prices[i]);
-               if(diff < minDiff) {
-                 minDiff = diff;
-                 closestPrice = prices[i];
-               }
-             }
-             rawPoint.value = closestPrice;
+            const prices = [candle.open, candle.high, candle.low, candle.close];
+            let closestPrice = prices[0];
+            let minDiff = Math.abs(rawPoint.value - closestPrice);
+            for (let i = 1; i < 4; i++) {
+              const diff = Math.abs(rawPoint.value - prices[i]);
+              if (diff < minDiff) {
+                minDiff = diff;
+                closestPrice = prices[i];
+              }
+            }
+            rawPoint.value = closestPrice;
           }
           // ---------------------------
 
@@ -5663,7 +6059,7 @@ export const ChartArea = ({
       }
     };
 
-    // Lắng nghe ở capture phase để chặn sự kiện trước khi thư viện xử lý
+    // Láº¯ng nghe á»Ÿ capture phase Ä‘á»ƒ cháº·n sá»± kiá»‡n trÆ°á»›c khi thÆ° viá»‡n xá»­ lĂ½
     container.addEventListener('mousedown', handleMouseDown, { capture: true });
     window.addEventListener('mousemove', handleMouseMove, { capture: true });
     window.addEventListener('mouseup', handleMouseUp, { capture: true });
@@ -5675,10 +6071,10 @@ export const ChartArea = ({
     };
   }, []);
 
-  // Xóa overlay đang chọn bằng phím Backspace / Delete
+  // XĂ³a overlay Ä‘ang chá»n báº±ng phĂ­m Backspace / Delete
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Bỏ qua nếu đang gõ chữ trong thẻ input/textarea
+      // Bá» qua náº¿u Ä‘ang gĂµ chá»¯ trong tháº» input/textarea
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
@@ -5711,8 +6107,8 @@ export const ChartArea = ({
           // Offset the points slightly so it's visible
           const newPoints = data.points?.map((p: any) => {
             const np = { ...p };
-            if (np.timestamp !== undefined) np.timestamp += shiftMs; 
-            if (np.dataIndex !== undefined) np.dataIndex += 5; 
+            if (np.timestamp !== undefined) np.timestamp += shiftMs;
+            if (np.dataIndex !== undefined) np.dataIndex += 5;
             if (np.value !== undefined) np.value *= 1.02; // Shift price by 2%
             return np;
           });
@@ -5740,7 +6136,7 @@ export const ChartArea = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [floatingToolbar, selectedOverlay]);
 
-  // Persist user overlays per symbol across reloads (F5) and clean up when switching symbol/sàn
+  // Persist user overlays per symbol across reloads (F5) and clean up when switching symbol/sĂ n
   useEffect(() => {
     const symbol = selectedStock?.symbol;
     if (!symbol) return;
@@ -5817,7 +6213,7 @@ export const ChartArea = ({
                   const val = p.value !== undefined ? p.value : p.price;
                   if (typeof val !== 'number' || val <= 0) return true;
                   const ratio = Math.max(val / currentPrice, currentPrice / val);
-                  return ratio < 8; // If price difference is > 8x, it belongs to another coin/sàn!
+                  return ratio < 8; // If price difference is > 8x, it belongs to another coin/sĂ n!
                 });
                 if (!hasValidPrice) return;
               }
@@ -5897,7 +6293,7 @@ export const ChartArea = ({
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/50 dark:bg-[#131722]/50 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-2 text-[#787b86]">
             <div className="w-8 h-8 border-4 border-[#e6e8ea] dark:border-[#2a2e39] border-t-blue-500 rounded-full animate-spin"></div>
-            <span className="text-sm font-medium">Đang tải dữ liệu...</span>
+            <span className="text-sm font-medium">Äang táº£i dá»¯ liá»‡u...</span>
           </div>
         </div>
       )}
@@ -5905,14 +6301,14 @@ export const ChartArea = ({
       {/* Active tool hint */}
       {activeTool !== 'cursor' && activeTool !== 'clear' && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 text-xs text-blue-200 bg-blue-900/80 border border-blue-700/60 px-4 py-1.5 rounded-full backdrop-blur-sm flex items-center gap-2 shadow-lg">
-          <span>✏️ <span className="font-semibold">{activeTool}</span> đang hoạt động</span>
+          <span>âœï¸ <span className="font-semibold">{activeTool}</span> Ä‘ang hoáº¡t Ä‘á»™ng</span>
           {activeTool === 'fibonacciLine' && (
             <button
               onClick={() => setIsFibModalOpen(true)}
               className="ml-1 bg-blue-600 hover:bg-blue-500 text-white px-2 py-0.5 rounded text-[11px] font-medium transition-colors flex items-center gap-1 shadow"
             >
               <Settings className="w-3 h-3" />
-              <span>Chỉnh thông tin số liệu</span>
+              <span>Chá»‰nh thĂ´ng tin sá»‘ liá»‡u</span>
             </button>
           )}
         </div>
@@ -5943,7 +6339,7 @@ export const ChartArea = ({
           }}
         >
           {/* Drag handle */}
-          <div className="cursor-move text-[#787b86] p-0.5 hover:text-white" title="Thanh công cụ Fibonacci">
+          <div className="cursor-move text-[#787b86] p-0.5 hover:text-white" title="Thanh cĂ´ng cá»¥ Fibonacci">
             <GripVertical className="w-4 h-4" />
           </div>
 
@@ -5956,9 +6352,9 @@ export const ChartArea = ({
               handleUpdateOverlayConfig({ lineWidth: nextWidth });
             }}
             className="px-1.5 py-0.5 rounded hover:bg-[#2a2e39] text-[#787b86] hover:text-white font-mono flex items-center gap-1 transition-colors"
-            title="Độ dày đường kẻ"
+            title="Äá»™ dĂ y Ä‘Æ°á»ng káº»"
           >
-            <span>—</span>
+            <span>â€”</span>
             <span>{selectedOverlay.extendData?.lineWidth || 1}px</span>
           </button>
 
@@ -5971,7 +6367,7 @@ export const ChartArea = ({
               ? 'text-blue-400 bg-blue-500/10'
               : 'text-[#787b86] hover:text-white hover:bg-[#2a2e39]'
               }`}
-            title="Bật/Tắt tô màu nền"
+            title="Báº­t/Táº¯t tĂ´ mĂ u ná»n"
           >
             <Layers className="w-4 h-4" />
           </button>
@@ -5982,10 +6378,10 @@ export const ChartArea = ({
           <button
             onClick={() => setIsFibModalOpen(true)}
             className="p-1.5 rounded hover:bg-blue-600/20 text-blue-400 hover:text-blue-300 transition-colors font-medium flex items-center gap-1.5"
-            title="Cài đặt thông số số liệu Fibonacci"
+            title="CĂ i Ä‘áº·t thĂ´ng sá»‘ sá»‘ liá»‡u Fibonacci"
           >
             <Settings className="w-3.5 h-3.5" />
-            <span className="text-[11px] font-semibold">Chỉnh số liệu</span>
+            <span className="text-[11px] font-semibold">Chá»‰nh sá»‘ liá»‡u</span>
           </button>
 
           <div className="w-px h-4 bg-[#2a2e39]" />
@@ -5999,7 +6395,7 @@ export const ChartArea = ({
             }}
             className={`p-1.5 rounded transition-colors ${selectedOverlay.lock ? 'text-amber-400 bg-amber-500/10' : 'text-[#787b86] hover:text-white hover:bg-[#2a2e39]'
               }`}
-            title={selectedOverlay.lock ? 'Mở khóa' : 'Khóa vị trí'}
+            title={selectedOverlay.lock ? 'Má»Ÿ khĂ³a' : 'KhĂ³a vá»‹ trĂ­'}
           >
             {selectedOverlay.lock ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
           </button>
@@ -6011,7 +6407,7 @@ export const ChartArea = ({
               setSelectedOverlay(null);
             }}
             className="p-1.5 rounded hover:bg-red-500/20 text-[#787b86] hover:text-red-400 transition-colors"
-            title="Xóa Fibonacci này"
+            title="XĂ³a Fibonacci nĂ y"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -6020,7 +6416,7 @@ export const ChartArea = ({
           <button
             onClick={() => setSelectedOverlay(null)}
             className="p-1 rounded text-[#787b86] hover:text-white hover:bg-[#2a2e39] transition-colors"
-            title="Đóng thanh công cụ"
+            title="ÄĂ³ng thanh cĂ´ng cá»¥"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -6088,7 +6484,7 @@ export const ChartArea = ({
 
             {/* Templates button (4 squares icon) */}
             <button
-              title="Bản mẫu"
+              title="Báº£n máº«u"
               onClick={() => setOverlayPopup(prev => prev === 'templates' ? null : 'templates')}
               className={`p-1.5 rounded transition-colors ${overlayPopup === 'templates' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-500' : 'text-[#787b86] hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
             >
@@ -6097,7 +6493,7 @@ export const ChartArea = ({
 
             {/* Color Picker button (pencil with color underline) */}
             <button
-              title="Màu sắc và Độ mờ"
+              title="MĂ u sáº¯c vĂ  Äá»™ má»"
               onClick={() => setOverlayPopup(prev => prev === 'color' ? null : 'color')}
               className={`p-1.5 rounded transition-colors relative flex flex-col items-center justify-center ${overlayPopup === 'color' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-500' : 'text-[#787b86] hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
             >
@@ -6105,9 +6501,9 @@ export const ChartArea = ({
               <div className="w-3.5 h-0.5 rounded-full mt-0.5" style={{ backgroundColor: overlayColor }} />
             </button>
 
-            {/* Text button / Ghi tên (T icon) */}
+            {/* Text button / Ghi tĂªn (T icon) */}
             <button
-              title="Cài đặt văn bản / Ghi tên"
+              title="CĂ i Ä‘áº·t vÄƒn báº£n / Ghi tĂªn"
               onClick={() => {
                 if (floatingToolbar?.overlay) {
                   onOverlayDoubleClickRef.current?.(floatingToolbar.overlay, 'text');
@@ -6121,7 +6517,7 @@ export const ChartArea = ({
 
             {/* Line Width button (e.g. 2px) */}
             <button
-              title="Độ dày nét"
+              title="Äá»™ dĂ y nĂ©t"
               onClick={() => setOverlayPopup(prev => prev === 'width' ? null : 'width')}
               className={`px-2 py-1 text-xs font-mono font-semibold rounded transition-colors ${overlayPopup === 'width' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-500' : 'text-[#787b86] hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
             >
@@ -6130,18 +6526,18 @@ export const ChartArea = ({
 
             {/* Line Style button */}
             <button
-              title="Kiểu nét"
+              title="Kiá»ƒu nĂ©t"
               onClick={() => setOverlayPopup(prev => prev === 'style' ? null : 'style')}
               className={`p-1.5 rounded transition-colors font-mono font-bold text-xs ${overlayPopup === 'style' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-500' : 'text-[#787b86] hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
             >
-              {overlayLineStyle === 'dashed' ? '---' : overlayLineStyle === 'dotted' ? '····' : '—'}
+              {overlayLineStyle === 'dashed' ? '---' : overlayLineStyle === 'dotted' ? 'Â·Â·Â·Â·' : 'â€”'}
             </button>
 
             <div className="w-[1px] h-4 bg-[#e6e8ea] dark:bg-[#2a2e39] mx-0.5" />
 
             {/* Lock */}
             <button
-              title={floatingToolbar.overlay.lock ? "Mở khóa" : "Khóa"}
+              title={floatingToolbar.overlay.lock ? "Má»Ÿ khĂ³a" : "KhĂ³a"}
               onClick={() => {
                 const newLockStatus = !floatingToolbar.overlay.lock;
                 chartRef.current?.overrideOverlay({ id: floatingToolbar.overlayId, lock: newLockStatus });
@@ -6154,7 +6550,7 @@ export const ChartArea = ({
 
             {/* Trash */}
             <button
-              title="Xóa"
+              title="XĂ³a"
               onClick={() => {
                 chartRef.current?.removeOverlay({ id: floatingToolbar.overlayId });
                 setFloatingToolbar(null);
@@ -6166,7 +6562,7 @@ export const ChartArea = ({
 
             {/* More options (...) */}
             <button
-              title="Tùy chọn khác"
+              title="TĂ¹y chá»n khĂ¡c"
               onClick={() => setOverlayPopup(prev => prev === 'context' ? null : 'context')}
               className={`p-1.5 rounded transition-colors ${overlayPopup === 'context' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-500' : 'text-[#787b86] hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
             >
@@ -6216,7 +6612,7 @@ export const ChartArea = ({
                   input.click();
                 }}
                 className="flex items-center justify-center p-1.5 rounded hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#787b86] dark:text-[#d1d4dc] transition-colors"
-                title="Thêm màu tùy chỉnh"
+                title="ThĂªm mĂ u tĂ¹y chá»‰nh"
               >
                 <Plus className="w-5 h-5" />
               </button>
@@ -6225,7 +6621,7 @@ export const ChartArea = ({
 
               <div className="flex flex-col gap-1.5">
                 <div className="flex justify-between items-center text-xs text-[#787b86]">
-                  <span>Độ mờ</span>
+                  <span>Äá»™ má»</span>
                   <span className="font-mono text-[#1e2329] dark:text-white font-semibold">{overlayOpacity}%</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -6260,9 +6656,9 @@ export const ChartArea = ({
               onClick={(e) => e.stopPropagation()}
             >
               {[
-                { id: 'solid', label: 'Đường thẳng', val: 'solid', icon: <div className="w-6 h-[2px] bg-current" /> },
-                { id: 'dashed', label: 'Đường Đứt nét', val: 'dashed', icon: <div className="w-6 h-[2px] border-b-2 border-dashed border-current" /> },
-                { id: 'dotted', label: 'Đường chấm chấm', val: 'dotted', icon: <div className="w-6 h-[2px] border-b-2 border-dotted border-current" /> }
+                { id: 'solid', label: 'ÄÆ°á»ng tháº³ng', val: 'solid', icon: <div className="w-6 h-[2px] bg-current" /> },
+                { id: 'dashed', label: 'ÄÆ°á»ng Äá»©t nĂ©t', val: 'dashed', icon: <div className="w-6 h-[2px] border-b-2 border-dashed border-current" /> },
+                { id: 'dotted', label: 'ÄÆ°á»ng cháº¥m cháº¥m', val: 'dotted', icon: <div className="w-6 h-[2px] border-b-2 border-dotted border-current" /> }
               ].map(item => (
                 <button
                   key={item.id}
@@ -6322,7 +6718,7 @@ export const ChartArea = ({
               style={{ top: Math.max(10, floatingToolbar.y - 320), left: Math.max(10, floatingToolbar.x + (floatingToolbar.x > window.innerWidth - 320 ? -200 : 80)) }}
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Submenu 1: Bản mẫu */}
+              {/* Submenu 1: Báº£n máº«u */}
               <div
                 className="relative group"
                 onMouseEnter={() => setActiveContextMenuSubMenu('templates')}
@@ -6331,30 +6727,30 @@ export const ChartArea = ({
                   onClick={() => setActiveContextMenuSubMenu(prev => prev === 'templates' ? null : 'templates')}
                   className="w-full flex items-center justify-between px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] transition-colors"
                 >
-                  <span>Bản mẫu</span>
+                  <span>{t('ctx.template', 'Báº£n máº«u')}</span>
                   <ChevronRight className="w-3.5 h-3.5 text-[#787b86]" />
                 </button>
                 {activeContextMenuSubMenu === 'templates' && (
                   <div className={`absolute top-0 ${floatingToolbar.x > window.innerWidth - 320 ? '-left-48' : 'left-full ml-1'} bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-lg shadow-2xl py-1 w-48 z-50 max-h-64 overflow-y-auto`}>
                     <button
                       onClick={() => {
-                        const name = window.prompt("Nhập tên bản mẫu mới:");
+                        const name = window.prompt(t('ctx.promptNewTemplate', 'Nháº­p tĂªn báº£n máº«u má»›i:'));
                         if (name) {
-                           const currentOverlay = floatingToolbar.overlay;
-                           const templates = JSON.parse(localStorage.getItem(`overlay-templates-${currentOverlay.name}`) || '{}');
-                           templates[name] = { styles: currentOverlay.styles, extendData: currentOverlay.extendData };
-                           localStorage.setItem(`overlay-templates-${currentOverlay.name}`, JSON.stringify(templates));
-                           setOverlayPopup(null);
+                          const currentOverlay = floatingToolbar.overlay;
+                          const templates = JSON.parse(localStorage.getItem(`overlay-templates-${currentOverlay.name}`) || '{}');
+                          templates[name] = { styles: currentOverlay.styles, extendData: currentOverlay.extendData };
+                          localStorage.setItem(`overlay-templates-${currentOverlay.name}`, JSON.stringify(templates));
+                          setOverlayPopup(null);
                         }
                       }}
                       className="w-full text-left px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc] border-b border-[#e6e8ea] dark:border-[#2a2e39] font-medium"
                     >
-                      Lưu thành...
+                      {t('ctx.saveAs', 'LÆ°u thĂ nh...')}
                     </button>
-                    
+
                     {Object.keys(JSON.parse(localStorage.getItem(`overlay-templates-${floatingToolbar.overlay.name}`) || '{}')).map((tplName) => (
                       <div key={tplName} className="w-full flex items-center justify-between px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc] group/tpl cursor-pointer">
-                        <span 
+                        <span
                           className="truncate flex-1"
                           onClick={() => {
                             const templates = JSON.parse(localStorage.getItem(`overlay-templates-${floatingToolbar.overlay.name}`) || '{}');
@@ -6375,7 +6771,7 @@ export const ChartArea = ({
                           className="w-3 h-3 text-[#f23645] opacity-0 group-hover/tpl:opacity-100 transition-opacity shrink-0 ml-2 z-10"
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (window.confirm(`Xóa bản mẫu "${tplName}"?`)) {
+                            if (window.confirm(`${t('ctx.confirmDeleteTemplate', 'XĂ³a báº£n máº«u')} "${tplName}"?`)) {
                               const templates = JSON.parse(localStorage.getItem(`overlay-templates-${floatingToolbar.overlay.name}`) || '{}');
                               delete templates[tplName];
                               localStorage.setItem(`overlay-templates-${floatingToolbar.overlay.name}`, JSON.stringify(templates));
@@ -6396,13 +6792,13 @@ export const ChartArea = ({
                       }}
                       className="w-full text-left px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc] border-t border-[#e6e8ea] dark:border-[#2a2e39]"
                     >
-                      Áp dụng Mặc định
+                      {t('ctx.applyDefault', 'Ăp dá»¥ng Máº·c Ä‘á»‹nh')}
                     </button>
                   </div>
                 )}
               </div>
 
-              {/* Submenu 2: Thứ tự Trực quan */}
+              {/* Submenu 2: Thá»© tá»± Trá»±c quan */}
               <div
                 className="relative group"
                 onMouseEnter={() => setActiveContextMenuSubMenu('visual_order')}
@@ -6411,7 +6807,7 @@ export const ChartArea = ({
                   onClick={() => setActiveContextMenuSubMenu(prev => prev === 'visual_order' ? null : 'visual_order')}
                   className="w-full flex items-center justify-between px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] transition-colors"
                 >
-                  <span>Thứ tự Trực quan</span>
+                  <span>{t('ctx.visualOrder', 'Thá»© tá»± Trá»±c quan')}</span>
                   <ChevronRight className="w-3.5 h-3.5 text-[#787b86]" />
                 </button>
                 {activeContextMenuSubMenu === 'visual_order' && (
@@ -6423,7 +6819,7 @@ export const ChartArea = ({
                       }}
                       className="w-full text-left px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]"
                     >
-                      Đưa lên phía trước
+                      {t('ctx.bringToFront', 'ÄÆ°a lĂªn phĂ­a trÆ°á»›c')}
                     </button>
                     <button
                       onClick={() => {
@@ -6432,7 +6828,7 @@ export const ChartArea = ({
                       }}
                       className="w-full text-left px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]"
                     >
-                      Gửi lại
+                      {t('ctx.sendToBack', 'Gá»­i vá» sau')}
                     </button>
                     <button
                       onClick={() => {
@@ -6441,7 +6837,7 @@ export const ChartArea = ({
                       }}
                       className="w-full text-left px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]"
                     >
-                      Đưa lên trên
+                      {t('ctx.bringForward', 'ÄÆ°a lĂªn trĂªn')}
                     </button>
                     <button
                       onClick={() => {
@@ -6450,13 +6846,13 @@ export const ChartArea = ({
                       }}
                       className="w-full text-left px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]"
                     >
-                      Gửi trở lại
+                      {t('ctx.sendBackward', 'Gá»­i trá»Ÿ láº¡i')}
                     </button>
                   </div>
                 )}
               </div>
 
-              {/* Submenu 3: Khả năng hiển thị trong các khoảng thời gian */}
+              {/* Submenu 3: Kháº£ nÄƒng hiá»ƒn thá»‹ trong cĂ¡c khoáº£ng thá»i gian */}
               <div
                 className="relative group"
                 onMouseEnter={() => setActiveContextMenuSubMenu('timeframe_visibility')}
@@ -6465,26 +6861,26 @@ export const ChartArea = ({
                   onClick={() => setActiveContextMenuSubMenu(prev => prev === 'timeframe_visibility' ? null : 'timeframe_visibility')}
                   className="w-full flex items-center justify-between px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] transition-colors"
                 >
-                  <span className="truncate pr-2">Khả năng hiển thị trong các khoảng thời gian</span>
+                  <span className="truncate pr-2">{t('ctx.visibility', 'Kháº£ nÄƒng hiá»ƒn thá»‹ trong cĂ¡c khoáº£ng thá»i gian')}</span>
                   <ChevronRight className="w-3.5 h-3.5 text-[#787b86] shrink-0" />
                 </button>
                 {activeContextMenuSubMenu === 'timeframe_visibility' && (
                   <div className={`absolute top-0 ${floatingToolbar.x > window.innerWidth - 320 ? '-left-64' : 'left-full ml-1'} bg-white dark:bg-[#1e222d] border border-[#e6e8ea] dark:border-[#2a2e39] rounded-lg shadow-2xl py-1 w-64 z-50`}>
-                    <button onClick={() => setOverlayPopup(null)} className="w-full text-left px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]">khoảng thời gian hiện tại trở đi</button>
-                    <button onClick={() => setOverlayPopup(null)} className="w-full text-left px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]">khoảng thời gian hiện tại trở về trước</button>
-                    <button onClick={() => setOverlayPopup(null)} className="w-full text-left px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]">Chỉ ở khoảng thời gian hiện tại</button>
-                    <button onClick={() => setOverlayPopup(null)} className="w-full text-left px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]">Tất cả khoảng thời gian</button>
+                    <button onClick={() => setOverlayPopup(null)} className="w-full text-left px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]">{t('ctx.visCurrentAndFuture', 'khoáº£ng thá»i gian hiá»‡n táº¡i trá»Ÿ Ä‘i')}</button>
+                    <button onClick={() => setOverlayPopup(null)} className="w-full text-left px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]">{t('ctx.visCurrentAndPast', 'khoáº£ng thá»i gian hiá»‡n táº¡i trá»Ÿ vá» trÆ°á»›c')}</button>
+                    <button onClick={() => setOverlayPopup(null)} className="w-full text-left px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]">{t('ctx.visCurrentOnly', 'Chá»‰ á»Ÿ khoáº£ng thá»i gian hiá»‡n táº¡i')}</button>
+                    <button onClick={() => setOverlayPopup(null)} className="w-full text-left px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]">{t('ctx.visAll', 'Táº¥t cáº£ khoáº£ng thá»i gian')}</button>
                   </div>
                 )}
               </div>
 
               <button onClick={() => setOverlayPopup(null)} className="w-full text-left px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]">
-                Danh sách đối tượng...
+                {t('ctx.objectTree', 'Danh sĂ¡ch Ä‘á»‘i tÆ°á»£ng...')}
               </button>
 
               <div className="w-full h-[1px] bg-[#e6e8ea] dark:bg-[#2a2e39] my-1" />
 
-              {/* Bản sao */}
+              {/* Báº£n sao */}
               <button
                 onClick={() => {
                   const chart = chartRef.current;
@@ -6509,11 +6905,11 @@ export const ChartArea = ({
                 }}
                 className="flex items-center justify-between px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]"
               >
-                <span>Bản sao</span>
+                <span>{t('ctx.clone', 'Báº£n sao')}</span>
                 <span className="text-[10px] text-[#787b86]">Alt + Drag</span>
               </button>
 
-              {/* Sao chép */}
+              {/* Sao chĂ©p */}
               <button
                 onClick={() => {
                   if (floatingToolbar) {
@@ -6529,7 +6925,7 @@ export const ChartArea = ({
                 }}
                 className="flex items-center justify-between px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]"
               >
-                <span>Sao chép</span>
+                <span>{t('ctx.copy', 'Sao chĂ©p')}</span>
                 <span className="text-[10px] text-[#787b86]">Ctrl + C</span>
               </button>
 
@@ -6543,7 +6939,7 @@ export const ChartArea = ({
                 }}
                 className="flex items-center justify-between px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]"
               >
-                <span>{floatingToolbar.overlay.lock ? 'Mở khóa' : 'Khóa'}</span>
+                <span>{floatingToolbar.overlay.lock ? t('ctx.unlock', 'Má»Ÿ khĂ³a') : t('ctx.lock', 'KhĂ³a')}</span>
               </button>
 
               <button
@@ -6553,7 +6949,7 @@ export const ChartArea = ({
                 }}
                 className="w-full text-left px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]"
               >
-                Ẩn
+                {t('ctx.hide', 'áº¨n')}
               </button>
 
               <button
@@ -6563,7 +6959,7 @@ export const ChartArea = ({
                 }}
                 className="flex items-center justify-between px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-red-500"
               >
-                <span>Loại bỏ</span>
+                <span>{t('ctx.remove', 'Loáº¡i bá»')}</span>
                 <span className="text-[10px] text-[#787b86]">Del</span>
               </button>
 
@@ -6576,7 +6972,7 @@ export const ChartArea = ({
                 }}
                 className="w-full text-left px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]"
               >
-                Thêm văn bản...
+                {t('chart.addText', 'ThĂªm vÄƒn báº£n')}...
               </button>
 
               <button
@@ -6586,7 +6982,7 @@ export const ChartArea = ({
                 }}
                 className="w-full text-left px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] text-[#1e2329] dark:text-[#d1d4dc]"
               >
-                Cài đặt...
+                {t('ctx.settings', 'CĂ i Ä‘áº·t...')}
               </button>
             </div>
           )}
@@ -6596,64 +6992,64 @@ export const ChartArea = ({
       {/* Chart Context Menu Popup */}
       {chartContextMenu && (
         <div
-              className="fixed z-50 bg-white dark:bg-[#1e222d] shadow-2xl rounded-lg border border-[#e6e8ea] dark:border-[#2a2e39] py-1.5 w-64 flex flex-col text-xs text-[#1e2329] dark:text-[#d1d4dc] select-none"
-              style={{ 
-                top: Math.min(chartContextMenu.y, window.innerHeight - 200), 
-                left: Math.min(chartContextMenu.x, window.innerWidth - 264) 
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => {
-                  if (chartRef.current) {
-                    chartRef.current.setBarSpace(6);
-                    chartRef.current.setOffsetRightDistance(50);
-                    // Force re-calc Y axis by overriding with autoMinMax (if supported) or clearing
-                    const anyChart = chartRef.current as any;
-                    if (anyChart.overrideYAxis) {
-                      anyChart.overrideYAxis({ autoMinMax: true });
-                    }
-                  }
-                  setChartContextMenu(null);
-                }}
-                className="w-full flex items-center px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] transition-colors"
-              >
-                <div className="mr-2">🔄</div> 
-                <span>Làm mới biểu đồ</span>
-              </button>
+          className="fixed z-50 bg-white dark:bg-[#1e222d] shadow-2xl rounded-lg border border-[#e6e8ea] dark:border-[#2a2e39] py-1.5 w-64 flex flex-col text-xs text-[#1e2329] dark:text-[#d1d4dc] select-none"
+          style={{
+            top: Math.min(chartContextMenu.y, window.innerHeight - 200),
+            left: Math.min(chartContextMenu.x, window.innerWidth - 264)
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => {
+              if (chartRef.current) {
+                chartRef.current.setBarSpace(6);
+                chartRef.current.setOffsetRightDistance(50);
+                // Force re-calc Y axis by overriding with autoMinMax (if supported) or clearing
+                const anyChart = chartRef.current as any;
+                if (anyChart.overrideYAxis) {
+                  anyChart.overrideYAxis({ autoMinMax: true });
+                }
+              }
+              setChartContextMenu(null);
+            }}
+            className="w-full flex items-center px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] transition-colors"
+          >
+            <div className="mr-2">đŸ”„</div>
+            <span>{t('chart.refresh', 'LĂ m má»›i biá»ƒu Ä‘á»“')}</span>
+          </button>
 
-              <button
-                onClick={() => {
-                  const priceStr = chartContextMenu.price.toFixed(getPricePrecision(selectedStock.price));
-                  navigator.clipboard.writeText(priceStr).then(() => {
-                    console.log("Đã copy giá:", priceStr);
-                  });
-                  setChartContextMenu(null);
-                }}
-                className="w-full flex items-center justify-between px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] transition-colors"
-              >
-                <div className="flex items-center">
-                  <Copy className="w-3.5 h-3.5 mr-2 text-[#787b86]" />
-                  <span>Sao chép giá {chartContextMenu.price.toFixed(getPricePrecision(selectedStock.price))}</span>
-                </div>
-              </button>
-
-              <button
-                onClick={() => {
-                  const event = new KeyboardEvent('keydown', { key: 'v', ctrlKey: true });
-                  window.dispatchEvent(event);
-                  setChartContextMenu(null);
-                }}
-                className="w-full flex items-center justify-between px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] transition-colors"
-              >
-                <div className="flex items-center">
-                  <div className="mr-2">📋</div>
-                  <span>Dán (Paste)</span>
-                </div>
-                <span className="text-[10px] text-[#787b86]">Ctrl + V</span>
-              </button>
+          <button
+            onClick={() => {
+              const priceStr = chartContextMenu.price.toFixed(getPricePrecision(selectedStock.price));
+              navigator.clipboard.writeText(priceStr).then(() => {
+                console.log("ÄĂ£ copy giĂ¡:", priceStr);
+              });
+              setChartContextMenu(null);
+            }}
+            className="w-full flex items-center justify-between px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] transition-colors"
+          >
+            <div className="flex items-center">
+              <Copy className="w-3.5 h-3.5 mr-2 text-[#787b86]" />
+              <span>{t('chart.copyPrice', 'Sao chĂ©p giĂ¡')} {chartContextMenu.price.toFixed(getPricePrecision(selectedStock.price))}</span>
             </div>
-          )}
+          </button>
+
+          <button
+            onClick={() => {
+              const event = new KeyboardEvent('keydown', { key: 'v', ctrlKey: true });
+              window.dispatchEvent(event);
+              setChartContextMenu(null);
+            }}
+            className="w-full flex items-center justify-between px-4 py-2 hover:bg-[#f0f3fa] dark:hover:bg-[#2a2e39] transition-colors"
+          >
+            <div className="flex items-center">
+              <div className="mr-2">đŸ“‹</div>
+              <span>{t('chart.paste', 'DĂ¡n (Paste)')}</span>
+            </div>
+            <span className="text-[10px] text-[#787b86]">Ctrl + V</span>
+          </button>
+        </div>
+      )}
 
       {/* Overlay Settings Modal */}
       <OverlaySettingsModal
@@ -6673,3 +7069,4 @@ export const ChartArea = ({
     </div>
   );
 };
+
