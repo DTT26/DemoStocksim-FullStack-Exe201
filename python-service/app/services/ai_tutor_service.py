@@ -25,7 +25,7 @@ from app.services.time_helper import (
 )
 from app.services.subscription_service import subscription_service
 from app.services.intent_router import route_question_intent
-from app.core.config import FREE_DAILY_LIMIT, PREMIUM_DAILY_LIMIT
+from app.core.config import FREE_DAILY_LIMIT, PREMIUM_DAILY_LIMIT, INSPECT_FREE_DAILY_LIMIT, INSPECT_PREMIUM_DAILY_LIMIT
 
 SIGNAL_KEYWORDS = [
   "có nên mua", "có nên bán", "buy hay sell", "mua hay bán", 
@@ -133,29 +133,36 @@ class AiTutorService:
         user_id = req.userId or (req.userData and req.userData.get("userId")) or "64f7b1e4a3b9c2d1e8f9a0b1"
         sub = subscription_service.get_or_create_subscription(user_id)
         plan = req.plan or sub.get("plan", "FREE")
-        limit = sub.get("daily_ai_limit", FREE_DAILY_LIMIT if plan == "FREE" else PREMIUM_DAILY_LIMIT)
-        used = sub.get("daily_ai_used", 0)
-
+        
         # 0.1 Scoring-based Question Intent Router (Sections 22 - 28)
         intent_info = route_question_intent(query)
         question_intent = intent_info["intent"]
         matched_tags = intent_info["matchedTags"]
 
-        if used >= limit:
-            limit_str = f"{used}/{limit}"
-            err_msg = (
-                f"⚠️ You have used up your {limit_str} free AI interactions for today!\nPlease upgrade to ✨ AI Tutor PRO to continue analyzing."
-                if is_en else
-                f"⚠️ Bạn đã sử dụng hết {limit_str} lượt tương tác AI miễn phí hôm nay!\nVui lòng nâng cấp lên gói ✨ AI Tutor PRO để tiếp tục phân tích."
-            )
-            return {
-                "success": False,
-                "intent": question_intent,
-                "message": err_msg,
-                "guardrailTriggered": "QUOTA_EXCEEDED",
-                "remainingToday": 0,
-                "plan": plan
-            }
+        if plan != "PRO":
+            limit = sub.get("monthly_chat_limit", 300) if plan in ["PLUS", "PREMIUM"] else sub.get("daily_ai_limit", FREE_DAILY_LIMIT)
+            used = sub.get("monthly_chat_used", 0) if plan in ["PLUS", "PREMIUM"] else sub.get("daily_ai_used", 0)
+            if used >= limit:
+                if plan in ["PLUS", "PREMIUM"]:
+                    err_msg = (
+                        "⚠️ You have used up your 300 chat quota for this month! Please upgrade to ✨ AI Tutor PRO for unlimited chat."
+                        if is_en else
+                        "⚠️ Bạn đã sử dụng hết 300/300 lượt chat của gói PLUS trong tháng này!\nVui lòng nâng cấp lên gói ✨ AI Tutor PRO để trò chuyện không giới hạn."
+                    )
+                else:
+                    err_msg = (
+                        f"⚠️ You have used up your {used}/{limit} free AI interactions for today!\nPlease upgrade to PLUS (129k - 300 chats) or PRO (299k - Unlimited)."
+                        if is_en else
+                        f"⚠️ Bạn đã sử dụng hết {used}/{limit} lượt tương tác AI miễn phí hôm nay!\nVui lòng nâng cấp gói PLUS (129k - 300 lượt) hoặc PRO (299k - Không giới hạn)."
+                    )
+                return {
+                    "success": False,
+                    "intent": question_intent,
+                    "message": err_msg,
+                    "guardrailTriggered": "QUOTA_EXCEEDED",
+                    "remainingToday": 0,
+                    "plan": plan
+                }
 
         # 1. Kích hoạt Strict Signal Guardrail trước mọi luồng xử lý (kể cả khi có LLM)
         # Ngăn chặn hoàn toàn prompt injection hoặc yêu cầu phím lệnh trực tiếp
@@ -811,32 +818,39 @@ class AiTutorService:
         lang = getattr(req, "lang", None) or "vi"
         is_en = str(lang).lower().startswith("en")
 
-        # 0. User Subscription & Daily Quota Guardrail Check
+        # 0. User Subscription & Quota Guardrail Check
         user_id = req.userId or (req.userData and req.userData.get("userId")) or "64f7b1e4a3b9c2d1e8f9a0b1"
         sub = subscription_service.get_or_create_subscription(user_id)
         plan = req.plan or sub.get("plan", "FREE")
-        limit = sub.get("daily_ai_limit", FREE_DAILY_LIMIT if plan == "FREE" else PREMIUM_DAILY_LIMIT)
-        used = sub.get("daily_ai_used", 0)
 
         intent_info = route_question_intent(query)
         question_intent = intent_info["intent"]
 
-        if used >= limit:
-            limit_str = f"{used}/{limit}"
-            err_msg = (
-                f"⚠️ You have used up your {limit_str} free AI interactions for today!\nPlease upgrade to ✨ AI Tutor PRO to continue analyzing."
-                if is_en else
-                f"⚠️ Bạn đã sử dụng hết {limit_str} lượt tương tác AI miễn phí hôm nay!\nVui lòng nâng cấp lên gói ✨ AI Tutor PRO để tiếp tục phân tích."
-            )
-            err_payload = {
-                "type": "error",
-                "message": err_msg,
-                "guardrailTriggered": "QUOTA_EXCEEDED",
-                "remainingToday": 0,
-                "plan": plan
-            }
-            yield f"data: {json.dumps(err_payload, ensure_ascii=False)}\n\n"
-            return
+        if plan != "PRO":
+            limit = sub.get("monthly_chat_limit", 300) if plan in ["PLUS", "PREMIUM"] else sub.get("daily_ai_limit", FREE_DAILY_LIMIT)
+            used = sub.get("monthly_chat_used", 0) if plan in ["PLUS", "PREMIUM"] else sub.get("daily_ai_used", 0)
+            if used >= limit:
+                if plan in ["PLUS", "PREMIUM"]:
+                    err_msg = (
+                        "⚠️ You have used up your 300 chat quota for this month! Please upgrade to ✨ AI Tutor PRO for unlimited chat."
+                        if is_en else
+                        "⚠️ Bạn đã sử dụng hết 300/300 lượt chat của gói PLUS trong tháng này!\nVui lòng nâng cấp lên gói ✨ AI Tutor PRO để trò chuyện không giới hạn."
+                    )
+                else:
+                    err_msg = (
+                        f"⚠️ You have used up your {used}/{limit} free AI interactions for today!\nPlease upgrade to PLUS (129k - 300 chats) or PRO (299k - Unlimited)."
+                        if is_en else
+                        f"⚠️ Bạn đã sử dụng hết {used}/{limit} lượt tương tác AI miễn phí hôm nay!\nVui lòng nâng cấp gói PLUS (129k - 300 lượt) hoặc PRO (299k - Không giới hạn)."
+                    )
+                err_payload = {
+                    "type": "error",
+                    "message": err_msg,
+                    "guardrailTriggered": "QUOTA_EXCEEDED",
+                    "remainingToday": 0,
+                    "plan": plan
+                }
+                yield f"data: {json.dumps(err_payload, ensure_ascii=False)}\n\n"
+                return
 
         # 1. Kích hoạt Strict Signal Guardrail
         strict_guard = check_strict_signal_guardrail(query, req.symbol, lang=lang)
@@ -1149,6 +1163,7 @@ class AiTutorService:
                 "remainingToday": remaining,
                 "concept": concept_val,
                 "framework": framework_val,
+                "provider": llm_client.preferred_provider or "openai",
                 "sources": citations
             }
             yield f"data: {json.dumps(meta_data, ensure_ascii=False)}\n\n"
@@ -1224,7 +1239,8 @@ class AiTutorService:
         symbol: Optional[str] = None,
         timeframe: Optional[str] = None,
         user_notes: str = "",
-        user_id: Optional[str] = None
+        user_id: Optional[str] = None,
+        lang: str = "vi"
     ) -> Dict[str, Any]:
         """
         Multimodal Chart Vision Inspector & Grader.
@@ -1232,28 +1248,38 @@ class AiTutorService:
         grade theory accuracy (ICT/SMC/Price Action), evaluate real-world trade quality,
         and provide corrections.
         """
-        # 1. Quota check if user_id is provided
-        remaining_today = PREMIUM_DAILY_LIMIT
+        # 1. Atomic Quota check & reservation for Chart Vision Inspection
+        remaining_today = 999999
         is_premium = False
+        is_en = str(lang).lower().startswith("en")
         if user_id:
-            try:
-                sub_status = subscription_service.get_user_subscription(user_id)
-                is_premium = sub_status.get("is_premium", False)
-                daily_limit = PREMIUM_DAILY_LIMIT if is_premium else FREE_DAILY_LIMIT
-                used = sub_status.get("daily_ai_used", 0)
-                if used >= daily_limit:
-                    return {
-                        "success": False,
-                        "quotaExceeded": True,
-                        "message": (
-                            f"Bạn đã sử dụng hết hạn mức AI hôm nay ({used}/{daily_limit} lượt). "
-                            "Hãy nâng cấp lên gói PRO để mở khóa 500 lượt soi chart mỗi ngày!"
-                        )
-                    }
-                subscription_service.increment_ai_usage(user_id)
-                remaining_today = max(0, daily_limit - (used + 1))
-            except Exception as ex:
-                print(f"Error checking quota for chart inspection: {ex}")
+            reserved, sub_record = subscription_service.reserve_inspect_slot(user_id)
+            plan = (sub_record or {}).get("plan", "FREE")
+            is_premium = plan in ["PLUS", "PRO", "PREMIUM"]
+            if not reserved:
+                if plan in ["PLUS", "PREMIUM"]:
+                    msg = (
+                        "⚠️ You have used up your 150 chart evaluation quota for this month! Upgrade to PRO for unlimited evaluations."
+                        if is_en else
+                        "⚠️ Bạn đã sử dụng hết 150/150 lượt Chấm Bài của gói PLUS trong tháng này! Nâng cấp gói PRO VIP để chấm bài không giới hạn."
+                    )
+                else:
+                    msg = (
+                        "⚠️ You have used your daily chart evaluation quota (2/2). Upgrade to PLUS (150/mo) or PRO (Unlimited)!"
+                        if is_en else
+                        "⚠️ Bạn đã dùng hết 2/2 lượt Chấm Bài miễn phí hôm nay. Nâng cấp gói PLUS (129k - 150 bài) hoặc PRO (299k - Không giới hạn)!"
+                    )
+                return {
+                    "success": False,
+                    "quotaExceeded": True,
+                    "message": msg
+                }
+            if plan == "PRO":
+                remaining_today = 999999
+            elif plan in ["PLUS", "PREMIUM"]:
+                remaining_today = max(0, sub_record.get("monthly_inspect_limit", 150) - sub_record.get("monthly_inspect_used", 0))
+            else:
+                remaining_today = max(0, sub_record.get("daily_inspect_limit", 2) - sub_record.get("daily_inspect_used", 0))
 
         # 2. System prompt
         system_prompt = (
@@ -1321,6 +1347,7 @@ class AiTutorService:
             "score": score,
             "verdict": verdict,
             "analysis": analysis,
+            "provider": llm_client.active_provider or "gemini",
             "remainingToday": remaining_today,
             "isPremium": is_premium
         }
@@ -1341,28 +1368,36 @@ class AiTutorService:
         without requiring screenshots.
         """
         is_en = lang == "en"
-        remaining_today = PREMIUM_DAILY_LIMIT
+        remaining_today = 999999
         is_premium = False
         if user_id:
-            try:
-                sub_status = subscription_service.get_user_subscription(user_id)
-                is_premium = sub_status.get("is_premium", False)
-                daily_limit = PREMIUM_DAILY_LIMIT if is_premium else FREE_DAILY_LIMIT
-                used = sub_status.get("daily_ai_used", 0)
-                if used >= daily_limit:
-                    return {
-                        "success": False,
-                        "quotaExceeded": True,
-                        "message": (
-                            f"You have reached your daily AI quota ({used}/{daily_limit}). Upgrade to PRO to unlock 500 chart evaluations per day!"
-                            if is_en else
-                            f"Bạn đã sử dụng hết hạn mức AI hôm nay ({used}/{daily_limit} lượt). Hãy nâng cấp lên gói PRO để mở khóa 500 lượt soi chart mỗi ngày!"
-                        )
-                    }
-                subscription_service.increment_ai_usage(user_id)
-                remaining_today = max(0, daily_limit - (used + 1))
-            except Exception as ex:
-                print(f"Error checking quota for inspect_chart_data: {ex}")
+            reserved, sub_record = subscription_service.reserve_inspect_slot(user_id)
+            plan = (sub_record or {}).get("plan", "FREE")
+            is_premium = plan in ["PLUS", "PRO", "PREMIUM"]
+            if not reserved:
+                if plan in ["PLUS", "PREMIUM"]:
+                    msg = (
+                        "⚠️ You have used up your 150 chart evaluation quota for this month! Upgrade to PRO for unlimited evaluations."
+                        if is_en else
+                        "⚠️ Bạn đã sử dụng hết 150/150 lượt Chấm Bài của gói PLUS trong tháng này! Nâng cấp gói PRO VIP để chấm bài không giới hạn."
+                    )
+                else:
+                    msg = (
+                        "⚠️ You have used your daily chart evaluation quota (2/2). Upgrade to PLUS (150/mo) or PRO (Unlimited)!"
+                        if is_en else
+                        "⚠️ Bạn đã dùng hết 2/2 lượt Chấm Bài miễn phí hôm nay. Nâng cấp gói PLUS (129k - 150 bài) hoặc PRO (299k - Không giới hạn)!"
+                    )
+                return {
+                    "success": False,
+                    "quotaExceeded": True,
+                    "message": msg
+                }
+            if plan == "PRO":
+                remaining_today = 999999
+            elif plan in ["PLUS", "PREMIUM"]:
+                remaining_today = max(0, sub_record.get("monthly_inspect_limit", 150) - sub_record.get("monthly_inspect_used", 0))
+            else:
+                remaining_today = max(0, sub_record.get("daily_inspect_limit", 2) - sub_record.get("daily_inspect_used", 0))
 
         # Summarize drawings
         drawings_summary = []
@@ -1577,6 +1612,7 @@ class AiTutorService:
             "analysis": analysis,
             "suggestedZone": suggested_zone,
             "drawingsCount": len(drawings),
+            "provider": llm_client.active_provider or "openai",
             "remainingToday": remaining_today,
             "isPremium": is_premium
         }

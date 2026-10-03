@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   X, Sparkles, Check, Zap, Shield, Crown, ArrowRight, 
-  Loader2, AlertCircle, ExternalLink, QrCode
+  Loader2, AlertCircle, QrCode, Infinity, Flame
 } from 'lucide-react';
 import { subscriptionService, type SubscriptionInfo } from '../../services/subscriptionService';
 
@@ -17,9 +17,9 @@ export const UpgradeProModal: React.FC<UpgradeProModalProps> = ({
   onClose,
   currentSubscription
 }) => {
+  const [selectedPlan, setSelectedPlan] = useState<'PLUS' | 'PRO'>('PRO');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [checkoutData, setCheckoutData] = useState<{ checkoutUrl: string; qrCode?: string } | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -37,10 +37,9 @@ export const UpgradeProModal: React.FC<UpgradeProModalProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const res = await subscriptionService.createCheckout('PREMIUM_MONTHLY');
+      const res = await subscriptionService.createCheckout(selectedPlan);
       if (res.success && res.checkoutUrl) {
-        setCheckoutData({ checkoutUrl: res.checkoutUrl, qrCode: res.qrCode });
-        // Chuyển hướng người dùng sang trang thanh toán PayOS
+        // Chuyển hướng người dùng sang trang thanh toán PayOS VietQR
         window.location.href = res.checkoutUrl;
       } else {
         setError(res.message || 'Không thể tạo liên kết thanh toán. Vui lòng thử lại sau.');
@@ -53,19 +52,20 @@ export const UpgradeProModal: React.FC<UpgradeProModalProps> = ({
     }
   };
 
-  const isCurrentPro = currentSubscription?.isPremium;
+  const currentPlan = currentSubscription?.plan || 'FREE';
+  const isCurrentPaid = currentSubscription?.isPremium;
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div 
-        className="relative w-full max-w-lg bg-white dark:bg-[#131722] border border-slate-200 dark:border-[#2a2e39] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        className="relative w-full max-w-2xl bg-white dark:bg-[#131722] border border-slate-200 dark:border-[#2a2e39] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
         onClick={e => e.stopPropagation()}
       >
         {/* Header Background Glow */}
-        <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-amber-500/20 via-purple-500/10 to-transparent pointer-events-none" />
+        <div className="absolute top-0 inset-x-0 h-36 bg-gradient-to-b from-amber-500/20 via-purple-500/10 to-transparent pointer-events-none" />
 
         {/* Close Button */}
         <button
@@ -74,97 +74,190 @@ export const UpgradeProModal: React.FC<UpgradeProModalProps> = ({
             e.stopPropagation();
             onClose();
           }}
-          className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#252d3d] transition-all z-30 cursor-pointer pointer-events-auto shadow-xs"
+          className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#252d3d] transition-all z-30 cursor-pointer shadow-xs"
           title="Đóng (ESC)"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Modal Header */}
-        <div className="px-6 pr-14 pt-6 pb-4 relative z-10">
+        <div className="px-6 pr-14 pt-6 pb-2 relative z-10">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-400 text-slate-950 flex items-center justify-center shadow-lg shadow-amber-500/25 shrink-0">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-400 text-slate-950 flex items-center justify-center shadow-lg shadow-amber-500/25 shrink-0">
               <Crown className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-                  StockSim AI Tutor <span className="text-amber-500">PRO</span>
+                  Nâng Cấp Gói <span className="text-amber-500">StockSim AI Tutor</span>
                 </h3>
-                <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-600 dark:text-amber-400 text-[10px] font-bold tracking-wider uppercase font-mono">
-                  VIP PLAN
-                </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Mở khóa toàn bộ năng lực phân tích của Huấn luyện viên AI chuyên nghiệp
+                Huấn luyện viên thực chiến ICT/SMC & Chấm bài vẽ biểu đồ tự động
               </p>
             </div>
           </div>
         </div>
 
-        {/* Price & Features */}
-        <div className="px-6 py-2 space-y-4 overflow-y-auto max-h-[70vh]">
-          {/* Price Box */}
-          <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/10 via-purple-500/5 to-blue-500/10 border border-amber-500/30 flex items-center justify-between">
-            <div>
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Gói 30 Ngày Không Giới Hạn</span>
-              <div className="flex items-baseline gap-1.5 mt-0.5">
-                <span className="text-2xl font-black text-slate-900 dark:text-white font-mono">99.000₫</span>
-                <span className="text-xs text-slate-400 font-normal">/ 30 ngày</span>
+        {/* Plan Cards Container */}
+        <div className="px-6 py-3 space-y-4 overflow-y-auto">
+          {/* Active Subscription Banner if user already has PLUS / PRO */}
+          {isCurrentPaid && (
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Crown className="w-4 h-4 text-amber-500 shrink-0" />
+                <span>
+                  Bạn đang dùng <strong>Gói {currentPlan}</strong>
+                  {currentSubscription?.premiumExpiresAt && (
+                    <> • Hạn đến: <strong>{new Date(currentSubscription.premiumExpiresAt).toLocaleDateString('vi-VN')}</strong></>
+                  )}
+                </span>
               </div>
-            </div>
-            <div className="text-right">
-              <span className="inline-block px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-semibold">
-                Chỉ ~3.300₫ / ngày
+              <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                Cộng dồn thêm 30 ngày
               </span>
             </div>
-          </div>
+          )}
 
-          {/* Feature List */}
-          <div className="space-y-2.5">
-            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-              Đặc quyền gói PRO
-            </h4>
-            
-            <div className="grid grid-cols-1 gap-2 text-xs">
-              <div className="flex items-start gap-2.5 p-2 rounded-lg bg-slate-50 dark:bg-[#1a1f2c] border border-slate-200 dark:border-[#262c3d]">
-                <div className="p-1 rounded bg-amber-500/20 text-amber-500 dark:text-amber-400 shrink-0 mt-0.5">
-                  <Zap className="w-3.5 h-3.5" />
+          {/* Side-by-Side Plan Selector */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {/* PLAN 1: GÓI PLUS (99k) */}
+            <div 
+              onClick={() => setSelectedPlan('PLUS')}
+              className={`relative p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                selectedPlan === 'PLUS'
+                  ? 'border-blue-500 bg-blue-500/10 dark:bg-blue-500/10 ring-2 ring-blue-500/40 shadow-md'
+                  : 'border-slate-200 dark:border-[#262c3d] bg-slate-50/70 dark:bg-[#181d2a] hover:border-slate-300 dark:hover:border-[#343e57]'
+              }`}
+            >
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-bold tracking-wider uppercase font-mono">
+                    TIẾT KIỆM
+                  </span>
+                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                    selectedPlan === 'PLUS' ? 'border-blue-500 bg-blue-500 text-white' : 'border-slate-400 dark:border-slate-600'
+                  }`}>
+                    {selectedPlan === 'PLUS' && <Check className="w-3 h-3 stroke-[3]" />}
+                  </div>
                 </div>
-                <div>
-                  <div className="font-semibold text-slate-900 dark:text-white">500 lượt hỏi AI mỗi ngày</div>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400">Thoải mái trò chuyện, hỏi đáp liên tục (Gói Free chỉ 10 lượt/ngày).</div>
+
+                <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <Zap className="w-4 h-4 text-blue-500" />
+                  Gói PLUS
+                </h4>
+                
+                <div className="flex items-baseline gap-1 mt-1 mb-3">
+                  <span className="text-2xl font-black text-slate-900 dark:text-white font-mono">99.000₫</span>
+                  <span className="text-xs text-slate-400">/ 30 ngày</span>
+                </div>
+
+                <div className="space-y-2 text-xs border-t border-slate-200 dark:border-[#252c3f] pt-3">
+                  <div className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
+                    <span className="text-slate-700 dark:text-slate-200">
+                      <strong>300 lượt Chat AI</strong> / tháng
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
+                    <span className="text-slate-700 dark:text-slate-200">
+                      <strong>150 bài Chấm Vẽ Biểu Đồ</strong> / tháng
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
+                    <span className="text-slate-600 dark:text-slate-300">
+                      Hỏi đáp chiến lược SMC / ICT, Price Action
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
+                    <span className="text-slate-600 dark:text-slate-300">
+                      Đo lường rủi ro & vị thế lệnh (Prop Firm Tool)
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-start gap-2.5 p-2 rounded-lg bg-slate-50 dark:bg-[#1a1f2c] border border-slate-200 dark:border-[#262c3d]">
-                <div className="p-1 rounded bg-purple-500/20 text-purple-500 dark:text-purple-400 shrink-0 mt-0.5">
-                  <Sparkles className="w-3.5 h-3.5" />
+              <div className="mt-4 pt-2 text-[11px] text-blue-600 dark:text-blue-400 font-medium">
+                Chỉ ~3.300₫ / ngày
+              </div>
+            </div>
+
+            {/* PLAN 2: GÓI PRO VIP (299k) */}
+            <div 
+              onClick={() => setSelectedPlan('PRO')}
+              className={`relative p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                selectedPlan === 'PRO'
+                  ? 'border-amber-500 bg-amber-500/10 dark:bg-amber-500/10 ring-2 ring-amber-500/50 shadow-lg shadow-amber-500/10'
+                  : 'border-slate-200 dark:border-[#262c3d] bg-slate-50/70 dark:bg-[#181d2a] hover:border-slate-300 dark:hover:border-[#343e57]'
+              }`}
+            >
+              {/* Hot Ribbon */}
+              <div className="absolute -top-2.5 right-3 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 text-[10px] font-extrabold uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                <Flame className="w-3 h-3 fill-slate-950" />
+                KHUYÊN DÙNG VIP
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-bold tracking-wider uppercase font-mono">
+                    UNLIMITED VIP
+                  </span>
+                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                    selectedPlan === 'PRO' ? 'border-amber-500 bg-amber-500 text-slate-950' : 'border-slate-400 dark:border-slate-600'
+                  }`}>
+                    {selectedPlan === 'PRO' && <Check className="w-3 h-3 stroke-[3]" />}
+                  </div>
                 </div>
-                <div>
-                  <div className="font-semibold text-slate-900 dark:text-white">Senior Prop Firm & ICT/SMC Coach Engine</div>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400">Phân tích chuyên sâu FVG, Liquidity Pools, Breaker Block & cấu trúc đa khung.</div>
+
+                <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <Crown className="w-4 h-4 text-amber-500" />
+                  Gói PRO VIP
+                </h4>
+                
+                <div className="flex items-baseline gap-1 mt-1 mb-3">
+                  <span className="text-2xl font-black text-slate-900 dark:text-white font-mono">299.000₫</span>
+                  <span className="text-xs text-slate-400">/ 30 ngày</span>
+                </div>
+
+                <div className="space-y-2 text-xs border-t border-slate-200 dark:border-[#252c3f] pt-3">
+                  <div className="flex items-start gap-2">
+                    <Infinity className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                    <span className="text-slate-900 dark:text-white font-bold">
+                      KHÔNG GIỚI HẠN Chat AI
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Infinity className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                    <span className="text-slate-900 dark:text-white font-bold">
+                      KHÔNG GIỚI HẠN Chấm Bài Vẽ
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                    <span className="text-slate-700 dark:text-slate-200">
+                      Ưu tiên băng thông cao nhất (Tốc độ phản hồi tức thì)
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Shield className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                    <span className="text-slate-700 dark:text-slate-200">
+                      Senior Prop Firm Risk & Hard Breach Prevention
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                    <span className="text-slate-700 dark:text-slate-200">
+                      Đo lường MFE / MAE & Thống kê kỷ luật lệnh
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-start gap-2.5 p-2 rounded-lg bg-slate-50 dark:bg-[#1a1f2c] border border-slate-200 dark:border-[#262c3d]">
-                <div className="p-1 rounded bg-emerald-500/20 text-emerald-500 dark:text-emerald-400 shrink-0 mt-0.5">
-                  <Shield className="w-3.5 h-3.5" />
-                </div>
-                <div>
-                  <div className="font-semibold text-slate-900 dark:text-white">Kiểm toán Rủi ro Quỹ (Hard Breach Prevention)</div>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400">Function Calling đo lường Daily Loss, Sụt giảm tối đa (Max Drawdown) tự động.</div>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2.5 p-2 rounded-lg bg-slate-50 dark:bg-[#1a1f2c] border border-slate-200 dark:border-[#262c3d]">
-                <div className="p-1 rounded bg-blue-500/20 text-blue-500 dark:text-blue-400 shrink-0 mt-0.5">
-                  <Check className="w-3.5 h-3.5" />
-                </div>
-                <div>
-                  <div className="font-semibold text-slate-900 dark:text-white">Đo lường MFE / MAE & Chấm điểm kỷ luật</div>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400">Review từng lệnh giao dịch, phát hiện thói quen xấu và giao dịch trả thù.</div>
-                </div>
+              <div className="mt-4 pt-2 text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                Chỉ ~9.900₫ / ngày • Toàn quyền sử dụng
               </div>
             </div>
           </div>
@@ -176,32 +269,18 @@ export const UpgradeProModal: React.FC<UpgradeProModalProps> = ({
               <span>{error}</span>
             </div>
           )}
-
-          {/* Current Status Note */}
-          {isCurrentPro && (
-            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs space-y-1">
-              <div className="flex items-center gap-2 font-bold text-amber-600 dark:text-amber-400">
-                <Crown className="w-4 h-4 shrink-0" />
-                <span>Bạn đang kích hoạt gói PRO VIP (500 lượt/ngày)</span>
-              </div>
-              {currentSubscription?.premiumExpiresAt && (
-                <div className="text-[11px] text-slate-600 dark:text-slate-300 font-mono pl-6">
-                  Hạn sử dụng đến: <strong className="text-slate-900 dark:text-white">{new Date(currentSubscription.premiumExpiresAt).toLocaleString('vi-VN')}</strong>
-                </div>
-              )}
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 pl-6">
-                Khi thanh toán gói tiếp theo, hệ thống sẽ tự động cộng dồn thêm <strong>30 ngày</strong> vào hạn dùng trên.
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Modal Footer / Action Button */}
-        <div className="p-6 pt-4 border-t border-slate-200 dark:border-[#2a2e39] bg-slate-50/50 dark:bg-[#11141c]/50">
+        <div className="p-6 pt-3 border-t border-slate-200 dark:border-[#2a2e39] bg-slate-50/50 dark:bg-[#11141c]/50">
           <button
             onClick={handleCheckout}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/25 transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed hover:scale-[1.01]"
+            className={`w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold text-sm shadow-lg transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed hover:scale-[1.01] ${
+              selectedPlan === 'PRO'
+                ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 shadow-amber-500/25'
+                : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white shadow-blue-500/25'
+            }`}
           >
             {loading ? (
               <>
@@ -211,7 +290,12 @@ export const UpgradeProModal: React.FC<UpgradeProModalProps> = ({
             ) : (
               <>
                 <QrCode className="w-4 h-4" />
-                <span>{isCurrentPro ? 'Gia hạn thêm 30 ngày • Quét mã QR PayOS' : 'Nâng cấp ngay • Quét mã QR PayOS'}</span>
+                <span>
+                  {selectedPlan === 'PRO'
+                    ? 'Thanh toán Gói PRO • 299.000₫ (Quét mã VietQR)'
+                    : 'Thanh toán Gói PLUS • 99.000₫ (Quét mã VietQR)'
+                  }
+                </span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
@@ -223,6 +307,8 @@ export const UpgradeProModal: React.FC<UpgradeProModalProps> = ({
             </span>
             <span>•</span>
             <span>Kích hoạt tự động tức thì</span>
+            <span>•</span>
+            <span>Hỗ trợ mọi App Ngân hàng & Ví điện tử</span>
           </div>
         </div>
       </div>

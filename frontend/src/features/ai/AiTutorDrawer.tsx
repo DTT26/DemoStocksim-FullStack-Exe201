@@ -707,7 +707,7 @@ export const AiTutorDrawer = ({
         <div className="flex items-center gap-1.5 shrink-0">
           {user && (
             <>
-              {subscription?.isPremium ? (
+              {subscription?.plan === 'PRO' ? (
                 <button
                   type="button"
                   onClick={() => setIsUpgradeModalOpen(true)}
@@ -715,16 +715,39 @@ export const AiTutorDrawer = ({
                   title={
                     subscription.premiumExpiresAt
                       ? (isEn
-                          ? `PRO VIP Account • ${subscription.remainingToday}/500 requests remaining today • Expires: ${new Date(subscription.premiumExpiresAt).toLocaleDateString('en-US')} (Click to view / extend)`
-                          : `Tài khoản PRO VIP • Còn ${subscription.remainingToday}/500 lượt hôm nay • Hạn dùng đến: ${new Date(subscription.premiumExpiresAt).toLocaleString('vi-VN')} (Bấm xem chi tiết / gia hạn)`)
-                      : (isEn ? 'PRO VIP Account (Click for details)' : 'Tài khoản PRO VIP (Bấm xem chi tiết)')
+                          ? `PRO VIP Account • Unlimited Chat & Chart Evaluations • Expires: ${new Date(subscription.premiumExpiresAt).toLocaleDateString('en-US')}`
+                          : `Tài khoản PRO VIP • Không giới hạn Chat & Chấm bài • Hạn đến: ${new Date(subscription.premiumExpiresAt).toLocaleDateString('vi-VN')}`)
+                      : 'PRO VIP Account (Unlimited)'
                   }
                 >
                   <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                  <span>PRO</span>
-                  <span className="font-mono text-[11px] opacity-85">({subscription.remainingToday}/500)</span>
+                  <span>PRO VIP</span>
+                  <span className="font-mono text-[11px] opacity-90 text-amber-500 font-extrabold">(∞)</span>
                   {subscription.premiumExpiresAt && (
                     <span className="hidden sm:inline-flex items-center text-[10px] text-amber-700 dark:text-amber-300 font-normal ml-0.5 border-l border-amber-500/30 pl-1.5 gap-1">
+                      <span>{isEn ? 'EXP:' : 'HSD:'}</span>
+                      <strong className="font-mono font-medium">{new Date(subscription.premiumExpiresAt).toLocaleDateString(isEn ? 'en-US' : 'vi-VN')}</strong>
+                    </span>
+                  )}
+                </button>
+              ) : subscription?.plan === 'PLUS' || subscription?.isPremium ? (
+                <button
+                  type="button"
+                  onClick={() => setIsUpgradeModalOpen(true)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-blue-500/15 via-purple-500/10 to-blue-500/15 border border-blue-500/35 hover:border-blue-500/60 text-blue-600 dark:text-blue-400 font-bold text-xs whitespace-nowrap shadow-xs transition-all cursor-pointer hover:scale-[1.02]"
+                  title={
+                    isEn
+                      ? `PLUS Plan • ${subscription.remainingChat ?? subscription.remainingToday}/300 chats • ${subscription.remainingInspect ?? 150}/150 evaluations remaining`
+                      : `Gói PLUS • Còn ${subscription.remainingChat ?? subscription.remainingToday}/300 chat • ${subscription.remainingInspect ?? 150}/150 chấm bài (Bấm nâng cấp PRO)`
+                  }
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                  <span>PLUS</span>
+                  <span className="font-mono text-[11px] opacity-85">
+                    ({subscription.remainingChat ?? subscription.remainingToday}/300)
+                  </span>
+                  {subscription.premiumExpiresAt && (
+                    <span className="hidden sm:inline-flex items-center text-[10px] text-blue-700 dark:text-blue-300 font-normal ml-0.5 border-l border-blue-500/30 pl-1.5 gap-1">
                       <span>{isEn ? 'EXP:' : 'HSD:'}</span>
                       <strong className="font-mono font-medium">{new Date(subscription.premiumExpiresAt).toLocaleDateString(isEn ? 'en-US' : 'vi-VN')}</strong>
                     </span>
@@ -734,19 +757,22 @@ export const AiTutorDrawer = ({
                 <div className="flex items-center gap-1.5 shrink-0">
                   <span 
                     className="hidden sm:inline-flex items-center px-2 py-1 rounded-lg bg-slate-100 dark:bg-[#1a1f2c] text-slate-600 dark:text-slate-300 text-xs font-mono border border-slate-200 dark:border-[#2b3347] whitespace-nowrap"
-                    title={isEn ? 'Remaining free AI requests today' : 'Lượt hỏi AI miễn phí còn lại hôm nay'}
+                    title={isEn ? 'Free quota remaining today' : 'Lượt dùng miễn phí hôm nay'}
                   >
                     <span className="text-slate-400 text-[11px] mr-1">Free:</span>
-                    <strong className="text-amber-600 dark:text-amber-400">{subscription ? subscription.remainingToday : 10}</strong>
-                    <span className="text-slate-400">/{subscription?.dailyAiLimit || 10}</span>
+                    <strong className="text-amber-600 dark:text-amber-400">{subscription?.remainingChat ?? (subscription ? subscription.remainingToday : 10)}</strong>
+                    <span className="text-slate-400">/10 chat</span>
+                    <span className="mx-1 text-slate-300 dark:text-slate-600">•</span>
+                    <strong className="text-blue-600 dark:text-blue-400">{subscription?.remainingInspect ?? 2}</strong>
+                    <span className="text-slate-400">/2 bài</span>
                   </span>
                   <button
                     onClick={() => setIsUpgradeModalOpen(true)}
                     className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs shadow-xs transition-all cursor-pointer whitespace-nowrap hover:scale-[1.02]"
-                    title={isEn ? 'Upgrade to PRO 500 requests/day' : 'Nâng cấp lên gói PRO 500 lượt/ngày qua PayOS'}
+                    title={isEn ? 'Upgrade to PLUS (99k) or PRO (299k)' : 'Nâng cấp Gói PLUS (99k) hoặc PRO (299k) qua PayOS'}
                   >
                     <Crown className="w-3.5 h-3.5 shrink-0" />
-                    <span>{isEn ? 'Upgrade PRO' : 'Nâng cấp PRO'}</span>
+                    <span>{isEn ? 'Upgrade' : 'Nâng cấp gói'}</span>
                   </button>
                 </div>
               )}
@@ -905,25 +931,37 @@ export const AiTutorDrawer = ({
                               <Sparkles className="w-3 h-3 text-amber-500 dark:text-amber-400" />
                               AI Tutor
                             </span>
-                            <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[9px] font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-                              Gemini
-                            </span>
+                            {msg.data?.provider === 'gemini' ? (
+                              <span className="px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-[9px] font-mono text-blue-600 dark:text-blue-400 flex items-center gap-1 shadow-2xs">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-blue-400 animate-pulse" />
+                                {msg.imageUrl ? 'Gemini Vision' : 'Gemini VIP'}
+                              </span>
+                            ) : msg.data?.provider === 'openai' ? (
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[9px] font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-1 shadow-2xs">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+                                OpenAI GPT-4o
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-[9px] font-mono text-amber-600 dark:text-amber-400 flex items-center gap-1 shadow-2xs">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400" />
+                                Knowledge Base
+                              </span>
+                            )}
                           </div>
                           <button
                             onClick={() => handleCopy(msg.id, msg.text)}
                             className="flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 dark:bg-[#202738] hover:bg-slate-200 dark:hover:bg-[#2a334a] text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-[#374158] text-[10px] transition-colors shadow-2xs"
-                            title="Sao chép nội dung"
+                            title={isEn ? "Copy content" : "Sao chép nội dung"}
                           >
                             {copiedId === msg.id ? (
                               <>
                                 <Check className="w-3 h-3 text-emerald-500 dark:text-emerald-400" />
-                                <span className="text-emerald-600 dark:text-emerald-400 font-medium">Đã chép</span>
+                                <span className="text-emerald-600 dark:text-emerald-400 font-medium">{isEn ? 'Copied' : 'Đã chép'}</span>
                               </>
                             ) : (
                               <>
                                 <Copy className="w-3 h-3" />
-                                <span>Sao chép</span>
+                                <span>{isEn ? 'Copy' : 'Sao chép'}</span>
                               </>
                             )}
                           </button>
@@ -934,7 +972,7 @@ export const AiTutorDrawer = ({
                           <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-start gap-2 text-amber-800 dark:text-amber-300 text-xs">
                             <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
                             <div>
-                              <strong className="text-amber-900 dark:text-amber-200">Lưu ý:</strong> AI đóng vai trò Trợ lý Giáo dục & Phân tích Độc lập, không đưa ra tín hiệu Buy/Sell hay phím lệnh.
+                              <strong className="text-amber-900 dark:text-amber-200">{isEn ? 'Notice:' : 'Lưu ý:'}</strong> {isEn ? 'AI acts as an Educational & Independent Analysis Assistant and does not provide direct buy/sell signals.' : 'AI đóng vai trò Trợ lý Giáo dục & Phân tích Độc lập, không đưa ra tín hiệu Buy/Sell hay phím lệnh.'}
                             </div>
                           </div>
                         )}
@@ -952,17 +990,19 @@ export const AiTutorDrawer = ({
                           <div className="mt-3 p-3.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-purple-500/10 to-amber-500/15 border border-amber-500/40 text-center space-y-2">
                             <div className="text-xs font-bold text-amber-700 dark:text-amber-300 flex items-center justify-center gap-1.5">
                               <Crown className="w-4 h-4 text-amber-500 shrink-0" />
-                              <span>Mở khóa 500 lượt hỏi AI / ngày với gói PRO</span>
+                              <span>{isEn ? 'Unlock 500 AI queries / day with PRO package' : 'Mở khóa 500 lượt hỏi AI / ngày với gói PRO'}</span>
                             </div>
                             <p className="text-[11px] text-slate-600 dark:text-slate-300">
-                              Kích hoạt Senior Prop Firm AI Tutor • Đo lường rủi ro quỹ • Quét mã QR PayOS kích hoạt ngay
+                              {isEn 
+                                ? 'Activate Senior Prop Firm AI Tutor • Portfolio Risk Measurement • Instant PayOS QR activation' 
+                                : 'Kích hoạt Senior Prop Firm AI Tutor • Đo lường rủi ro quỹ • Quét mã QR PayOS kích hoạt ngay'}
                             </p>
                             <button
                               onClick={() => setIsUpgradeModalOpen(true)}
                               className="px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 transition-all flex items-center justify-center gap-1.5 mx-auto cursor-pointer hover:scale-[1.02]"
                             >
                               <Crown className="w-3.5 h-3.5" />
-                              <span>Nâng cấp PRO ngay (99.000₫ / 30 ngày)</span>
+                              <span>{isEn ? 'Upgrade PRO Now (99,000₫ / 30 days)' : 'Nâng cấp PRO ngay (99.000₫ / 30 ngày)'}</span>
                               <ArrowRight className="w-3.5 h-3.5" />
                             </button>
                           </div>
@@ -973,7 +1013,7 @@ export const AiTutorDrawer = ({
                           <div className="pt-2 border-t border-slate-200 dark:border-[#252c3f]/60 space-y-1.5">
                             <div className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1">
                               <ShieldCheck className="w-3 h-3 text-emerald-500 dark:text-emerald-400" />
-                              Tài liệu đối chiếu:
+                              {isEn ? 'Verified Reference Sources:' : 'Tài liệu đối chiếu:'}
                             </div>
                             <div className="flex flex-wrap gap-1.5">
                               {msg.data.sources.map((src, i) => (
@@ -1021,7 +1061,7 @@ export const AiTutorDrawer = ({
                       <div className={`h-1.5 rounded-full transition-all duration-300 ${loadingSeconds >= 4 ? 'w-6 bg-amber-500 shadow-xs shadow-amber-500/50' : 'w-2 bg-slate-200 dark:bg-slate-700'}`} />
                       <div className={`h-1.5 rounded-full transition-all duration-300 ${loadingSeconds >= 8 ? 'w-6 bg-amber-500 shadow-xs shadow-amber-500/50' : 'w-2 bg-slate-200 dark:bg-slate-700'}`} />
                       <span className="text-[10px] text-slate-400 ml-1">
-                        {loadingSeconds <= 3 ? 'Giai đoạn 1/3' : loadingSeconds <= 7 ? 'Giai đoạn 2/3' : 'Giai đoạn 3/3'}
+                        {isEn ? `Stage ${loadingSeconds <= 3 ? '1/3' : loadingSeconds <= 7 ? '2/3' : '3/3'}` : (loadingSeconds <= 3 ? 'Giai đoạn 1/3' : loadingSeconds <= 7 ? 'Giai đoạn 2/3' : 'Giai đoạn 3/3')}
                       </span>
                     </div>
                   </div>
@@ -1065,6 +1105,33 @@ export const AiTutorDrawer = ({
                   <span>{isEn ? 'Rescan' : 'Quét lại hình'}</span>
                 </button>
               </div>
+
+              {/* Evaluation Quota Strip */}
+              <div className="flex items-center justify-between pt-2 border-t border-amber-500/20 text-[11px]">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-500 dark:text-slate-400">
+                    {isEn ? 'Evaluation Quota:' : 'Hạn mức Chấm Bài:'}
+                  </span>
+                  {subscription?.isPremium ? (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold font-mono">
+                      {isEn ? 'PRO: 20 evaluations/day' : 'PRO: 20 lượt/ngày'}
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full bg-slate-200 dark:bg-[#202533] text-slate-700 dark:text-slate-300 font-semibold font-mono">
+                      {isEn ? 'Free: 2 evaluations/day' : 'Free: 2 lượt/ngày'}
+                    </span>
+                  )}
+                </div>
+                {!subscription?.isPremium && (
+                  <button
+                    onClick={() => setIsUpgradeModalOpen(true)}
+                    className="font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Crown className="w-3 h-3" />
+                    <span>{isEn ? 'Upgrade to 20/day' : 'Nâng cấp 20 lượt/ngày'}</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Error Message */}
@@ -1073,7 +1140,7 @@ export const AiTutorDrawer = ({
                 <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                 <div className="flex-1">
                   <span>{inspectError}</span>
-                  {inspectError.includes('hạn mức') && (
+                  {(inspectError.includes('hạn mức') || inspectError.includes('lượt') || inspectError.toLowerCase().includes('quota') || inspectError.toLowerCase().includes('upgrade')) && (
                     <button
                       onClick={() => setIsUpgradeModalOpen(true)}
                       className="block mt-1 font-bold underline cursor-pointer text-amber-600 dark:text-amber-400"
@@ -1272,6 +1339,22 @@ export const AiTutorDrawer = ({
                           : (isEn ? 'INCORRECT' : 'CHƯA ĐÚNG')}
                       </span>
                     </span>
+                    {inspectResult.provider === 'gemini' ? (
+                      <span className="px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-[9px] font-mono text-blue-600 dark:text-blue-400 flex items-center gap-1 shadow-2xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-blue-400 animate-pulse" />
+                        Gemini Vision
+                      </span>
+                    ) : inspectResult.provider === 'openai' ? (
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[9px] font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-1 shadow-2xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+                        OpenAI GPT-4o
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/30 text-[9px] font-mono text-purple-600 dark:text-purple-400 flex items-center gap-1 shadow-2xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-500 dark:bg-purple-400" />
+                        Rule Engine
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30">

@@ -19,6 +19,7 @@ export interface AskResponse {
   sources: KnowledgeSource[];
   socraticQuestions: string[];
   guardrailTriggered?: string | null;
+  provider?: string;
 }
 
 export interface TradeAnalysisSummary {
