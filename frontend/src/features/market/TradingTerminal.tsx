@@ -355,12 +355,6 @@ export const TradingTerminal = () => {
   });
   const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
   const [isAiTutorOpen, setIsAiTutorOpen] = useState(false);
-  const [sharedChartImage, setSharedChartImage] = useState<string | null>(null);
-
-  const handleShareChartToChat = (imageUrl: string) => {
-    setSharedChartImage(imageUrl);
-    setIsAiTutorOpen(true);
-  };
 
   // Store backtest rules when launching Bar Replay from AI Tutor
   const [activeBacktestRules, setActiveBacktestRules] = useState<{
@@ -1078,7 +1072,17 @@ export const TradingTerminal = () => {
         balance={balance}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
         onOpenChallenge={() => setIsChallengeModalOpen(true)}
-        onOpenAiTutor={() => setIsAiTutorOpen(true)}
+        onOpenAiTutor={() => {
+          if (challengeState.status === 'ACTIVE') {
+            showAlert({
+              title: 'Tính năng AI bị khóa khi thi quỹ',
+              message: 'Trong quá trình thực hiện bài thi Thử Thách Cấp Vốn Quỹ (Prop Firm Challenge), mọi công cụ AI Trading Tutor và phân tích tự động đều bị vô hiệu hóa để bảo đảm tính minh bạch và đánh giá đúng năng lực giao dịch thực tế của thí sinh.',
+              type: 'warning'
+            });
+            return;
+          }
+          setIsAiTutorOpen(true);
+        }}
         challengeLevelName={currentChallengeLevel.badge}
         challengeStatus={challengeState.status}
         accountRankBadge={accountRankConfig.badge}
@@ -1086,7 +1090,6 @@ export const TradingTerminal = () => {
         certCount={challengeState.certificates?.length || 0}
         selectedStock={selectedStock}
         activeTimeframe={activeTimeframe}
-        onShareToChat={handleShareChartToChat}
       />
 
       {/* Dynamic Prop Challenge Header Bar - Chỉ hiển thị khi đang trong bài thi hoặc có kết quả */}
@@ -1320,6 +1323,7 @@ export const TradingTerminal = () => {
                   pendingOrders={pendingOrders}
                   selectedSymbol={selectedStock.symbol}
                   currentPrice={selectedStock.price}
+                  isChallengeActive={challengeState.status === 'ACTIVE'}
                   onClosePosition={async (symbol, side, price, closeQty) => {
                     try {
                       const res = await tradingApi.closePosition(symbol, side, price, closeQty);
@@ -1683,10 +1687,8 @@ export const TradingTerminal = () => {
       />
       <AiTutorDrawer
         isOpen={isAiTutorOpen}
-        onClose={() => {
-          setIsAiTutorOpen(false);
-          setSharedChartImage(null);
-        }}
+        isChallengeActive={challengeState.status === 'ACTIVE'}
+        onClose={() => setIsAiTutorOpen(false)}
         currentSymbol={selectedStock.symbol}
         currentPrice={selectedStock.price}
         timeframe={activeTimeframe}
@@ -1696,8 +1698,6 @@ export const TradingTerminal = () => {
           exchange: selectedStock.exchange,
           market: selectedStock.market
         }}
-        sharedImage={sharedChartImage}
-        onClearSharedImage={() => setSharedChartImage(null)}
         onStartBacktestReplay={handleStartBacktestReplayFromAi}
       />
     </div>

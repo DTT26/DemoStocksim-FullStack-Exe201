@@ -7,6 +7,7 @@ import {
   PenTool, Eye, CheckCheck
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useI18n } from '../../contexts/I18nContext';
 import { aiService, type AskResponse, type StrategyComparisonData } from '../../services/aiService';
 import { subscriptionService, type SubscriptionInfo } from '../../services/subscriptionService';
 import { UpgradeProModal } from './UpgradeProModal';
@@ -28,6 +29,7 @@ interface AiTutorDrawerProps {
   topOffset?: number;
   sharedImage?: string | null;
   onClearSharedImage?: () => void;
+  isChallengeActive?: boolean;
   onStartBacktestReplay?: (symbol: string, timeframe: string, rules?: {
     strategy: string;
     entryRule: string;
@@ -45,20 +47,15 @@ interface ChatMessage {
   imageUrl?: string;
 }
 
-const QUICK_CONCEPTS = [
-  { label: 'Fair Value Gap (FVG)', concept: 'Fair Value Gap', framework: 'ICT' },
-  { label: 'Liquidity Pools (BSL/SSL)', concept: 'Liquidity', framework: 'ICT' },
-  { label: 'Market Structure (HH/HL)', concept: 'Market Structure', framework: 'PRICE_ACTION' },
-  { label: 'Order Block & Breaker', concept: 'Order Block', framework: 'ICT' },
-  { label: 'Quản trị rủi ro 1%-2%', concept: 'Position Size', framework: 'RISK_MANAGEMENT' },
-  { label: 'FOMO & Giao dịch trả thù', concept: 'Trading Psychology', framework: 'PSYCHOLOGY' }
-];
-
-const WELCOME_MESSAGE: ChatMessage = {
+const getWelcomeMessage = (isEn: boolean): ChatMessage => ({
   id: 'welcome',
   sender: 'tutor',
-  text: `👋 **Chào bạn! Tôi là AI Trading Tutor của StockSim.**\n\nTôi sẵn sàng hỗ trợ bạn:\n- 📖 Giải thích kiến thức (**ICT/SMC, Price Action, Quản trị vốn 1%-2%**)\n- 🔍 Đọc cấu trúc thị trường theo giá sàn real-time\n- ⚖️ Phân tích, review lệnh thắng/thua.\n\nHãy nhập câu hỏi hoặc chọn các thẻ chủ đề phía trên nhé!`
-};
+  text: isEn
+    ? `👋 **Hello! I am StockSim's AI Trading Tutor.**\n\nI am ready to help you with:\n- 📖 Concept deep dives (**ICT/SMC, Price Action, 1%-2% Capital Preservation**)\n- 🔍 Reading real-time market structure & liquidity sweeps\n- ⚖️ Analyzing and reviewing winning/losing trades.\n\nType your question below or click any quick topic above to begin!`
+    : `👋 **Chào bạn! Tôi là AI Trading Tutor của StockSim.**\n\nTôi sẵn sàng hỗ trợ bạn:\n- 📖 Giải thích kiến thức (**ICT/SMC, Price Action, Quản trị vốn 1%-2%**)\n- 🔍 Đọc cấu trúc thị trường theo giá sàn real-time\n- ⚖️ Phân tích, review lệnh thắng/thua.\n\nHãy nhập câu hỏi hoặc chọn các thẻ chủ đề phía trên nhé!`
+});
+
+const WELCOME_MESSAGE = getWelcomeMessage(false);
 
 const renderInlineStyles = (text: string) => {
   const parts = text.split(/(\*\*.*?\*\*|`.*?`|\*[^*\n]+?\*)/g);
@@ -169,6 +166,7 @@ export const AiTutorDrawer = ({
   topOffset = 48,
   sharedImage,
   onClearSharedImage,
+  isChallengeActive = false,
   onStartBacktestReplay
 }: AiTutorDrawerProps) => {
   const [activeTab, setActiveTab] = useState<'tutor' | 'inspect' | 'compare'>('tutor');
@@ -196,25 +194,29 @@ export const AiTutorDrawer = ({
     };
   }, [loading]);
 
+  const { user, login } = useAuth();
+  const { t, lang } = useI18n();
+  const isEn = lang === 'en';
+
   const getDynamicLoadingStatus = (sec: number) => {
     if (sec <= 3) {
       return {
         icon: '🔍',
-        text: 'Đang rà soát dữ liệu thị trường & tài khoản...',
-        subtext: 'Thu thập giá sàn real-time, số dư ví và dữ liệu nến OHLCV...'
+        text: isEn ? 'Reviewing market data & account balance...' : 'Đang rà soát dữ liệu thị trường & tài khoản...',
+        subtext: isEn ? 'Fetching live prices, wallet balance, and OHLCV klines...' : 'Thu thập giá sàn real-time, số dư ví và dữ liệu nến OHLCV...'
       };
     }
     if (sec <= 7) {
       return {
         icon: '⚡',
-        text: 'Đang đối chiếu cấu trúc SMC / Liquidity...',
-        subtext: 'Nhận diện nhịp Displacement, vùng FVG, Order Block và quét thanh khoản...'
+        text: isEn ? 'Analyzing SMC / Liquidity structure...' : 'Đang đối chiếu cấu trúc SMC / Liquidity...',
+        subtext: isEn ? 'Detecting Displacement, FVG, Order Blocks, and liquidity sweeps...' : 'Nhận diện nhịp Displacement, vùng FVG, Order Block và quét thanh khoản...'
       };
     }
     return {
       icon: '✍️',
-      text: 'Đang hoàn thiện lời khuyên cho bạn...',
-      subtext: 'Tổng hợp luận điểm phân tích kỹ thuật và phương án quản trị rủi ro...'
+      text: isEn ? 'Finalizing your mentor feedback...' : 'Đang hoàn thiện lời khuyên cho bạn...',
+      subtext: isEn ? 'Synthesizing technical edge and risk management plan...' : 'Tổng hợp luận điểm phân tích kỹ thuật và phương án quản trị rủi ro...'
     };
   };
 
@@ -223,10 +225,19 @@ export const AiTutorDrawer = ({
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
-  const { user, login } = useAuth();
-  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
+  const [messages, setMessages] = useState<ChatMessage[]>([getWelcomeMessage(isEn)]);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+
+  // Sync welcome message when switching language
+  useEffect(() => {
+    setMessages(prev => {
+      if (prev.length === 1 && prev[0].id === 'welcome') {
+        return [getWelcomeMessage(isEn)];
+      }
+      return prev.map(m => m.id === 'welcome' ? getWelcomeMessage(isEn) : m);
+    });
+  }, [isEn]);
 
   const fetchSubscription = async () => {
     if (!user?._id) return;
@@ -256,7 +267,7 @@ export const AiTutorDrawer = ({
         const history = await aiService.getChatHistory();
         if (!isCancelled && history && history.length > 0) {
           setMessages([
-            WELCOME_MESSAGE,
+            getWelcomeMessage(isEn),
             ...history.map(item => ({
               id: item.id,
               sender: item.sender,
@@ -274,7 +285,7 @@ export const AiTutorDrawer = ({
     return () => {
       isCancelled = true;
     };
-  }, [isOpen]);
+  }, [isOpen, isEn]);
 
   // Handle shared chart snapshot from Camera toolbar
   useEffect(() => {
@@ -284,7 +295,9 @@ export const AiTutorDrawer = ({
       const newMsg: ChatMessage = {
         id: newMsgId,
         sender: 'user',
-        text: `📊 **Ảnh chụp biểu đồ: ${currentSymbol} (${timeframe})**\nĐã đính kèm ảnh chụp biểu đồ kỹ thuật cùng các công cụ vẽ. Nhờ AI Tutor phân tích cấu trúc giá và các mức Fibonacci/hỗ trợ kháng cự trên biểu đồ này!`,
+        text: isEn
+          ? `📊 **Chart Snapshot: ${currentSymbol} (${timeframe})**\nAttached chart screenshot with active drawings. AI Tutor please analyze price structure, key Fibonacci levels, and support/resistance on this chart!`
+          : `📊 **Ảnh chụp biểu đồ: ${currentSymbol} (${timeframe})**\nĐã đính kèm ảnh chụp biểu đồ kỹ thuật cùng các công cụ vẽ. Nhờ AI Tutor phân tích cấu trúc giá và các mức Fibonacci/hỗ trợ kháng cự trên biểu đồ này!`,
         imageUrl: sharedImage
       };
       setMessages(prev => [...prev, newMsg]);
@@ -292,13 +305,19 @@ export const AiTutorDrawer = ({
       (async () => {
         try {
           setLoading(true);
+          const qText = isEn
+            ? `Analyze market structure, key price zones, and Fibonacci levels of ${currentSymbol} on ${timeframe} timeframe. Suggest trade scenarios with proper risk management.`
+            : `Phân tích cấu trúc thị trường, các vùng giá quan trọng và các mức Fibonacci của mã ${currentSymbol} trên khung thời gian ${timeframe}. Đưa ra các gợi ý kịch bản giao dịch theo quản trị rủi ro.`;
           const res = await aiService.askQuestion(
-            `Phân tích cấu trúc thị trường, các vùng giá quan trọng và các mức Fibonacci của mã ${currentSymbol} trên khung thời gian ${timeframe}. Đưa ra các gợi ý kịch bản giao dịch theo quản trị rủi ro.`,
+            qText,
             undefined,
             currentSymbol,
             currentPrice,
             timeframe,
-            marketContext
+            marketContext,
+            undefined,
+            undefined,
+            lang
           );
           const tutorMsg: ChatMessage = {
             id: 'tutor-' + Date.now(),
@@ -315,13 +334,16 @@ export const AiTutorDrawer = ({
         }
       })();
     }
-  }, [sharedImage, isOpen, currentSymbol, timeframe, currentPrice, marketContext, onClearSharedImage]);
+  }, [sharedImage, isOpen, currentSymbol, timeframe, currentPrice, marketContext, onClearSharedImage, isEn, lang]);
 
   const handleClearChat = async () => {
-    if (!confirm('Bạn có chắc muốn xóa toàn bộ lịch sử đoạn chat này trong Database không?')) return;
+    const confirmMsg = isEn 
+      ? 'Are you sure you want to clear your entire chat history in the Database?' 
+      : 'Bạn có chắc muốn xóa toàn bộ lịch sử đoạn chat này trong Database không?';
+    if (!confirm(confirmMsg)) return;
     try {
       await aiService.clearChatHistory();
-      setMessages([WELCOME_MESSAGE]);
+      setMessages([getWelcomeMessage(isEn)]);
     } catch (err) {
       console.error('Failed to clear chat history:', err);
     }
@@ -488,7 +510,8 @@ export const AiTutorDrawer = ({
             timeframe,
             marketContext,
             chatHistory,
-            allStocks
+            allStocks,
+            lang
           },
           (_token, fullText) => {
             if (!hasStartedStreaming) {
@@ -535,7 +558,8 @@ export const AiTutorDrawer = ({
           timeframe, 
           marketContext,
           chatHistory,
-          allStocks
+          allStocks,
+          lang
         );
         const tutorMsg: ChatMessage = {
           id: String(Date.now() + 1),
@@ -554,17 +578,23 @@ export const AiTutorDrawer = ({
       // Sanitize raw HTML error pages (e.g. Render/Cloudflare 502/503/504)
       if (errMessage.includes('<!DOCTYPE html') || errMessage.includes('<html') || errMessage.length > 200) {
         if (errMessage.includes('502')) {
-          errMessage = 'Máy chủ AI trên Render đang khởi động lại (Cold-start sau 15p nghỉ) hoặc chưa phản hồi. Vui lòng đợi 30-60 giây và gửi lại câu hỏi.';
+          errMessage = isEn 
+            ? 'AI server is restarting (cold-start) or not responding. Please wait 30-60 seconds and retry.'
+            : 'Máy chủ AI trên Render đang khởi động lại (Cold-start sau 15p nghỉ) hoặc chưa phản hồi. Vui lòng đợi 30-60 giây và gửi lại câu hỏi.';
         } else if (errMessage.includes('504')) {
-          errMessage = 'Hết thời gian chờ phản hồi từ máy chủ AI (Gateway Timeout). Vui lòng thử lại.';
+          errMessage = isEn 
+            ? 'Gateway Timeout from AI server. Please try again.'
+            : 'Hết thời gian chờ phản hồi từ máy chủ AI (Gateway Timeout). Vui lòng thử lại.';
         } else {
-          errMessage = 'Máy chủ AI tạm thời không thể truy cập (HTTP Error).';
+          errMessage = isEn 
+            ? 'AI server is temporarily unavailable (HTTP Error).'
+            : 'Máy chủ AI tạm thời không thể truy cập (HTTP Error).';
         }
       }
 
       const noticeText = isLocal
-        ? '⚠️ Không thể kết nối tới AI Service. Vui lòng đảm bảo `python-service` đang chạy trên cổng 8000.'
-        : `⚠️ Không thể kết nối tới AI Service trên máy chủ. ${errMessage ? `(Chi tiết: ${errMessage})` : 'Vui lòng kiểm tra lại dịch vụ python-service trên Render.'}`;
+        ? (isEn ? '⚠️ Unable to connect to AI Service. Please make sure `python-service` is running on port 8000.' : '⚠️ Không thể kết nối tới AI Service. Vui lòng đảm bảo `python-service` đang chạy trên cổng 8000.')
+        : (isEn ? `⚠️ Unable to connect to AI Service on server. ${errMessage ? `(Details: ${errMessage})` : 'Please check python-service.'}` : `⚠️ Không thể kết nối tới AI Service trên máy chủ. ${errMessage ? `(Chi tiết: ${errMessage})` : 'Vui lòng kiểm tra lại dịch vụ python-service trên Render.'}`);
 
       setMessages(prev => [
         ...prev, 
@@ -581,7 +611,9 @@ export const AiTutorDrawer = ({
   };
 
   const handleExplainConcept = async (concept: string, framework: string) => {
-    const promptText = `Giải thích về khái niệm ${concept} (${framework})`;
+    const promptText = isEn 
+      ? `Explain the concept of ${concept} (${framework})` 
+      : `Giải thích về khái niệm ${concept} (${framework})`;
     handleAsk(promptText);
   };
 
@@ -731,7 +763,7 @@ export const AiTutorDrawer = ({
           }`}
         >
           <MessageSquare className="w-3.5 h-3.5" />
-          Gia sư AI (Chat)
+          {isEn ? 'AI Tutor (Chat)' : 'Gia sư AI (Chat)'}
         </button>
         <button
           onClick={() => setActiveTab('inspect')}
@@ -742,7 +774,7 @@ export const AiTutorDrawer = ({
           }`}
         >
           <Target className="w-3.5 h-3.5 text-amber-500" />
-          <span>🎯 Chấm Bài Vùng Vẽ</span>
+          <span>{isEn ? '🎯 Zone Evaluation' : '🎯 Chấm Bài Vùng Vẽ'}</span>
         </button>
         <button
           onClick={() => {
@@ -756,9 +788,24 @@ export const AiTutorDrawer = ({
           }`}
         >
           <Scale className="w-3.5 h-3.5" />
-          So sánh Chiến lược
+          {isEn ? 'Compare Strategies' : 'So sánh Chiến lược'}
         </button>
       </div>
+
+      {/* Active Challenge Lock Banner */}
+      {isChallengeActive && (
+        <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-2.5 flex items-start gap-2.5 text-xs text-amber-600 dark:text-amber-300">
+          <Lock className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold">{isEn ? 'AI Tutor is temporarily locked during Challenge' : 'Tính năng AI bị tạm khóa trong thời gian thi Quỹ'}</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              {isEn 
+                ? 'Under Prop Firm Challenge rules, all AI and automated analysis tools are disabled to ensure fair evaluation.'
+                : 'Theo quy chế thi Thử Thách Cấp Vốn Quỹ (Prop Firm Challenge), toàn bộ công cụ AI và phân tích tự động bị vô hiệu hóa để bảo đảm tính minh bạch và đánh giá đúng năng lực thí sinh.'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Content Area */}
       <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 text-sm bg-white dark:bg-[#131722]">
@@ -769,10 +816,17 @@ export const AiTutorDrawer = ({
             <div className="bg-[#f8f9fa] dark:bg-[#181b24] p-3 rounded-xl border border-[#e6e8ea] dark:border-[#2a2e39]/80 space-y-2">
               <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
                 <Layers className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
-                Khái niệm trọng tâm (Knowledge Base):
+                {isEn ? 'Core Concepts (Knowledge Base):' : 'Khái niệm trọng tâm (Knowledge Base):'}
               </div>
               <div className="flex flex-wrap gap-2">
-                {QUICK_CONCEPTS.map(item => (
+                {[
+                  { label: 'Fair Value Gap (FVG)', concept: 'Fair Value Gap', framework: 'ICT' },
+                  { label: 'Liquidity Pools (BSL/SSL)', concept: 'Liquidity', framework: 'ICT' },
+                  { label: 'Market Structure (HH/HL)', concept: 'Market Structure', framework: 'PRICE_ACTION' },
+                  { label: 'Order Block & Breaker', concept: 'Order Block', framework: 'ICT' },
+                  { label: isEn ? '1%-2% Risk Management' : 'Quản trị rủi ro 1%-2%', concept: 'Position Size', framework: 'RISK_MANAGEMENT' },
+                  { label: isEn ? 'FOMO & Revenge Trading' : 'FOMO & Giao dịch trả thù', concept: 'Trading Psychology', framework: 'PSYCHOLOGY' }
+                ].map(item => (
                   <button
                     key={item.label}
                     onClick={() => handleExplainConcept(item.concept, item.framework)}
@@ -1694,15 +1748,35 @@ export const AiTutorDrawer = ({
       {/* Footer / Input (For Tutor Tab) */}
       {activeTab === 'tutor' && (
         <div className="p-3 border-t border-[#e6e8ea] dark:border-[#252c3f] bg-white/95 dark:bg-[#161a26]/90 backdrop-blur-md">
-          {!user ? (
+          {isChallengeActive ? (
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
+                <Lock className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-amber-600 dark:text-amber-400">
+                  {isEn ? 'AI locked during Prop Challenge' : 'Khóa AI khi đang thi Quỹ'}
+                </div>
+                <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                  {isEn 
+                    ? 'You are currently in a Prop Firm Challenge. AI Tutor is disabled by competition rules.'
+                    : 'Bạn đang tham gia bài thi Cấp Vốn. AI Tutor tạm thời vô hiệu hóa theo quy chế thi.'}
+                </div>
+              </div>
+            </div>
+          ) : !user ? (
             <div className="py-2.5 px-3.5 rounded-xl bg-slate-50 dark:bg-[#1a1f2c] border border-slate-200 dark:border-[#262c3d] flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
                   <Lock className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-slate-800 dark:text-slate-100">Yêu cầu đăng nhập tài khoản</div>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400">Vui lòng đăng nhập để bắt đầu trò chuyện và quản lý lượt hỏi AI.</div>
+                  <div className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                    {isEn ? 'Account Login Required' : 'Yêu cầu đăng nhập tài khoản'}
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {isEn ? 'Please log in to chat with AI and manage daily quota.' : 'Vui lòng đăng nhập để bắt đầu trò chuyện và quản lý lượt hỏi AI.'}
+                  </div>
                 </div>
               </div>
               <button
@@ -1710,7 +1784,7 @@ export const AiTutorDrawer = ({
                 onClick={() => login()}
                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs shadow-sm transition-all whitespace-nowrap cursor-pointer hover:scale-[1.02]"
               >
-                Đăng nhập ngay
+                {isEn ? 'Log in now' : 'Đăng nhập ngay'}
               </button>
             </div>
           ) : (
@@ -1726,14 +1800,14 @@ export const AiTutorDrawer = ({
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Nhập câu hỏi bất kỳ (ví dụ: FVG là gì?, tính rủi ro lệnh, review vị thế...)..."
+                  placeholder={isEn ? 'Type any question (e.g., What is FVG?, calculate position risk, review setup...)...' : 'Nhập câu hỏi bất kỳ (ví dụ: FVG là gì?, tính rủi ro lệnh, review vị thế...)...'}
                   className="w-full bg-[#f0f3fa] dark:bg-[#10141f] border border-[#e6e8ea] dark:border-[#2b3347] focus:border-amber-500/70 focus:ring-2 focus:ring-amber-500/20 rounded-xl pl-3.5 pr-10 py-2.5 text-xs text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none transition-all shadow-inner"
                 />
                 <button
                   type="submit"
                   disabled={loading || !query.trim()}
                   className="absolute right-1.5 p-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-20 disabled:pointer-events-none text-slate-950 transition-all shadow-sm cursor-pointer"
-                  title="Gửi câu hỏi (Nhấn Enter)"
+                  title={isEn ? 'Send question (Press Enter)' : 'Gửi câu hỏi (Nhấn Enter)'}
                 >
                   <Send className="w-3.5 h-3.5" />
                 </button>
@@ -1741,7 +1815,7 @@ export const AiTutorDrawer = ({
               <div className="flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500 mt-2 px-1">
                 <span className="flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-amber-500" />
-                  AI Trading Tutor • Sẵn sàng giải đáp mọi thắc mắc
+                  {isEn ? 'AI Trading Tutor • Ready to assist with any inquiry' : 'AI Trading Tutor • Sẵn sàng giải đáp mọi thắc mắc'}
                 </span>
                 <span className="hidden sm:inline font-mono text-[10px] text-slate-500 bg-[#edf0f5] dark:bg-[#1e2433] px-1.5 py-0.5 rounded border border-[#dce1ea] dark:border-[#2a3246]">
                   Enter ↵

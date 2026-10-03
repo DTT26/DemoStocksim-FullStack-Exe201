@@ -35,10 +35,12 @@ class AskQuestionRequest(BaseModel):
     userData: Optional[Dict[str, Any]] = None
     userId: Optional[str] = None
     plan: Optional[str] = None
+    lang: Optional[str] = "vi"
 
 class ConceptExplainRequest(BaseModel):
     concept: str
     framework: Optional[str] = None
+    lang: Optional[str] = "vi"
 
 class TradeInput(BaseModel):
     tradeId: Optional[str] = "TRD-CUSTOM"
@@ -62,6 +64,7 @@ class TradeInput(BaseModel):
     isOpen: Optional[bool] = None
     realPnL: Optional[float] = None
     duration: Optional[str] = None
+    lang: Optional[str] = "vi"
 
 class StudentReflectionRequest(BaseModel):
     trade: TradeInput

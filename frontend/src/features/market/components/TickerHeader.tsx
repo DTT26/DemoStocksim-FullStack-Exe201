@@ -237,7 +237,17 @@ export const TickerHeader = ({
             onClick={() => onTabChange('coin_info')}
             className={`pb-1.5 border-b-2 ${activeTab === 'coin_info' ? 'text-[#1e2329] dark:text-[#d1d4dc] border-blue-500 font-semibold' : 'border-transparent hover:text-[#1e2329] dark:hover:text-[#d1d4dc]'}`}
           >
-            {stock.market === 'Tiền điện tử (Crypto)' ? t('tab.coinInfo', 'Thông Tin Coin') : t('tab.stockInfo', 'Thông Tin Cổ phiếu')}
+            {stock.market === 'Tiền điện tử (Crypto)' 
+              ? t('tab.coinInfo', 'Thông Tin Coin') 
+              : stock.market === 'Cổ phiếu'
+              ? t('tab.stockInfo', 'Thông Tin Cổ phiếu')
+              : stock.market === 'Hàng hóa'
+              ? t('tab.commodityInfo', 'Thông Tin Hàng Hóa')
+              : stock.market === 'Ngoại hối (Forex)'
+              ? t('tab.forexInfo', 'Thông Tin Ngoại Hối')
+              : stock.market === 'Chỉ số'
+              ? t('tab.indexInfo', 'Thông Tin Chỉ Số')
+              : t('tab.assetInfo', 'Thông Tin Cơ Bản')}
           </button>
           <button 
             onClick={() => onTabChange('info')}

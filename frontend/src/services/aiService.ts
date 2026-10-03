@@ -296,13 +296,14 @@ export const aiService = {
     timeframe?: string,
     marketContext?: any,
     chatHistory?: Array<{ sender: string; text: string }>,
-    allStocks?: any[]
+    allStocks?: any[],
+    lang: string = 'vi'
   ): Promise<AskResponse> {
     const res = await fetch(`${API_BASE}/ask`, {
       method: 'POST',
       headers: getAuthHeaders(),
       credentials: 'include',
-      body: JSON.stringify({ question, framework, symbol, currentPrice, timeframe, marketContext, chatHistory, allStocks }),
+      body: JSON.stringify({ question, framework, symbol, currentPrice, timeframe, marketContext, chatHistory, allStocks, lang }),
     });
     const json = await res.json();
     if (!json.success) throw new Error(json.message || 'Lỗi kết nối AI Tutor');
@@ -319,6 +320,7 @@ export const aiService = {
       marketContext?: any;
       chatHistory?: Array<{ sender: string; text: string }>;
       allStocks?: any[];
+      lang?: string;
     },
     onChunk: (token: string, currentFullText: string) => void,
     onMeta?: (meta: any) => void
@@ -327,7 +329,7 @@ export const aiService = {
       method: 'POST',
       headers: getAuthHeaders(),
       credentials: 'include',
-      body: JSON.stringify(params),
+      body: JSON.stringify({ ...params, lang: params.lang || 'vi' }),
     });
 
     if (!res.ok || !res.body) {
@@ -387,57 +389,57 @@ export const aiService = {
     };
   },
 
-  async explainConcept(concept: string, framework?: string): Promise<AskResponse> {
+  async explainConcept(concept: string, framework?: string, lang: string = 'vi'): Promise<AskResponse> {
     const res = await fetch(`${API_BASE}/explain-concept`, {
       method: 'POST',
       headers: getAuthHeaders(),
       credentials: 'include',
-      body: JSON.stringify({ concept, framework }),
+      body: JSON.stringify({ concept, framework, lang }),
     });
     const json = await res.json();
     if (!json.success) throw new Error(json.message || 'Lỗi giải thích khái niệm');
     return json.data;
   },
 
-  async analyzeTrade(tradeData: any): Promise<TradeReviewData> {
+  async analyzeTrade(tradeData: any, lang: string = 'vi'): Promise<TradeReviewData> {
     const res = await fetch(`${API_BASE}/analyze-trade`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(tradeData),
+      body: JSON.stringify({ ...tradeData, lang: tradeData?.lang || lang }),
     });
     const json = await res.json();
     if (!json.success) throw new Error(json.message || 'Lỗi phân tích lệnh');
     return json.data;
   },
 
-  async reviewTrade(tradeData: any): Promise<TradeReviewData> {
+  async reviewTrade(tradeData: any, lang: string = 'vi'): Promise<TradeReviewData> {
     const res = await fetch(`${API_BASE}/review-trade`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(tradeData),
+      body: JSON.stringify({ ...tradeData, lang: tradeData?.lang || lang }),
     });
     const json = await res.json();
     if (!json.success) throw new Error(json.message || 'Lỗi xuất bản Trade Review');
     return json.data;
   },
 
-  async submitReflection(payload: { trade: any; question?: string; reflectionText: string }): Promise<{ feedback: string; encouragement: string; reflectionReceived: string }> {
+  async submitReflection(payload: { trade: any; question?: string; reflectionText: string; lang?: string }): Promise<{ feedback: string; encouragement: string; reflectionReceived: string }> {
     const res = await fetch(`${API_BASE}/submit-reflection`, {
       method: 'POST',
       headers: getAuthHeaders(),
       credentials: 'include',
-      body: JSON.stringify(payload)
+      body: JSON.stringify({ ...payload, lang: payload.lang || 'vi' })
     });
     const json = await res.json();
     if (!json.success) throw new Error(json.message || 'Lỗi gửi phản hồi tự phản biện');
     return json.data;
   },
 
-  async compareStrategies(tradeData: any): Promise<StrategyComparisonData> {
+  async compareStrategies(tradeData: any, lang: string = 'vi'): Promise<StrategyComparisonData> {
     const res = await fetch(`${API_BASE}/compare-strategies`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ trade: tradeData }),
+      body: JSON.stringify({ trade: tradeData, lang }),
     });
     const json = await res.json();
     if (!json.success) throw new Error(json.message || 'Lỗi so sánh chiến lược');

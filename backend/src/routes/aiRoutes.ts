@@ -70,6 +70,33 @@ async function forwardToPython(endpoint: string, method: string = 'POST', data?:
   throw lastError;
 }
 
+// Middleware: Khóa toàn bộ tính năng AI nếu người dùng đang trong bài thi Thử Thách Quỹ (status: ACTIVE)
+const blockIfInActiveChallenge = async (req: Request, res: Response, next: any) => {
+  if (req.method === 'POST') {
+    try {
+      const userId = (req as any).user?._id?.toString() || req.body?.userId || getUserIdFromReq(req);
+      if (userId && userId !== '64f7b1e4a3b9c2d1e8f9a0b1' && userId !== 'guest_user') {
+        const activeChallenge = await Challenge.findOne({ userId, status: 'ACTIVE' });
+        if (activeChallenge) {
+          const isEn = (req.body?.lang || '').toLowerCase().startsWith('en');
+          return res.status(403).json({
+            success: false,
+            guardrailTriggered: 'CHALLENGE_ACTIVE_BLOCKED',
+            message: isEn
+              ? 'Your account is currently taking an active Prop Firm Challenge. All AI features are locked according to competition rules to ensure integrity and realistic trading evaluation.'
+              : 'Tài khoản của bạn đang trong bài thi Thử Thách Cấp Vốn Quỹ (Prop Firm Challenge). Toàn bộ tính năng AI bị khóa theo quy chế thi để đảm bảo tính minh bạch và đánh giá độc lập năng lực giao dịch thực tế.'
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('[AI Guardrail] blockIfInActiveChallenge check error:', err);
+    }
+  }
+  next();
+};
+
+router.use(blockIfInActiveChallenge);
+
 // 1. Ask AI Tutor (Bắt buộc đăng nhập tài khoản)
 router.post('/ask', protect, async (req: AuthRequest, res: Response) => {
   try {

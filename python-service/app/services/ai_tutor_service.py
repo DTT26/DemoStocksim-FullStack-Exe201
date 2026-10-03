@@ -70,29 +70,54 @@ class AiTutorService:
         ]
         return any(p in lower for p in phrases)
 
-    def get_socratic_questions(self, doc) -> List[str]:
+    def get_socratic_questions(self, doc, lang: str = "vi") -> List[str]:
         concept = doc.concept
         framework = doc.framework.upper()
+        is_en = str(lang).lower().startswith("en")
 
         if framework == "PSYCHOLOGY":
+            if is_en:
+                return [
+                    "Under what market conditions did you last experience FOMO or an urge to revenge trade?",
+                    "Do you log your setup rationale into your trading journal before entering or only after closing?",
+                    "Following two consecutive losses, what does your mandatory cool-down protocol look like?"
+                ]
             return [
                 "Lần gần nhất bạn cảm thấy FOMO hoặc muốn giao dịch trả thù (Revenge Trading) là trong bối cảnh nào?",
                 "Bạn thường ghi chép lại lý do vào lệnh vào nhật ký trước khi vào lệnh hay sau khi lệnh đã đóng?",
                 "Sau 2 lệnh thua liên tiếp, kế hoạch nghỉ giải lao (Cool-down) của bạn được thực hiện ra sao?"
             ]
         elif framework == "RISK_MANAGEMENT":
+            if is_en:
+                return [
+                    "Does your current position size strictly ensure that risk does not exceed 1-2% of total equity?",
+                    "What is the minimum Risk:Reward (R:R) ratio you require before clicking the order button?",
+                    "During high volatility, do you ever widen or tamper with your predetermined Stop Loss?"
+                ]
             return [
                 "Khối lượng vị thế (Position Size) hiện tại của bạn có đảm bảo mức rủi ro không vượt quá 2% tổng tài khoản không?",
                 "Tỷ lệ Risk:Reward (R:R) tối thiểu mà bạn kiên quyết yêu cầu trước khi bấm nút mở vị thế là bao nhiêu?",
                 "Khi thị trường biến động mạnh, bạn có bao giờ nới lỏng hoặc dời Stop Loss ra xa hơn không?"
             ]
         elif "LIQUIDITY" in concept.upper():
+            if is_en:
+                return [
+                    "Is the liquidity pool (BSL/SSL) you are observing a session high/low or daily high/low?",
+                    "After sweeping the liquidity pool, does the reaction candle show a clear rejection wick?",
+                    "Is your technical Stop Loss placed safely behind the liquidity sweep high/low?"
+                ]
             return [
                 "Vùng thanh khoản (BSL/SSL) bạn vừa quan sát là đỉnh/đáy của phiên hôm nay hay khung ngày?",
                 "Sau khi giá quét qua vùng đỉnh/đáy cũ, nến phản ứng có xuất hiện râu từ chối (Rejection) rõ ràng không?",
                 "Điểm dừng lỗ kỹ thuật của bạn có nằm an toàn phía ngoài cây nến quét thanh khoản không?"
             ]
         else: # Technical setups: FVG, Order Block, Market Structure, Breakout
+            if is_en:
+                return [
+                    f"What specific candlestick characteristics at the {concept} area confirm the reliability of this setup?",
+                    f"In this {concept} setup, where is the exact Invalidation Level (Stop Loss) that nullifies the idea?",
+                    "If the market pulls back 1R against your entry, what is your predetermined risk mitigation plan?"
+                ]
             return [
                 f"Đặc điểm nào của cây nến tại vùng {concept} giúp bạn xác nhận độ tin cậy của setup này?",
                 f"Trong setup {concept}, điểm Invalidation (Stop Loss) vô hiệu hóa toàn bộ cấu trúc nằm ở đâu?",
@@ -101,6 +126,8 @@ class AiTutorService:
 
     def answer_question(self, req: AskQuestionRequest) -> Dict[str, Any]:
         query = req.question.strip()
+        lang = getattr(req, "lang", None) or "vi"
+        is_en = str(lang).lower().startswith("en")
 
         # 0. User Subscription & Daily Quota Guardrail Check (Sections 3, 4, 5, 31)
         user_id = req.userId or (req.userData and req.userData.get("userId")) or "64f7b1e4a3b9c2d1e8f9a0b1"
@@ -116,10 +143,15 @@ class AiTutorService:
 
         if used >= limit:
             limit_str = f"{used}/{limit}"
+            err_msg = (
+                f"⚠️ You have used up your {limit_str} free AI interactions for today!\nPlease upgrade to ✨ AI Tutor PRO to continue analyzing."
+                if is_en else
+                f"⚠️ Bạn đã sử dụng hết {limit_str} lượt tương tác AI miễn phí hôm nay!\nVui lòng nâng cấp lên gói ✨ AI Tutor PRO để tiếp tục phân tích."
+            )
             return {
                 "success": False,
                 "intent": question_intent,
-                "message": f"⚠️ Bạn đã sử dụng hết {limit_str} lượt tương tác AI miễn phí hôm nay!\nVui lòng nâng cấp lên gói ✨ AI Tutor PRO để tiếp tục phân tích.",
+                "message": err_msg,
                 "guardrailTriggered": "QUOTA_EXCEEDED",
                 "remainingToday": 0,
                 "plan": plan
@@ -127,25 +159,39 @@ class AiTutorService:
 
         # 1. Kích hoạt Strict Signal Guardrail trước mọi luồng xử lý (kể cả khi có LLM)
         # Ngăn chặn hoàn toàn prompt injection hoặc yêu cầu phím lệnh trực tiếp
-        strict_guard = check_strict_signal_guardrail(query, req.symbol)
+        strict_guard = check_strict_signal_guardrail(query, req.symbol, lang=lang)
         if strict_guard:
             return strict_guard
 
         # Static Guardrail for Buy/Sell signals (khi không có LLM)
         if not llm_client.is_configured() and self.is_asking_for_signal(query):
-            symbol = req.symbol or "cổ phiếu này"
-            return {
-                "answer": (
-                    f"⚠️ **Nguyên tắc hệ thống**: AI hoạt động như một Trợ lý Giáo dục & Phân tích Độc lập, "
-                    f"tuyệt đối không đưa ra khuyến nghị Mua (Buy) / Bán (Sell) hay phím lệnh giao dịch cho {symbol}.\n\n"
-                    f"Thay vào đó, tôi có thể hỗ trợ bạn bóc tách các yếu tố kỹ thuật đang ủng hộ hoặc phản đối "
-                    f"một vị thế dựa trên phương pháp Price Action hoặc ICT/SMC để bạn tự đưa ra quyết định độc lập."
-                ),
-                "reasoning": "Quyết định vào lệnh phải do chính trader chịu trách nhiệm dựa trên kế hoạch và tỷ lệ rủi ro định trước.",
-                "sources": [],
-                "socraticQuestions": [],
-                "guardrailTriggered": "NO_BUY_SELL_SIGNAL"
-            }
+            symbol = req.symbol or ("this asset" if is_en else "cổ phiếu này")
+            if is_en:
+                return {
+                    "answer": (
+                        f"⚠️ **System Policy**: The AI functions as an Educational Assistant & Independent Analytical Tutor, "
+                        f"strictly avoiding direct Buy/Sell calls or trade execution recommendations for {symbol}.\n\n"
+                        f"Instead, I can help you dissect key technical factors supporting or contradicting "
+                        f"a position based on Price Action or ICT/SMC principles so you make your own independent decisions."
+                    ),
+                    "reasoning": "Trade execution decisions must be owned by the trader based on an objective plan and predefined risk.",
+                    "sources": [],
+                    "socraticQuestions": [],
+                    "guardrailTriggered": "NO_BUY_SELL_SIGNAL"
+                }
+            else:
+                return {
+                    "answer": (
+                        f"⚠️ **Nguyên tắc hệ thống**: AI hoạt động như một Trợ lý Giáo dục & Phân tích Độc lập, "
+                        f"tuyệt đối không đưa ra khuyến nghị Mua (Buy) / Bán (Sell) hay phím lệnh giao dịch cho {symbol}.\n\n"
+                        f"Thay vào đó, tôi có thể hỗ trợ bạn bóc tách các yếu tố kỹ thuật đang ủng hộ hoặc phản đối "
+                        f"một vị thế dựa trên phương pháp Price Action hoặc ICT/SMC để bạn tự đưa ra quyết định độc lập."
+                    ),
+                    "reasoning": "Quyết định vào lệnh phải do chính trader chịu trách nhiệm dựa trên kế hoạch và tỷ lệ rủi ro định trước.",
+                    "sources": [],
+                    "socraticQuestions": [],
+                    "guardrailTriggered": "NO_BUY_SELL_SIGNAL"
+                }
 
         # 2. Retrieve relevant verified knowledge documents from Knowledge Base
         results: List[RetrievalResult] = retriever.retrieve(
@@ -309,7 +355,17 @@ class AiTutorService:
                 "• TẠI SAO (WHY): Động cơ của Dòng tiền thông minh (Smart Money) / Liquidity Sweep.\n"
                 "• BẰNG CHỨNG (EVIDENCE): Nến Displacement, Volume, Thân nến đóng qua cản.\n"
                 "• ĐIỀU GÌ VÔ HIỆU HÓA (INVALIDATION): Mức giá cụ thể mà nếu chạm vào thì luận điểm bị HỦY BỎ.\n"
-                "• YẾU TỐ CÒN CHƯA RÕ (UNKNOWN): Điều kiện cần chờ thị trường xác nhận thêm."
+                "• YẾU TỐ CÒN CHƯA RÕ (UNKNOWN): Điều kiện cần chờ thị trường xác nhận thêm.\n\n"
+                "==================================================\n"
+                "🌐 LANGUAGE REQUIREMENT (ƯU TIÊN TUYỆT ĐỐI / HIGHEST PRIORITY):\n"
+                "==================================================\n"
+                + (
+                    "The user is using the ENGLISH interface.\n"
+                    "You MUST respond 100% in natural, fluent, professional ENGLISH. Translate all analysis and terms into English."
+                    if is_en else
+                    "Giao diện người dùng đang đặt là TIẾNG VIỆT.\n"
+                    "Bạn BẮT BUỘC phải trả lời 100% bằng TIẾNG VIỆT tự nhiên, chuẩn mực tài chính và thân thiện."
+                )
             )
             
             chat_history_str = ""
@@ -674,19 +730,50 @@ class AiTutorService:
         # 5. OFFLINE FALLBACK MODE (When no API Key is provided)
         if results:
             primary_doc = results[0].document
-            answer_text = (
-                f"### Khái niệm: {primary_doc.concept} ({primary_doc.framework})\n\n"
-                f"{primary_doc.content}\n\n"
-                f"> 💡 **Lưu ý cốt lõi**: Trong phương pháp {primary_doc.framework}, "
-                f"đây là công cụ dùng để định vị xác suất thị trường, **không phải quy luật chắc chắn đảm bảo lợi nhuận 100%**."
-            )
+            if is_en:
+                answer_text = (
+                    f"### Concept: {primary_doc.concept} ({primary_doc.framework})\n\n"
+                    f"{primary_doc.content}\n\n"
+                    f"> 💡 **Core Takeaway**: Under the {primary_doc.framework} methodology, "
+                    f"this tool is used to establish probabilistic market edge, **not a guaranteed rule ensuring 100% win rate**."
+                )
+            else:
+                answer_text = (
+                    f"### Khái niệm: {primary_doc.concept} ({primary_doc.framework})\n\n"
+                    f"{primary_doc.content}\n\n"
+                    f"> 💡 **Lưu ý cốt lõi**: Trong phương pháp {primary_doc.framework}, "
+                    f"đây là công cụ dùng để định vị xác suất thị trường, **không phải quy luật chắc chắn đảm bảo lợi nhuận 100%**."
+                )
             return {
                 "answer": answer_text,
                 "concept": primary_doc.concept,
                 "framework": primary_doc.framework,
                 "sources": citations,
-                "socraticQuestions": self.get_socratic_questions(primary_doc),
+                "socraticQuestions": self.get_socratic_questions(primary_doc, lang=lang),
                 "guardrailTriggered": None
+            }
+
+        if is_en:
+            return {
+                "answer": (
+                    f"👋 **Absolutely! I am ready to guide you through trading concepts.**\n\n"
+                    f"I can provide in-depth breakdowns, verified citations (Tier 1 & Tier 2), and Socratic reflection questions on:\n\n"
+                    f"1. 📚 **ICT / Smart Money Concepts (SMC)**:\n"
+                    f"   - *Fair Value Gap (FVG)*, *Order Block*, *Liquidity Sweep*, *Optimal Trade Entry (OTE)*, *Market Structure Shift (MSS)*...\n\n"
+                    f"2. 📈 **Classical Price Action**:\n"
+                    f"   - *Market Structure (Higher High / Higher Low)*, *Breakout & Retest*, *Pinbar Rejections*...\n\n"
+                    f"3. 🛡️ **Risk Management & Trading Psychology**:\n"
+                    f"   - *1%-2% Capital Preservation Rule*, *Risk:Reward (R:R)*, *MAE & MFE Drawdown metrics*, *Managing FOMO & Revenge Trading*...\n\n"
+                    f"👉 **Which concept would you like to explore first? Type your topic to begin!**"
+                ),
+                "concept": "Knowledge Base Scope",
+                "framework": "TUTOR_SYSTEM",
+                "sources": [],
+                "socraticQuestions": [
+                    "Would you prefer to explore ICT (Smart Money) or classical Price Action first?",
+                    "Do you currently have a fixed risk management rule for every trade?"
+                ],
+                "guardrailTriggered": "INSUFFICIENT_KNOWLEDGE"
             }
 
         return {
@@ -714,12 +801,15 @@ class AiTutorService:
     def explain_concept(self, req: ConceptExplainRequest) -> Dict[str, Any]:
         ask_req = AskQuestionRequest(
             question=req.concept,
-            framework=req.framework
+            framework=req.framework,
+            lang=req.lang
         )
         return self.answer_question(ask_req)
 
     def answer_question_stream(self, req: AskQuestionRequest) -> Iterator[str]:
         query = req.question.strip()
+        lang = getattr(req, "lang", None) or "vi"
+        is_en = str(lang).lower().startswith("en")
 
         # 0. User Subscription & Daily Quota Guardrail Check
         user_id = req.userId or (req.userData and req.userData.get("userId")) or "64f7b1e4a3b9c2d1e8f9a0b1"
@@ -733,9 +823,14 @@ class AiTutorService:
 
         if used >= limit:
             limit_str = f"{used}/{limit}"
+            err_msg = (
+                f"⚠️ You have used up your {limit_str} free AI interactions for today!\nPlease upgrade to ✨ AI Tutor PRO to continue analyzing."
+                if is_en else
+                f"⚠️ Bạn đã sử dụng hết {limit_str} lượt tương tác AI miễn phí hôm nay!\nVui lòng nâng cấp lên gói ✨ AI Tutor PRO để tiếp tục phân tích."
+            )
             err_payload = {
                 "type": "error",
-                "message": f"⚠️ Bạn đã sử dụng hết {limit_str} lượt tương tác AI miễn phí hôm nay!\nVui lòng nâng cấp lên gói ✨ AI Tutor PRO để tiếp tục phân tích.",
+                "message": err_msg,
                 "guardrailTriggered": "QUOTA_EXCEEDED",
                 "remainingToday": 0,
                 "plan": plan
@@ -744,7 +839,7 @@ class AiTutorService:
             return
 
         # 1. Kích hoạt Strict Signal Guardrail
-        strict_guard = check_strict_signal_guardrail(query, req.symbol)
+        strict_guard = check_strict_signal_guardrail(query, req.symbol, lang=lang)
         if strict_guard:
             err_payload = {
                 "type": "error",
@@ -757,15 +852,24 @@ class AiTutorService:
 
         # Static Guardrail for Buy/Sell signals (khi không có LLM)
         if not llm_client.is_configured() and self.is_asking_for_signal(query):
-            symbol = req.symbol or "cổ phiếu này"
-            err_payload = {
-                "type": "error",
-                "message": (
+            symbol = req.symbol or ("this asset" if is_en else "cổ phiếu này")
+            if is_en:
+                msg = (
+                    f"⚠️ **System Policy**: The AI functions as an Educational Assistant & Independent Analytical Tutor, "
+                    f"strictly avoiding direct Buy/Sell calls or trade execution recommendations for {symbol}.\n\n"
+                    f"Instead, I can help you dissect key technical factors supporting or contradicting "
+                    f"a position based on Price Action or ICT/SMC principles so you make your own independent decisions."
+                )
+            else:
+                msg = (
                     f"⚠️ **Nguyên tắc hệ thống**: AI hoạt động như một Trợ lý Giáo dục & Phân tích Độc lập, "
                     f"tuyệt đối không đưa ra khuyến nghị Mua (Buy) / Bán (Sell) hay phím lệnh giao dịch cho {symbol}.\n\n"
                     f"Thay vào đó, tôi có thể hỗ trợ bạn bóc tách các yếu tố kỹ thuật đang ủng hộ hoặc phản đối "
                     f"một vị thế dựa trên phương pháp Price Action hoặc ICT/SMC để bạn tự đưa ra quyết định độc lập."
-                ),
+                )
+            err_payload = {
+                "type": "error",
+                "message": msg,
                 "guardrailTriggered": "NO_BUY_SELL_SIGNAL",
                 "plan": plan
             }
@@ -909,7 +1013,17 @@ class AiTutorService:
                 f"{time_prompt_section}"
                 f"{risk_tool_instruction}\n\n"
                 "QUY TẮC TRẢ LỜI CHỐNG NÓI CHUNG CHUNG:\n"
-                "Cung cấp CÁI GÌ, Ở ĐÂU, TẠI SAO, BẰNG CHỨNG, ĐIỀU GÌ VÔ HIỆU HÓA."
+                "Cung cấp CÁI GÌ, Ở ĐÂU, TẠI SAO, BẰNG CHỨNG, ĐIỀU GÌ VÔ HIỆU HÓA.\n\n"
+                "==================================================\n"
+                "🌐 LANGUAGE REQUIREMENT (ƯU TIÊN TUYỆT ĐỐI / HIGHEST PRIORITY):\n"
+                "==================================================\n"
+                + (
+                    "The user is using the ENGLISH interface.\n"
+                    "You MUST respond 100% in natural, fluent, professional ENGLISH. Translate all analysis and terms into English."
+                    if is_en else
+                    "Giao diện người dùng đang đặt là TIẾNG VIỆT.\n"
+                    "Bạn BẮT BUỘC phải trả lời 100% bằng TIẾNG VIỆT tự nhiên, chuẩn mực tài chính và thân thiện."
+                )
             )
 
             chat_history_str = ""

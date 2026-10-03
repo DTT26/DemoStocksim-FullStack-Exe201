@@ -7,6 +7,7 @@ import {
   AlertCircle, Layers, ExternalLink, PlayCircle
 } from 'lucide-react';
 import { aiService, type TradeReviewData } from '../../services/aiService';
+import { useI18n } from '../../contexts/I18nContext';
 
 interface TradeReviewModalProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ interface TradeReviewModalProps {
     entryTime?: string;
     exitTime?: string;
     duration?: string;
+    lang?: string;
   };
 }
 
@@ -38,6 +40,8 @@ export const TradeReviewModal = ({
   onClose,
   tradeData
 }: TradeReviewModalProps) => {
+  const { t, lang } = useI18n();
+  const isEn = lang === 'en';
   const [review, setReview] = useState<TradeReviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'ALL' | 'CONTEXT' | 'RISK' | 'IMPROVEMENTS'>('ALL');
@@ -46,11 +50,11 @@ export const TradeReviewModal = ({
     if (!isOpen) return;
     setLoading(true);
 
-    aiService.analyzeTrade(tradeData)
+    aiService.analyzeTrade({ ...tradeData, lang })
       .then(res => setReview(res))
       .catch(err => console.error('Failed to load trade review', err))
       .finally(() => setLoading(false));
-  }, [isOpen, tradeData]);
+  }, [isOpen, tradeData, lang]);
 
   if (!isOpen) return null;
 
@@ -63,49 +67,61 @@ export const TradeReviewModal = ({
         return {
           bg: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
           dot: 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]',
-          badgeText: 'Kế hoạch chuẩn chỉnh',
-          title: 'ACTIVE POSITION (Đang mở - Setup chuẩn)',
-          desc: 'Vị thế đang mở và tuân thủ kỷ luật bài bản. Hãy kiên nhẫn bám sát kế hoạch TP/SL!'
+          badgeText: isEn ? 'Disciplined Plan' : 'Kế hoạch chuẩn chỉnh',
+          title: isEn ? 'ACTIVE POSITION (Open - Valid Setup)' : 'ACTIVE POSITION (Đang mở - Setup chuẩn)',
+          desc: isEn 
+            ? 'Position is open and strictly complying with risk discipline. Patiently follow your TP/SL plan!'
+            : 'Vị thế đang mở và tuân thủ kỷ luật bài bản. Hãy kiên nhẫn bám sát kế hoạch TP/SL!'
         };
       case 'OPEN_WARNING_SETUP':
         return {
           bg: 'bg-amber-500/10 border-amber-500/30 text-amber-400',
           dot: 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]',
-          badgeText: 'Cảnh báo rủi ro',
-          title: 'ACTIVE POSITION (Đang mở - Cảnh báo rủi ro)',
-          desc: 'Vị thế đang mở nhưng có yếu tố vi phạm nguyên tắc (như thiếu Stop Loss hoặc rủi ro quá lớn). Cần xử lý ngay!'
+          badgeText: isEn ? 'Risk Warning' : 'Cảnh báo rủi ro',
+          title: isEn ? 'ACTIVE POSITION (Open - High Risk Warning)' : 'ACTIVE POSITION (Đang mở - Cảnh báo rủi ro)',
+          desc: isEn 
+            ? 'Open position carries rule violations (e.g., missing Stop Loss or oversized risk). Immediate action required!'
+            : 'Vị thế đang mở nhưng có yếu tố vi phạm nguyên tắc (như thiếu Stop Loss hoặc rủi ro quá lớn). Cần xử lý ngay!'
         };
       case 'WINNING_GOOD_TRADE':
         return {
           bg: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
           dot: 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]',
-          badgeText: 'Lệnh mẫu mực',
+          badgeText: isEn ? 'Textbook Execution' : 'Lệnh mẫu mực',
           title: 'GOOD TRADE + WINNING TRADE',
-          desc: 'Chuẩn quy trình kỷ luật & Thị trường trả lời bằng kết quả xứng đáng.'
+          desc: isEn 
+            ? 'Textbook process compliance rewarded by positive market probabilities.'
+            : 'Chuẩn quy trình kỷ luật & Thị trường trả lời bằng kết quả xứng đáng.'
         };
       case 'LOSING_GOOD_TRADE':
         return {
           bg: 'bg-blue-500/10 border-blue-500/30 text-blue-400',
           dot: 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.6)]',
-          badgeText: 'Kỷ luật chuẩn',
-          title: 'GOOD TRADE WITH LOSS (Lệnh chất lượng)',
-          desc: 'Kỷ luật cắt lỗ chuẩn xác. Thua lỗ chỉ là chi phí xác suất tự nhiên của thị trường.'
+          badgeText: isEn ? 'Disciplined Loss' : 'Kỷ luật chuẩn',
+          title: 'GOOD TRADE WITH LOSS',
+          desc: isEn 
+            ? 'Disciplined stop loss execution. Losses are simply normal probabilistic business costs.'
+            : 'Kỷ luật cắt lỗ chuẩn xác. Thua lỗ chỉ là chi phí xác suất tự nhiên của thị trường.'
         };
       case 'WINNING_BAD_TRADE':
         return {
           bg: 'bg-amber-500/10 border-amber-500/30 text-amber-400',
           dot: 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]',
-          badgeText: 'Cảnh báo ảo tưởng',
-          title: 'BAD TRADE STILL PROFITABLE (Thắng do may mắn)',
-          desc: 'Có lãi nhưng vi phạm nguyên tắc quản trị rủi ro. Tránh lặp lại thói quen xấu này!'
+          badgeText: isEn ? 'Dangerous Win' : 'Cảnh báo ảo tưởng',
+          title: 'BAD TRADE STILL PROFITABLE',
+          desc: isEn 
+            ? 'Profitable outcome despite severe process violations. Avoid reinforcing risky habits!'
+            : 'Có lãi nhưng vi phạm nguyên tắc quản trị rủi ro. Tránh lặp lại thói quen xấu này!'
         };
       default:
         return {
           bg: 'bg-rose-500/10 border-rose-500/30 text-rose-400',
           dot: 'bg-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.6)]',
-          badgeText: 'Cần cải thiện',
-          title: 'BAD TRADE WITH LOSS (Vi phạm quy trình)',
-          desc: 'Lệnh thiếu kỷ luật dẫn đến kết quả thua lỗ. Cần nghiêm túc xem xét các điểm cải thiện bên dưới.'
+          badgeText: isEn ? 'Needs Improvement' : 'Cần cải thiện',
+          title: 'BAD TRADE WITH LOSS',
+          desc: isEn 
+            ? 'Lack of trade discipline led to losses. Carefully review the improvement points below.'
+            : 'Lệnh thiếu kỷ luật dẫn đến kết quả thua lỗ. Cần nghiêm túc xem xét các điểm cải thiện bên dưới.'
         };
     }
   };
@@ -157,12 +173,12 @@ export const TradeReviewModal = ({
                       : 'bg-slate-700/40 text-slate-300 border border-slate-600/40'
                   }`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${isOpenTrade ? 'bg-cyan-400 animate-ping' : 'bg-slate-400'}`}></span>
-                    {isOpenTrade ? 'VỊ THẾ ĐANG MỞ' : 'LỆNH ĐÃ ĐÓNG'}
+                    {isOpenTrade ? (isEn ? 'OPEN POSITION' : 'VỊ THẾ ĐANG MỞ') : (isEn ? 'CLOSED TRADE' : 'LỆNH ĐÃ ĐÓNG')}
                   </span>
                 </div>
               </div>
               <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
-                <span>Hệ thống Huấn luyện &amp; Đánh giá Quy trình (Process &gt; Outcome)</span>
+                <span>{isEn ? 'Process-oriented Review & Trading Coach (Process > Outcome)' : 'Hệ thống Huấn luyện & Đánh giá Quy trình (Process > Outcome)'}</span>
                 <span className="text-slate-600">•</span>
                 <span className="text-amber-400/90 font-medium">Winning Trade ≠ Good Trade</span>
               </p>
@@ -209,7 +225,7 @@ export const TradeReviewModal = ({
             </div>
             <div className="h-3.5 w-px bg-slate-700 hidden sm:block"></div>
             <div className="flex items-center gap-1.5">
-              <span className="text-[11px] text-slate-400">Khối lượng:</span>
+              <span className="text-[11px] text-slate-400">{isEn ? 'Quantity:' : 'Khối lượng:'}</span>
               <span className="font-mono font-semibold text-slate-200">
                 {tradeData.quantity} {tradeData.symbol.replace(/USDT$/, '')}
               </span>
@@ -238,7 +254,7 @@ export const TradeReviewModal = ({
             </span>
             <span className="flex items-center gap-1 text-slate-400 font-mono">
               <Clock className="w-3 h-3 text-slate-500" />
-              {review?.summary.duration || tradeData.duration || '15-45 phút'}
+              {review?.summary.duration || tradeData.duration || (isEn ? '15-45 mins' : '15-45 phút')}
             </span>
           </div>
         </div>
@@ -248,10 +264,10 @@ export const TradeReviewModal = ({
         {/* ================================================================ */}
         <div className="px-5 py-2 bg-[#121622] border-b border-[#232838] flex items-center gap-1.5 overflow-x-auto custom-scrollbar">
           {[
-            { id: 'ALL', label: 'Tất Cả (Toàn Diện)' },
-            { id: 'CONTEXT', label: '1. Bối Cảnh & Setup' },
-            { id: 'RISK', label: '2. Quản Trị Rủi Ro & MFE/MAE' },
-            { id: 'IMPROVEMENTS', label: '3. Đánh Giá & Bài Học' },
+            { id: 'ALL', label: isEn ? 'All (Comprehensive)' : 'Tất Cả (Toàn Diện)' },
+            { id: 'CONTEXT', label: isEn ? '1. Context & Setup' : '1. Bối Cảnh & Setup' },
+            { id: 'RISK', label: isEn ? '2. Risk & MFE/MAE' : '2. Quản Trị Rủi Ro & MFE/MAE' },
+            { id: 'IMPROVEMENTS', label: isEn ? '3. Evaluation & Takeaways' : '3. Đánh Giá & Bài Học' },
           ].map(tab => (
             <button
               key={tab.id}
