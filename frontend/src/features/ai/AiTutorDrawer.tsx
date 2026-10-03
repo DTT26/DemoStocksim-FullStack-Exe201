@@ -377,6 +377,12 @@ export const AiTutorDrawer = ({
       prevCurrentSymbolRef.current = currentSymbol;
       setActiveSymbol(currentSymbol);
       if (currentPrice) setActivePrice(currentPrice);
+      // Reset AI Drawing Inspection states and remove AI correction overlay on symbol change
+      setInspectResult(null);
+      setInspectError(null);
+      setHasDrawnCorrection(false);
+      clearAiCorrectionOverlay();
+      handleScanDrawings();
     }
   }, [currentSymbol, currentPrice]);
 

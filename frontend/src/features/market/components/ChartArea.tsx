@@ -43,6 +43,27 @@ const hexToRgba = (hex: string, alpha: number = 1) => {
 let globalChartInstance: any = null;
 export const getChartInstance = () => globalChartInstance;
 
+export const isUserDrawingOverlay = (ov: any): boolean => {
+  if (!ov) return false;
+  const id = typeof ov.id === 'string' ? ov.id : '';
+  const name = typeof ov.name === 'string' ? ov.name : '';
+
+  // Filter out system/automated overlays
+  if (
+    id.startsWith('preview_') ||
+    id.startsWith('active_') ||
+    id.startsWith('pending_') ||
+    id.startsWith('tpsl_') ||
+    name === 'tpslZone' ||
+    name === 'aiCorrectionZone' ||
+    name === 'aiCorrectionBox' ||
+    name === 'zoomInBox'
+  ) {
+    return false;
+  }
+  return true;
+};
+
 export interface UserChartDrawing {
   id?: string;
   name: string;
@@ -71,7 +92,7 @@ export const getChartDrawingsData = (): { drawings: UserChartDrawing[]; klines: 
     const drawings: UserChartDrawing[] = [];
     if (Array.isArray(rawOverlays)) {
       rawOverlays.forEach((ov: any) => {
-        if (!ov || ov.name === 'zoomInBox' || ov.name === 'aiCorrectionBox' || ov.name === 'aiCorrectionZone') return;
+        if (!isUserDrawingOverlay(ov)) return;
         const pts = (ov.points || []).map((p: any) => ({
           timestamp: p.timestamp,
           price: p.value !== undefined ? p.value : p.price,
@@ -5719,54 +5740,120 @@ export const ChartArea = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [floatingToolbar, selectedOverlay]);
 
-  // Persist overlays across reloads (F5) and symbol changes
+  // Persist user overlays per symbol across reloads (F5) and clean up when switching symbol/sàn
   useEffect(() => {
     const symbol = selectedStock?.symbol;
     if (!symbol) return;
 
-    const loadOverlays = () => {
-      const chart = chartRef.current;
-      if (chart) {
-        chart.removeOverlay();
-        const saved = localStorage.getItem(`saved-overlays-${symbol}`);
-        if (saved) {
-          try {
-            const overlays = JSON.parse(saved);
-            if (Array.isArray(overlays)) {
-               overlays.forEach(ov => {
-                 chart.createOverlay({
-                   ...ov,
-                   onClick: (chart as any).handleOverlayClick,
-                   onRightClick: () => false
-                 });
-               });
+    // Helper: remove only user drawings and AI correction zone from chart
+    const clearDrawingsFromChart = () => {
+      const activeChart = chartRef.current;
+      if (!activeChart) return;
+      try {
+        const raw = typeof activeChart.getOverlays === 'function' ? activeChart.getOverlays() : [];
+        if (Array.isArray(raw)) {
+          raw.forEach((ov: any) => {
+            if (isUserDrawingOverlay(ov)) {
+              activeChart.removeOverlay({ id: ov.id });
             }
-          } catch(e) {}
+          });
+        }
+        try {
+          activeChart.removeOverlay({ name: 'aiCorrectionZone' });
+        } catch (_) {}
+      } catch (err) {
+        console.error('Error clearing drawings from chart:', err);
+      }
+    };
+
+    // Helper: save only user drawings for the given symbol to localStorage
+    const saveDrawingsForSymbol = (targetSymbol: string) => {
+      const activeChart = chartRef.current;
+      if (!activeChart || !targetSymbol) return;
+      try {
+        const raw = typeof activeChart.getOverlays === 'function' ? activeChart.getOverlays() : [];
+        const userOverlays = (Array.isArray(raw) ? raw : [])
+          .filter(isUserDrawingOverlay)
+          .map((ov: any) => ({
+            id: ov.id,
+            name: ov.name,
+            points: ov.points,
+            extendData: ov.extendData,
+            styles: ov.styles,
+            lock: ov.lock,
+            visible: ov.visible,
+            zLevel: ov.zLevel
+          }));
+
+        if (userOverlays.length > 0) {
+          localStorage.setItem(`saved-overlays-${targetSymbol}`, JSON.stringify(userOverlays));
+        } else {
+          localStorage.removeItem(`saved-overlays-${targetSymbol}`);
+        }
+      } catch (err) {
+        console.error('Error saving drawings for symbol:', targetSymbol, err);
+      }
+    };
+
+    // Helper: load saved drawings for current symbol
+    const loadDrawingsForSymbol = () => {
+      const activeChart = chartRef.current;
+      if (!activeChart) return;
+
+      clearDrawingsFromChart();
+
+      const saved = localStorage.getItem(`saved-overlays-${symbol}`);
+      if (saved) {
+        try {
+          const overlays = JSON.parse(saved);
+          if (Array.isArray(overlays)) {
+            const currentPrice = selectedStock?.price || 0;
+            overlays.forEach((ov: any) => {
+              if (!isUserDrawingOverlay(ov)) return;
+              
+              // Validate overlay points against current symbol price to prevent cross-symbol contamination
+              if (currentPrice > 0 && Array.isArray(ov.points) && ov.points.length > 0) {
+                const hasValidPrice = ov.points.some((p: any) => {
+                  const val = p.value !== undefined ? p.value : p.price;
+                  if (typeof val !== 'number' || val <= 0) return true;
+                  const ratio = Math.max(val / currentPrice, currentPrice / val);
+                  return ratio < 8; // If price difference is > 8x, it belongs to another coin/sàn!
+                });
+                if (!hasValidPrice) return;
+              }
+
+              activeChart.createOverlay({
+                ...ov,
+                onClick: (activeChart as any).handleOverlayClick,
+                onRightClick: () => false
+              });
+            });
+          }
+        } catch (e) {
+          console.error('Error loading saved drawings for symbol:', symbol, e);
         }
       }
     };
-    
-    // Wait slightly for chart init on first mount
-    const timer = setTimeout(loadOverlays, 100);
+
+    // Immediately clear drawings when switching to new symbol so old drawings never linger
+    clearDrawingsFromChart();
+
+    // Load saved drawings for the new symbol after brief tick
+    const timer = setTimeout(loadDrawingsForSymbol, 60);
 
     const handleBeforeUnload = () => {
-      const chart = chartRef.current;
-      if (chart) {
-         const overlays = chart.getOverlays();
-         if (overlays && overlays.length > 0) {
-            localStorage.setItem(`saved-overlays-${symbol}`, JSON.stringify(overlays));
-         } else {
-            localStorage.removeItem(`saved-overlays-${symbol}`);
-         }
-      }
+      saveDrawingsForSymbol(symbol);
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
-       clearTimeout(timer);
-       handleBeforeUnload();
-       window.removeEventListener('beforeunload', handleBeforeUnload);
+      clearTimeout(timer);
+      // 1. Save drawings for the symbol we are leaving
+      saveDrawingsForSymbol(symbol);
+      // 2. Immediately strip user drawings from canvas so the next symbol starts completely clean
+      clearDrawingsFromChart();
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [selectedStock?.symbol]);
 
