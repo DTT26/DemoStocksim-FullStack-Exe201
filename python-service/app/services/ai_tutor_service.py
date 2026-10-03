@@ -1390,30 +1390,50 @@ class AiTutorService:
             klines_summary.append(f"O:{o} H:{h} L:{l} C:{c} (t:{t})")
         klines_str = "; ".join(klines_summary)
 
-        # Calculate wave extrema
+        # Calculate wave extrema & price context
         highs = [k.get("high") for k in recent_klines if isinstance(k.get("high"), (int, float))]
         lows = [k.get("low") for k in recent_klines if isinstance(k.get("low"), (int, float))]
         wave_max = max(highs) if highs else 0
         wave_min = min(lows) if lows else 0
 
+        # Identify student drawing zone relative to wave (upper swing high or lower swing low)
+        first_draw = drawings[0] if drawings else {}
+        user_p_high = first_draw.get("priceHigh") or wave_max
+        user_p_low = first_draw.get("priceLow") or wave_min
+        user_mid = (user_p_high + user_p_low) / 2 if (user_p_high and user_p_low) else wave_max
+        wave_mid = (wave_max + wave_min) / 2 if (wave_max and wave_min) else user_mid
+        is_upper_zone = user_mid >= wave_mid
+
         if is_en:
             system_prompt = (
-                "You are a Senior Quantitative & Technical Analyst Tutor specializing in Price Action and ICT / Smart Money Concepts.\n"
+                "You are a Senior Quantitative & Technical Analyst Tutor specializing in Price Action, ICT, and Smart Money Concepts (SMC).\n"
                 "Your objective is to inspect direct COORDINATE DRAWING DATA drawn by the trader on the chart against REAL OHLCV CANDLESTICK DATA.\n\n"
-                "Please respond strictly in English using clean, structured, encouraging Markdown:\n\n"
+                "IMPORTANT INSTRUCTIONS:\n"
+                "1. Be crisp, concise, pedagogical, and highly structured (about 300-450 words). DO NOT ramble to ensure all 5 sections and the concluding JSON block complete cleanly without truncation.\n"
+                "2. Provide your feedback in clean Markdown using EXACTLY these 5 sections:\n\n"
                 "### 1. Theoretical Accuracy Assessment\n"
-                "- Clear conclusion: Theoretically, is this drawing **CORRECT**, **PARTIALLY CORRECT**, or **INCORRECT**?\n"
-                "- Identify the exact price level and candle the trader marked (e.g., last up-candle before Bearish Displacement, or FVG).\n\n"
+                "- **Conclusion:** Clearly state if the drawing is **CORRECT**, **PARTIALLY CORRECT**, or **INCORRECT**.\n"
+                "- **Drawing Analysis:** Explain what zone the trader marked (Order Block, FVG, or Supply/Demand) and compare their coordinates against actual candle wicks and bodies.\n\n"
                 "### 2. Deep Practical Market Lens (Reliability & Probability)\n"
-                "- **Zone classification:** Is this a Continuation OB/FVG or an Extreme / Origin OB?\n"
-                "- **Impulse displacement quality:** Was the displacement impulsive enough? Did it leave an unmitigated FVG?\n"
-                "- **Liquidity & Market Traps:** Was there a Liquidity Sweep? Warn against Smart Money Traps (SMT) or Inducement.\n\n"
+                "- **Zone classification:** Is this a Continuation or an Extreme Origin zone?\n"
+                "- **Displacement & Traps:** Evaluate impulse displacement strength, liquidity sweep, and warn against Smart Money Traps (SMT) or Inducement.\n\n"
                 "### 3. Optimal Smart Money Zone\n"
-                "- State the precise extreme high/low levels and the ideal institutional mitigation zone for this swing.\n\n"
+                "- Clearly identify the ideal institutional mitigation zone for this swing (high-low price range) and explain why.\n\n"
                 "### 4. 💡 Core Trading Takeaway\n"
-                "- Actionable advice to avoid getting trapped.\n\n"
+                "- 1-2 actionable practical execution rules to avoid stop hunts.\n\n"
                 "### 5. Final Evaluation Score\n"
-                "- Provide a numerical score on a 100-point scale (e.g., **Evaluation Score: 85/100**)."
+                "- **Evaluation Score: [X]/100** (objective score from 0 to 100).\n\n"
+                "AT THE VERY END, YOU MUST OUTPUT THIS JSON BLOCK ENCLOSED IN ```json:zone ... ``` FOR THE SYSTEM TO PLOT THE OPTIMAL ZONE ON CHART:\n"
+                "```json:zone\n"
+                "{\n"
+                '  "type": "Order Block (OB)",\n'
+                '  "name": "Bearish Order Block",\n'
+                '  "label": "AI: Bearish Order Block",\n'
+                '  "priceHigh": 4440.0,\n'
+                '  "priceLow": 4425.0,\n'
+                '  "explanation": "Last up-candle before strong bearish displacement"\n'
+                "}\n"
+                "```"
             )
             user_prompt = (
                 f"Asset: {symbol or 'N/A'}, Timeframe: {timeframe or 'N/A'}.\n"
@@ -1427,39 +1447,111 @@ class AiTutorService:
         else:
             system_prompt = (
                 "Bạn là Chuyên gia Cao cấp Đào tạo Phân tích Kỹ thuật và Huấn luyện viên Chiến lược Thực chiến "
-                "(Senior Quantitative & Technical Analyst Tutor, chuyên sâu về Price Action, ICT - Inner Circle Trader, SMC - Smart Money Concepts).\n"
+                "(Price Action, ICT - Inner Circle Trader, SMC - Smart Money Concepts).\n"
                 "Nhiệm vụ của bạn là kiểm tra trực tiếp DỮ LIỆU TỌA ĐỘ VÙNG VẼ HỌC VIÊN ĐÃ VẼ TRÊN BIỂU ĐỒ đối chiếu với DỮ LIỆU NẾN THẬT (OHLCV).\n\n"
-                "Hãy trả lời theo cấu trúc Markdown rõ ràng, chuẩn sư phạm, truyền cảm hứng và sắc sảo như sau:\n\n"
+                "YÊU CẦU QUAN TRỌNG ĐỂ KHÔNG BỊ CẮT CHỮ (TRUNCATION):\n"
+                "1. Viết súc tích, sắc bén, chuẩn sư phạm (khoảng 300 - 450 từ). Tuyệt đối KHÔNG viết dông dài để đảm bảo hoàn thành trọn vẹn cả 5 mục và khối JSON cuối cùng.\n"
+                "2. Trình bày bài chấm theo đúng 5 mục cấu trúc Markdown sau:\n\n"
                 "### 1. Đánh giá sơ bộ về hình thức lý thuyết\n"
-                "- Kết luận rõ ràng: Về mặt hình thức lý thuyết, bạn vẽ **ĐÚNG** hay **SAI / CHƯA CHUẨN**?\n"
-                "- Nhận diện đúng học viên đã khoanh vùng mức giá nào (ví dụ: cây nến tăng cuối cùng trước khi nhịp sập Bearish Displacement diễn ra, hoặc vùng FVG).\n\n"
+                "- **Kết luận:** Nêu rõ học viên vẽ **ĐÚNG**, **ĐÚNG MỘT PHẦN** hay **CHƯA ĐÚNG**?\n"
+                "- **Nhận diện vùng vẽ:** Xác định học viên đang vẽ vùng gì (Order Block, FVG, hay Vùng Cung/Cầu). Tọa độ vùng vẽ của học viên so với râu nến và thân nến thực tế lệch hay chuẩn ở đâu?\n\n"
                 "### 2. Lăng kính thực chiến chuyên sâu (Độ tin cậy & Xác suất)\n"
-                "- **Phân loại vùng:** Đây là vùng Tiếp diễn (Continuation OB/FVG) hay vùng Cực trị / Gốc (Extreme / Original OB)?\n"
-                "- **Chất lượng sóng đẩy:** Nhịp Displacement có đủ mạnh không? Có tạo FVG (Imbalance) đi kèm không?\n"
-                "- **Thanh khoản & Bẫy giá:** Có hiện tượng Quét thanh khoản (Liquidity Sweep) không? Cảnh báo nguy cơ bẫy Smart Money Trap (SMT) hoặc thanh khoản dụ dỗ (Inducement).\n\n"
+                "- **Phân loại vùng:** Vùng Tiếp diễn (Continuation) hay Cực trị (Extreme)?\n"
+                "- **Chất lượng sóng đẩy & Bẫy giá:** Nhịp Displacement có đủ mạnh không? Có tạo FVG không? Cảnh báo nguy cơ Quét thanh khoản (Liquidity Sweep) và Bẫy Smart Money (SMT / Inducement).\n\n"
                 "### 3. Vùng chuẩn xác nhất theo Smart Money\n"
-                "- Chỉ rõ mức giá đỉnh/đáy cực trị và vùng nến chuẩn nhất của con sóng này.\n\n"
+                "- Chỉ rõ tên vùng chuẩn, khoảng giá nến chuẩn (từ giá thấp đến giá cao) và lý giải ngắn gọn vì sao vùng này mới là tối ưu.\n\n"
                 "### 4. 💡 Bài học thực chiến cốt lõi\n"
-                "- Lời khuyên hành động thực chiến ngắn gọn giúp học viên không bị bẫy thị trường.\n\n"
+                "- 1-2 lời khuyên đắt giá giúp học viên vào lệnh chuẩn, tránh bị quét Stop Loss oan uổng.\n\n"
                 "### 5. Điểm số đánh giá\n"
-                "- Cho điểm theo thang điểm 100 (Ví dụ: **Điểm đánh giá: 85/100**)."
+                "- **Điểm đánh giá: [X]/100** (cho điểm khách quan từ 0 đến 100).\n\n"
+                "Ở CUỐI CÙNG, BẮT BUỘC CUNG CẤP KHỐI DỮ LIỆU JSON ĐỂ HỆ THỐNG VẼ LẠI VÙNG CHUẨN LÊN BIỂU ĐỒ:\n"
+                "```json:zone\n"
+                "{\n"
+                '  "type": "Order Block (OB)",\n'
+                '  "name": "Order Block (OB) Kháng Cự",\n'
+                '  "label": "AI: Bearish Order Block",\n'
+                '  "priceHigh": 4440.0,\n'
+                '  "priceLow": 4425.0,\n'
+                '  "explanation": "Vùng nến tăng cuối cùng trước cú sập mạnh Displacement"\n'
+                "}\n"
+                "```"
             )
             user_prompt = (
                 f"Mã tài sản: {symbol or 'N/A'}, Khung thời gian: {timeframe or 'N/A'}.\n"
                 f"DỮ LIỆU HÌNH VẼ CỦA HỌC VIÊN TRÊN BIỂU ĐỒ:\n{drawings_str}\n\n"
-                f"CHUỖI NẾN THỰC TẾ TRÊN BIỂU ĐỒ (OHLCV):\n{klines_str}\n"
+                f"CHUỖI NẾN THỰC TẾ TRÊN BIỂU ĐỒ (OHLCV):\n{klines_str}\n\n"
                 f"Đỉnh cao nhất của sóng: {wave_max}, Đáy thấp nhất: {wave_min}.\n"
             )
             if user_notes:
                 user_prompt += f"\nGhi chú học viên: {user_notes}\n"
 
-        analysis = llm_client.generate_text(system_prompt, user_prompt, max_tokens=2000)
+        analysis = llm_client.generate_text(system_prompt, user_prompt, max_tokens=4000)
         if not analysis:
             analysis = (
                 "Unable to analyze data at this time. Please try again later."
                 if is_en else
                 "Không thể phân tích dữ liệu lúc này. Vui lòng thử lại sau."
             )
+
+        # 1. Parse JSON zone block if generated by LLM
+        suggested_zone = None
+        zone_match = re.search(r'```(?:json:zone|json)?\s*(\{[\s\S]*?\})\s*```', analysis)
+        if zone_match:
+            try:
+                raw_zone = json.loads(zone_match.group(1))
+                if isinstance(raw_zone, dict) and "priceHigh" in raw_zone and "priceLow" in raw_zone:
+                    z_high = float(raw_zone.get("priceHigh", 0))
+                    z_low = float(raw_zone.get("priceLow", 0))
+                    if z_high > 0 and z_low > 0 and z_high >= z_low:
+                        suggested_zone = {
+                            "type": raw_zone.get("type", "Order Block (OB)"),
+                            "name": raw_zone.get("name", raw_zone.get("type", "Order Block")),
+                            "label": raw_zone.get("label", f"AI: {raw_zone.get('name', 'Order Block')}"),
+                            "priceHigh": round(z_high, 4),
+                            "priceLow": round(z_low, 4),
+                            "explanation": raw_zone.get("explanation", "")
+                        }
+                # Clean JSON block from analysis text so UI displays pure clean markdown
+                analysis = analysis[:zone_match.start()].strip()
+            except Exception as e:
+                print(f"Error parsing AI suggested zone JSON: {e}")
+
+        # 2. Intelligent candle-based algorithmic fallback if JSON was missing or malformed
+        if not suggested_zone and wave_max > 0:
+            if is_upper_zone:
+                # Find swing high candle
+                high_candle = next((k for k in reversed(recent_klines) if k.get("high") == wave_max), recent_klines[-1] if recent_klines else {})
+                c_open = float(high_candle.get("open") or wave_max)
+                c_close = float(high_candle.get("close") or wave_max)
+                c_low = float(high_candle.get("low") or wave_max * 0.995)
+                # Order block bottom: body low or high candle low
+                ob_low = min(c_open, c_close)
+                if ob_low >= wave_max or ob_low <= 0:
+                    ob_low = wave_max * 0.993
+                suggested_zone = {
+                    "type": "Order Block (OB)",
+                    "name": "Bearish Extreme Order Block" if is_en else "Order Block (OB) Giảm Giá - Cực Trị",
+                    "label": "AI: Bearish Order Block" if is_en else "AI: Order Block (OB) Kháng Cự",
+                    "priceHigh": round(wave_max, 4),
+                    "priceLow": round(ob_low, 4),
+                    "explanation": "Extreme institutional mitigation zone at wave high" if is_en else "Vùng nến đảo chiều cực trị tại đỉnh sóng có thanh khoản phe bán"
+                }
+            else:
+                # Find swing low candle
+                low_candle = next((k for k in reversed(recent_klines) if k.get("low") == wave_min), recent_klines[-1] if recent_klines else {})
+                c_open = float(low_candle.get("open") or wave_min)
+                c_close = float(low_candle.get("close") or wave_min)
+                ob_high = max(c_open, c_close)
+                if ob_high <= wave_min or ob_high <= 0:
+                    ob_high = wave_min * 1.007
+                suggested_zone = {
+                    "type": "Order Block (OB)",
+                    "name": "Bullish Extreme Order Block" if is_en else "Order Block (OB) Tăng Giá - Cực Trị",
+                    "label": "AI: Bullish Order Block" if is_en else "AI: Order Block (OB) Hỗ Trợ",
+                    "priceHigh": round(ob_high, 4),
+                    "priceLow": round(wave_min, 4),
+                    "explanation": "Extreme institutional mitigation zone at wave low" if is_en else "Vùng nến tích lũy cực trị tại đáy sóng có thanh khoản phe mua"
+                }
 
         score = 80
         score_match = re.search(r'(?:Điểm\s*(?:đánh giá|số)?|Score)[:\s*]+(\d{1,3})\s*(?:/\s*100)?', analysis, re.IGNORECASE)
@@ -1475,16 +1567,6 @@ class AiTutorService:
             verdict = "CORRECT" if "ĐÚNG" in analysis.upper() and "SAI" not in analysis[:300].upper() else "PARTIALLY_CORRECT"
         if "CHƯA ĐÚNG" in analysis[:300].upper() or "SAI" in analysis[:300].upper():
             verdict = "INCORRECT"
-
-        # AI suggested correction zone
-        suggested_zone = None
-        if wave_max > 0:
-            suggested_zone = {
-                "name": "Original Bearish OB",
-                "priceHigh": round(wave_max, 4),
-                "priceLow": round(wave_max * 0.992, 4),
-                "label": f"Extreme OB ({round(wave_max, 2)})"
-            }
 
         return {
             "success": True,

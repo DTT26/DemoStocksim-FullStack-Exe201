@@ -60,7 +60,7 @@ class LLMClient:
         if full_text:
             yield full_text
 
-    def generate_text(self, system_prompt: str, user_prompt: str, max_tokens: int = 1500) -> Optional[str]:
+    def generate_text(self, system_prompt: str, user_prompt: str, max_tokens: int = 4000) -> Optional[str]:
         self.last_error = None
         self.active_provider = None
         if not self.is_configured():
@@ -96,7 +96,7 @@ class LLMClient:
         user_prompt: str,
         image_base64: str,
         mime_type: str = "image/png",
-        max_tokens: int = 2500
+        max_tokens: int = 4000
     ) -> Optional[str]:
         self.last_error = None
         self.active_provider = None
@@ -144,20 +144,18 @@ class LLMClient:
         self, 
         system_prompt: str, 
         user_prompt: str, 
-        max_tokens: int = 1500,
+        max_tokens: int = 4000,
         image_data: Optional[Dict[str, str]] = None
     ) -> Optional[str]:
         # Models in order of current available quota & speed
         models = [
-            "gemini-3.6-flash",
-            "gemini-3.8-flash",
-            "gemini-3.5-flash",
-            "gemini-flash-latest",
-            "gemini-3.1-flash-lite",
-            "gemini-3.5-flash-lite",
             "gemini-flash-lite-latest",
-            "gemini-2.5-flash-lite",
-            "gemini-pro-latest"
+            "gemini-pro-latest",
+            "gemini-flash-latest",
+            "gemini-3.5-flash-lite",
+            "gemini-3.5-flash",
+            "gemini-3.7-flash",
+            "gemini-3.8-flash"
         ]
 
         contents_parts: List[Dict[str, Any]] = [{"text": user_prompt}]
@@ -219,14 +217,15 @@ class LLMClient:
         self,
         system_prompt: str,
         user_prompt: str,
-        max_tokens: int = 1500
+        max_tokens: int = 4000
     ) -> Iterator[str]:
         models = [
-            "gemini-3.6-flash",
-            "gemini-3.8-flash",
-            "gemini-3.5-flash",
+            "gemini-flash-lite-latest",
+            "gemini-pro-latest",
             "gemini-flash-latest",
-            "gemini-pro-latest"
+            "gemini-3.5-flash-lite",
+            "gemini-3.5-flash",
+            "gemini-3.7-flash"
         ]
         contents_parts: List[Dict[str, Any]] = [{"text": user_prompt}]
         payload = {

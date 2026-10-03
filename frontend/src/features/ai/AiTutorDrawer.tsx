@@ -16,6 +16,7 @@ import {
   getChartInstance, 
   getChartDrawingsData, 
   drawAiCorrectionOverlay, 
+  clearAiCorrectionOverlay,
   type UserChartDrawing 
 } from '../market/components/ChartArea';
 
@@ -1277,17 +1278,33 @@ export const AiTutorDrawer = ({
 
                 {/* AI Suggested Zone & Direct Auto-Draw onto Chart */}
                 {inspectResult.suggestedZone && (
-                  <div className="p-3 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 space-y-2">
-                    <div className="flex items-center justify-between">
+                  <div className="p-3.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/35 space-y-2.5 shadow-xs">
+                    <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <Target className="w-4 h-4 text-amber-500" />
+                        <Target className="w-4 h-4 text-amber-500 shrink-0" />
                         <span className="text-xs font-bold text-slate-900 dark:text-white">
-                          {isEn ? 'AI Suggested Optimal Zone:' : 'AI Đề Xuất Vùng Vẽ Chuẩn Xác Nhất:'}
+                          {isEn ? 'AI Optimal Correction Zone:' : 'AI Đề Xuất Vùng Vẽ Chuẩn Xác Nhất:'}
                         </span>
                       </div>
-                      <span className="text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400">
-                        ${inspectResult.suggestedZone.priceLow?.toLocaleString('en-US')} — ${inspectResult.suggestedZone.priceHigh?.toLocaleString('en-US')}
+                      <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-[11px] border border-amber-500/30 shrink-0">
+                        {inspectResult.suggestedZone.type || 'Order Block (OB)'}
                       </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-white/70 dark:bg-[#161a22]/70 border border-slate-200/80 dark:border-[#2b3347] space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                          {inspectResult.suggestedZone.name || (isEn ? 'Optimal Swing Order Block' : 'Vùng Order Block Chuẩn Xác')}
+                        </span>
+                        <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                          ${inspectResult.suggestedZone.priceLow?.toLocaleString('en-US')} — ${inspectResult.suggestedZone.priceHigh?.toLocaleString('en-US')}
+                        </span>
+                      </div>
+                      {inspectResult.suggestedZone.explanation && (
+                        <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-snug">
+                          {inspectResult.suggestedZone.explanation}
+                        </p>
+                      )}
                     </div>
 
                     <button
@@ -1302,12 +1319,20 @@ export const AiTutorDrawer = ({
                       {hasDrawnCorrection ? (
                         <>
                           <CheckCheck className="w-4 h-4" />
-                          <span>{isEn ? 'AI corrected zone plotted on chart!' : 'Đã vẽ vùng AI sửa lại lên biểu đồ!'}</span>
+                          <span>
+                            {isEn 
+                              ? `✓ Plotted "${inspectResult.suggestedZone.type || 'Optimal Zone'}" on chart!` 
+                              : `✓ Đã vẽ "${inspectResult.suggestedZone.name || inspectResult.suggestedZone.type || 'Vùng Chuẩn'}" lên biểu đồ!`}
+                          </span>
                         </>
                       ) : (
                         <>
                           <PenTool className="w-3.5 h-3.5" />
-                          <span>{isEn ? '🎯 Plot AI corrected zone onto chart' : '🎯 Tự động vẽ vùng AI sửa lại lên biểu đồ'}</span>
+                          <span>
+                            {isEn 
+                              ? `🎯 Plot "${inspectResult.suggestedZone.type || 'Optimal Zone'}" onto chart` 
+                              : `🎯 Tự động vẽ "${inspectResult.suggestedZone.name || inspectResult.suggestedZone.type || 'Vùng Chuẩn'}" lên biểu đồ`}
+                          </span>
                         </>
                       )}
                     </button>
@@ -1325,6 +1350,7 @@ export const AiTutorDrawer = ({
                     onClick={() => {
                       setInspectResult(null);
                       setHasDrawnCorrection(false);
+                      clearAiCorrectionOverlay();
                       handleScanDrawings();
                     }}
                     className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-[#1f2430] hover:bg-slate-200 dark:hover:bg-[#2b3347] text-slate-700 dark:text-slate-200 text-xs font-semibold cursor-pointer transition-colors"

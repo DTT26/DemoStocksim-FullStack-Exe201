@@ -71,7 +71,7 @@ export const getChartDrawingsData = (): { drawings: UserChartDrawing[]; klines: 
     const drawings: UserChartDrawing[] = [];
     if (Array.isArray(rawOverlays)) {
       rawOverlays.forEach((ov: any) => {
-        if (!ov || ov.name === 'zoomInBox' || ov.name === 'aiCorrectionBox') return;
+        if (!ov || ov.name === 'zoomInBox' || ov.name === 'aiCorrectionBox' || ov.name === 'aiCorrectionZone') return;
         const pts = (ov.points || []).map((p: any) => ({
           timestamp: p.timestamp,
           price: p.value !== undefined ? p.value : p.price,
@@ -101,15 +101,102 @@ export const getChartDrawingsData = (): { drawings: UserChartDrawing[]; klines: 
   }
 };
 
+// Đăng ký Vùng AI Sửa Lại (aiCorrectionZone) với nhãn tên vùng trực quan trên biểu đồ
+registerOverlay({
+  name: 'aiCorrectionZone',
+  totalStep: 3,
+  needDefaultPointFigure: true,
+  needDefaultXAxisFigure: true,
+  needDefaultYAxisFigure: true,
+  createPointFigures: ({ coordinates, overlay }: any) => {
+    if (!coordinates || coordinates.length < 2) return [];
+    const p1 = coordinates[0];
+    const p2 = coordinates[1];
+    const minX = Math.min(p1.x, p2.x);
+    const maxX = Math.max(p1.x, p2.x);
+    const minY = Math.min(p1.y, p2.y);
+    const maxY = Math.max(p1.y, p2.y);
+
+    const figures: any[] = [
+      // 1. Shaded polygon zone with dashed border
+      {
+        type: 'polygon',
+        attrs: {
+          coordinates: [
+            { x: minX, y: minY },
+            { x: maxX, y: minY },
+            { x: maxX, y: maxY },
+            { x: minX, y: maxY }
+          ]
+        },
+        styles: {
+          style: 'stroke_fill',
+          color: 'rgba(245, 158, 11, 0.22)',
+          borderColor: '#f59e0b',
+          borderSize: 2,
+          borderStyle: 'dashed'
+        }
+      }
+    ];
+
+    // 2. High-visibility Badge Note on the Zone (e.g. "🎯 AI: Order Block (OB) | 4,398.25 - 4,433.72")
+    const label = overlay?.extendData?.label || overlay?.extendData?.name || overlay?.text || '🎯 AI: Order Block (OB)';
+    const priceText = overlay?.extendData?.priceText ? ` (${overlay.extendData.priceText})` : '';
+    const badgeText = `${label}${priceText}`;
+
+    figures.push({
+      type: 'text',
+      attrs: {
+        x: minX + 6,
+        y: minY > 30 ? minY - 8 : minY + 14,
+        text: badgeText,
+        align: 'left',
+        baseline: minY > 30 ? 'bottom' : 'top'
+      },
+      styles: {
+        color: '#ffffff',
+        backgroundColor: '#d97706',
+        borderRadius: 4,
+        paddingLeft: 7,
+        paddingRight: 7,
+        paddingTop: 3,
+        paddingBottom: 3,
+        size: 11,
+        family: 'Inter, system-ui, sans-serif',
+        weight: 'bold'
+      }
+    });
+
+    return figures;
+  }
+});
+
+export const clearAiCorrectionOverlay = () => {
+  if (!globalChartInstance) return;
+  try {
+    globalChartInstance.removeOverlay({ name: 'aiCorrectionZone' });
+  } catch (err) {
+    console.error('Error removing AI correction overlay:', err);
+  }
+};
+
 export const drawAiCorrectionOverlay = (suggestedZone: {
   priceHigh: number;
   priceLow: number;
   startTimestamp?: number;
   endTimestamp?: number;
   label?: string;
+  type?: string;
+  name?: string;
+  explanation?: string;
 }) => {
   if (!globalChartInstance) return null;
   try {
+    // Clear any previous AI correction zone
+    try {
+      globalChartInstance.removeOverlay({ name: 'aiCorrectionZone' });
+    } catch (_) {}
+
     const klines = (globalChartInstance.getDataList && globalChartInstance.getDataList()) || [];
     const lastKline = klines[klines.length - 1];
     const prevKline = klines[Math.max(0, klines.length - 15)];
@@ -117,16 +204,28 @@ export const drawAiCorrectionOverlay = (suggestedZone: {
     const t1 = suggestedZone.startTimestamp || prevKline?.timestamp || (Date.now() - 3600000 * 4);
     const t2 = suggestedZone.endTimestamp || lastKline?.timestamp || Date.now();
 
+    const zoneLabel = suggestedZone.label || (suggestedZone.type ? `🎯 AI: ${suggestedZone.type}` : (suggestedZone.name ? `🎯 AI: ${suggestedZone.name}` : '🎯 AI: Vùng Chuẩn'));
+    const priceText = `$${suggestedZone.priceLow?.toLocaleString('en-US')} - $${suggestedZone.priceHigh?.toLocaleString('en-US')}`;
+
     const newId = globalChartInstance.createOverlay({
-      name: 'rect',
+      name: 'aiCorrectionZone',
       points: [
         { timestamp: t1, value: suggestedZone.priceHigh },
         { timestamp: t2, value: suggestedZone.priceLow }
       ],
+      extendData: {
+        label: zoneLabel,
+        name: suggestedZone.name,
+        type: suggestedZone.type,
+        priceText,
+        priceHigh: suggestedZone.priceHigh,
+        priceLow: suggestedZone.priceLow,
+        explanation: suggestedZone.explanation
+      },
       styles: {
         rect: {
           style: 'stroke_fill',
-          color: 'rgba(245, 158, 11, 0.25)',
+          color: 'rgba(245, 158, 11, 0.22)',
           borderColor: '#f59e0b',
           borderSize: 2,
           borderStyle: 'dashed'
