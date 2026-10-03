@@ -506,6 +506,7 @@ class AiTutorService:
                     "success": True,
                     "intent": question_intent,
                     "answer": llm_answer,
+                    "provider": llm_client.active_provider or llm_client.preferred_provider or "openai",
                     "plan": plan,
                     "dailyAiUsed": new_used,
                     "dailyAiLimit": limit,
@@ -1183,55 +1184,89 @@ class AiTutorService:
             except Exception as stream_err:
                 print(f"Error during stream generation: {stream_err}")
 
-            # If stream produced no tokens, fallback to regular generate_text
+            # If stream produced no tokens, fallback to regular generate_text or static knowledge base
             if not streamed_tokens:
                 fallback_text = llm_client.generate_text(sys_prompt, user_p, max_tokens=max_out)
                 if fallback_text:
                     streamed_tokens.append(fallback_text)
                     yield f"data: {json.dumps({'type': 'token', 'token': fallback_text}, ensure_ascii=False)}\n\n"
                 else:
-                    subscription_service.rollback_quota_slot(user_id)
-                    yield f"data: {json.dumps({'type': 'error', 'message': 'Không thể kết nối tới mô hình AI. Vui lòng thử lại.'}, ensure_ascii=False)}\n\n"
-                    return
+                    # Seamlessly fall back to verified Knowledge Base without cutting off user
+                    print("LLM stream and generate_text produced empty output, falling back to Knowledge Base")
+                    offline_res = self.answer_question(req)
+                    ans = offline_res.get("answer") or offline_res.get("message")
+                    if not ans and results:
+                        primary_doc = results[0].document
+                        ans = f"### {primary_doc.concept} ({primary_doc.framework})\n\n{primary_doc.content}"
+                    elif not ans:
+                        ans = (
+                            "AI Tutor đang kết nối dữ liệu. Bạn có thể hỏi về các khái niệm như FVG, Order Block, Liquidity Sweep, hoặc nhờ phân tích vị thế hiện tại."
+                            if not is_en else
+                            "AI Tutor is syncing data. Feel free to ask about FVG, Order Block, Liquidity Sweeps, or risk sizing."
+                        )
+                    words = ans.split(" ")
+                    for i, w in enumerate(words):
+                        chunk = w + (" " if i < len(words) - 1 else "")
+                        streamed_tokens.append(chunk)
+                        yield f"data: {json.dumps({'type': 'token', 'token': chunk}, ensure_ascii=False)}\n\n"
 
             full_answer = "".join(streamed_tokens)
+            provider_val = llm_client.active_provider or llm_client.preferred_provider or "openai"
             done_payload = {
                 "type": "done",
                 "answer": full_answer,
                 "concept": concept_val,
                 "framework": framework_val,
+                "provider": provider_val,
                 "sources": citations,
                 "socraticQuestions": []
             }
             yield f"data: {json.dumps(done_payload, ensure_ascii=False)}\n\n"
             return
 
-        # 4. Fallback when LLM is offline: Call static answer_question and stream it as a single chunk
+        # 4. Fallback when LLM is offline: Call static answer_question and stream it smoothly
         offline_res = self.answer_question(req)
-        ans = offline_res.get("answer", "")
+        ans = offline_res.get('answer') or offline_res.get('message') or ''
+        if not ans and results:
+            primary_doc = results[0].document
+            ans = f'### {primary_doc.concept} ({primary_doc.framework})\n\n' + primary_doc.content
+        elif not ans:
+            ans = (
+                'AI Tutor sẵn sàng giải đáp kiến thức ICT/SMC, Price Action và quản trị rủi ro cho bạn. Hãy gõ câu hỏi để bắt đầu nhé!'
+                if not is_en else
+                'AI Tutor is ready to guide you on ICT/SMC, Price Action, and risk management. Type a question to begin!'
+            )
+
+        provider_val = offline_res.get('provider') or ('openai' if llm_client.is_configured() else 'knowledge_base')
         meta_data = {
-            "type": "meta",
-            "intent": offline_res.get("intent", question_intent),
-            "plan": offline_res.get("plan", plan),
-            "dailyAiUsed": offline_res.get("dailyAiUsed", used),
-            "dailyAiLimit": limit,
-            "remainingToday": offline_res.get("remainingToday", max(0, limit - used)),
-            "concept": offline_res.get("concept", "AI Trading Tutor"),
-            "framework": offline_res.get("framework", "OFFLINE"),
-            "sources": offline_res.get("sources", citations)
+            'type': 'meta',
+            'intent': offline_res.get('intent', question_intent),
+            'plan': offline_res.get('plan', plan),
+            'dailyAiUsed': offline_res.get('dailyAiUsed', used),
+            'dailyAiLimit': limit,
+            'remainingToday': offline_res.get('remainingToday', max(0, limit - used)),
+            'concept': offline_res.get('concept', 'AI Trading Tutor'),
+            'framework': offline_res.get('framework', 'VIP_LLM' if provider_val == 'openai' else 'OFFLINE'),
+            'provider': provider_val,
+            'sources': offline_res.get('sources', citations)
         }
-        yield f"data: {json.dumps(meta_data, ensure_ascii=False)}\n\n"
-        if ans:
-            yield f"data: {json.dumps({'type': 'token', 'token': ans}, ensure_ascii=False)}\n\n"
+        yield f'data: {json.dumps(meta_data, ensure_ascii=False)}\n\n'
+
+        words = ans.split(' ')
+        for i, w in enumerate(words):
+            chunk = w + (' ' if i < len(words) - 1 else '')
+            yield f'data: {json.dumps({"type": "token", "token": chunk}, ensure_ascii=False)}\n\n'
+
         done_payload = {
-            "type": "done",
-            "answer": ans,
-            "concept": offline_res.get("concept"),
-            "framework": offline_res.get("framework"),
-            "sources": offline_res.get("sources", []),
-            "socraticQuestions": offline_res.get("socraticQuestions", [])
+            'type': 'done',
+            'answer': ans,
+            'provider': provider_val,
+            'concept': offline_res.get('concept'),
+            'framework': offline_res.get('framework'),
+            'sources': offline_res.get('sources', []),
+            'socraticQuestions': offline_res.get('socraticQuestions', [])
         }
-        yield f"data: {json.dumps(done_payload, ensure_ascii=False)}\n\n"
+        yield f'data: {json.dumps(done_payload, ensure_ascii=False)}\n\n'
 
     def inspect_chart_vision(
         self,

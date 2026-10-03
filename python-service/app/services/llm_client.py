@@ -347,9 +347,14 @@ class LLMClient:
                             except Exception:
                                 continue
                 else:
-                    print(f"OpenAI Stream HTTP {resp.status_code}")
+                    err_msg = f"OpenAI Stream HTTP {resp.status_code}"
+                    self.last_error = err_msg
+                    print(err_msg)
+                    raise RuntimeError(err_msg)
         except Exception as ex:
+            self.last_error = str(ex)
             print(f"OpenAI stream error: {ex}")
+            raise ex
 
     def _call_openai(self, system_prompt: str, user_prompt: str, max_tokens: int) -> Optional[str]:
         base_url = self.openai_base_url or "https://api.openai.com/v1"

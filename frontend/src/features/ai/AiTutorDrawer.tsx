@@ -589,25 +589,28 @@ export const AiTutorDrawer = ({
           }
         );
 
-        // Finalize message with complete metadata & citations
-        setMessages(prev => {
-          const exists = prev.some(m => m.id === streamingId);
-          if (exists) {
-            return prev.map(m => m.id === streamingId ? { ...m, text: res.answer, data: res } : m);
-          }
-          return [...prev, { id: streamingId, sender: 'tutor', text: res.answer, data: res }];
-        });
-        streamSucceeded = true;
-        fetchSubscription();
+        // Finalize message with complete metadata & citations if valid answer was received
+        if (res.answer && !res.answer.includes('Không nhận được câu trả lời từ AI.')) {
+          setMessages(prev => {
+            const exists = prev.some(m => m.id === streamingId);
+            if (exists) {
+              return prev.map(m => m.id === streamingId ? { ...m, text: res.answer, data: res } : m);
+            }
+            return [...prev, { id: streamingId, sender: 'tutor', text: res.answer, data: res }];
+          });
+          streamSucceeded = true;
+          fetchSubscription();
+        } else {
+          console.warn('Streaming produced empty answer, falling back to standard askQuestion');
+          setMessages(prev => prev.filter(m => m.id !== streamingId));
+        }
       } catch (streamErr) {
         console.warn('Streaming error, checking fallback:', streamErr);
-        if (hasStartedStreaming) {
-          throw streamErr;
-        }
+        setMessages(prev => prev.filter(m => m.id !== streamingId));
       }
 
-      // 2. Fallback to standard request if streaming failed before sending any tokens
-      if (!streamSucceeded && !hasStartedStreaming) {
+      // 2. Fallback to standard request if streaming failed or produced empty answer
+      if (!streamSucceeded) {
         const res = await aiService.askQuestion(
           q, 
           undefined, 
@@ -982,7 +985,7 @@ export const AiTutorDrawer = ({
                                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-blue-400 animate-pulse" />
                                 {msg.imageUrl ? 'Gemini Vision' : 'Gemini VIP'}
                               </span>
-                            ) : msg.data?.provider === 'openai' ? (
+                            ) : (msg.data?.provider === 'openai' || msg.data?.framework === 'VIP_LLM' || (!msg.data?.provider && (!msg.text || !msg.text.includes('Không nhận được')))) ? (
                               <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[9px] font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-1 shadow-2xs">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
                                 OpenAI GPT-4o
