@@ -23,7 +23,7 @@ PAYOS_CANCEL_URL = os.getenv("PAYOS_CANCEL_URL", "http://localhost:5173/payment/
 # Centralized Subscription Constants
 # 1. Gói FREE (Miễn phí)
 FREE_DAILY_LIMIT = 10
-INSPECT_FREE_DAILY_LIMIT = 2
+INSPECT_FREE_DAILY_LIMIT = 1
 
 # 2. Gói PLUS (129.000₫ / 30 ngày)
 PLAN_PLUS_PRICE = 129000

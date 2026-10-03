@@ -61,7 +61,7 @@ router.get('/me', protect, async (req: any, res: Response) => {
           let chatUsed = dailyUsed;
           let remainingChat = Math.max(0, chatLimit - chatUsed);
 
-          let inspectLimit = 2;
+          let inspectLimit = 1;
           let inspectUsed = sub.daily_inspect_used || 0;
           let remainingInspect = Math.max(0, inspectLimit - inspectUsed);
           let isUnlimited = false;
@@ -114,9 +114,9 @@ router.get('/me', protect, async (req: any, res: Response) => {
       chatLimit: 10,
       chatUsed: 0,
       remainingChat: 10,
-      inspectLimit: 2,
+      inspectLimit: 1,
       inspectUsed: 0,
-      remainingInspect: 2,
+      remainingInspect: 1,
       isUnlimited: false,
       premiumExpiresAt: null,
       isPremium: false,

@@ -809,13 +809,13 @@ export const AiTutorDrawer = ({
                     <strong className="text-amber-600 dark:text-amber-400">{subscription?.remainingChat ?? (subscription ? subscription.remainingToday : 10)}</strong>
                     <span className="text-slate-400">/10 chat</span>
                     <span className="mx-1 text-slate-300 dark:text-slate-600">•</span>
-                    <strong className="text-blue-600 dark:text-blue-400">{subscription?.remainingInspect ?? 2}</strong>
-                    <span className="text-slate-400">/2 bài</span>
+                    <strong className="text-blue-600 dark:text-blue-400">{subscription?.remainingInspect ?? 1}</strong>
+                    <span className="text-slate-400">/1 bài</span>
                   </span>
                   <button
                     onClick={() => setIsUpgradeModalOpen(true)}
                     className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs shadow-xs transition-all cursor-pointer whitespace-nowrap hover:scale-[1.02]"
-                    title={isEn ? 'Upgrade to PLUS (99k) or PRO (299k)' : 'Nâng cấp Gói PLUS (99k) hoặc PRO (299k) qua PayOS'}
+                    title={isEn ? 'Upgrade to PLUS (129k) or PRO (299k)' : 'Nâng cấp Gói PLUS (129k) hoặc PRO (299k) qua PayOS'}
                   >
                     <Crown className="w-3.5 h-3.5 shrink-0" />
                     <span>{isEn ? 'Upgrade' : 'Nâng cấp gói'}</span>
@@ -1158,13 +1158,17 @@ export const AiTutorDrawer = ({
                   <span className="text-slate-500 dark:text-slate-400">
                     {isEn ? 'Evaluation Quota:' : 'Hạn mức Chấm Bài:'}
                   </span>
-                  {subscription?.isPremium ? (
+                  {subscription?.plan === 'PRO' ? (
                     <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold font-mono">
-                      {isEn ? 'PRO: 20 evaluations/day' : 'PRO: 20 lượt/ngày'}
+                      {isEn ? 'PRO VIP: Unlimited' : 'PRO VIP: Không giới hạn'}
+                    </span>
+                  ) : subscription?.plan === 'PLUS' || subscription?.plan === 'PREMIUM' ? (
+                    <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold font-mono">
+                      {isEn ? `PLUS: ${subscription?.remainingInspect ?? 150}/150 month` : `PLUS: ${subscription?.remainingInspect ?? 150}/150 tháng`}
                     </span>
                   ) : (
                     <span className="px-2 py-0.5 rounded-full bg-slate-200 dark:bg-[#202533] text-slate-700 dark:text-slate-300 font-semibold font-mono">
-                      {isEn ? 'Free: 2 evaluations/day' : 'Free: 2 lượt/ngày'}
+                      {isEn ? `Free: ${subscription?.remainingInspect ?? 1}/1 day` : `Free: ${subscription?.remainingInspect ?? 1}/1 lượt/ngày`}
                     </span>
                   )}
                 </div>
