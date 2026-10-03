@@ -28,36 +28,74 @@ function getUserIdFromReq(req: Request): string {
 }
 
 async function forwardToPython(endpoint: string, method: string = 'POST', data?: any) {
-  const url = `${PYTHON_URL}/internal/ai${endpoint}`;
+  const cleanBaseUrl = PYTHON_URL.replace(/\/+$/, '');
+  const url = `${cleanBaseUrl}/internal/ai${endpoint}`;
   const options: RequestInit = {
     method,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'Connection': 'keep-alive'
+    },
     body: data ? JSON.stringify(data) : undefined,
     signal: AbortSignal.timeout(65000), // Cho phép 65s để Render khởi động nếu đang ngủ (cold-start)
   };
 
   let lastError: any = null;
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       const resp = await fetch(url, options);
       if (!resp.ok) {
-        if ((resp.status === 502 || resp.status === 503 || resp.status === 504) && attempt === 1) {
-          await new Promise(r => setTimeout(r, 3000));
+        if ((resp.status === 502 || resp.status === 503 || resp.status === 504) && attempt < maxAttempts) {
+          console.warn(`[AI Route] Python service returned ${resp.status} on attempt ${attempt}. Retrying in 6s for cold-start recovery...`);
+          await new Promise(r => setTimeout(r, 6000));
           continue;
         }
         const errorText = await resp.text();
-        throw new Error(`Python AI Service error (${resp.status}): ${errorText}`);
+        const isHtml = errorText.trim().startsWith('<') || errorText.includes('<!DOCTYPE html');
+        const cleanMsg = isHtml 
+          ? `Dịch vụ AI đang khởi động (Cold-start) hoặc tạm thời không khả dụng trên Render (${resp.status} Bad Gateway). Vui lòng thử lại sau 30-60 giây.`
+          : errorText.slice(0, 300);
+        throw new Error(`Python AI Service error (${resp.status}): ${cleanMsg}`);
       }
       return await resp.json();
     } catch (err: any) {
       lastError = err;
-      if (attempt === 1) {
-        await new Promise(r => setTimeout(r, 3000));
+      if (attempt < maxAttempts) {
+        console.warn(`[AI Route] Python connection error on attempt ${attempt}: ${err?.message}. Retrying...`);
+        await new Promise(r => setTimeout(r, 4000));
       }
     }
   }
   throw lastError;
 }
+
+// Middleware: Khóa toàn bộ tính năng AI nếu người dùng đang trong bài thi Thử Thách Quỹ (status: ACTIVE)
+const blockIfInActiveChallenge = async (req: Request, res: Response, next: any) => {
+  if (req.method === 'POST') {
+    try {
+      const userId = (req as any).user?._id?.toString() || req.body?.userId || getUserIdFromReq(req);
+      if (userId && userId !== '64f7b1e4a3b9c2d1e8f9a0b1' && userId !== 'guest_user') {
+        const activeChallenge = await Challenge.findOne({ userId, status: 'ACTIVE' });
+        if (activeChallenge) {
+          const isEn = (req.body?.lang || '').toLowerCase().startsWith('en');
+          return res.status(403).json({
+            success: false,
+            guardrailTriggered: 'CHALLENGE_ACTIVE_BLOCKED',
+            message: isEn
+              ? 'Your account is currently taking an active Prop Firm Challenge. All AI features are locked according to competition rules to ensure integrity and realistic trading evaluation.'
+              : 'Tài khoản của bạn đang trong bài thi Thử Thách Cấp Vốn Quỹ (Prop Firm Challenge). Toàn bộ tính năng AI bị khóa theo quy chế thi để đảm bảo tính minh bạch và đánh giá độc lập năng lực giao dịch thực tế.'
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('[AI Guardrail] blockIfInActiveChallenge check error:', err);
+    }
+  }
+  next();
+};
+
+router.use(blockIfInActiveChallenge);
 
 // 1. Ask AI Tutor (Bắt buộc đăng nhập tài khoản)
 router.post('/ask', protect, async (req: AuthRequest, res: Response) => {
@@ -176,6 +214,183 @@ router.post('/ask', protect, async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     console.error('AI Ask error:', error.message);
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// 1.1 Ask AI Tutor with Server-Sent Events (SSE Streaming)
+router.post('/ask-stream', protect, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user._id.toString();
+    const symbol = req.body?.symbol || 'BTCUSDT';
+    const question = req.body?.question || '';
+
+    // Persist user question in DB
+    if (question && question.trim()) {
+      try {
+        await AiChatMessage.create({
+          userId,
+          symbol,
+          sender: 'user',
+          text: question
+        });
+      } catch (saveErr) {
+        console.warn('Could not save user message to DB:', saveErr);
+      }
+    }
+
+    // Query user live portfolio & DB data to provide full database context to AI
+    let userData: any = null;
+    try {
+      const [wallet, holdings, pendingOrders, activeChallenge, recentOrders] = await Promise.all([
+        Wallet.findOne({ userId }),
+        Holding.find({ userId }),
+        Order.find({ userId, status: 'PENDING' }),
+        Challenge.findOne({ userId, status: { $in: ['ACTIVE', 'PAUSED', 'FAILED', 'PASSED'] } }),
+        Order.find({ userId }).sort({ createdAt: -1 }).limit(5)
+      ]);
+
+      userData = {
+        wallet: {
+          balance: wallet?.balance ?? 10000,
+          availableBalance: wallet?.availableBalance ?? 10000
+        },
+        positions: holdings.map(h => ({
+          symbol: h.symbol,
+          side: h.side,
+          quantity: h.quantity,
+          entryPrice: h.averagePrice,
+          leverage: h.leverage,
+          tp: h.tp,
+          sl: h.sl,
+          accountType: h.accountType
+        })),
+        pendingOrders: pendingOrders.map(o => ({
+          symbol: o.symbol,
+          side: o.side,
+          price: o.price,
+          quantity: o.quantity,
+          type: o.type
+        })),
+        recentOrders: recentOrders.map(o => ({
+          symbol: o.symbol,
+          side: o.side,
+          price: o.price,
+          quantity: o.quantity,
+          status: o.status
+        })),
+        challenge: activeChallenge ? {
+          status: activeChallenge.status,
+          level: activeChallenge.currentLevel,
+          capital: activeChallenge.startingCapitalUSD,
+          currentBalance: activeChallenge.currentBalanceUSD,
+          totalProfit: activeChallenge.totalProfitUSD,
+          dailyLoss: activeChallenge.dailyLossUSD,
+          maxLoss: activeChallenge.maxLossUSD
+        } : null
+      };
+    } catch (dbErr) {
+      console.warn('Could not query user DB portfolio:', dbErr);
+    }
+
+    const payload = {
+      ...req.body,
+      userId,
+      userData: userData || req.body?.userData
+    };
+
+    const cleanBaseUrl = PYTHON_URL.replace(/\/+$/, '');
+    const url = `${cleanBaseUrl}/internal/ai/ask-stream`;
+
+    // Setup SSE response headers for client
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders?.();
+
+    let fullAnswer = '';
+    let doneData: any = null;
+
+    try {
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Connection': 'keep-alive'
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(65000)
+      });
+
+      if (!resp.ok || !resp.body) {
+        const errorText = await resp.text();
+        const cleanMsg = errorText.includes('<!DOCTYPE html') || errorText.length > 200
+          ? `Máy chủ AI Render đang khởi động (${resp.status}). Vui lòng thử lại sau 30-60 giây.`
+          : errorText;
+        res.write(`data: ${JSON.stringify({ type: 'error', message: cleanMsg })}\n\n`);
+        return res.end();
+      }
+
+      // Stream chunks from python service to frontend
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const text = decoder.decode(value, { stream: true });
+        res.write(text);
+        buffer += text;
+
+        // Parse accumulated text to capture tokens for DB persistence
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const parsed = JSON.parse(line.slice(6));
+              if (parsed.type === 'token' && parsed.token) {
+                fullAnswer += parsed.token;
+              } else if (parsed.type === 'done') {
+                doneData = parsed;
+                if (parsed.answer) fullAnswer = parsed.answer;
+              }
+            } catch {
+              // ignore partial line JSON parse errors
+            }
+          }
+        }
+      }
+
+      // Save complete AI response to DB
+      if (fullAnswer.trim()) {
+        try {
+          await AiChatMessage.create({
+            userId,
+            symbol,
+            sender: 'tutor',
+            text: fullAnswer,
+            data: doneData || { answer: fullAnswer }
+          });
+        } catch (saveErr) {
+          console.warn('Could not save streamed tutor message to DB:', saveErr);
+        }
+      }
+
+      res.end();
+    } catch (fetchErr: any) {
+      console.error('Error streaming from Python service:', fetchErr);
+      res.write(`data: ${JSON.stringify({ type: 'error', message: fetchErr.message || 'Lỗi kết nối streaming AI' })}\n\n`);
+      res.end();
+    }
+  } catch (error: any) {
+    console.error('AI Ask Stream error:', error.message);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: error.message });
+    } else {
+      res.end();
+    }
   }
 });
 
@@ -467,12 +682,14 @@ router.post('/inspect-chart', optionalProtect, async (req: any, res: Response) =
 router.post('/inspect-chart-data', optionalProtect, async (req: any, res: Response) => {
   try {
     const userId = req.user?._id?.toString() || req.body?.userId || 'guest_user';
-    const { drawings, klines, symbol, timeframe, userNotes } = req.body;
+    const { drawings, klines, symbol, timeframe, userNotes, lang } = req.body;
 
     if (!drawings || !Array.isArray(drawings) || drawings.length === 0) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Bạn chưa vẽ vùng phân tích nào trên biểu đồ. Hãy dùng thanh công cụ bên trái (Hộp chữ nhật, Đường kẻ) để đánh dấu vùng Order Block / FVG trước nhé!' 
+        message: lang === 'en' 
+          ? 'No drawings detected on chart. Please use the left toolbar (Rectangle, Line) to mark Order Block / FVG first!' 
+          : 'Bạn chưa vẽ vùng phân tích nào trên biểu đồ. Hãy dùng thanh công cụ bên trái (Hộp chữ nhật, Đường kẻ) để đánh dấu vùng Order Block / FVG trước nhé!' 
       });
     }
 
@@ -482,7 +699,8 @@ router.post('/inspect-chart-data', optionalProtect, async (req: any, res: Respon
       symbol: symbol || '',
       timeframe: timeframe || '',
       userNotes: userNotes || '',
-      userId
+      userId,
+      lang: lang || 'vi'
     });
 
     return res.json(result);

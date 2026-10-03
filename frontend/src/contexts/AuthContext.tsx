@@ -117,7 +117,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     fetchUser();
   }, []);
 
-  // Đăng nhập bằng Google
+  // Tự động giải phóng trạng thái chờ nếu quá 25 giây (tránh kẹt màn hình loading)
+  useEffect(() => {
+    let timer: any;
+    if (isGoogleAuthenticating) {
+      timer = setTimeout(() => {
+        setIsGoogleAuthenticating(false);
+        setGoogleAuthError('Quá trình xác thực Google phản hồi quá lâu. Vui lòng thử lại.');
+      }, 25000);
+    }
+    return () => clearTimeout(timer);
+  }, [isGoogleAuthenticating]);
+
+  // Đăng nhập bằng Google (Popup access_token flow)
   const triggerGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
@@ -176,8 +188,66 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log('Login Failed', err);
       setIsGoogleAuthenticating(false);
       setGoogleAuthError('Đăng nhập Google không thành công hoặc đã bị hủy.');
+    },
+    onNonOAuthError: (nonOAuthError) => {
+      console.warn('Google non-OAuth error:', nonOAuthError);
+      setIsGoogleAuthenticating(false);
+      if (nonOAuthError?.type === 'popup_failed_to_open') {
+        setGoogleAuthError('Trình duyệt Safari đã chặn cửa sổ Pop-up. Vui lòng cho phép Pop-up trên Safari hoặc bấm lại để đăng nhập.');
+      } else if (nonOAuthError?.type === 'popup_closed') {
+        setGoogleAuthError('Cửa sổ đăng nhập Google đã được đóng.');
+      } else {
+        setGoogleAuthError('Không thể mở cửa sổ đăng nhập Google. Vui lòng thử lại.');
+      }
     }
   });
+
+  // Đăng nhập bằng Google Credential (dành cho One Tap hoặc nút GoogleLogin chính thức)
+  const loginWithGoogleCredential = async (credential: string) => {
+    try {
+      setIsGoogleAuthenticating(true);
+      setGoogleAuthError('');
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const tokenToSend = captchaTokenRef.current || captchaToken;
+      const res = await fetch(`${apiUrl}/auth/google`, {
+        credentials: 'include',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          credential,
+          captchaToken: tokenToSend
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (data.token) localStorage.setItem('token', data.token);
+        if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
+        await fetchUser();
+        setGoogleAuthError('');
+        setIsLoginModalOpen(false);
+      } else {
+        const isSuspended = res.status === 403 && data.message && (
+          data.message.includes('Suspended') || 
+          data.message.includes('khóa') || 
+          data.message.includes('đình chỉ')
+        );
+        if (isSuspended) {
+          setIsLoginModalOpen(false);
+          setSuspendedModal({
+            isOpen: true,
+            message: data.message || 'Tài khoản của bạn đã bị khóa hoặc tạm ngưng.'
+          });
+        } else {
+          setGoogleAuthError(data.message || 'Đăng nhập Google thất bại. Vui lòng thử lại.');
+        }
+      }
+    } catch (err: any) {
+      console.error('Failed to authenticate credential', err);
+      setGoogleAuthError(err?.message || 'Lỗi kết nối máy chủ khi đăng nhập Google.');
+    } finally {
+      setIsGoogleAuthenticating(false);
+    }
+  };
 
   // Đăng nhập bằng Email & Mật khẩu
   const loginWithEmail = async (email: string, password: string, captchaToken?: string) => {
@@ -411,12 +481,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         googleError={googleAuthError}
         onClearGoogleError={() => setGoogleAuthError('')}
         onLoginGoogle={(token) => {
-          captchaTokenRef.current = token;
-          setCaptchaToken(token);
+          captchaTokenRef.current = token || '';
+          setCaptchaToken(token || '');
           setGoogleAuthError('');
-          setIsGoogleAuthenticating(true);
+          // Lưu ý: Không bật isGoogleAuthenticating ở đây để không khóa UI và không phá vỡ cử chỉ người dùng của Safari
           triggerGoogleLogin();
         }} 
+        onLoginGoogleCredential={(credential) => {
+          loginWithGoogleCredential(credential);
+        }}
       />
       {/* Global Google Authenticating Loading Overlay */}
       {isGoogleAuthenticating && (
@@ -436,6 +509,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Đang đồng bộ dữ liệu
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                setIsGoogleAuthenticating(false);
+                setGoogleAuthError('Đã hủy quá trình xác thực.');
+              }}
+              className="mt-2 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 underline cursor-pointer py-1"
+            >
+              Hủy thao tác
+            </button>
           </div>
         </div>
       )}

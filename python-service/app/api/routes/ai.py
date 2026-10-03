@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from typing import Dict, Any, List
 from app.rag.schema import (
     AskQuestionRequest,
@@ -21,6 +22,18 @@ router = APIRouter()
 @router.post("/ask")
 def ask_question(req: AskQuestionRequest):
     return ai_tutor_service.answer_question(req)
+
+@router.post("/ask-stream")
+def ask_question_stream(req: AskQuestionRequest):
+    return StreamingResponse(
+        ai_tutor_service.answer_question_stream(req),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
 
 @router.post("/explain-concept")
 def explain_concept(req: ConceptExplainRequest):
@@ -45,7 +58,7 @@ def submit_reflection(req: StudentReflectionRequest):
 
 @router.post("/compare-strategies")
 def compare_strategies(req: StrategyComparisonRequest):
-    return strategy_comparator.compare(req.trade)
+    return strategy_comparator.compare(req.trade, req.lang or "vi")
 
 @router.post("/backtest-assistant")
 def backtest_assist(req: BacktestAssistantRequest):
@@ -80,13 +93,15 @@ async def inspect_chart_data(request: Request):
     timeframe = data.get("timeframe")
     user_notes = data.get("userNotes", "")
     user_id = request.headers.get("x-user-id") or data.get("userId")
+    lang = data.get("lang", "vi")
     return ai_tutor_service.inspect_chart_data(
         drawings=drawings,
         klines=klines,
         symbol=symbol,
         timeframe=timeframe,
         user_notes=user_notes,
-        user_id=user_id
+        user_id=user_id,
+        lang=lang
     )
 
 @router.get("/sources")

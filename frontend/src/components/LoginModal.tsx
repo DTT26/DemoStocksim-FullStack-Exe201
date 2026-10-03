@@ -15,12 +15,15 @@ import {
   ChevronLeft,
   AlertCircle
 } from 'lucide-react';
+import { isInAppBrowser, isIOS, isSafari } from '../utils/browserUtils';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
 
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLoginGoogle: (captchaToken: string) => void;
+  onLoginGoogle: (captchaToken?: string) => void;
+  onLoginGoogleCredential?: (credential: string) => void;
   isGoogleLoading?: boolean;
   googleError?: string;
   onClearGoogleError?: () => void;
@@ -34,6 +37,7 @@ export const LoginModal = ({
   isOpen, 
   onClose, 
   onLoginGoogle, 
+  onLoginGoogleCredential,
   isGoogleLoading = false,
   googleError = '',
   onClearGoogleError
@@ -173,16 +177,16 @@ export const LoginModal = ({
   };
 
   // 1. Xử lý Đăng nhập Google
-  const handleGoogleClick = async () => {
-    setLoading(true);
+  const handleGoogleClick = () => {
     setErrorMsg('');
     if (onClearGoogleError) onClearGoogleError();
     try {
-      const token = await getRecaptchaToken('google_login');
-      onLoginGoogle(token);
+      // BẮT BUỘC ĐỒNG BỘ: Không dùng await getRecaptchaToken tại đây
+      // Vì trên Safari iOS, bất kỳ hàm await/Promise nào cũng sẽ làm mất cử chỉ người dùng (User Activation Context)
+      // khiến trình duyệt Safari chặn Popup Google Login ngay lập tức!
+      onLoginGoogle('');
     } catch (err: any) {
       setErrorMsg('Không thể khởi tạo đăng nhập Google. Vui lòng thử lại.');
-      setLoading(false);
     }
   };
 
@@ -632,6 +636,19 @@ export const LoginModal = ({
         {/* Scrollable Form Content */}
         <div className="p-6 overflow-y-auto max-h-[calc(92vh-130px)] space-y-4 bg-white dark:bg-[#111827] transition-colors">
           
+          {/* Cảnh báo nếu mở trong App mạng xã hội (Zalo/Facebook) */}
+          {isInAppBrowser() && (
+            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+              <div className="space-y-0.5">
+                <span className="font-bold">Đang mở trong ứng dụng (Zalo/Facebook):</span>
+                <p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-300">
+                  Google hạn chế đăng nhập từ trình duyệt nội bộ của ứng dụng. Vui lòng bấm vào biểu tượng <strong>⋯</strong> hoặc <strong>⋮</strong> và chọn <strong>"Mở bằng trình duyệt Safari/Chrome"</strong> để đăng nhập.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Thông báo Lỗi */}
           {errorMsg && (
             <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-start gap-2 animate-in fade-in">
@@ -738,7 +755,7 @@ export const LoginModal = ({
                 {isGoogleLoading || (loading && !loginEmail) ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin text-indigo-600 dark:text-indigo-400" />
-                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">Đang đăng nhập bằng Google...</span>
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">Đang kết nối Google...</span>
                   </>
                 ) : (
                   <>
@@ -747,6 +764,36 @@ export const LoginModal = ({
                   </>
                 )}
               </button>
+
+              {/* Hướng dẫn và nút dự phòng nếu gặp sự cố Safari chặn Pop-up */}
+              {googleError && (googleError.includes('Pop-up') || googleError.includes('Safari')) && (
+                <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs space-y-2 animate-in fade-in">
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <span>Mẹo mở đăng nhập trên Safari:</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-300 pl-5">
+                    1. Bấm lại nút <strong>"Tiếp tục bằng Google"</strong> và chọn <strong>"Cho phép"</strong> nếu có hộp thoại hỏi.<br />
+                    2. Hoặc vào <strong>Cài đặt iPhone &gt; Safari &gt; Tắt "Chặn cửa sổ bật lên"</strong>.<br />
+                    3. Hoặc đăng nhập trực tiếp qua nút bên dưới:
+                  </p>
+                  {onLoginGoogleCredential && (
+                    <div className="pt-1 flex justify-center">
+                      <GoogleLogin
+                        onSuccess={(cred) => {
+                          if (cred.credential) onLoginGoogleCredential(cred.credential);
+                        }}
+                        onError={() => setErrorMsg('Đăng nhập Google thất bại hoặc bị hủy.')}
+                        theme="outline"
+                        size="large"
+                        shape="rectangular"
+                        text="continue_with"
+                        width="100%"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="text-center pt-2">
                 <p className="text-xs text-slate-500 dark:text-slate-400">

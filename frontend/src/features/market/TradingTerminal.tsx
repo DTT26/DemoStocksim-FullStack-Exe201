@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChartArea } from './components/ChartArea';
 import { RightSidebar } from './components/RightSidebar';
@@ -74,6 +74,11 @@ export const TradingTerminal = () => {
   const [isIndicatorModalOpen, setIsIndicatorModalOpen] = useState(false);
   const [activeIndicators, setActiveIndicators] = useState<string[]>([]);
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
+  const positionsRef = useRef(positions);
+  positionsRef.current = positions;
+  const pendingOrdersRef = useRef(pendingOrders);
+  pendingOrdersRef.current = pendingOrders;
+  const closingPositionsRef = useRef<Set<string>>(new Set());
   const [tradeCount, setTradeCount] = useState(0);
   const [toast, setToast] = useState<{ msg: string, type: 'info' | 'warning' | 'success' | 'error' } | null>(null);
   const [editingSymbol, setEditingSymbol] = useState<string | null>(null);
@@ -305,6 +310,7 @@ export const TradingTerminal = () => {
   const [isReplaying, setIsReplaying] = useState(false);
   const [isSelectingReplayStart, setIsSelectingReplayStart] = useState(false);
   const [replayTime, setReplayTime] = useState<number | null>(null);
+  const [replayPrice, setReplayPrice] = useState<number | null>(null);
   const [replayStepTrigger, setReplayStepTrigger] = useState(0);
   const [replayReloadTrigger, setReplayReloadTrigger] = useState(0);
   const [totalBars, setTotalBars] = useState(1000);
@@ -350,12 +356,6 @@ export const TradingTerminal = () => {
   });
   const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
   const [isAiTutorOpen, setIsAiTutorOpen] = useState(false);
-  const [sharedChartImage, setSharedChartImage] = useState<string | null>(null);
-
-  const handleShareChartToChat = (imageUrl: string) => {
-    setSharedChartImage(imageUrl);
-    setIsAiTutorOpen(true);
-  };
 
   // Store backtest rules when launching Bar Replay from AI Tutor
   const [activeBacktestRules, setActiveBacktestRules] = useState<{
@@ -559,9 +559,155 @@ export const TradingTerminal = () => {
     }
   }, [selectedStock.price, positions, user?._id]);
 
-  // Kiểm tra Real-time TP/SL/Lệnh chờ mỗi khi giá thay đổi (~1s)
+  // Tự động đóng lệnh ngay tức khắc trong Bar Replay khi giá nến cắn Chốt lời (TP) hoặc Cắt lỗ (SL)
+  const checkReplayTriggers = async (
+    symbol: string,
+    price: number,
+    bar?: { open: number; high: number; low: number; close: number; timestamp: number }
+  ) => {
+    if (!user?._id) return;
+
+    const pos = positionsRef.current[symbol];
+    if (pos && !closingPositionsRef.current.has(symbol)) {
+      const high = bar ? Math.max(bar.high, price) : price;
+      const low = bar ? Math.min(bar.low, price) : price;
+      let hitReason: 'TP' | 'SL' | null = null;
+      let triggerPrice = price;
+
+      if (pos.side === 'LONG') {
+        if (pos.sl && low <= pos.sl && pos.tp && high >= pos.tp) {
+          if (bar && Math.abs(bar.open - pos.sl) < Math.abs(bar.open - pos.tp)) {
+            hitReason = 'SL';
+            triggerPrice = pos.sl;
+          } else {
+            hitReason = 'TP';
+            triggerPrice = pos.tp;
+          }
+        } else if (pos.tp && high >= pos.tp) {
+          hitReason = 'TP';
+          triggerPrice = pos.tp;
+        } else if (pos.sl && low <= pos.sl) {
+          hitReason = 'SL';
+          triggerPrice = pos.sl;
+        }
+      } else if (pos.side === 'SHORT') {
+        if (pos.sl && high >= pos.sl && pos.tp && low <= pos.tp) {
+          if (bar && Math.abs(bar.open - pos.sl) < Math.abs(bar.open - pos.tp)) {
+            hitReason = 'SL';
+            triggerPrice = pos.sl;
+          } else {
+            hitReason = 'TP';
+            triggerPrice = pos.tp;
+          }
+        } else if (pos.tp && low <= pos.tp) {
+          hitReason = 'TP';
+          triggerPrice = pos.tp;
+        } else if (pos.sl && high >= pos.sl) {
+          hitReason = 'SL';
+          triggerPrice = pos.sl;
+        }
+      }
+
+      if (hitReason) {
+        closingPositionsRef.current.add(symbol);
+        const isTP = hitReason === 'TP';
+        const label = isTP ? 'Chốt lời (TP)' : 'Cắt lỗ (SL)';
+
+        // 1. Đóng ngay lập tức trên UI (Optimistic Update) để lệnh tự đóng liền
+        setPositions(prev => {
+          const next = { ...prev };
+          delete next[symbol];
+          return next;
+        });
+
+        // 2. Cập nhật số dư tiền mặt tức thì
+        const pnl = pos.side === 'LONG'
+          ? (triggerPrice - pos.averagePrice) * pos.quantity
+          : (pos.averagePrice - triggerPrice) * pos.quantity;
+        const returnedMargin = (pos.averagePrice * pos.quantity) / (pos.leverage || 1);
+        setBalance(prev => Math.max(0, prev + pnl + returnedMargin));
+
+        // 3. Thông báo tức thì
+        showToast(
+          `${isTP ? '🎯' : '🛑'} [Bar Replay] Vị thế ${pos.side} ${symbol} đã cắn ${label} tại giá $${triggerPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}!`,
+          isTP ? 'success' : 'warning'
+        );
+        addNotification?.({
+          title: `${isTP ? '🎯 Khớp Chốt Lời' : '🛑 Khớp Cắt Lỗ'} (Replay)`,
+          message: `Vị thế ${pos.side} ${symbol} đã tự động đóng tại giá $${triggerPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}. Lợi nhuận: ${pnl >= 0 ? '+' : '-'}$${Math.abs(pnl).toFixed(2)}`,
+          type: isTP ? 'success' : 'warning'
+        });
+
+        // 4. Lưu vào database backend
+        tradingApi.closePosition(symbol, pos.side, triggerPrice, undefined, user._id)
+          .then(async (res) => {
+            if (res && res.success) {
+              await fetchPortfolio(user._id);
+              setTradeCount(c => c + 1);
+              useNotificationStore.getState().fetchNotifications();
+            }
+          })
+          .catch((err) => {
+            console.error('Lỗi lưu đóng vị thế Replay về backend:', err);
+          })
+          .finally(() => {
+            setTimeout(() => {
+              closingPositionsRef.current.delete(symbol);
+            }, 1000);
+          });
+      }
+    }
+
+    // Tự động khớp các lệnh chờ Limit / Stop trong Bar Replay
+    const pendings = pendingOrdersRef.current.filter(o => o.symbol === symbol && o.status === 'PENDING');
+    for (const ord of pendings) {
+      const key = `order_${ord._id}`;
+      if (closingPositionsRef.current.has(key)) continue;
+
+      const high = bar ? Math.max(bar.high, price) : price;
+      const low = bar ? Math.min(bar.low, price) : price;
+      let shouldFill = false;
+      let fillPrice = ord.price;
+
+      if (ord.type === 'LIMIT') {
+        if (ord.side === 'LONG' && low <= ord.price) { shouldFill = true; fillPrice = ord.price; }
+        if (ord.side === 'SHORT' && high >= ord.price) { shouldFill = true; fillPrice = ord.price; }
+      } else if (ord.type === 'STOP') {
+        if (ord.side === 'LONG' && high >= ord.price) { shouldFill = true; fillPrice = ord.price; }
+        if (ord.side === 'SHORT' && low <= ord.price) { shouldFill = true; fillPrice = ord.price; }
+      }
+
+      if (shouldFill) {
+        closingPositionsRef.current.add(key);
+        tradingApi.checkTriggers({ [symbol]: fillPrice }, user._id)
+          .then(async () => {
+            await fetchPortfolio(user._id);
+            setTradeCount(c => c + 1);
+            showToast(`⚡ [Bar Replay] Lệnh chờ ${ord.side} ${ord.type} ${symbol} đã khớp tại giá $${fillPrice.toLocaleString('en-US')}`, 'info');
+          })
+          .catch((e) => {
+            console.error('Lỗi khớp lệnh chờ Replay:', e);
+          })
+          .finally(() => {
+            setTimeout(() => {
+              closingPositionsRef.current.delete(key);
+            }, 1000);
+          });
+      }
+    }
+  };
+
+  // Tự động kiểm tra TP/SL ngay khi vị thế mới được mở hoặc cập nhật trong lúc Replay đang chạy
+  useEffect(() => {
+    if (isReplaying && (replayPrice || selectedStock.price)) {
+      checkReplayTriggers(selectedStock.symbol, replayPrice || selectedStock.price);
+    }
+  }, [positions, isReplaying]);
+
+  // Kiểm tra Real-time TP/SL/Lệnh chờ mỗi khi giá thay đổi (~1s) - Chỉ áp dụng cho Live Trading
   useEffect(() => {
     if (!user?._id) return;
+    if (isReplaying) return; // Bar Replay đã được xử lý ngay lập tức từng nến qua checkReplayTriggers
 
     const checkTriggers = async () => {
       const priceMap: Record<string, number> = {};
@@ -617,7 +763,7 @@ export const TradingTerminal = () => {
         });
     };
     checkTriggers();
-  }, [user?._id, selectedStock.price, selectedStock.symbol, positions, pendingOrders]);
+  }, [user?._id, selectedStock.price, selectedStock.symbol, positions, pendingOrders, isReplaying]);
 
   const handleChallengeStateUpdate = async (newState: UserChallengeState) => {
     setChallengeState(newState);
@@ -970,14 +1116,25 @@ export const TradingTerminal = () => {
     setIsSelectingReplayStart(false);
   };
 
-  const handleConfirmReplayStart = (timestamp: number) => {
+  const handleConfirmReplayStart = (timestamp: number, price?: number) => {
     setReplayTime(timestamp);
+    if (price && !isNaN(price)) {
+      setReplayPrice(price);
+      setSelectedStock(prev => {
+        const curTicker = useMarketStore.getState().tickers[prev.symbol];
+        const openPrice = curTicker?.openPrice;
+        const change = openPrice ? (price - openPrice) : (curTicker ? curTicker.change : prev.change);
+        const percent = openPrice ? ((price - openPrice) / openPrice) * 100 : (curTicker ? curTicker.percent : prev.percent);
+        return { ...prev, price, change, percent, type: change >= 0 ? 'up' : 'down' };
+      });
+      handlePriceChange(price);
+    }
     setIsSelectingReplayStart(false);
     setIsReplaying(true);
     setReplayReloadTrigger(t => t + 1);
     if (store.isActive && store.session) {
       const isoTime = new Date(timestamp).toISOString();
-      store.tick(selectedStock.price, isoTime);
+      store.tick(price || selectedStock.price, isoTime);
     }
   };
 
@@ -1017,6 +1174,7 @@ export const TradingTerminal = () => {
       setIsReplaying(false);
       setIsSelectingReplayStart(false);
       setReplayTime(null);
+      setReplayPrice(null);
     }
     setGoToRealtimeTrigger(t => t + 1);
   };
@@ -1037,6 +1195,7 @@ export const TradingTerminal = () => {
     setIsReplaying(false);
     setIsSelectingReplayStart(false);
     setReplayTime(null);
+    setReplayPrice(null);
     setToast(null); // clear any lingering toast immediately
   };
 
@@ -1073,7 +1232,17 @@ export const TradingTerminal = () => {
         balance={balance}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
         onOpenChallenge={() => setIsChallengeModalOpen(true)}
-        onOpenAiTutor={() => setIsAiTutorOpen(true)}
+        onOpenAiTutor={() => {
+          if (challengeState.status === 'ACTIVE') {
+            showAlert({
+              title: 'Tính năng AI bị khóa khi thi quỹ',
+              message: 'Trong quá trình thực hiện bài thi Thử Thách Cấp Vốn Quỹ (Prop Firm Challenge), mọi công cụ AI Trading Tutor và phân tích tự động đều bị vô hiệu hóa để bảo đảm tính minh bạch và đánh giá đúng năng lực giao dịch thực tế của thí sinh.',
+              type: 'warning'
+            });
+            return;
+          }
+          setIsAiTutorOpen(true);
+        }}
         challengeLevelName={currentChallengeLevel.badge}
         challengeStatus={challengeState.status}
         accountRankBadge={accountRankConfig.badge}
@@ -1081,7 +1250,6 @@ export const TradingTerminal = () => {
         certCount={challengeState.certificates?.length || 0}
         selectedStock={selectedStock}
         activeTimeframe={activeTimeframe}
-        onShareToChat={handleShareChartToChat}
       />
 
       {/* Dynamic Prop Challenge Header Bar - Chỉ hiển thị khi đang trong bài thi hoặc có kết quả */}
@@ -1254,9 +1422,11 @@ export const TradingTerminal = () => {
                   isSelectingReplayStart={isSelectingReplayStart}
                   onSelectReplayStart={handleConfirmReplayStart}
                   replayTime={replayTime}
+                  replayPrice={replayPrice}
                   replayStepTrigger={replayStepTrigger}
                   replayReloadTrigger={replayReloadTrigger}
                   onReplayTimeChange={setReplayTime}
+                  onReplayPriceChange={setReplayPrice}
                   goToRealtimeTrigger={goToRealtimeTrigger}
                   onDataLoaded={setTotalBars}
                   tradeOrders={tradeOrders.filter(o => o.symbol === selectedStock.symbol)}
@@ -1281,7 +1451,11 @@ export const TradingTerminal = () => {
                   redoTrigger={redoTrigger}
                   onUndoRedoChange={setUndoRedoState}
                   chartSettings={chartSettings}
-                  onPriceUpdate={(price, timestamp) => {
+                  onPriceUpdate={(price, timestamp, bar) => {
+                    if (isReplaying) {
+                      setReplayPrice(price);
+                      checkReplayTriggers(selectedStock.symbol, price, bar);
+                    }
                     setSelectedStock(prev => {
                       if (prev.price === price) return prev;
                       const curTicker = useMarketStore.getState().tickers[prev.symbol];
@@ -1302,7 +1476,7 @@ export const TradingTerminal = () => {
                       } else {
                         candleTimeStr = store.currentTime || store.session.replayCurrentTime || store.session.replayStartTime || new Date().toISOString();
                       }
-                      store.tick(price, candleTimeStr);
+                      store.tick(price, candleTimeStr, bar?.high, bar?.low);
                     }
                   }}
                 />
@@ -1315,6 +1489,7 @@ export const TradingTerminal = () => {
                   pendingOrders={pendingOrders}
                   selectedSymbol={selectedStock.symbol}
                   currentPrice={selectedStock.price}
+                  isChallengeActive={challengeState.status === 'ACTIVE'}
                   onClosePosition={async (symbol, side, price, closeQty) => {
                     try {
                       const res = await tradingApi.closePosition(symbol, side, price, closeQty);
@@ -1678,10 +1853,8 @@ export const TradingTerminal = () => {
       />
       <AiTutorDrawer
         isOpen={isAiTutorOpen}
-        onClose={() => {
-          setIsAiTutorOpen(false);
-          setSharedChartImage(null);
-        }}
+        isChallengeActive={challengeState.status === 'ACTIVE'}
+        onClose={() => setIsAiTutorOpen(false)}
         currentSymbol={selectedStock.symbol}
         currentPrice={selectedStock.price}
         timeframe={activeTimeframe}
@@ -1691,8 +1864,6 @@ export const TradingTerminal = () => {
           exchange: selectedStock.exchange,
           market: selectedStock.market
         }}
-        sharedImage={sharedChartImage}
-        onClearSharedImage={() => setSharedChartImage(null)}
         onStartBacktestReplay={handleStartBacktestReplayFromAi}
       />
     </div>

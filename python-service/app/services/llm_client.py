@@ -1,18 +1,22 @@
 import os
+import json
 import httpx
 from dotenv import load_dotenv
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Iterator
 
 class LLMClient:
     """
     VIP Hybrid LLM Client supporting Google Gemini API and OpenAI API.
     Dynamically loads .env so changes take effect immediately without restart.
-    Provides fast timeout and graceful fallback across active models.
+    Provides fast timeout, HTTP connection pooling, and streaming fallback.
     """
 
     def __init__(self):
         self.last_error: Optional[str] = None
         self.active_provider: Optional[str] = None
+        # Persistent HTTP connection pool to avoid repeated SSL/TLS handshakes
+        limits = httpx.Limits(max_keepalive_connections=20, max_connections=50, keepalive_expiry=60.0)
+        self.client = httpx.Client(limits=limits, timeout=30.0)
         self._reload_env()
 
     def _reload_env(self):
@@ -31,7 +35,32 @@ class LLMClient:
         self._reload_env()
         return bool(self.gemini_key or self.openai_key)
 
-    def generate_text(self, system_prompt: str, user_prompt: str, max_tokens: int = 1500) -> Optional[str]:
+    def stream_text(self, system_prompt: str, user_prompt: str, max_tokens: int = 1500) -> Iterator[str]:
+        self.last_error = None
+        self.active_provider = None
+        if not self.is_configured():
+            return
+
+        # Priority 1: Google Gemini Streaming (Fastest TTFT)
+        if self.gemini_key:
+            try:
+                has_yielded = False
+                for chunk in self._stream_gemini(system_prompt, user_prompt, max_tokens):
+                    has_yielded = True
+                    self.active_provider = "gemini"
+                    yield chunk
+                if has_yielded:
+                    return
+            except Exception as e:
+                self.last_error = str(e)
+                print(f"Gemini Streaming error, falling back: {e}")
+
+        # Fallback to standard generation if streaming fails
+        full_text = self.generate_text(system_prompt, user_prompt, max_tokens)
+        if full_text:
+            yield full_text
+
+    def generate_text(self, system_prompt: str, user_prompt: str, max_tokens: int = 4000) -> Optional[str]:
         self.last_error = None
         self.active_provider = None
         if not self.is_configured():
@@ -67,7 +96,7 @@ class LLMClient:
         user_prompt: str,
         image_base64: str,
         mime_type: str = "image/png",
-        max_tokens: int = 2500
+        max_tokens: int = 4000
     ) -> Optional[str]:
         self.last_error = None
         self.active_provider = None
@@ -115,20 +144,18 @@ class LLMClient:
         self, 
         system_prompt: str, 
         user_prompt: str, 
-        max_tokens: int = 1500,
+        max_tokens: int = 4000,
         image_data: Optional[Dict[str, str]] = None
     ) -> Optional[str]:
         # Models in order of current available quota & speed
         models = [
-            "gemini-3.6-flash",
-            "gemini-3.8-flash",
-            "gemini-3.5-flash",
-            "gemini-flash-latest",
-            "gemini-3.1-flash-lite",
-            "gemini-3.5-flash-lite",
             "gemini-flash-lite-latest",
-            "gemini-2.5-flash-lite",
-            "gemini-pro-latest"
+            "gemini-pro-latest",
+            "gemini-flash-latest",
+            "gemini-3.5-flash-lite",
+            "gemini-3.5-flash",
+            "gemini-3.7-flash",
+            "gemini-3.8-flash"
         ]
 
         contents_parts: List[Dict[str, Any]] = [{"text": user_prompt}]
@@ -158,34 +185,90 @@ class LLMClient:
                 }
             }
             try:
-                with httpx.Client(timeout=25.0) as client:
-                    resp = client.post(url, json=payload)
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        candidates = data.get("candidates", [])
-                        if candidates and "content" in candidates[0]:
-                            parts = candidates[0]["content"].get("parts", [])
-                            texts = [p.get("text", "") for p in parts if "text" in p]
-                            full_text = "\n".join(texts).strip()
-                            if full_text:
-                                self.last_error = None
-                                return full_text
-                    elif resp.status_code in [429, 503, 500, 502, 504, 404]:
-                        print(f"Gemini ({model}) HTTP {resp.status_code}, trying next model...")
-                        continue
-                    else:
-                        err_json = resp.json() if "application/json" in resp.headers.get("content-type", "") else {}
-                        err_msg = err_json.get("error", {}).get("message", resp.text)
-                        self.last_error = f"Google Gemini ({resp.status_code}): {err_msg}"
-                        print(f"Gemini ({model}) HTTP {resp.status_code}: {err_msg}")
-                        if resp.status_code in [400, 401, 403]:
-                            break
-                        continue
+                resp = self.client.post(url, json=payload, timeout=25.0)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    candidates = data.get("candidates", [])
+                    if candidates and "content" in candidates[0]:
+                        parts = candidates[0]["content"].get("parts", [])
+                        texts = [p.get("text", "") for p in parts if "text" in p]
+                        full_text = "\n".join(texts).strip()
+                        if full_text:
+                            self.last_error = None
+                            return full_text
+                elif resp.status_code in [429, 503, 500, 502, 504, 404]:
+                    print(f"Gemini ({model}) HTTP {resp.status_code}, trying next model...")
+                    continue
+                else:
+                    err_json = resp.json() if "application/json" in resp.headers.get("content-type", "") else {}
+                    err_msg = err_json.get("error", {}).get("message", resp.text)
+                    self.last_error = f"Google Gemini ({resp.status_code}): {err_msg}"
+                    print(f"Gemini ({model}) HTTP {resp.status_code}: {err_msg}")
+                    if resp.status_code in [400, 401, 403]:
+                        break
+                    continue
             except Exception as ex:
                 self.last_error = str(ex)
                 print(f"Error calling {model}: {ex}")
                 continue
         return None
+
+    def _stream_gemini(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        max_tokens: int = 4000
+    ) -> Iterator[str]:
+        models = [
+            "gemini-flash-lite-latest",
+            "gemini-pro-latest",
+            "gemini-flash-latest",
+            "gemini-3.5-flash-lite",
+            "gemini-3.5-flash",
+            "gemini-3.7-flash"
+        ]
+        contents_parts: List[Dict[str, Any]] = [{"text": user_prompt}]
+        payload = {
+            "system_instruction": {
+                "parts": [{"text": system_prompt}]
+            },
+            "contents": [
+                {
+                    "parts": contents_parts
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.4,
+                "maxOutputTokens": max_tokens,
+                "topP": 0.95
+            }
+        }
+        for model in models:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?alt=sse&key={self.gemini_key}"
+            try:
+                with self.client.stream("POST", url, json=payload, timeout=35.0) as resp:
+                    if resp.status_code == 200:
+                        for line in resp.iter_lines():
+                            if line.startswith("data: "):
+                                raw = line[6:].strip()
+                                try:
+                                    data = json.loads(raw)
+                                    parts = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+                                    for p in parts:
+                                        t = p.get("text", "")
+                                        if t:
+                                            yield t
+                                except Exception:
+                                    pass
+                        return
+                    elif resp.status_code in [429, 503, 500, 502, 504, 404]:
+                        print(f"Gemini stream ({model}) HTTP {resp.status_code}, trying next model...")
+                        continue
+                    else:
+                        break
+            except Exception as ex:
+                print(f"Error streaming {model}: {ex}")
+                continue
 
     def _call_openai(self, system_prompt: str, user_prompt: str, max_tokens: int) -> Optional[str]:
         url = "https://api.openai.com/v1/chat/completions"
@@ -204,17 +287,16 @@ class LLMClient:
             "max_tokens": max_tokens
         }
         try:
-            with httpx.Client(timeout=20.0) as client:
-                resp = client.post(url, headers=headers, json=payload)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    choices = data.get("choices", [])
-                    if choices and "message" in choices[0]:
-                        return choices[0]["message"].get("content", "")
-                else:
-                    print(f"OpenAI HTTP {resp.status_code}: {resp.text}")
-                    if resp.status_code in [400, 401, 403]:
-                        self.openai_key = ""
+            resp = self.client.post(url, headers=headers, json=payload, timeout=20.0)
+            if resp.status_code == 200:
+                data = resp.json()
+                choices = data.get("choices", [])
+                if choices and "message" in choices[0]:
+                    return choices[0]["message"].get("content", "")
+            else:
+                print(f"OpenAI HTTP {resp.status_code}: {resp.text}")
+                if resp.status_code in [400, 401, 403]:
+                    self.openai_key = ""
         except Exception as ex:
             self.last_error = str(ex)
             print(f"Error calling OpenAI: {ex}")

@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useI18n } from '../contexts/I18nContext';
-import { User, Bell, Moon, Sun, Globe, Trophy, Sparkles } from 'lucide-react';
+import { User, Bell, Moon, Sun, Globe, Trophy, Sparkles, Lock } from 'lucide-react';
 import { UserDropdown } from './UserDropdown';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useModal } from '../contexts/ModalContext';
 import { LanguageModal } from './LanguageModal';
 import { NotificationDropdown } from './NotificationDropdown';
-import { ChartSnapshotDropdown } from '../features/market/components/ChartSnapshotDropdown';
 import type { Stock } from '../features/market/data';
 
 interface ToolbarNavbarProps {
@@ -24,7 +23,6 @@ interface ToolbarNavbarProps {
   certCount?: number;
   selectedStock?: Stock;
   activeTimeframe?: string;
-  onShareToChat?: (imageUrl: string) => void;
 }
 
 export const ToolbarNavbar = ({ 
@@ -39,8 +37,7 @@ export const ToolbarNavbar = ({
   accountRankName,
   certCount,
   selectedStock,
-  activeTimeframe,
-  onShareToChat
+  activeTimeframe
 }: ToolbarNavbarProps) => {
   const { user, login, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -98,22 +95,30 @@ export const ToolbarNavbar = ({
         )}
         {/* Right side controls */}
         <div className="flex items-center gap-2">
-          {/* Nút Chụp ảnh biểu đồ - BÊN TRÁI CHỮ AI */}
-          <ChartSnapshotDropdown
-            selectedStock={selectedStock}
-            activeTimeframe={activeTimeframe}
-            onShareToChat={onShareToChat}
-          />
-
           {/* Nút AI Trading Tutor */}
-          <button
-            onClick={onOpenAiTutor}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-blue-500/15 via-purple-500/15 to-amber-500/15 hover:from-blue-500/25 hover:to-amber-500/25 border border-blue-500/30 text-blue-600 dark:text-blue-300 font-bold text-xs transition-all shadow-xs hover:scale-[1.02] cursor-pointer"
-            title="Mở Trợ lý & Gia sư AI Trading Tutor (Hỏi đáp, So sánh chiến lược, RAG)"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 animate-pulse" />
-            <span className="hidden sm:inline">AI Tutor</span>
-          </button>
+          {challengeStatus === 'ACTIVE' ? (
+            <button
+              onClick={() => showAlert({
+                title: 'Tính năng AI bị khóa khi thi quỹ',
+                message: 'Trong quá trình thực hiện bài thi Thử Thách Cấp Vốn Quỹ (Prop Firm Challenge), mọi công cụ AI Trading Tutor và đánh giá lệnh đều bị vô hiệu hóa để bảo đảm tính minh bạch và đánh giá đúng năng lực giao dịch thực tế của thí sinh.',
+                type: 'warning'
+              })}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-[#1e222d] border border-gray-300 dark:border-gray-700/60 text-gray-500 dark:text-gray-400 font-semibold text-xs transition-all cursor-pointer opacity-80 hover:opacity-100"
+              title="AI Tutor bị khóa trong thời gian làm bài thi Thử Thách Quỹ"
+            >
+              <Lock className="w-3.5 h-3.5 text-amber-500" />
+              <span className="hidden sm:inline">AI Tutor (Khóa)</span>
+            </button>
+          ) : (
+            <button
+              onClick={onOpenAiTutor}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-blue-500/15 via-purple-500/15 to-amber-500/15 hover:from-blue-500/25 hover:to-amber-500/25 border border-blue-500/30 text-blue-600 dark:text-blue-300 font-bold text-xs transition-all shadow-xs hover:scale-[1.02] cursor-pointer"
+              title="Mở Trợ lý & Gia sư AI Trading Tutor (Hỏi đáp, So sánh chiến lược, RAG)"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 animate-pulse" />
+              <span className="hidden sm:inline">AI Tutor</span>
+            </button>
+          )}
 
           {/* Thông báo */}
           <NotificationDropdown />

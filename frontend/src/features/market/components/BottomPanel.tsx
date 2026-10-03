@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, CheckSquare, Square, Settings2, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { X, CheckSquare, Square, Settings2, ChevronDown, ChevronUp, Sparkles, Lock } from 'lucide-react';
 import { STOCKS, getPricePrecision } from '../data';
 import { tradingApi } from '../../../services/tradingApi';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -26,6 +26,7 @@ interface BottomPanelProps {
   onAddMargin: (symbol: string, side: 'LONG' | 'SHORT', amount: number) => Promise<{ success: boolean; message: string }>;
   onEditPosition: (symbol: string) => void;
   refreshTrigger: number;
+  isChallengeActive?: boolean;
 }
 
 export const BottomPanel = ({
@@ -38,11 +39,12 @@ export const BottomPanel = ({
   onUpdateTPSL,
   onAddMargin,
   onEditPosition,
-  refreshTrigger
+  refreshTrigger,
+  isChallengeActive = false
 }: BottomPanelProps) => {
   const { user } = useAuth();
   const { showAlert } = useModal();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [activeTab, setActiveTab] = useState<'positions' | 'orders' | 'order_history' | 'trade_history' | 'position_history' | 'cashflow_history'>('positions');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   
@@ -202,16 +204,16 @@ export const BottomPanel = ({
             <table className="w-full min-w-[680px] xl:min-w-[760px] text-left text-xs text-[#1e2329] dark:text-[#d1d4dc]">
               <thead className="sticky top-0 bg-[#f8f9fa] dark:bg-[#0b0e11] text-[#787b86] font-normal text-[11px] border-b border-[#e6e8ea] dark:border-transparent">
                 <tr>
-                  <th className="px-2.5 xl:px-4 py-2">Symbol</th>
-                  <th className="px-2 xl:px-4 py-2">Size</th>
-                  <th className="px-2 xl:px-4 py-2">Giá mở</th>
-                  <th className="px-2 xl:px-4 py-2">Giá hiện tại</th>
-                  <th className="px-2 xl:px-4 py-2 text-[#f23645] dark:text-[#ff6b6b] font-semibold">Giá thanh lý</th>
-                  <th className="px-2 xl:px-4 py-2">Margin</th>
-                  <th className="px-2 xl:px-4 py-2">Side</th>
-                  <th className="px-2 xl:px-4 py-2 text-right">PNL (ROE%)</th>
+                  <th className="px-2.5 xl:px-4 py-2">{t('table.symbol', 'Symbol')}</th>
+                  <th className="px-2 xl:px-4 py-2">{t('table.size', 'Size')}</th>
+                  <th className="px-2 xl:px-4 py-2">{t('table.entryPrice', 'Giá mở')}</th>
+                  <th className="px-2 xl:px-4 py-2">{t('table.currentPrice', 'Giá hiện tại')}</th>
+                  <th className="px-2 xl:px-4 py-2 text-[#f23645] dark:text-[#ff6b6b] font-semibold">{t('table.liqPrice', 'Giá thanh lý')}</th>
+                  <th className="px-2 xl:px-4 py-2">{t('table.margin', 'Margin')}</th>
+                  <th className="px-2 xl:px-4 py-2">{t('table.side', 'Side')}</th>
+                  <th className="px-2 xl:px-4 py-2 text-right">{t('table.pnl', 'PNL')} (ROE%)</th>
                   <th className="px-2 xl:px-4 py-2 text-center">TP / SL</th>
-                  <th className="px-2 xl:px-4 py-2 text-center">Thao tác</th>
+                  <th className="px-2 xl:px-4 py-2 text-center">{t('table.action', 'Thao tác')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e6e8ea] dark:divide-[#2a2e39]/50">
@@ -269,7 +271,7 @@ export const BottomPanel = ({
                         ) : (
                           <>
                             ${margin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            <button onClick={() => setAddingMargin({ symbol: p.symbol, side: p.side, amount: '' })} className="ml-1 text-blue-500 hover:text-blue-400 font-bold" title="Bơm thêm ký quỹ">+</button>
+                            <button onClick={() => setAddingMargin({ symbol: p.symbol, side: p.side, amount: '' })} className="ml-1 text-blue-500 hover:text-blue-400 font-bold" title={t('panel.addMargin', 'Thêm ký quỹ')}>+</button>
                           </>
                         )}
                       </td>
@@ -280,25 +282,38 @@ export const BottomPanel = ({
                       </td>
                       <td className="px-2 xl:px-4 py-2 text-center text-[#787b86]">
                         {p.tp ? p.tp.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'} / {p.sl ? p.sl.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
-                        <button onClick={() => onEditPosition(p.symbol)} className="ml-1.5 text-blue-500 hover:text-blue-400 font-medium">Sửa</button>
+                        <button onClick={() => onEditPosition(p.symbol)} className="ml-1.5 text-blue-500 hover:text-blue-400 font-medium">{t('panel.editPos', 'Sửa')}</button>
                       </td>
                       <td className="px-2 xl:px-4 py-2 text-center flex items-center justify-center gap-1">
                         <button 
-                          onClick={() => setReviewTradeData({
-                            symbol: p.symbol,
-                            side: p.side === 'LONG' ? 'BUY' : 'SELL',
-                            entryPrice: p.averagePrice,
-                            currentPrice: markPrice,
-                            stopLoss: p.sl,
-                            takeProfit: p.tp,
-                            quantity: p.quantity,
-                            isOpen: true,
-                            timeframe: '15m'
-                          })}
-                          className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 px-1.5 py-1 rounded text-[11px] font-semibold transition-colors flex items-center gap-0.5"
-                          title="Đánh giá quy trình lệnh bằng AI"
+                          onClick={() => {
+                            if (isChallengeActive) {
+                              showAlert({
+                                title: 'AI bị khóa khi thi quỹ',
+                                message: 'Tính năng Đánh giá lệnh bằng AI bị khóa trong thời gian làm bài thi Thử Thách Quỹ nhằm đánh giá trung thực năng lực của thí sinh.',
+                                type: 'warning'
+                              });
+                              return;
+                            }
+                            setReviewTradeData({
+                              symbol: p.symbol,
+                              side: p.side === 'LONG' ? 'BUY' : 'SELL',
+                              entryPrice: p.averagePrice,
+                              currentPrice: markPrice,
+                              stopLoss: p.sl,
+                              takeProfit: p.tp,
+                              quantity: p.quantity,
+                              isOpen: true,
+                              timeframe: '15m'
+                            });
+                          }}
+                          className={isChallengeActive 
+                            ? "bg-gray-500/10 text-gray-400 border border-gray-500/20 px-1.5 py-1 rounded text-[11px] font-semibold flex items-center gap-0.5 cursor-pointer opacity-60 hover:opacity-100"
+                            : "bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 px-1.5 py-1 rounded text-[11px] font-semibold transition-colors flex items-center gap-0.5"
+                          }
+                          title={isChallengeActive ? "Tính năng AI bị khóa khi đang thi quỹ" : "Đánh giá quy trình lệnh bằng AI"}
                         >
-                          <Sparkles className="w-3 h-3" /> AI
+                          {isChallengeActive ? <Lock className="w-3 h-3 text-amber-500" /> : <Sparkles className="w-3 h-3" />} AI
                         </button>
                         <button 
                           onClick={async () => {
@@ -417,21 +432,124 @@ export const BottomPanel = ({
                     return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-500/20 text-gray-400 whitespace-nowrap">{type}</span>;
                   };
 
+                  // Helper to parse & localize the first part of description (Action + Symbol + Price)
+                  const renderActionText = (firstPart: string) => {
+                    // 1. "Mở LONG BTCUSDT ở giá 84.353,77"
+                    const openMatch = firstPart.match(/^Mở\s+(LONG|SHORT)\s+([A-Z0-9]+)(?:\s+ở\s+giá\s+(.+))?$/i);
+                    if (openMatch) {
+                      const [, side, sym, price] = openMatch;
+                      return (
+                        <span>
+                          {t('panel.actionOpen', 'Mở')}{' '}
+                          <span className={side.toUpperCase() === 'LONG' ? 'text-[#089981]' : 'text-[#f23645]'}>{side.toUpperCase()}</span>{' '}
+                          {sym}
+                          {price ? <> {t('panel.atPrice', 'ở giá')} <span className="font-mono">{price}</span></> : null}
+                        </span>
+                      );
+                    }
+
+                    // 2. "Đóng [vị thế / một phần] LONG/SHORT SYMBOL ở giá PRICE"
+                    const closeMatch = firstPart.match(/^Đóng\s*(vị\s+thế|một\s+phần)?\s*(LONG|SHORT)\s+([A-Z0-9]+)(?:\s+ở\s+giá\s+(.+))?$/i);
+                    if (closeMatch) {
+                      const [, mod, side, sym, price] = closeMatch;
+                      const actionLabel = mod?.includes('phần')
+                        ? t('panel.actionClosePartial', 'Đóng một phần')
+                        : (mod?.includes('thế') ? t('panel.actionClosePos', 'Đóng vị thế') : t('panel.actionClose', 'Đóng'));
+                      return (
+                        <span>
+                          {actionLabel}{' '}
+                          <span className={side.toUpperCase() === 'LONG' ? 'text-[#089981]' : 'text-[#f23645]'}>{side.toUpperCase()}</span>{' '}
+                          {sym}
+                          {price ? <> {t('panel.atPrice', 'ở giá')} <span className="font-mono">{price}</span></> : null}
+                        </span>
+                      );
+                    }
+
+                    // 3. "Đặt lệnh chờ LONG/SHORT TYPE SYMBOL tại/ở giá PRICE"
+                    const pendingMatch = firstPart.match(/^Đặt\s+lệnh\s+chờ\s+(LONG|SHORT)\s+(\w+)\s+([A-Z0-9]+)(?:\s+(?:tại|ở\s+giá)\s+(.+))?$/i);
+                    if (pendingMatch) {
+                      const [, side, ordType, sym, price] = pendingMatch;
+                      return (
+                        <span>
+                          {t('panel.actionPlacePending', 'Đặt lệnh chờ')}{' '}
+                          <span className={side.toUpperCase() === 'LONG' ? 'text-[#089981]' : 'text-[#f23645]'}>{side.toUpperCase()}</span>{' '}
+                          {ordType} {sym}
+                          {price ? <> {t('panel.atPrice', 'ở giá')} <span className="font-mono">{price}</span></> : null}
+                        </span>
+                      );
+                    }
+
+                    // 4. "Khớp lệnh chờ TYPE LONG/SHORT SYMBOL ở giá PRICE"
+                    const filledMatch = firstPart.match(/^Khớp\s+lệnh\s+chờ\s+(\w+)\s+(LONG|SHORT)\s+([A-Z0-9]+)(?:\s+ở\s+giá\s+(.+))?$/i);
+                    if (filledMatch) {
+                      const [, ordType, side, sym, price] = filledMatch;
+                      return (
+                        <span>
+                          {t('panel.actionFilledPending', 'Khớp lệnh chờ')}{' '}
+                          {ordType}{' '}
+                          <span className={side.toUpperCase() === 'LONG' ? 'text-[#089981]' : 'text-[#f23645]'}>{side.toUpperCase()}</span>{' '}
+                          {sym}
+                          {price ? <> {t('panel.atPrice', 'ở giá')} <span className="font-mono">{price}</span></> : null}
+                        </span>
+                      );
+                    }
+
+                    // 5. "Bơm AMOUNT ký quỹ vào lệnh LONG/SHORT SYMBOL"
+                    const marginMatch = firstPart.match(/^Bơm\s+([\d.,]+)\s+ký\s+quỹ\s+vào\s+lệnh\s+(LONG|SHORT)\s+([A-Z0-9]+)/i);
+                    if (marginMatch) {
+                      const [, amount, side, sym] = marginMatch;
+                      return (
+                        <span>
+                          {t('panel.actionAddMargin', 'Bơm')}{' '}
+                          <span className="font-mono">${amount}</span>{' '}
+                          {t('panel.marginToOrder', 'ký quỹ vào lệnh')}{' '}
+                          <span className={side.toUpperCase() === 'LONG' ? 'text-[#089981]' : 'text-[#f23645]'}>{side.toUpperCase()}</span>{' '}
+                          {sym}
+                        </span>
+                      );
+                    }
+
+                    // 6. "Hủy lệnh chờ..."
+                    if (/^Hủy\s+lệnh\s+chờ/i.test(firstPart)) {
+                      const rest = firstPart
+                        .replace(/^Hủy\s+lệnh\s+chờ\s*/i, '')
+                        .replace(/do\s+có\s+vị\s+thế\s+(LONG|SHORT)\s+ngược\s+chiều/i, `${t('panel.dueToOpposite', 'do có vị thế ngược chiều')} $1`)
+                        .replace(/Hoàn\s+ký\s+quỹ/i, t('panel.refundMargin', 'Hoàn ký quỹ'));
+                      return (
+                        <span>
+                          {t('panel.actionCancelPending', 'Hủy lệnh chờ')}{' '}
+                          {rest}
+                        </span>
+                      );
+                    }
+
+                    return <span>{firstPart}</span>;
+                  };
+
                   // Format description cleanly
                   const formatDescription = (desc: string) => {
-                    // 2. Pattern with pipes: "Mở LONG BTCUSDT ở giá $84,244.01 | Margin: ... | x1 | Qty: 0.10"
-                    // or "Đóng LONG 0.1000 BTCUSDT ở giá $84,699.82 | Giá vào: $84,244.01. Lợi nhuận: +$45.58"
+                    // 1. Pattern with pipes: "Mở LONG BTCUSDT ở giá $84,244.01 | Margin: ... | x1 | Qty: 0.10"
                     if (desc.includes('|')) {
                       const parts = desc.split('|').map(p => p.trim());
                       return (
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-[#1e2329] dark:text-white">{parts[0]}</span>
+                          <span className="font-semibold text-[#1e2329] dark:text-white">
+                            {renderActionText(parts[0])}
+                          </span>
                           {parts.slice(1).map((part, idx) => {
                             let displayText = part;
-                            if (/^qty/i.test(displayText)) {
-                              displayText = displayText.replace(/^qty/i, t('panel.qtyShort', 'KL'));
-                            } else if (/^margin/i.test(displayText)) {
-                              displayText = displayText.replace(/^margin/i, t('panel.marginShort', 'Ký quỹ'));
+                            if (/^(?:qty|kl)\s*:\s*/i.test(displayText)) {
+                              displayText = displayText.replace(/^(?:qty|kl)\s*:\s*/i, `${t('panel.qtyShort', 'KL')}: `);
+                            } else if (/^(?:margin|ký\s*quỹ)\s*:\s*/i.test(displayText)) {
+                              displayText = displayText.replace(/^(?:margin|ký\s*quỹ)\s*:\s*/i, `${t('panel.marginShort', 'Ký quỹ')}: `);
+                            } else if (/^(?:lợi\s*nhuận|profit|pnl)\s*:\s*/i.test(displayText)) {
+                              displayText = displayText.replace(/^(?:lợi\s*nhuận|profit|pnl)\s*:\s*/i, `${t('panel.profit', 'Lợi nhuận')}: `);
+                            } else if (/^(?:vốn\s*về|return)\s*:\s*/i.test(displayText)) {
+                              displayText = displayText.replace(/^(?:vốn\s*về|return)\s*:\s*/i, `${t('panel.returnCapital', 'Vốn về')}: `);
+                            } else if (/^(?:giá\s*vào|entry)\s*:\s*/i.test(displayText)) {
+                              displayText = displayText.replace(/^(?:giá\s*vào|entry)\s*:\s*/i, `${t('panel.entryPrice', 'Giá vào')}: `);
+                            } else if (/^(?:hoàn\s*ký\s*quỹ|refund\s*margin)\s*:?\s*/i.test(displayText)) {
+                              displayText = displayText.replace(/^(?:hoàn\s*ký\s*quỹ|refund\s*margin)\s*:?\s*/i, `${t('panel.refundMargin', 'Hoàn ký quỹ')}: `);
                             }
 
                             if (/^x\d+$/i.test(displayText)) {
@@ -468,25 +586,47 @@ export const BottomPanel = ({
                       );
                     }
                     
-                    // 3. Pattern without pipes: "Đóng LONG 10000.00 FPT ở giá $120.00. Lợi nhuận: -2.700đ"
-                    const actionMatch = desc.match(/^(Đóng|Mở|Chốt lời|Cắt lỗ)\s+(LONG|SHORT)\s+([\d.,]+)\s+([A-Z0-9]+)/i);
+                    // 2. Pattern without pipes: "Đóng LONG 10000.00 FPT ở giá $120.00. Lợi nhuận: -2.700đ"
+                    const actionMatch = desc.match(/^(Đóng(?:\s+vị\s+thế|\s+một\s+phần)?|Mở|Chốt lời|Cắt lỗ)\s+(LONG|SHORT)\s+([\d.,]+)\s+([A-Z0-9]+)/i);
                     if (actionMatch) {
-                      const action = actionMatch[1];
+                      const rawAction = actionMatch[1];
+                      let action = rawAction;
+                      if (/đóng\s+vị\s+thế/i.test(rawAction)) action = t('panel.actionClosePos', 'Đóng vị thế');
+                      else if (/đóng\s+một\s+phần/i.test(rawAction)) action = t('panel.actionClosePartial', 'Đóng một phần');
+                      else if (/đóng/i.test(rawAction)) action = t('panel.actionClose', 'Đóng');
+                      else if (/mở/i.test(rawAction)) action = t('panel.actionOpen', 'Mở');
+                      else if (/chốt\s*lời/i.test(rawAction)) action = t('panel.actionTP', 'Chốt lời');
+                      else if (/cắt\s*lỗ/i.test(rawAction)) action = t('panel.actionSL', 'Cắt lỗ');
+
                       const side = actionMatch[2].toUpperCase();
                       const qty = actionMatch[3];
                       const symbol = actionMatch[4];
                       const pm = desc.match(/[\$]([\d,.]+)/) || desc.match(/giá\s*[\$:]?\s*([\d,.]+)/i);
                       const price = pm ? pm[1] : '';
+                      const pnlMatch = desc.match(/Lợi\s*nhuận:\s*([+-]?\$?[\d,.-]+[đ$]?)/i);
+
                       return (
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-semibold text-[#1e2329] dark:text-white">{action} {symbol}</span>
                           <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${side === 'LONG' ? 'bg-[#089981]/20 text-[#089981]' : 'bg-[#f23645]/20 text-[#f23645]'}`}>{side}</span>
-                          <span className="text-[#787b86]">{t('panel.qtyShort', 'KL')}: <span className="text-[#1e2329] dark:text-[#d1d4dc]">{parseFloat(qty).toLocaleString('vi-VN')}</span></span>
+                          <span className="text-[#787b86]">{t('panel.qtyShort', 'KL')}: <span className="text-[#1e2329] dark:text-[#d1d4dc]">{parseFloat(qty).toLocaleString(lang === 'vi' ? 'vi-VN' : 'en-US')}</span></span>
                           {price && <span className="text-[#787b86]">{t('order.price', 'Giá')}: <span className="text-[#1e2329] dark:text-[#d1d4dc] font-mono">${price}</span></span>}
+                          {pnlMatch && (
+                            <span className={`px-2 py-0.5 rounded text-[11px] font-medium border whitespace-nowrap ${pnlMatch[1].includes('-') ? 'bg-[#f23645]/10 text-[#f23645] border-[#f23645]/20' : 'bg-[#089981]/10 text-[#089981] border-[#089981]/20'}`}>
+                              {t('panel.profit', 'Lợi nhuận')}: {pnlMatch[1]}
+                            </span>
+                          )}
                         </div>
                       );
                     }
-                    return <span className="text-[#d1d4dc] text-xs">{desc}</span>;
+
+                    let fallbackText = desc;
+                    if (/^Nạp\s+tiền/i.test(desc)) {
+                      fallbackText = desc.replace(/^Nạp\s+tiền/i, t('panel.typeDeposit', 'Nạp tiền'));
+                    } else if (/^Rút\s+tiền/i.test(desc)) {
+                      fallbackText = desc.replace(/^Rút\s+tiền/i, t('panel.typeWithdraw', 'Rút tiền'));
+                    }
+                    return <span className="text-[#d1d4dc] text-xs">{fallbackText}</span>;
                   };
 
                   const getTradeReviewPayload = () => {
@@ -685,7 +825,7 @@ export const BottomPanel = ({
                   return (
                     <tr key={tx._id} className="hover:bg-[#f5f5f5] dark:hover:bg-[#1e222d] transition-colors">
                       <td className="px-4 py-2 text-[#787b86] font-mono text-[11px]">
-                        {new Date(tx.createdAt).toLocaleString('vi-VN')}
+                        {new Date(tx.createdAt).toLocaleString(lang === 'vi' ? 'vi-VN' : 'en-US')}
                       </td>
                       <td className="px-4 py-2">
                         {renderTypeBadge(tx.type)}
@@ -716,17 +856,29 @@ export const BottomPanel = ({
                       </td>
 
                       <td className={`px-4 py-2 text-right font-mono font-semibold ${colorClass}`}>
-                        {isPositive ? '+' : '-'}${displayAmount.toLocaleString('vi-VN', { maximumFractionDigits: 2 })}
+                        {isPositive ? '+' : '-'}${displayAmount.toLocaleString(lang === 'vi' ? 'vi-VN' : 'en-US', { maximumFractionDigits: 2 })}
                       </td>
                       <td className="px-4 py-2 text-right">
                         <button
                           onClick={() => {
+                            if (isChallengeActive) {
+                              showAlert({
+                                title: t('panel.aiLockedTitle', 'AI bị khóa khi thi quỹ'),
+                                message: t('panel.aiLockedDesc', 'Tính năng AI Review bị khóa trong thời gian làm bài thi Thử Thách Quỹ nhằm đánh giá trung thực năng lực của thí sinh.'),
+                                type: 'warning'
+                              });
+                              return;
+                            }
                             const payload = getTradeReviewPayload();
                             setReviewTradeData(payload);
                           }}
-                          className="px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-[10px] font-semibold inline-flex items-center gap-1 transition-colors"
+                          className={isChallengeActive
+                            ? "px-2 py-0.5 rounded bg-gray-500/10 text-gray-400 border border-gray-500/20 text-[10px] font-semibold inline-flex items-center gap-1 cursor-pointer opacity-60 hover:opacity-100"
+                            : "px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-[10px] font-semibold inline-flex items-center gap-1 transition-colors"
+                          }
+                          title={isChallengeActive ? (lang === 'vi' ? "AI Review bị khóa khi đang thi quỹ" : "AI Review is locked during Challenge") : (lang === 'vi' ? "Review trade với AI" : "Review trade with AI")}
                         >
-                          <Sparkles className="w-2.5 h-2.5" /> Review
+                          {isChallengeActive ? <Lock className="w-2.5 h-2.5 text-amber-500" /> : <Sparkles className="w-2.5 h-2.5" />} Review
                         </button>
                       </td>
                     </tr>
@@ -745,9 +897,9 @@ export const BottomPanel = ({
           <div className="bg-[#1e222d] rounded-xl w-[340px] p-5 shadow-2xl border border-[#2a2e39]">
             <div className="flex justify-between items-center mb-4 border-b border-[#2a2e39] pb-3">
               <div>
-                <h3 className="text-white font-bold text-sm">Đóng vị thế {closingPos.symbol}</h3>
+                <h3 className="text-white font-bold text-sm">{t('panel.closePosTitle', 'Đóng vị thế')} {closingPos.symbol}</h3>
                 <span className={`text-[11px] font-bold ${closingPos.side === 'LONG' ? 'text-[#089981]' : 'text-[#f23645]'}`}>
-                  {closingPos.side} (Đang mở: {closingPos.maxQty.toFixed(4)} Lot)
+                  {closingPos.side} ({t('panel.openQty', 'Đang mở')}: {closingPos.maxQty.toFixed(4)} Lot)
                 </span>
               </div>
               <button onClick={() => setClosingPos(null)} className="text-[#787b86] hover:text-white transition-colors">
@@ -757,7 +909,7 @@ export const BottomPanel = ({
 
             <div className="space-y-4">
               <div>
-                <label className="block text-[#787b86] text-xs mb-1">Tỷ lệ đóng vị thế</label>
+                <label className="block text-[#787b86] text-xs mb-1">{t('panel.closeRatio', 'Tỷ lệ đóng vị thế')}</label>
                 <div className="grid grid-cols-4 gap-1.5 mb-3">
                   {[0.25, 0.5, 0.75, 1.0].map(pct => (
                     <button
@@ -775,7 +927,7 @@ export const BottomPanel = ({
                   ))}
                 </div>
 
-                <label className="block text-[#787b86] text-xs mb-1">Số Lot muốn đóng</label>
+                <label className="block text-[#787b86] text-xs mb-1">{t('panel.closeQtyLabel', 'Số Lot muốn đóng')}</label>
                 <input
                   type="number"
                   step="0.01"
@@ -783,14 +935,14 @@ export const BottomPanel = ({
                   value={closingPos.closeQty}
                   onChange={e => setClosingPos({ ...closingPos, closeQty: e.target.value })}
                   className="w-full bg-[#131722] border border-[#2a2e39] rounded px-3 py-2 text-white focus:outline-none focus:border-[#2962ff] font-mono text-sm"
-                  placeholder="Nhập số lot"
+                  placeholder={t('panel.enterLot', 'Nhập số lot')}
                 />
               </div>
 
               <div className="bg-[#131722] p-3 rounded border border-[#2a2e39] flex flex-col gap-1 text-xs">
                 <div className="flex justify-between text-[#787b86]">
-                  <span>Giá đóng (Mark Price):</span>
-                  <span className="font-mono text-white font-bold">${closingPos.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span>{t('panel.closePriceMark', 'Giá đóng (Mark Price):')}</span>
+                  <span className="font-mono text-white font-bold">${closingPos.price.toLocaleString(lang === 'vi' ? 'vi-VN' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               </div>
             </div>
@@ -800,7 +952,7 @@ export const BottomPanel = ({
                 onClick={() => setClosingPos(null)}
                 className="flex-1 py-2 rounded font-medium text-[#d1d4dc] bg-[#2a2e39] hover:bg-[#363a45] transition-colors text-xs"
               >
-                Hủy
+                {t('panel.cancelOrder', 'Hủy')}
               </button>
               <button
                 onClick={async () => {
@@ -808,7 +960,7 @@ export const BottomPanel = ({
                   if (!isNaN(qtyToClose) && qtyToClose > 0) {
                     const res = await onClosePosition(closingPos.symbol, closingPos.side, closingPos.price, qtyToClose);
                     showAlert({
-                      title: res.success ? 'Đóng vị thế thành công' : 'Đóng vị thế thất bại',
+                      title: res.success ? (lang === 'vi' ? 'Đóng vị thế thành công' : 'Position closed successfully') : (lang === 'vi' ? 'Đóng vị thế thất bại' : 'Failed to close position'),
                       message: res.message,
                       type: res.success ? 'success' : 'error'
                     });
@@ -817,7 +969,7 @@ export const BottomPanel = ({
                 }}
                 className="flex-1 py-2 rounded font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors text-xs"
               >
-                Xác nhận đóng
+                {t('panel.confirmClose', 'Xác nhận đóng')}
               </button>
             </div>
           </div>
@@ -836,38 +988,42 @@ export const BottomPanel = ({
   );
 };
 
-const EmptyState = () => (
-  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-    {/* SVG Graphic mimicking the screenshot */}
-    <div className="relative w-24 h-24 mb-4">
-      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full opacity-80">
-        {/* Box/Folder base */}
-        <path d="M20 50 L50 65 L80 50 L80 80 L50 95 L20 80 Z" className="fill-[#f8f9fa] dark:fill-[#1e222d] stroke-[#e6e8ea] dark:stroke-[#2a2e39]" strokeWidth="2" strokeLinejoin="round"/>
-        <path d="M20 50 L50 35 L80 50 L50 65 Z" className="fill-[#f0f3fa] dark:fill-[#2a2e39] stroke-[#e6e8ea] dark:stroke-[#363a45]" strokeWidth="2" strokeLinejoin="round"/>
-        {/* Paper */}
-        <path d="M35 35 L65 35 L65 55 L35 55 Z" fill="#ffffff" transform="matrix(0.866 0.5 -0.866 0.5 50 10)" opacity="0.9"/>
-        {/* Dotted lines on paper */}
-        <path d="M45 42 L55 42" stroke="#d1d4dc" strokeWidth="2" strokeDasharray="2 2" transform="matrix(0.866 0.5 -0.866 0.5 50 10)"/>
-        {/* Magnifying Glass */}
-        <circle cx="55" cy="25" r="12" fill="#f8f9fa" stroke="#d1d4dc" strokeWidth="3"/>
-        <circle cx="55" cy="25" r="8" fill="#e2e8f0" opacity="0.5"/>
-        <line x1="63" y1="33" x2="75" y2="45" stroke="#d1d4dc" strokeWidth="4" strokeLinecap="round"/>
-      </svg>
+const EmptyState = () => {
+  const { t } = useI18n();
+  return (
+    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+      {/* SVG Graphic mimicking the screenshot */}
+      <div className="relative w-24 h-24 mb-4">
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full opacity-80">
+          {/* Box/Folder base */}
+          <path d="M20 50 L50 65 L80 50 L80 80 L50 95 L20 80 Z" className="fill-[#f8f9fa] dark:fill-[#1e222d] stroke-[#e6e8ea] dark:stroke-[#2a2e39]" strokeWidth="2" strokeLinejoin="round"/>
+          <path d="M20 50 L50 35 L80 50 L50 65 Z" className="fill-[#f0f3fa] dark:fill-[#2a2e39] stroke-[#e6e8ea] dark:stroke-[#363a45]" strokeWidth="2" strokeLinejoin="round"/>
+          {/* Paper */}
+          <path d="M35 35 L65 35 L65 55 L35 55 Z" fill="#ffffff" transform="matrix(0.866 0.5 -0.866 0.5 50 10)" opacity="0.9"/>
+          {/* Dotted lines on paper */}
+          <path d="M45 42 L55 42" stroke="#d1d4dc" strokeWidth="2" strokeDasharray="2 2" transform="matrix(0.866 0.5 -0.866 0.5 50 10)"/>
+          {/* Magnifying Glass */}
+          <circle cx="55" cy="25" r="12" fill="#f8f9fa" stroke="#d1d4dc" strokeWidth="3"/>
+          <circle cx="55" cy="25" r="8" fill="#e2e8f0" opacity="0.5"/>
+          <line x1="63" y1="33" x2="75" y2="45" stroke="#d1d4dc" strokeWidth="4" strokeLinecap="round"/>
+        </svg>
+      </div>
+      
+      <div className="text-[#1e2329] dark:text-[#d1d4dc] font-semibold text-sm mb-1">{t('panel.noOpenPositions', 'Không có vị thế mở')}</div>
+      <div className="text-[#787b86] text-[11px] mb-6">{t('panel.noOpenPositionsDesc', 'Thực hiện giao dịch live, giao dịch demo hoặc giao dịch sao chép')}</div>
+      
+      <div className="flex gap-3 pointer-events-auto">
+        <button className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-[#d1d4dc] dark:hover:text-white px-4 py-1.5 rounded-full text-[11px] font-medium transition-colors">
+          {t('panel.demoTrade', 'Giao dịch Demo')}
+        </button>
+        <button className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-[#d1d4dc] dark:hover:text-white px-4 py-1.5 rounded-full text-[11px] font-medium transition-colors">
+          {t('panel.copyTrade', 'Giao Dịch Sao Chép')}
+        </button>
+        <button className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-[#d1d4dc] dark:hover:text-white px-4 py-1.5 rounded-full text-[11px] font-medium transition-colors">
+          {t('panel.bot', 'Bot')}
+        </button>
+      </div>
     </div>
-    
-    <div className="text-[#1e2329] dark:text-[#d1d4dc] font-semibold text-sm mb-1">Không có vị thế mở</div>
-    <div className="text-[#787b86] text-[11px] mb-6">Thực hiện giao dịch live, giao dịch demo hoặc giao dịch sao chép</div>
-    
-    <div className="flex gap-3 pointer-events-auto">
-      <button className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-[#d1d4dc] dark:hover:text-white px-4 py-1.5 rounded-full text-[11px] font-medium transition-colors">
-        Giao dịch Demo
-      </button>
-      <button className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-[#d1d4dc] dark:hover:text-white px-4 py-1.5 rounded-full text-[11px] font-medium transition-colors">
-        Giao Dịch Sao Chép
-      </button>
-      <button className="bg-[#f0f3fa] hover:bg-[#e0e5f2] text-[#4b5563] hover:text-[#1e2329] dark:bg-[#2a2e39] dark:hover:bg-[#363a45] dark:text-[#d1d4dc] dark:hover:text-white px-4 py-1.5 rounded-full text-[11px] font-medium transition-colors">
-        Bot
-      </button>
-    </div>
-  </div>
-);
+  );
+};
+

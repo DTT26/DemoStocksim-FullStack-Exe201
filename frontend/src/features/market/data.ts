@@ -70,64 +70,64 @@ export const STOCKS: Stock[] = [
   { symbol: 'XRPUSDT.P', name: 'Ripple Perp', price: 1.4863, change: -0.0287, percent: -1.89, type: 'down', market: 'Tiền điện tử (Crypto)', exchange: 'KUCOIN / BINANCE FUTURES', isFutures: true, leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 2_340_000_000 },
 
   // ==========================================
-  // 3. HÀNG HÓA & NĂNG LƯỢNG (BingX, OANDA, NYMEX)
+  // 3. HÀNG HÓA & NĂNG LƯỢNG (BingX)
   // ==========================================
-  { symbol: 'XAUUSD', name: 'Vàng (Gold / USD)', price: 4124.50, change: -160.80, percent: -3.75, type: 'down', market: 'Hàng hóa', exchange: 'BINGX / OANDA', leverageInfo: { max: 200, marks: [50, 100, 150, 200] }, volume24h: 35_000_000_000 },
-  { symbol: 'XAGUSD', name: 'Bạc (Silver / USD)', price: 61.68, change: 0.85, percent: 1.40, type: 'up', market: 'Hàng hóa', exchange: 'BINGX / OANDA', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 8_500_000_000 },
-  { symbol: 'USOIL', name: 'Dầu thô WTI (Crude Oil)', price: 94.40, change: -1.10, percent: -1.15, type: 'down', market: 'Hàng hóa', exchange: 'BINGX / NYMEX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 18_000_000_000 },
-  { symbol: 'BRENT', name: 'Dầu thô Brent (Brent Oil)', price: 97.69, change: -0.95, percent: -0.96, type: 'down', market: 'Hàng hóa', exchange: 'BINGX / ICE', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 14_000_000_000 },
-  { symbol: 'NGAS', name: 'Khí tự nhiên (Natural Gas)', price: 3.12, change: 0.08, percent: 2.63, type: 'up', market: 'Hàng hóa', exchange: 'BINGX / NYMEX', leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 5_200_000_000 },
-  { symbol: 'COPPER', name: 'Đồng (Copper)', price: 5.48, change: 0.05, percent: 0.92, type: 'up', market: 'Hàng hóa', exchange: 'BINGX / COMEX', leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 4_100_000_000 },
-  { symbol: 'PLATINUM', name: 'Bạch kim (Platinum)', price: 1080.50, change: -12.40, percent: -1.13, type: 'down', market: 'Hàng hóa', exchange: 'BINGX / NYMEX', leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 2_300_000_000 },
+  { symbol: 'XAUUSD', name: 'Vàng (Gold / USD)', price: 4143.40, change: 11.08, percent: 0.27, type: 'up', market: 'Hàng hóa', exchange: 'BINGX', leverageInfo: { max: 200, marks: [50, 100, 150, 200] }, volume24h: 35_000_000_000 },
+  { symbol: 'XAGUSD', name: 'Bạc (Silver / USD)', price: 60.45, change: 0.63, percent: 1.05, type: 'up', market: 'Hàng hóa', exchange: 'BINGX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 8_500_000_000 },
+  { symbol: 'USOIL', name: 'Dầu thô WTI (Crude Oil)', price: 91.15, change: 0.30, percent: 0.33, type: 'up', market: 'Hàng hóa', exchange: 'BINGX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 18_000_000_000 },
+  { symbol: 'BRENT', name: 'Dầu thô Brent (Brent Oil)', price: 102.30, change: 1.00, percent: 0.99, type: 'up', market: 'Hàng hóa', exchange: 'BINGX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 14_000_000_000 },
+  { symbol: 'NGAS', name: 'Khí tự nhiên (Natural Gas)', price: 3.035, change: 0.035, percent: 1.17, type: 'up', market: 'Hàng hóa', exchange: 'BINGX', leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 5_200_000_000 },
+  { symbol: 'COPPER', name: 'Đồng (Copper)', price: 6.593, change: 0.036, percent: 0.55, type: 'up', market: 'Hàng hóa', exchange: 'BINGX', leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 4_100_000_000 },
+  { symbol: 'PLATINUM', name: 'Bạch kim (Platinum)', price: 1705.50, change: 23.14, percent: 1.38, type: 'up', market: 'Hàng hóa', exchange: 'BINGX', leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 2_300_000_000 },
 
   // ==========================================
-  // 4. NGOẠI HỐI - FOREX (BingX, OANDA, Forex.com)
+  // 4. NGOẠI HỐI - FOREX (BingX)
   // ==========================================
-  { symbol: 'EURUSD', name: 'Euro / US Dollar', price: 1.1378, change: 0.0012, percent: 0.11, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'BINGX / OANDA', leverageInfo: { max: 500, marks: [100, 200, 300, 400, 500] }, volume24h: 85_000_000_000 },
-  { symbol: 'GBPUSD', name: 'British Pound / USD', price: 1.3236, change: 0.0025, percent: 0.19, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'BINGX / OANDA', leverageInfo: { max: 500, marks: [100, 200, 300, 400, 500] }, volume24h: 42_000_000_000 },
-  { symbol: 'USDJPY', name: 'US Dollar / Yen Nhật', price: 157.76, change: 0.85, percent: 0.54, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'BINGX / OANDA', leverageInfo: { max: 500, marks: [100, 200, 300, 400, 500] }, volume24h: 55_000_000_000 },
-  { symbol: 'GBPJPY', name: 'Bảng Anh / Yen Nhật (Guppy)', price: 208.61, change: 1.45, percent: 0.70, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'BINGX / OANDA', leverageInfo: { max: 500, marks: [100, 200, 300, 400, 500] }, volume24h: 38_000_000_000 },
-  { symbol: 'EURJPY', name: 'Euro / Yen Nhật', price: 178.88, change: 0.98, percent: 0.55, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'BINGX / OANDA', leverageInfo: { max: 500, marks: [100, 200, 300, 400, 500] }, volume24h: 32_000_000_000 },
-  { symbol: 'AUDUSD', name: 'Đô la Úc / USD', price: 0.7019, change: -0.0018, percent: -0.26, type: 'down', market: 'Ngoại hối (Forex)', exchange: 'BINGX / FOREX.COM', leverageInfo: { max: 400, marks: [50, 100, 200, 400] }, volume24h: 19_000_000_000 },
-  { symbol: 'USDCAD', name: 'USD / Đô la Canada', price: 1.4154, change: 0.0010, percent: 0.07, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'BINGX / FOREX.COM', leverageInfo: { max: 400, marks: [50, 100, 200, 400] }, volume24h: 14_000_000_000 },
-  { symbol: 'USDCHF', name: 'USD / Franc Thụy Sĩ', price: 0.8845, change: -0.0015, percent: -0.17, type: 'down', market: 'Ngoại hối (Forex)', exchange: 'BINGX / OANDA', leverageInfo: { max: 400, marks: [50, 100, 200, 400] }, volume24h: 16_000_000_000 },
-  { symbol: 'NZDUSD', name: 'Đô la New Zealand / USD', price: 0.6125, change: -0.0012, percent: -0.20, type: 'down', market: 'Ngoại hối (Forex)', exchange: 'BINGX / OANDA', leverageInfo: { max: 400, marks: [50, 100, 200, 400] }, volume24h: 11_000_000_000 },
-  { symbol: 'EURGBP', name: 'Euro / Bảng Anh', price: 0.8596, change: -0.0008, percent: -0.09, type: 'down', market: 'Ngoại hối (Forex)', exchange: 'BINGX / OANDA', leverageInfo: { max: 400, marks: [50, 100, 200, 400] }, volume24h: 15_000_000_000 },
-  { symbol: 'AUDJPY', name: 'Đô la Úc / Yen Nhật', price: 110.74, change: 0.35, percent: 0.32, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'BINGX / OANDA', leverageInfo: { max: 400, marks: [50, 100, 200, 400] }, volume24h: 18_000_000_000 },
-  { symbol: 'CHFJPY', name: 'Franc Thụy Sĩ / Yen Nhật', price: 178.35, change: 0.72, percent: 0.41, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'BINGX / OANDA', leverageInfo: { max: 400, marks: [50, 100, 200, 400] }, volume24h: 12_000_000_000 },
-  { symbol: 'CADJPY', name: 'Đô la Canada / Yen Nhật', price: 111.45, change: 0.48, percent: 0.43, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'BINGX / OANDA', leverageInfo: { max: 400, marks: [50, 100, 200, 400] }, volume24h: 9_500_000_000 },
+  { symbol: 'EURUSD', name: 'Euro / US Dollar', price: 1.1378, change: 0.0012, percent: 0.11, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'BINGX', leverageInfo: { max: 500, marks: [100, 200, 300, 400, 500] }, volume24h: 85_000_000_000 },
+  { symbol: 'GBPUSD', name: 'British Pound / USD', price: 1.3236, change: 0.0025, percent: 0.19, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'BINGX', leverageInfo: { max: 500, marks: [100, 200, 300, 400, 500] }, volume24h: 42_000_000_000 },
+  { symbol: 'USDJPY', name: 'US Dollar / Yen Nhật', price: 157.76, change: 0.85, percent: 0.54, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'BINGX', leverageInfo: { max: 500, marks: [100, 200, 300, 400, 500] }, volume24h: 55_000_000_000 },
+  { symbol: 'GBPJPY', name: 'Bảng Anh / Yen Nhật (Guppy)', price: 208.61, change: 1.45, percent: 0.70, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'BINGX', leverageInfo: { max: 500, marks: [100, 200, 300, 400, 500] }, volume24h: 38_000_000_000 },
+  { symbol: 'EURJPY', name: 'Euro / Yen Nhật', price: 178.88, change: 0.98, percent: 0.55, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'BINGX', leverageInfo: { max: 500, marks: [100, 200, 300, 400, 500] }, volume24h: 32_000_000_000 },
+  { symbol: 'AUDUSD', name: 'Đô la Úc / USD', price: 0.7019, change: -0.0018, percent: -0.26, type: 'down', market: 'Ngoại hối (Forex)', exchange: 'BINGX', leverageInfo: { max: 400, marks: [50, 100, 200, 400] }, volume24h: 19_000_000_000 },
+  { symbol: 'USDCAD', name: 'USD / Đô la Canada', price: 1.4154, change: 0.0010, percent: 0.07, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'BINGX', leverageInfo: { max: 400, marks: [50, 100, 200, 400] }, volume24h: 14_000_000_000 },
+  { symbol: 'USDCHF', name: 'USD / Franc Thụy Sĩ', price: 0.8845, change: -0.0015, percent: -0.17, type: 'down', market: 'Ngoại hối (Forex)', exchange: 'BINGX', leverageInfo: { max: 400, marks: [50, 100, 200, 400] }, volume24h: 16_000_000_000 },
+  { symbol: 'NZDUSD', name: 'Đô la New Zealand / USD', price: 0.6125, change: -0.0012, percent: -0.20, type: 'down', market: 'Ngoại hối (Forex)', exchange: 'BINGX', leverageInfo: { max: 400, marks: [50, 100, 200, 400] }, volume24h: 11_000_000_000 },
+  { symbol: 'EURGBP', name: 'Euro / Bảng Anh', price: 0.8596, change: -0.0008, percent: -0.09, type: 'down', market: 'Ngoại hối (Forex)', exchange: 'BINGX', leverageInfo: { max: 400, marks: [50, 100, 200, 400] }, volume24h: 15_000_000_000 },
+  { symbol: 'AUDJPY', name: 'Đô la Úc / Yen Nhật', price: 110.74, change: 0.35, percent: 0.32, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'BINGX', leverageInfo: { max: 400, marks: [50, 100, 200, 400] }, volume24h: 18_000_000_000 },
+  { symbol: 'CHFJPY', name: 'Franc Thụy Sĩ / Yen Nhật', price: 178.35, change: 0.72, percent: 0.41, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'BINGX', leverageInfo: { max: 400, marks: [50, 100, 200, 400] }, volume24h: 12_000_000_000 },
+  { symbol: 'CADJPY', name: 'Đô la Canada / Yen Nhật', price: 111.45, change: 0.48, percent: 0.43, type: 'up', market: 'Ngoại hối (Forex)', exchange: 'BINGX', leverageInfo: { max: 400, marks: [50, 100, 200, 400] }, volume24h: 9_500_000_000 },
 
   // ==========================================
-  // 5. CỔ PHIẾU MỸ (NASDAQ, NYSE via BingX)
+  // 5. CỔ PHIẾU MỸ (BingX)
   // ==========================================
-  { symbol: 'AAPL', name: 'Apple Inc.', price: 340.62, change: 3.50, percent: 1.04, type: 'up', market: 'Cổ phiếu', exchange: 'NASDAQ / BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 8_500_000_000 },
-  { symbol: 'MSFT', name: 'Microsoft Corp.', price: 517.07, change: 6.20, percent: 1.21, type: 'up', market: 'Cổ phiếu', exchange: 'NASDAQ / BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 6_800_000_000 },
-  { symbol: 'TSLA', name: 'Tesla Inc.', price: 370.11, change: -4.50, percent: -1.20, type: 'down', market: 'Cổ phiếu', exchange: 'NASDAQ / BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 12_400_000_000 },
-  { symbol: 'NVDA', name: 'NVIDIA Corp.', price: 224.08, change: 5.20, percent: 2.38, type: 'up', market: 'Cổ phiếu', exchange: 'NASDAQ / BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 15_200_000_000 },
-  { symbol: 'GOOGL', name: 'Alphabet (Google)', price: 342.57, change: 4.10, percent: 1.21, type: 'up', market: 'Cổ phiếu', exchange: 'NASDAQ / BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 5_900_000_000 },
-  { symbol: 'AMZN', name: 'Amazon.com Inc.', price: 245.80, change: 2.80, percent: 1.15, type: 'up', market: 'Cổ phiếu', exchange: 'NASDAQ / BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 7_100_000_000 },
-  { symbol: 'META', name: 'Meta Platforms (Facebook)', price: 721.94, change: 12.30, percent: 1.73, type: 'up', market: 'Cổ phiếu', exchange: 'NASDAQ / BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 6_400_000_000 },
-  { symbol: 'AMD', name: 'Advanced Micro Devices', price: 165.40, change: 3.10, percent: 1.91, type: 'up', market: 'Cổ phiếu', exchange: 'NASDAQ / BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 4_800_000_000 },
-  { symbol: 'INTC', name: 'Intel Corp.', price: 24.85, change: -0.45, percent: -1.78, type: 'down', market: 'Cổ phiếu', exchange: 'NASDAQ / BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 2_600_000_000 },
-  { symbol: 'BABA', name: 'Alibaba Group', price: 92.40, change: -1.80, percent: -1.91, type: 'down', market: 'Cổ phiếu', exchange: 'NYSE / BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 3_200_000_000 },
-  { symbol: 'DIS', name: 'Walt Disney Co.', price: 114.60, change: 0.85, percent: 0.75, type: 'up', market: 'Cổ phiếu', exchange: 'NYSE / BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 1_800_000_000 },
-  { symbol: 'COIN', name: 'Coinbase Global', price: 312.50, change: -8.20, percent: -2.56, type: 'down', market: 'Cổ phiếu', exchange: 'NASDAQ / BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 2_900_000_000 },
-  { symbol: 'UBER', name: 'Uber Technologies', price: 78.40, change: 1.20, percent: 1.55, type: 'up', market: 'Cổ phiếu', exchange: 'NYSE / BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 1_600_000_000 },
-  { symbol: 'ORCL', name: 'Oracle Corp.', price: 185.30, change: 2.10, percent: 1.15, type: 'up', market: 'Cổ phiếu', exchange: 'NYSE / BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 2_100_000_000 },
-  { symbol: 'KO', name: 'Coca-Cola Co.', price: 88.11, change: 0.45, percent: 0.51, type: 'up', market: 'Cổ phiếu', exchange: 'NYSE / BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 1_200_000_000 },
-  { symbol: 'JNJ', name: 'Johnson & Johnson', price: 272.40, change: -1.20, percent: -0.44, type: 'down', market: 'Cổ phiếu', exchange: 'NYSE / BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 980_000_000 },
+  { symbol: 'AAPL', name: 'Apple Inc.', price: 340.62, change: 3.50, percent: 1.04, type: 'up', market: 'Cổ phiếu', exchange: 'BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 8_500_000_000 },
+  { symbol: 'MSFT', name: 'Microsoft Corp.', price: 517.07, change: 6.20, percent: 1.21, type: 'up', market: 'Cổ phiếu', exchange: 'BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 6_800_000_000 },
+  { symbol: 'TSLA', name: 'Tesla Inc.', price: 370.11, change: -4.50, percent: -1.20, type: 'down', market: 'Cổ phiếu', exchange: 'BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 12_400_000_000 },
+  { symbol: 'NVDA', name: 'NVIDIA Corp.', price: 224.08, change: 5.20, percent: 2.38, type: 'up', market: 'Cổ phiếu', exchange: 'BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 15_200_000_000 },
+  { symbol: 'GOOGL', name: 'Alphabet (Google)', price: 342.57, change: 4.10, percent: 1.21, type: 'up', market: 'Cổ phiếu', exchange: 'BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 5_900_000_000 },
+  { symbol: 'AMZN', name: 'Amazon.com Inc.', price: 245.80, change: 2.80, percent: 1.15, type: 'up', market: 'Cổ phiếu', exchange: 'BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 7_100_000_000 },
+  { symbol: 'META', name: 'Meta Platforms (Facebook)', price: 721.94, change: 12.30, percent: 1.73, type: 'up', market: 'Cổ phiếu', exchange: 'BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 6_400_000_000 },
+  { symbol: 'AMD', name: 'Advanced Micro Devices', price: 165.40, change: 3.10, percent: 1.91, type: 'up', market: 'Cổ phiếu', exchange: 'BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 4_800_000_000 },
+  { symbol: 'INTC', name: 'Intel Corp.', price: 24.85, change: -0.45, percent: -1.78, type: 'down', market: 'Cổ phiếu', exchange: 'BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 2_600_000_000 },
+  { symbol: 'BABA', name: 'Alibaba Group', price: 92.40, change: -1.80, percent: -1.91, type: 'down', market: 'Cổ phiếu', exchange: 'BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 3_200_000_000 },
+  { symbol: 'DIS', name: 'Walt Disney Co.', price: 114.60, change: 0.85, percent: 0.75, type: 'up', market: 'Cổ phiếu', exchange: 'BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 1_800_000_000 },
+  { symbol: 'COIN', name: 'Coinbase Global', price: 312.50, change: -8.20, percent: -2.56, type: 'down', market: 'Cổ phiếu', exchange: 'BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 2_900_000_000 },
+  { symbol: 'UBER', name: 'Uber Technologies', price: 78.40, change: 1.20, percent: 1.55, type: 'up', market: 'Cổ phiếu', exchange: 'BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 1_600_000_000 },
+  { symbol: 'ORCL', name: 'Oracle Corp.', price: 185.30, change: 2.10, percent: 1.15, type: 'up', market: 'Cổ phiếu', exchange: 'BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 2_100_000_000 },
+  { symbol: 'KO', name: 'Coca-Cola Co.', price: 88.11, change: 0.45, percent: 0.51, type: 'up', market: 'Cổ phiếu', exchange: 'BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 1_200_000_000 },
+  { symbol: 'JNJ', name: 'Johnson & Johnson', price: 272.40, change: -1.20, percent: -0.44, type: 'down', market: 'Cổ phiếu', exchange: 'BINGX', leverageInfo: { max: 20, marks: [5, 10, 15, 20] }, volume24h: 980_000_000 },
 
   // ==========================================
-  // 6. CHỈ SỐ TOÀN CẦU & DOLLAR INDEX (CME, ICE, EUREX)
+  // 6. CHỈ SỐ TOÀN CẦU & DOLLAR INDEX (Yahoo Finance)
   // ==========================================
-  { symbol: 'DXY', name: 'US Dollar Index (Sức mạnh USD)', price: 100.80, change: 0.32, percent: 0.32, type: 'up', market: 'Chỉ số', exchange: 'ICE / BINGX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 25_000_000_000 },
-  { symbol: 'SPX', name: 'S&P 500 Index', price: 7711.70, change: 35.40, percent: 0.46, type: 'up', market: 'Chỉ số', exchange: 'CME / BINGX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 45_000_000_000 },
-  { symbol: 'NDX', name: 'Nasdaq 100 Index', price: 30355.49, change: 180.50, percent: 0.60, type: 'up', market: 'Chỉ số', exchange: 'CME / BINGX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 38_000_000_000 },
-  { symbol: 'DJI', name: 'Dow Jones Industrial', price: 51632.40, change: 120.20, percent: 0.23, type: 'up', market: 'Chỉ số', exchange: 'CBOT / BINGX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 22_000_000_000 },
-  { symbol: 'JP225', name: 'Nikkei 225 (Nhật Bản)', price: 39450.00, change: 280.00, percent: 0.71, type: 'up', market: 'Chỉ số', exchange: 'OSE / BINGX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 18_000_000_000 },
-  { symbol: 'UK100', name: 'FTSE 100 (Anh Quốc)', price: 8420.50, change: -15.20, percent: -0.18, type: 'down', market: 'Chỉ số', exchange: 'LSE / BINGX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 14_000_000_000 },
-  { symbol: 'EU50', name: 'Euro Stoxx 50 (Châu Âu)', price: 5045.20, change: 18.40, percent: 0.37, type: 'up', market: 'Chỉ số', exchange: 'EUREX / BINGX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 16_000_000_000 },
-  { symbol: 'US2000', name: 'Russell 2000 (Small Cap)', price: 2315.80, change: 12.60, percent: 0.55, type: 'up', market: 'Chỉ số', exchange: 'CME / BINGX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 12_000_000_000 },
+  { symbol: 'DXY', name: 'US Dollar Index (Sức mạnh USD)', price: 101.93, change: 0.15, percent: 0.15, type: 'up', market: 'Chỉ số', exchange: 'YAHOO FINANCE', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 25_000_000_000 },
+  { symbol: 'SPX', name: 'S&P 500 Index', price: 7722.72, change: 35.40, percent: 0.46, type: 'up', market: 'Chỉ số', exchange: 'YAHOO FINANCE', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 45_000_000_000 },
+  { symbol: 'NDX', name: 'Nasdaq 100 Index', price: 27190.86, change: 180.50, percent: 0.67, type: 'up', market: 'Chỉ số', exchange: 'YAHOO FINANCE', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 38_000_000_000 },
+  { symbol: 'DJI', name: 'Dow Jones Industrial', price: 51176.96, change: 120.20, percent: 0.24, type: 'up', market: 'Chỉ số', exchange: 'YAHOO FINANCE', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 22_000_000_000 },
+  { symbol: 'JP225', name: 'Nikkei 225 (Nhật Bản)', price: 68309.46, change: 280.00, percent: 0.41, type: 'up', market: 'Chỉ số', exchange: 'YAHOO FINANCE', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 18_000_000_000 },
+  { symbol: 'UK100', name: 'FTSE 100 (Anh Quốc)', price: 10462.00, change: -15.20, percent: -0.15, type: 'down', market: 'Chỉ số', exchange: 'YAHOO FINANCE', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 14_000_000_000 },
+  { symbol: 'EU50', name: 'Euro Stoxx 50 (Châu Âu)', price: 6238.50, change: 18.40, percent: 0.30, type: 'up', market: 'Chỉ số', exchange: 'YAHOO FINANCE', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 16_000_000_000 },
+  { symbol: 'US2000', name: 'Russell 2000 (Small Cap)', price: 2832.90, change: 12.60, percent: 0.45, type: 'up', market: 'Chỉ số', exchange: 'YAHOO FINANCE', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 12_000_000_000 },
 ];
 
 
@@ -252,7 +252,10 @@ export const generateOHLCV = (basePrice: number, count = 200, timeframe = 'D', e
  * - Forex chuẩn (EURUSD, GBPUSD...): 100,000 đơn vị tiền tệ
  * - XAUUSD (Vàng): 100 oz / lot
  * - XAGUSD (Bạc): 5,000 oz / lot
- * - USOIL (Dầu): 1,000 thùng / lot
+ * - USOIL, BRENT (Dầu thô): 1,000 thùng / lot
+ * - PLATINUM (Bạch kim): 50 oz / lot
+ * - COPPER (Đồng): 1,000 lbs / lot
+ * - NGAS (Khí tự nhiên): 1,000 MMBtu / lot
  * - Crypto (BTC, ETH...): 1 coin / lot
  * - Cổ phiếu / Chỉ số: 1 CP / HĐ / lot
  */
@@ -264,7 +267,9 @@ export const getContractMultiplier = (symbolOrStock?: string | Stock): number =>
     if (stock.market === 'Ngoại hối (Forex)') return 100000;
     if (stock.symbol === 'XAUUSD') return 100;
     if (stock.symbol === 'XAGUSD') return 5000;
-    if (stock.symbol === 'USOIL') return 1000;
+    if (stock.symbol === 'USOIL' || stock.symbol === 'BRENT') return 1000;
+    if (stock.symbol === 'PLATINUM') return 50;
+    if (stock.symbol === 'COPPER' || stock.symbol === 'NGAS') return 1000;
     if (stock.market === 'Tiền điện tử (Crypto)') return 1;
     if (stock.market === 'Cổ phiếu') return 1;
     if (stock.market === 'Chỉ số') return 1;
@@ -274,14 +279,18 @@ export const getContractMultiplier = (symbolOrStock?: string | Stock): number =>
   const sym = symbolOrStock.toUpperCase().trim();
   if (sym === 'XAUUSD') return 100;
   if (sym === 'XAGUSD') return 5000;
-  if (sym === 'USOIL') return 1000;
+  if (sym === 'USOIL' || sym === 'BRENT') return 1000;
+  if (sym === 'PLATINUM') return 50;
+  if (sym === 'COPPER' || sym === 'NGAS') return 1000;
 
   const found = STOCKS.find(s => s.symbol.toUpperCase() === sym);
   if (found) {
     if (found.market === 'Ngoại hối (Forex)') return 100000;
     if (found.symbol === 'XAUUSD') return 100;
     if (found.symbol === 'XAGUSD') return 5000;
-    if (found.symbol === 'USOIL') return 1000;
+    if (found.symbol === 'USOIL' || found.symbol === 'BRENT') return 1000;
+    if (found.symbol === 'PLATINUM') return 50;
+    if (found.symbol === 'COPPER' || found.symbol === 'NGAS') return 1000;
     return 1;
   }
 
@@ -298,8 +307,10 @@ export const getContractMultiplier = (symbolOrStock?: string | Stock): number =>
 /**
  * Trả về đơn vị của tài sản tương ứng:
  * - Crypto: BTC, ETH, SOL...
- * - Vàng/Bạc: oz
- * - Dầu: thùng
+ * - Vàng/Bạc/Bạch kim: oz
+ * - Dầu thô: thùng
+ * - Khí gas: MMBtu
+ * - Đồng: lbs
  * - Forex: Lot
  * - Cổ phiếu: CP
  * - Chỉ số: HĐ
@@ -309,8 +320,10 @@ export const getAssetUnit = (symbolOrStock?: string | Stock): string => {
   const sym = typeof symbolOrStock === 'string' ? symbolOrStock.toUpperCase().trim() : symbolOrStock.symbol.toUpperCase().trim();
   const market = typeof symbolOrStock !== 'string' ? symbolOrStock.market : STOCKS.find(s => s.symbol.toUpperCase() === sym)?.market;
 
-  if (sym === 'XAUUSD' || sym === 'XAGUSD') return 'oz';
-  if (sym === 'USOIL') return 'thùng';
+  if (sym === 'XAUUSD' || sym === 'XAGUSD' || sym === 'PLATINUM') return 'oz';
+  if (sym === 'USOIL' || sym === 'BRENT') return 'thùng';
+  if (sym === 'NGAS') return 'MMBtu';
+  if (sym === 'COPPER') return 'lbs';
   if (market === 'Ngoại hối (Forex)' || ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCHF', 'NZDUSD', 'USDCAD', 'EURJPY', 'GBPJPY'].includes(sym)) {
     return 'Lot';
   }

@@ -43,17 +43,10 @@ export const BINGX_SYMBOL_MAP: Record<string, string> = {
   'ORCL': 'NCSKORCL2USD-USDT',
   'KO': 'NCSKKO2USD-USDT',
   'JNJ': 'NCSKJNJ2USD-USDT',
-
-  // Chỉ số toàn cầu & Sức mạnh USD (Global Indices & DXY)
-  'SPX': 'NCSISP5002USD-USDT',
-  'NDX': 'NCSINASDAQ1002USD-USDT',
-  'DJI': 'NCSIDOWJONES2USD-USDT',
-  'DXY': 'NCSIDXY2USD-USDT',
-  'JP225': 'NCSINIKKEI2252USD-USDT',
-  'UK100': 'NCSIUK2USD-USDT',
-  'EU50': 'NCSIEUSTX2USD-USDT',
-  'US2000': 'NCSIRUSSELL20002USD-USDT',
 };
+
+// Danh sách các Chỉ số Toàn cầu chính thức (lấy trực tiếp từ Sở giao dịch gốc: CME, ICE, CBOT, JPX, LSE, EUREX)
+export const OFFICIAL_INDICES = ['SPX', 'NDX', 'DJI', 'DXY', 'JP225', 'UK100', 'EU50', 'US2000'];
 
 // Bản đồ ngược từ mã BingX sang mã chuẩn của hệ thống
 export const BINGX_REVERSE_MAP: Record<string, string> = Object.entries(BINGX_SYMBOL_MAP).reduce(
@@ -122,18 +115,26 @@ export const fetchBingXKlines = async ({
   }
 
   try {
-    let url = `https://open-api.bingx.com/openApi/swap/v3/quote/klines?symbol=${encodeURIComponent(bingxSymbol)}&interval=${bingxInterval}&limit=${limit}`;
+    let url = `/api/market/bingx/klines?symbol=${encodeURIComponent(bingxSymbol)}&interval=${bingxInterval}&limit=${limit}`;
     if (startTime) url += `&startTime=${startTime}`;
     if (endTime) url += `&endTime=${endTime}`;
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-    const res = await fetch(url, { signal: controller.signal });
+    let res = await fetch(url, { signal: controller.signal }).catch(() => null);
     clearTimeout(timeoutId);
 
-    if (!res.ok) {
-      throw new Error(`BingX HTTP error: ${res.status}`);
+    // Fallback sang link direct nếu proxy backend lỗi
+    if (!res || !res.ok) {
+      let directUrl = `https://open-api.bingx.com/openApi/swap/v3/quote/klines?symbol=${encodeURIComponent(bingxSymbol)}&interval=${bingxInterval}&limit=${limit}`;
+      if (startTime) directUrl += `&startTime=${startTime}`;
+      if (endTime) directUrl += `&endTime=${endTime}`;
+      res = await fetch(directUrl).catch(() => null);
+    }
+
+    if (!res || !res.ok) {
+      throw new Error(`BingX HTTP error: ${res ? res.status : 'network error'}`);
     }
 
     const json = await res.json();
@@ -172,7 +173,21 @@ export const fetchUnifiedKlines = async (params: FetchMarketKlinesParams): Promi
   const { symbol, timeframe, limit = 500, isFutures, startTime, endTime } = params;
   const upperSym = symbol.toUpperCase();
 
-  // 1. Nếu là mã nằm trong danh mục TradFi của BingX (Vàng XAUUSD, Dầu, Ngoại hối, Cổ phiếu Mỹ, Chỉ số)
+  // 1. Nếu là Chỉ số toàn cầu (SPX, NDX, DJI, DXY, JP225, UK100, EU50, US2000)
+  // Luôn lấy nến chuẩn từ sở giao dịch gốc (CME, ICE, CBOT, JPX, LSE, EUREX) qua Backend Yahoo Finance
+  if (OFFICIAL_INDICES.includes(upperSym)) {
+    try {
+      const backendRes = await fetch(`/api/market/klines?symbol=${encodeURIComponent(upperSym)}&timeframe=${encodeURIComponent(timeframe)}&limit=${limit}`);
+      if (backendRes.ok) {
+        const json = await backendRes.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          return json.data;
+        }
+      }
+    } catch (_) {}
+  }
+
+  // 2. Nếu là mã nằm trong danh mục TradFi của BingX (Vàng XAUUSD, Dầu, Ngoại hối, Cổ phiếu Mỹ)
   if (BINGX_SYMBOL_MAP[upperSym]) {
     const bingxData = await fetchBingXKlines({ symbol: upperSym, timeframe, limit, startTime, endTime });
     if (bingxData && bingxData.length > 0) {
@@ -192,6 +207,28 @@ export const fetchUnifiedKlines = async (params: FetchMarketKlinesParams): Promi
       });
       if (binanceGold && binanceGold.length > 0) return binanceGold;
     }
+
+    // Fallback sang Backend (Yahoo Finance) cho Chỉ số (DJI, DXY, JP225, UK100, EU50, US2000...) & Forex khi sàn BingX đóng cửa / offline
+    try {
+      const backendRes = await fetch(`/api/market/klines?symbol=${encodeURIComponent(upperSym)}&timeframe=${encodeURIComponent(timeframe)}&limit=${limit}`);
+      if (backendRes.ok) {
+        const json = await backendRes.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          return json.data;
+        }
+      }
+    } catch (_) {}
+
+    // Fallback bổ sung sang Twelve Data (Vàng XAU/USD & Ngoại hối Forex)
+    try {
+      const tdRes = await fetch(`/api/market/twelvedata/klines?symbol=${encodeURIComponent(upperSym)}&timeframe=${encodeURIComponent(timeframe)}&limit=${limit}`);
+      if (tdRes.ok) {
+        const json = await tdRes.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          return json.data;
+        }
+      }
+    } catch (_) {}
   }
 
   // 2. Mặc định ưu tiên Binance cho Tiền điện tử (Crypto)
@@ -215,6 +252,17 @@ export const fetchUnifiedKlines = async (params: FetchMarketKlinesParams): Promi
     return bingxFallbackData;
   }
 
+  // 4. Fallback cuối cùng sang backend
+  try {
+    const backendRes = await fetch(`/api/market/klines?symbol=${encodeURIComponent(upperSym)}&timeframe=${encodeURIComponent(timeframe)}&limit=${limit}`);
+    if (backendRes.ok) {
+      const json = await backendRes.json();
+      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+        return json.data;
+      }
+    }
+  } catch (_) {}
+
   return [];
 };
 
@@ -230,7 +278,30 @@ export const subscribeUnifiedBar = (
 ): (() => void) => {
   const upperSym = symbol.toUpperCase();
 
-  // Kênh BingX (Vàng, Dầu, Forex, Cổ phiếu, Chỉ số)
+  // Kênh Chỉ số chuẩn từ Sở giao dịch gốc (CME, ICE, CBOT, JPX, LSE, EUREX)
+  if (OFFICIAL_INDICES.includes(upperSym)) {
+    let isActive = true;
+    const pollIndex = async () => {
+      if (!isActive) return;
+      try {
+        const bRes = await fetch(`/api/market/klines?symbol=${encodeURIComponent(upperSym)}&timeframe=${encodeURIComponent(timeframe)}&limit=1`);
+        if (bRes && bRes.ok && isActive) {
+          const bJson = await bRes.json();
+          if (bJson.success && Array.isArray(bJson.data) && bJson.data.length > 0) {
+            onUpdate(bJson.data[bJson.data.length - 1]);
+          }
+        }
+      } catch (_) {}
+    };
+    pollIndex();
+    const timerId = setInterval(pollIndex, 3000);
+    return () => {
+      isActive = false;
+      clearInterval(timerId);
+    };
+  }
+
+  // Kênh BingX (Vàng, Dầu, Forex, Cổ phiếu)
   if (BINGX_SYMBOL_MAP[upperSym]) {
     const bingxSymbol = BINGX_SYMBOL_MAP[upperSym];
     const bingxInterval = mapTimeframeToBingX(timeframe);
@@ -239,30 +310,46 @@ export const subscribeUnifiedBar = (
     const pollLatest = async () => {
       if (!isActive) return;
       try {
-        const url = `https://open-api.bingx.com/openApi/swap/v3/quote/klines?symbol=${encodeURIComponent(bingxSymbol)}&interval=${bingxInterval}&limit=1`;
-        const res = await fetch(url);
-        if (!res.ok) return;
-        const json = await res.json();
-        if (json.code === 0 && Array.isArray(json.data) && json.data.length > 0 && isActive) {
-          const c = json.data[0];
-          const candle: KLineData = {
-            timestamp: Number(c.time),
-            open: parseFloat(c.open),
-            high: parseFloat(c.high),
-            low: parseFloat(c.low),
-            close: parseFloat(c.close),
-            volume: parseFloat(c.volume || '0'),
-          };
-          onUpdate(candle);
+        let url = `/api/market/bingx/klines?symbol=${encodeURIComponent(bingxSymbol)}&interval=${bingxInterval}&limit=1`;
+        let res = await fetch(url).catch(() => null);
+        if (!res || !res.ok) {
+          res = await fetch(`https://open-api.bingx.com/openApi/swap/v3/quote/klines?symbol=${encodeURIComponent(bingxSymbol)}&interval=${bingxInterval}&limit=1`).catch(() => null);
+        }
+        if (res && res.ok) {
+          const json = await res.json();
+          if (json.code === 0 && Array.isArray(json.data) && json.data.length > 0 && isActive) {
+            const c = json.data[0];
+            const candle: KLineData = {
+              timestamp: Number(c.time),
+              open: parseFloat(c.open),
+              high: parseFloat(c.high),
+              low: parseFloat(c.low),
+              close: parseFloat(c.close),
+              volume: parseFloat(c.volume || '0'),
+            };
+            onUpdate(candle);
+            return;
+          }
         }
       } catch (err) {
         // bỏ qua lỗi polling mạng nhẹ
       }
+
+      // Fallback: poll qua Backend (Yahoo Finance) khi BingX đóng cửa / offline
+      try {
+        const bRes = await fetch(`/api/market/klines?symbol=${encodeURIComponent(upperSym)}&timeframe=${encodeURIComponent(timeframe)}&limit=1`);
+        if (bRes.ok && isActive) {
+          const bJson = await bRes.json();
+          if (bJson.success && Array.isArray(bJson.data) && bJson.data.length > 0) {
+            onUpdate(bJson.data[bJson.data.length - 1]);
+          }
+        }
+      } catch (_) {}
     };
 
     // Chạy ngay lần đầu và định kỳ 1.5s
     pollLatest();
-    const timerId = setInterval(pollLatest, 1500);
+    const timerId = setInterval(pollLatest, 2000);
 
     return () => {
       isActive = false;
@@ -286,7 +373,7 @@ export const fetchAllMarketLivePrices = async (): Promise<Record<string, number>
     const [spotRes, futRes, bingxRes] = await Promise.all([
       fetch('https://api.binance.com/api/v3/ticker/24hr').catch(() => null),
       fetch('https://fapi.binance.com/fapi/v1/ticker/24hr').catch(() => null),
-      fetch('https://open-api.bingx.com/openApi/swap/v2/quote/ticker').catch(() => null),
+      fetch('/api/market/bingx/ticker').catch(() => fetch('https://open-api.bingx.com/openApi/swap/v2/quote/ticker').catch(() => null)),
     ]);
 
     // 1. Xử lý Binance Spot
@@ -350,7 +437,7 @@ export const syncLiveMarketData = async (stocksList: any[]): Promise<void> => {
     const [spotRes, futRes, bingxRes] = await Promise.all([
       fetch('https://api.binance.com/api/v3/ticker/24hr').catch(() => null),
       fetch('https://fapi.binance.com/fapi/v1/ticker/24hr').catch(() => null),
-      fetch('https://open-api.bingx.com/openApi/swap/v2/quote/ticker').catch(() => null),
+      fetch('/api/market/bingx/ticker').catch(() => fetch('https://open-api.bingx.com/openApi/swap/v2/quote/ticker').catch(() => null)),
     ]);
 
     const tickerMap: Record<string, { price: number; change: number; percent: number; type: 'up' | 'down'; volume24h?: number }> = {};

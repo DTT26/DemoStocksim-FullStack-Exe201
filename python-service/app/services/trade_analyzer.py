@@ -22,6 +22,8 @@ class TradeAnalyzer:
     """
 
     def analyze(self, trade: TradeInput) -> Dict[str, Any]:
+        lang = getattr(trade, 'lang', None) or 'vi'
+        is_en = str(lang).lower().startswith('en')
         is_buy = trade.side.upper() in ["BUY", "LONG"]
         entry = trade.entryPrice or 0.0
         is_open = trade.isOpen if trade.isOpen is not None else (trade.exitPrice is None)
@@ -77,8 +79,8 @@ class TradeAnalyzer:
             capital_at_risk = 0.0
             max_potential_loss = None
             risk_pct = 0.0
-            risk_display = "Chưa xác định (Thiếu SL)"
-            risk_warning = "Risk cannot be determined because Stop Loss is not defined."
+            risk_display = "Undefined (Missing SL)" if is_en else "Chưa xác định (Thiếu SL)"
+            risk_warning = "Risk cannot be determined because Stop Loss is not defined." if is_en else "Chưa xác định được rủi ro tối đa do thiếu Stop Loss."
 
         # Planned R:R & Actual R:R
         if has_sl and has_tp and risk_per_unit > 0:
@@ -349,10 +351,10 @@ class TradeAnalyzer:
                 "stopLoss": f"${sl:,.2f}" if has_sl else "Not Set",
                 "takeProfit": f"${tp:,.2f}" if has_tp else "Not Set",
                 "risk": f"{risk_pct}%" if has_sl else "Undefined",
-                "rr": f"1 : {actual_rr}" if (has_sl and not is_open) else "Chưa đóng / Undefined",
+                "rr": f"1 : {actual_rr}" if (has_sl and not is_open) else ("Not closed / Undefined" if is_en else "Chưa đóng / Undefined"),
                 "exit": f"${exit_p:,.2f}" if not is_open else f"Live ${eval_price:,.2f}"
             },
-            "auditNote": "Lưu ý: Mức độ tuân thủ được đánh giá độc lập hoàn toàn với kết quả lãi/lỗ (P/L) của lệnh."
+            "auditNote": "Note: Process compliance is audited completely independent of trade profit/loss (P/L)." if is_en else "Lưu ý: Mức độ tuân thủ được đánh giá độc lập hoàn toàn với kết quả lãi/lỗ (P/L) của lệnh."
         }
 
         # =====================================================================
@@ -364,108 +366,192 @@ class TradeAnalyzer:
             if is_good_process:
                 trade_verdict = "OPEN_GOOD_SETUP"
                 verdict_desc = (
-                    f"Vị thế Đang Mở & Kỷ Luật Chuẩn (Good Setup Active): Quy trình quản trị rủi ro được thiết lập bài bản. "
-                    f"P/L tạm tính: {pnl_sign}${abs_pnl:,.2f} ({pct_sign}{return_pct}%)."
+                    f"Active Position & Disciplined Setup: Risk management process is properly configured. Unrealized P/L: {pnl_sign}${abs_pnl:,.2f} ({pct_sign}{return_pct}%)."
+                    if is_en else
+                    f"Vị thế Đang Mở & Kỷ Luật Chuẩn (Good Setup Active): Quy trình quản trị rủi ro được thiết lập bài bản. P/L tạm tính: {pnl_sign}${abs_pnl:,.2f} ({pct_sign}{return_pct}%)."
                 )
             else:
                 trade_verdict = "OPEN_WARNING_SETUP"
                 verdict_desc = (
-                    f"Vị thế Đang Mở & Cảnh Báo Quy Trình (Warning Setup Active): Vị thế đang chạy nhưng có vi phạm quy trình "
-                    f"({'chưa cài đặt Stop Loss' if not has_sl else 'rủi ro vượt ngưỡng'}). "
-                    f"P/L tạm tính: {pnl_sign}${abs_pnl:,.2f} ({pct_sign}{return_pct}%)."
+                    f"Active Position & Warning Setup: Position is active but violates rules ({'missing Stop Loss' if not has_sl else 'risk exceeds limits'}). Unrealized P/L: {pnl_sign}${abs_pnl:,.2f} ({pct_sign}{return_pct}%)."
+                    if is_en else
+                    f"Vị thế Đang Mở & Cảnh Báo Quy Trình (Warning Setup Active): Vị thế đang chạy nhưng có vi phạm quy trình ({'chưa cài đặt Stop Loss' if not has_sl else 'rủi ro vượt ngưỡng'}). P/L tạm tính: {pnl_sign}${abs_pnl:,.2f} ({pct_sign}{return_pct}%)."
                 )
         else:
             is_profitable = total_pnl > 0
             if is_profitable and is_good_process:
                 trade_verdict = "WINNING_GOOD_TRADE"
-                verdict_desc = "Good Trade + Winning Trade: Quy trình chuẩn mực và thị trường mang lại kết quả xứng đáng."
+                verdict_desc = (
+                    "Good Trade + Winning Trade: Disciplined process rewarded by market probabilities."
+                    if is_en else
+                    "Good Trade + Winning Trade: Quy trình chuẩn mực và thị trường mang lại kết quả xứng đáng."
+                )
             elif is_profitable and not is_good_process:
                 trade_verdict = "WINNING_BAD_TRADE"
                 verdict_desc = (
-                    "Bad Trade still Profitable: Lệnh thắng nhưng quy trình kém (thiếu SL hoặc rủi ro không kiểm soát). "
-                    "Chiến thắng này là do may mắn nhất thời, thói quen này sẽ bào mòn tài khoản trong dài hạn."
+                    "Bad Trade still Profitable: Profitable trade with flawed process (missing SL or uncontrolled risk). This win is temporary luck and reinforces destructive habits."
+                    if is_en else
+                    "Bad Trade still Profitable: Lệnh thắng nhưng quy trình kém (thiếu SL hoặc rủi ro không kiểm soát). Chiến thắng này là do may mắn nhất thời, thói quen này sẽ bào mòn tài khoản trong dài hạn."
                 )
             elif not is_profitable and is_good_process:
                 trade_verdict = "LOSING_GOOD_TRADE"
                 verdict_desc = (
-                    "Good Trade with Loss: Lệnh thực hiện đúng quy trình dù kết quả thua lỗ. "
-                    "Thua lỗ có kiểm soát chỉ là chi phí xác suất kinh doanh tự nhiên. Hãy giữ vững kỷ luật!"
+                    "Good Trade with Loss: Followed rules and accepted controlled loss. Controlled losses are a natural business expense in trading."
+                    if is_en else
+                    "Good Trade with Loss: Lệnh thực hiện đúng quy trình dù kết quả thua lỗ. Thua lỗ có kiểm soát chỉ là chi phí xác suất kinh doanh tự nhiên. Hãy giữ vững kỷ luật!"
                 )
             else:
                 trade_verdict = "LOSING_BAD_TRADE"
-                verdict_desc = "Bad Trade with Loss: Lệnh vừa thua lỗ vừa vi phạm quy trình quản trị rủi ro. Cần nghiêm túc rút kinh nghiệm."
+                verdict_desc = (
+                    "Bad Trade with Loss: Trade resulted in a loss while violating risk management rules. Needs serious post-mortem review."
+                    if is_en else
+                    "Bad Trade with Loss: Lệnh vừa thua lỗ vừa vi phạm quy trình quản trị rủi ro. Cần nghiêm túc rút kinh nghiệm."
+                )
 
         # =====================================================================
         # 9. AI Trading Coach Mentor Feedback
         # =====================================================================
         if is_open:
             if not has_sl:
-                coach_explanation = (
-                    f"Vị thế hiện tại chưa có Stop Loss. Điều này khiến mức thua lỗ tối đa (Maximum Potential Loss) chưa được xác định. "
-                    f"Theo nguyên tắc Risk Management của chiến lược {strategy_name}, bạn bắt buộc phải xác định Invalidation Point trước khi mở lệnh."
-                )
-                coach_action = f"Hãy xác định ngay điểm vô hiệu kỹ thuật (khoảng ${entry * (0.98 if is_buy else 1.02):,.2f}) để đặt Stop Loss cứng bảo vệ vốn."
-                reflection_question = "Nếu giá đảo chiều mạnh ngay sau entry, điểm kỹ thuật nào sẽ khiến setup của bạn bị xem là hoàn toàn invalid?"
+                if is_en:
+                    coach_explanation = (
+                        f"Current position does not have a Stop Loss. This leaves your Maximum Potential Loss undefined. "
+                        f"Under the Risk Management rules of {strategy_name}, you must identify an Invalidation Point before opening an entry."
+                    )
+                    coach_action = f"Immediately determine your technical invalidation level (around ${entry * (0.98 if is_buy else 1.02):,.2f}) to place a hard Stop Loss protecting capital."
+                    reflection_question = "If price strongly reverses immediately after entry, what exact price point completely invalidates this trade setup?"
+                else:
+                    coach_explanation = (
+                        f"Vị thế hiện tại chưa có Stop Loss. Điều này khiến mức thua lỗ tối đa (Maximum Potential Loss) chưa được xác định. "
+                        f"Theo nguyên tắc Risk Management của chiến lược {strategy_name}, bạn bắt buộc phải xác định Invalidation Point trước khi mở lệnh."
+                    )
+                    coach_action = f"Hãy xác định ngay điểm vô hiệu kỹ thuật (khoảng ${entry * (0.98 if is_buy else 1.02):,.2f}) để đặt Stop Loss cứng bảo vệ vốn."
+                    reflection_question = "Nếu giá đảo chiều mạnh ngay sau entry, điểm kỹ thuật nào sẽ khiến setup của bạn bị xem là hoàn toàn invalid?"
             elif risk_pct > 2.0:
-                coach_explanation = (
-                    f"Vị thế đang có mức rủi ro {risk_pct}% tài khoản, vượt quá ngưỡng kỷ luật chuẩn (1% - 2%). "
-                    f"Khối lượng vị thế quá lớn sẽ gây áp lực tâm lý nặng nề khi nến dao động ngược chiều."
-                )
-                coach_action = "Tuyệt đối không dời Stop Loss ra xa hơn. Hãy cân nhắc giảm một phần khối lượng hoặc dời SL về hòa vốn khi giá tạo cấu trúc thuận lợi mới."
-                reflection_question = "Mức rủi ro hiện tại có khiến bạn cảm thấy bất an và phải dán mắt vào bảng điện từng giây không?"
+                if is_en:
+                    coach_explanation = (
+                        f"Position carries a risk of {risk_pct}% of account equity, exceeding disciplined benchmark (1% - 2%). "
+                        f"Excessive position sizing creates overwhelming psychological pressure on adverse fluctuations."
+                    )
+                    coach_action = "Never widen your Stop Loss. Consider partial position trim or moving SL to break-even once favorable market structure forms."
+                    reflection_question = "Does this risk level make you feel anxious and glued to the charts every tick?"
+                else:
+                    coach_explanation = (
+                        f"Vị thế đang có mức rủi ro {risk_pct}% tài khoản, vượt quá ngưỡng kỷ luật chuẩn (1% - 2%). "
+                        f"Khối lượng vị thế quá lớn sẽ gây áp lực tâm lý nặng nề khi nến dao động ngược chiều."
+                    )
+                    coach_action = "Tuyệt đối không dời Stop Loss ra xa hơn. Hãy cân nhắc giảm một phần khối lượng hoặc dời SL về hòa vốn khi giá tạo cấu trúc thuận lợi mới."
+                    reflection_question = "Mức rủi ro hiện tại có khiến bạn cảm thấy bất an và phải dán mắt vào bảng điện từng giây không?"
             else:
-                coach_explanation = (
-                    f"Kế hoạch quản trị rủi ro rất chuẩn chỉnh với mức rủi ro {risk_pct}% tài khoản. "
-                    f"Khi vị thế đang chạy, cám dỗ can thiệp lệnh hoặc chốt non là rào cản tâm lý lớn nhất."
-                )
-                coach_action = "Hãy kiên nhẫn để thị trường kiểm định các mốc thanh khoản mục tiêu theo xác suất thống kê."
-                reflection_question = "Nếu giá thoái lui nhẹ 0.5R trước khi tiếp tục xu hướng, bạn có đủ bình tĩnh để không can thiệp lệnh sớm không?"
+                if is_en:
+                    coach_explanation = (
+                        f"Risk management plan is disciplined at {risk_pct}% account risk. "
+                        f"While the trade runs, the temptation to prematurely close or micro-manage is the primary psychological hurdle."
+                    )
+                    coach_action = "Exercise patience to allow the market to test target liquidity pools based on statistical edge."
+                    reflection_question = "If price pulls back 0.5R before continuing in your favor, can you stay calm without micro-managing?"
+                else:
+                    coach_explanation = (
+                        f"Kế hoạch quản trị rủi ro rất chuẩn chỉnh với mức rủi ro {risk_pct}% tài khoản. "
+                        f"Khi vị thế đang chạy, cám dỗ can thiệp lệnh hoặc chốt non là rào cản tâm lý lớn nhất."
+                    )
+                    coach_action = "Hãy kiên nhẫn để thị trường kiểm định các mốc thanh khoản mục tiêu theo xác suất thống kê."
+                    reflection_question = "Nếu giá thoái lui nhẹ 0.5R trước khi tiếp tục xu hướng, bạn có đủ bình tĩnh để không can thiệp lệnh sớm không?"
         else:
             if total_pnl > 0 and not is_good_process:
-                coach_explanation = (
-                    f"Lệnh đạt lợi nhuận ({pnl_sign}${abs_pnl:,.2f}), nhưng đây là một 'Bad Trade still Profitable'. "
-                    f"Việc thiếu Stop Loss hoặc vi phạm quy tắc mà vẫn có lãi là cái bẫy tâm lý nguy hiểm nhất trong trading, "
-                    f"vì nó củng cố hành vi liều lĩnh cho những lệnh tương lai."
-                )
-                coach_action = "Ghi nhận lợi nhuận nhưng tự nhắc nhở bản thân rằng lệnh này đã vi phạm quy trình và tuyệt đối không lặp lại."
-                reflection_question = "Nếu thị trường bất ngờ ra tin thiên nga đen ngược chiều lệnh này khi bạn không có SL, tài khoản của bạn sẽ chịu hậu quả ra sao?"
+                if is_en:
+                    coach_explanation = (
+                        f"Trade was profitable ({pnl_sign}${abs_pnl:,.2f}), but this is a 'Bad Trade still Profitable'. "
+                        f"Skipping Stop Loss or violating trading rules while gaining profit is a dangerous psychological trap, "
+                        f"as it reinforces reckless habits for future trades."
+                    )
+                    coach_action = "Accept the profit, but remind yourself that this trade violated procedure and must never be repeated."
+                    reflection_question = "If a surprise black swan event occurred against this trade with no SL, what would have happened to your account?"
+                else:
+                    coach_explanation = (
+                        f"Lệnh đạt lợi nhuận ({pnl_sign}${abs_pnl:,.2f}), nhưng đây là một 'Bad Trade still Profitable'. "
+                        f"Việc thiếu Stop Loss hoặc vi phạm quy tắc mà vẫn có lãi là cái bẫy tâm lý nguy hiểm nhất trong trading, "
+                        f"vì nó củng cố hành vi liều lĩnh cho những lệnh tương lai."
+                    )
+                    coach_action = "Ghi nhận lợi nhuận nhưng tự nhắc nhở bản thân rằng lệnh này đã vi phạm quy trình và tuyệt đối không lặp lại."
+                    reflection_question = "Nếu thị trường bất ngờ ra tin thiên nga đen ngược chiều lệnh này khi bạn không có SL, tài khoản của bạn sẽ chịu hậu quả ra sao?"
             elif total_pnl <= 0 and is_good_process:
-                coach_explanation = (
-                    f"Lệnh chạm mức cắt lỗ ({pnl_sign}${abs_pnl:,.2f}), nhưng bạn đã thể hiện đúng phẩm chất của một trader kỷ luật: "
-                    f"Chấp nhận cắt lỗ theo kế hoạch để bảo toàn 98%+ vốn cho các cơ hội tiếp theo."
-                )
-                coach_action = "Không nên tự trách mình. Hãy ghi nhận trade này là một bài học mẫu mực về việc tôn trọng Stop Loss."
-                reflection_question = "Sau lệnh thua này, bạn có cảm thấy muốn vào lệnh ngay để gỡ gạc (Revenge Trading) hay bình tĩnh chờ setup tiếp theo?"
+                if is_en:
+                    coach_explanation = (
+                        f"Trade hit stop loss ({pnl_sign}${abs_pnl:,.2f}), but you demonstrated true professional discipline: "
+                        f"Accepting the planned loss to preserve 98%+ of your capital for high-probability setups ahead."
+                    )
+                    coach_action = "Do not blame yourself. Treat this trade as a textbook example of honoring your Stop Loss."
+                    reflection_question = "After this loss, do you feel an urge to immediately re-enter to make money back (Revenge Trading), or wait calmly for your setup?"
+                else:
+                    coach_explanation = (
+                        f"Lệnh chạm mức cắt lỗ ({pnl_sign}${abs_pnl:,.2f}), nhưng bạn đã thể hiện đúng phẩm chất của một trader kỷ luật: "
+                        f"Chấp nhận cắt lỗ theo kế hoạch để bảo toàn 98%+ vốn cho các cơ hội tiếp theo."
+                    )
+                    coach_action = "Không nên tự trách mình. Hãy ghi nhận trade này là một bài học mẫu mực về việc tôn trọng Stop Loss."
+                    reflection_question = "Sau lệnh thua này, bạn có cảm thấy muốn vào lệnh ngay để gỡ gạc (Revenge Trading) hay bình tĩnh chờ setup tiếp theo?"
             elif total_pnl <= 0 and not is_good_process:
-                coach_explanation = (
-                    f"Lệnh thua lỗ ({pnl_sign}${abs_pnl:,.2f}) kèm theo vi phạm quy trình ({rule_violations[0] if rule_violations else 'thiếu kế hoạch'}). "
-                    f"Khi không có quy trình, bạn đang đánh bạc với thị trường thay vì kinh doanh xác suất."
-                )
-                coach_action = "Tạm dừng giao dịch 15-30 phút để cân bằng tâm lý trước khi rà soát lại checklist chiến lược."
-                reflection_question = "Nếu được thực hiện lại lệnh này từ đầu, quy tắc nào là quy tắc đầu tiên bạn sẽ bắt buộc bản thân tuân thủ?"
+                if is_en:
+                    rule_str = rule_violations[0] if rule_violations else 'lack of structured plan'
+                    coach_explanation = (
+                        f"Trade resulted in loss ({pnl_sign}${abs_pnl:,.2f}) alongside process violation ({rule_str}). "
+                        f"Trading without a clear process is gambling with the market rather than running a probabilistic business."
+                    )
+                    coach_action = "Step away from the screen for 15-30 minutes to reset emotions before reviewing your strategy checklist."
+                    reflection_question = "If you could execute this trade again from scratch, what is the single most important rule you would enforce?"
+                else:
+                    coach_explanation = (
+                        f"Lệnh thua lỗ ({pnl_sign}${abs_pnl:,.2f}) kèm theo vi phạm quy trình ({rule_violations[0] if rule_violations else 'thiếu kế hoạch'}). "
+                        f"Khi không có quy trình, bạn đang đánh bạc với thị trường thay vì kinh doanh xác suất."
+                    )
+                    coach_action = "Tạm dừng giao dịch 15-30 phút để cân bằng tâm lý trước khi rà soát lại checklist chiến lược."
+                    reflection_question = "Nếu được thực hiện lại lệnh này từ đầu, quy tắc nào là quy tắc đầu tiên bạn sẽ bắt buộc bản thân tuân thủ?"
             else:
-                coach_explanation = (
-                    f"Xuất sắc! Lệnh này hội tụ cả hai yếu tố: Quy trình chuẩn mực và kết quả sinh lời xứng đáng ({pnl_sign}${abs_pnl:,.2f})."
-                )
-                coach_action = "Lưu lại ảnh chụp setup và các bước thực thi này vào Nhật ký Giao dịch (Trading Journal) để nhân rộng."
-                reflection_question = "Yếu tố then chốt nào trong khâu chuẩn bị trước lệnh đã giúp bạn tự tin giữ đúng kế hoạch?"
+                if is_en:
+                    coach_explanation = (
+                        f"Outstanding! This trade executed both essential pillars: textbook process compliance and a rewarding return ({pnl_sign}${abs_pnl:,.2f})."
+                    )
+                    coach_action = "Save screenshot of this setup and execution log into your Trading Journal for replication."
+                    reflection_question = "What key factor during your pre-trade preparation gave you the confidence to stick firmly to the plan?"
+                else:
+                    coach_explanation = (
+                        f"Xuất sắc! Lệnh này hội tụ cả hai yếu tố: Quy trình chuẩn mực và kết quả sinh lời xứng đáng ({pnl_sign}${abs_pnl:,.2f})."
+                    )
+                    coach_action = "Lưu lại ảnh chụp setup và các bước thực thi này vào Nhật ký Giao dịch (Trading Journal) để nhân rộng."
+                    reflection_question = "Yếu tố then chốt nào trong khâu chuẩn bị trước lệnh đã giúp bạn tự tin giữ đúng kế hoạch?"
 
         # High-Quality LLM Coaching Enhancement if API is configured
         if llm_client.is_configured():
-            sl_state = f"đã đặt SL tại ${sl:,.2f} ({risk_pct}%)" if has_sl else "CHƯA ĐẶT STOP LOSS (Rủi ro chưa xác định)"
-            sys_p = (
-                "Bạn là một AI Trading Coach & Mentor theo trường phái 'Process > Outcome' (Quy trình quan trọng hơn kết quả). "
-                "Hãy viết một lời nhận xét súc tích (3-4 câu) bằng tiếng Việt dành cho học viên. "
-                "Giải thích vấn đề, nêu bằng chứng, giải thích tại sao quan trọng và đưa ra giải pháp. "
-                "TUYỆT ĐỐI KHÔNG khuyên BUY/SELL hay hứa hẹn lợi nhuận."
-            )
-            user_p = (
-                f"Lệnh: {trade.side} {trade.symbol}, Entry: ${entry:,.2f}, Exit/Live: ${eval_price:,.2f}.\n"
-                f"Trạng thái Stop Loss: {sl_state}.\n"
-                f"P/L: {pnl_sign}${abs_pnl:,.2f} ({pct_sign}{return_pct}%).\n"
-                f"Điểm Process Compliance: {total_process_score}/100.\n"
-                f"Phân loại: {trade_verdict}."
-            )
+            if is_en:
+                sl_state = f"SL set at ${sl:,.2f} ({risk_pct}%)" if has_sl else "NO STOP LOSS SET (Undefined Risk)"
+                sys_p = (
+                    "You are an expert AI Trading Coach & Mentor operating under the 'Process > Outcome' philosophy. "
+                    "Write a concise mentor feedback (3-4 sentences) in English for the trader. "
+                    "State the issue, provide the technical evidence, explain why it matters, and suggest an actionable fix. "
+                    "DO NOT provide buy/sell financial advice or promise profits."
+                )
+                user_p = (
+                    f"Trade: {trade.side} {trade.symbol}, Entry: ${entry:,.2f}, Exit/Live: ${eval_price:,.2f}.\n"
+                    f"Stop Loss Status: {sl_state}.\n"
+                    f"P/L: {pnl_sign}${abs_pnl:,.2f} ({pct_sign}{return_pct}%).\n"
+                    f"Process Compliance Score: {total_process_score}/100.\n"
+                    f"Verdict Classification: {trade_verdict}."
+                )
+            else:
+                sl_state = f"đã đặt SL tại ${sl:,.2f} ({risk_pct}%)" if has_sl else "CHƯA ĐẶT STOP LOSS (Rủi ro chưa xác định)"
+                sys_p = (
+                    "Bạn là một AI Trading Coach & Mentor theo trường phái 'Process > Outcome' (Quy trình quan trọng hơn kết quả). "
+                    "Hãy viết một lời nhận xét súc tích (3-4 câu) bằng tiếng Việt dành cho học viên. "
+                    "Giải thích vấn đề, nêu bằng chứng, giải thích tại sao quan trọng và đưa ra giải pháp. "
+                    "TUYỆT ĐỐI KHÔNG khuyên BUY/SELL hay hứa hẹn lợi nhuận."
+                )
+                user_p = (
+                    f"Lệnh: {trade.side} {trade.symbol}, Entry: ${entry:,.2f}, Exit/Live: ${eval_price:,.2f}.\n"
+                    f"Trạng thái Stop Loss: {sl_state}.\n"
+                    f"P/L: {pnl_sign}${abs_pnl:,.2f} ({pct_sign}{return_pct}%).\n"
+                    f"Điểm Process Compliance: {total_process_score}/100.\n"
+                    f"Phân loại: {trade_verdict}."
+                )
             custom_coach = llm_client.generate_text(sys_p, user_p, max_tokens=250)
             if custom_coach:
                 coach_explanation = custom_coach
@@ -473,13 +559,22 @@ class TradeAnalyzer:
         # =====================================================================
         # 10. Learning Takeaways (3-5 Actionable Lessons)
         # =====================================================================
-        learning_takeaways = [
-            "Xác định Invalidation Point (Điểm vô hiệu mô hình) và cài đặt Stop Loss cứng TRƯỚC KHI mở vị thế.",
-            "Xác định Risk cụ thể trên vốn tài khoản (chuẩn 1% - 2%) trước khi bấm nút đặt lệnh.",
-            "Không bao giờ đánh giá chất lượng một trade chỉ dựa vào kết quả P/L (Winning Trade ≠ Good Trade).",
-            f"Mô hình {strategy_name} chỉ có xác suất cao khi được đặt trong bối cảnh thị trường (Market Context) thuận lợi.",
-            "Phân biệt rạch ròi giữa Kỷ luật Quy trình (Process Quality) và Biến động Ngẫu nhiên của thị trường (Trade Outcome)."
-        ]
+        if is_en:
+            learning_takeaways = [
+                "Define the Technical Invalidation Point and place a hard Stop Loss BEFORE opening any position.",
+                "Calculate and cap specific risk on account equity (standard 1% - 2%) before clicking the order button.",
+                "Never judge trade quality solely by P/L outcome (Winning Trade ≠ Good Trade).",
+                f"{strategy_name} strategy holds high expectancy only when framed inside favorable Market Context and liquidity bias.",
+                "Strictly distinguish between Process Quality (discipline) and Random Market Fluctuations (trade outcome)."
+            ]
+        else:
+            learning_takeaways = [
+                "Xác định Invalidation Point (Điểm vô hiệu mô hình) và cài đặt Stop Loss cứng TRƯỚC KHI mở vị thế.",
+                "Xác định Risk cụ thể trên vốn tài khoản (chuẩn 1% - 2%) trước khi bấm nút đặt lệnh.",
+                "Không bao giờ đánh giá chất lượng một trade chỉ dựa vào kết quả P/L (Winning Trade ≠ Good Trade).",
+                f"Mô hình {strategy_name} chỉ có xác suất cao khi được đặt trong bối cảnh thị trường (Market Context) thuận lợi.",
+                "Phân biệt rạch ròi giữa Kỷ luật Quy trình (Process Quality) và Biến động Ngẫu nhiên của thị trường (Trade Outcome)."
+            ]
 
         # =====================================================================
         # 11. Citations / Sources

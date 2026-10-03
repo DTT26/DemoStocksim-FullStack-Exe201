@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import { protect } from '../middleware/authMiddleware';
 
 const router = Router();
-const PYTHON_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
+const PYTHON_URL = (process.env.PYTHON_SERVICE_URL || 'http://localhost:8000').replace(/\/+$/, '');
 
 // 1. Get current user's subscription and remaining quota
 router.get('/me', protect, async (req: any, res: Response) => {

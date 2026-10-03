@@ -1,5 +1,6 @@
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Iterator
 import re
+import json
 from app.rag.retriever import retriever
 from app.rag.schema import AskQuestionRequest, ConceptExplainRequest, RetrievalResult
 from app.services.llm_client import llm_client
@@ -69,29 +70,54 @@ class AiTutorService:
         ]
         return any(p in lower for p in phrases)
 
-    def get_socratic_questions(self, doc) -> List[str]:
+    def get_socratic_questions(self, doc, lang: str = "vi") -> List[str]:
         concept = doc.concept
         framework = doc.framework.upper()
+        is_en = str(lang).lower().startswith("en")
 
         if framework == "PSYCHOLOGY":
+            if is_en:
+                return [
+                    "Under what market conditions did you last experience FOMO or an urge to revenge trade?",
+                    "Do you log your setup rationale into your trading journal before entering or only after closing?",
+                    "Following two consecutive losses, what does your mandatory cool-down protocol look like?"
+                ]
             return [
                 "Lần gần nhất bạn cảm thấy FOMO hoặc muốn giao dịch trả thù (Revenge Trading) là trong bối cảnh nào?",
                 "Bạn thường ghi chép lại lý do vào lệnh vào nhật ký trước khi vào lệnh hay sau khi lệnh đã đóng?",
                 "Sau 2 lệnh thua liên tiếp, kế hoạch nghỉ giải lao (Cool-down) của bạn được thực hiện ra sao?"
             ]
         elif framework == "RISK_MANAGEMENT":
+            if is_en:
+                return [
+                    "Does your current position size strictly ensure that risk does not exceed 1-2% of total equity?",
+                    "What is the minimum Risk:Reward (R:R) ratio you require before clicking the order button?",
+                    "During high volatility, do you ever widen or tamper with your predetermined Stop Loss?"
+                ]
             return [
                 "Khối lượng vị thế (Position Size) hiện tại của bạn có đảm bảo mức rủi ro không vượt quá 2% tổng tài khoản không?",
                 "Tỷ lệ Risk:Reward (R:R) tối thiểu mà bạn kiên quyết yêu cầu trước khi bấm nút mở vị thế là bao nhiêu?",
                 "Khi thị trường biến động mạnh, bạn có bao giờ nới lỏng hoặc dời Stop Loss ra xa hơn không?"
             ]
         elif "LIQUIDITY" in concept.upper():
+            if is_en:
+                return [
+                    "Is the liquidity pool (BSL/SSL) you are observing a session high/low or daily high/low?",
+                    "After sweeping the liquidity pool, does the reaction candle show a clear rejection wick?",
+                    "Is your technical Stop Loss placed safely behind the liquidity sweep high/low?"
+                ]
             return [
                 "Vùng thanh khoản (BSL/SSL) bạn vừa quan sát là đỉnh/đáy của phiên hôm nay hay khung ngày?",
                 "Sau khi giá quét qua vùng đỉnh/đáy cũ, nến phản ứng có xuất hiện râu từ chối (Rejection) rõ ràng không?",
                 "Điểm dừng lỗ kỹ thuật của bạn có nằm an toàn phía ngoài cây nến quét thanh khoản không?"
             ]
         else: # Technical setups: FVG, Order Block, Market Structure, Breakout
+            if is_en:
+                return [
+                    f"What specific candlestick characteristics at the {concept} area confirm the reliability of this setup?",
+                    f"In this {concept} setup, where is the exact Invalidation Level (Stop Loss) that nullifies the idea?",
+                    "If the market pulls back 1R against your entry, what is your predetermined risk mitigation plan?"
+                ]
             return [
                 f"Đặc điểm nào của cây nến tại vùng {concept} giúp bạn xác nhận độ tin cậy của setup này?",
                 f"Trong setup {concept}, điểm Invalidation (Stop Loss) vô hiệu hóa toàn bộ cấu trúc nằm ở đâu?",
@@ -100,6 +126,8 @@ class AiTutorService:
 
     def answer_question(self, req: AskQuestionRequest) -> Dict[str, Any]:
         query = req.question.strip()
+        lang = getattr(req, "lang", None) or "vi"
+        is_en = str(lang).lower().startswith("en")
 
         # 0. User Subscription & Daily Quota Guardrail Check (Sections 3, 4, 5, 31)
         user_id = req.userId or (req.userData and req.userData.get("userId")) or "64f7b1e4a3b9c2d1e8f9a0b1"
@@ -115,10 +143,15 @@ class AiTutorService:
 
         if used >= limit:
             limit_str = f"{used}/{limit}"
+            err_msg = (
+                f"⚠️ You have used up your {limit_str} free AI interactions for today!\nPlease upgrade to ✨ AI Tutor PRO to continue analyzing."
+                if is_en else
+                f"⚠️ Bạn đã sử dụng hết {limit_str} lượt tương tác AI miễn phí hôm nay!\nVui lòng nâng cấp lên gói ✨ AI Tutor PRO để tiếp tục phân tích."
+            )
             return {
                 "success": False,
                 "intent": question_intent,
-                "message": f"⚠️ Bạn đã sử dụng hết {limit_str} lượt tương tác AI miễn phí hôm nay!\nVui lòng nâng cấp lên gói ✨ AI Tutor PRO để tiếp tục phân tích.",
+                "message": err_msg,
                 "guardrailTriggered": "QUOTA_EXCEEDED",
                 "remainingToday": 0,
                 "plan": plan
@@ -126,25 +159,39 @@ class AiTutorService:
 
         # 1. Kích hoạt Strict Signal Guardrail trước mọi luồng xử lý (kể cả khi có LLM)
         # Ngăn chặn hoàn toàn prompt injection hoặc yêu cầu phím lệnh trực tiếp
-        strict_guard = check_strict_signal_guardrail(query, req.symbol)
+        strict_guard = check_strict_signal_guardrail(query, req.symbol, lang=lang)
         if strict_guard:
             return strict_guard
 
         # Static Guardrail for Buy/Sell signals (khi không có LLM)
         if not llm_client.is_configured() and self.is_asking_for_signal(query):
-            symbol = req.symbol or "cổ phiếu này"
-            return {
-                "answer": (
-                    f"⚠️ **Nguyên tắc hệ thống**: AI hoạt động như một Trợ lý Giáo dục & Phân tích Độc lập, "
-                    f"tuyệt đối không đưa ra khuyến nghị Mua (Buy) / Bán (Sell) hay phím lệnh giao dịch cho {symbol}.\n\n"
-                    f"Thay vào đó, tôi có thể hỗ trợ bạn bóc tách các yếu tố kỹ thuật đang ủng hộ hoặc phản đối "
-                    f"một vị thế dựa trên phương pháp Price Action hoặc ICT/SMC để bạn tự đưa ra quyết định độc lập."
-                ),
-                "reasoning": "Quyết định vào lệnh phải do chính trader chịu trách nhiệm dựa trên kế hoạch và tỷ lệ rủi ro định trước.",
-                "sources": [],
-                "socraticQuestions": [],
-                "guardrailTriggered": "NO_BUY_SELL_SIGNAL"
-            }
+            symbol = req.symbol or ("this asset" if is_en else "cổ phiếu này")
+            if is_en:
+                return {
+                    "answer": (
+                        f"⚠️ **System Policy**: The AI functions as an Educational Assistant & Independent Analytical Tutor, "
+                        f"strictly avoiding direct Buy/Sell calls or trade execution recommendations for {symbol}.\n\n"
+                        f"Instead, I can help you dissect key technical factors supporting or contradicting "
+                        f"a position based on Price Action or ICT/SMC principles so you make your own independent decisions."
+                    ),
+                    "reasoning": "Trade execution decisions must be owned by the trader based on an objective plan and predefined risk.",
+                    "sources": [],
+                    "socraticQuestions": [],
+                    "guardrailTriggered": "NO_BUY_SELL_SIGNAL"
+                }
+            else:
+                return {
+                    "answer": (
+                        f"⚠️ **Nguyên tắc hệ thống**: AI hoạt động như một Trợ lý Giáo dục & Phân tích Độc lập, "
+                        f"tuyệt đối không đưa ra khuyến nghị Mua (Buy) / Bán (Sell) hay phím lệnh giao dịch cho {symbol}.\n\n"
+                        f"Thay vào đó, tôi có thể hỗ trợ bạn bóc tách các yếu tố kỹ thuật đang ủng hộ hoặc phản đối "
+                        f"một vị thế dựa trên phương pháp Price Action hoặc ICT/SMC để bạn tự đưa ra quyết định độc lập."
+                    ),
+                    "reasoning": "Quyết định vào lệnh phải do chính trader chịu trách nhiệm dựa trên kế hoạch và tỷ lệ rủi ro định trước.",
+                    "sources": [],
+                    "socraticQuestions": [],
+                    "guardrailTriggered": "NO_BUY_SELL_SIGNAL"
+                }
 
         # 2. Retrieve relevant verified knowledge documents from Knowledge Base
         results: List[RetrievalResult] = retriever.retrieve(
@@ -308,7 +355,17 @@ class AiTutorService:
                 "• TẠI SAO (WHY): Động cơ của Dòng tiền thông minh (Smart Money) / Liquidity Sweep.\n"
                 "• BẰNG CHỨNG (EVIDENCE): Nến Displacement, Volume, Thân nến đóng qua cản.\n"
                 "• ĐIỀU GÌ VÔ HIỆU HÓA (INVALIDATION): Mức giá cụ thể mà nếu chạm vào thì luận điểm bị HỦY BỎ.\n"
-                "• YẾU TỐ CÒN CHƯA RÕ (UNKNOWN): Điều kiện cần chờ thị trường xác nhận thêm."
+                "• YẾU TỐ CÒN CHƯA RÕ (UNKNOWN): Điều kiện cần chờ thị trường xác nhận thêm.\n\n"
+                "==================================================\n"
+                "🌐 LANGUAGE REQUIREMENT (ƯU TIÊN TUYỆT ĐỐI / HIGHEST PRIORITY):\n"
+                "==================================================\n"
+                + (
+                    "The user is using the ENGLISH interface.\n"
+                    "You MUST respond 100% in natural, fluent, professional ENGLISH. Translate all analysis and terms into English."
+                    if is_en else
+                    "Giao diện người dùng đang đặt là TIẾNG VIỆT.\n"
+                    "Bạn BẮT BUỘC phải trả lời 100% bằng TIẾNG VIỆT tự nhiên, chuẩn mực tài chính và thân thiện."
+                )
             )
             
             chat_history_str = ""
@@ -427,7 +484,7 @@ class AiTutorService:
                     f"{kb_context}\n\n"
                     "Hãy trả lời súc tích, hoàn chỉnh, chuyên nghiệp và chuẩn xác dựa trên toàn bộ dữ liệu thị trường và database học viên được cung cấp ở trên."
                 )
-            llm_answer = llm_client.generate_text(sys_prompt, user_p, max_tokens=2000 if plan == "PREMIUM" else 1000)
+            llm_answer = llm_client.generate_text(sys_prompt, user_p, max_tokens=2000 if plan == "PREMIUM" else 750)
 
             if llm_answer:
                 # Nếu có rủi ro vi phạm quỹ Hard Breach, đảm bảo khối cảnh báo ở đầu bài
@@ -673,19 +730,50 @@ class AiTutorService:
         # 5. OFFLINE FALLBACK MODE (When no API Key is provided)
         if results:
             primary_doc = results[0].document
-            answer_text = (
-                f"### Khái niệm: {primary_doc.concept} ({primary_doc.framework})\n\n"
-                f"{primary_doc.content}\n\n"
-                f"> 💡 **Lưu ý cốt lõi**: Trong phương pháp {primary_doc.framework}, "
-                f"đây là công cụ dùng để định vị xác suất thị trường, **không phải quy luật chắc chắn đảm bảo lợi nhuận 100%**."
-            )
+            if is_en:
+                answer_text = (
+                    f"### Concept: {primary_doc.concept} ({primary_doc.framework})\n\n"
+                    f"{primary_doc.content}\n\n"
+                    f"> 💡 **Core Takeaway**: Under the {primary_doc.framework} methodology, "
+                    f"this tool is used to establish probabilistic market edge, **not a guaranteed rule ensuring 100% win rate**."
+                )
+            else:
+                answer_text = (
+                    f"### Khái niệm: {primary_doc.concept} ({primary_doc.framework})\n\n"
+                    f"{primary_doc.content}\n\n"
+                    f"> 💡 **Lưu ý cốt lõi**: Trong phương pháp {primary_doc.framework}, "
+                    f"đây là công cụ dùng để định vị xác suất thị trường, **không phải quy luật chắc chắn đảm bảo lợi nhuận 100%**."
+                )
             return {
                 "answer": answer_text,
                 "concept": primary_doc.concept,
                 "framework": primary_doc.framework,
                 "sources": citations,
-                "socraticQuestions": self.get_socratic_questions(primary_doc),
+                "socraticQuestions": self.get_socratic_questions(primary_doc, lang=lang),
                 "guardrailTriggered": None
+            }
+
+        if is_en:
+            return {
+                "answer": (
+                    f"👋 **Absolutely! I am ready to guide you through trading concepts.**\n\n"
+                    f"I can provide in-depth breakdowns, verified citations (Tier 1 & Tier 2), and Socratic reflection questions on:\n\n"
+                    f"1. 📚 **ICT / Smart Money Concepts (SMC)**:\n"
+                    f"   - *Fair Value Gap (FVG)*, *Order Block*, *Liquidity Sweep*, *Optimal Trade Entry (OTE)*, *Market Structure Shift (MSS)*...\n\n"
+                    f"2. 📈 **Classical Price Action**:\n"
+                    f"   - *Market Structure (Higher High / Higher Low)*, *Breakout & Retest*, *Pinbar Rejections*...\n\n"
+                    f"3. 🛡️ **Risk Management & Trading Psychology**:\n"
+                    f"   - *1%-2% Capital Preservation Rule*, *Risk:Reward (R:R)*, *MAE & MFE Drawdown metrics*, *Managing FOMO & Revenge Trading*...\n\n"
+                    f"👉 **Which concept would you like to explore first? Type your topic to begin!**"
+                ),
+                "concept": "Knowledge Base Scope",
+                "framework": "TUTOR_SYSTEM",
+                "sources": [],
+                "socraticQuestions": [
+                    "Would you prefer to explore ICT (Smart Money) or classical Price Action first?",
+                    "Do you currently have a fixed risk management rule for every trade?"
+                ],
+                "guardrailTriggered": "INSUFFICIENT_KNOWLEDGE"
             }
 
         return {
@@ -713,9 +801,422 @@ class AiTutorService:
     def explain_concept(self, req: ConceptExplainRequest) -> Dict[str, Any]:
         ask_req = AskQuestionRequest(
             question=req.concept,
-            framework=req.framework
+            framework=req.framework,
+            lang=req.lang
         )
         return self.answer_question(ask_req)
+
+    def answer_question_stream(self, req: AskQuestionRequest) -> Iterator[str]:
+        query = req.question.strip()
+        lang = getattr(req, "lang", None) or "vi"
+        is_en = str(lang).lower().startswith("en")
+
+        # 0. User Subscription & Daily Quota Guardrail Check
+        user_id = req.userId or (req.userData and req.userData.get("userId")) or "64f7b1e4a3b9c2d1e8f9a0b1"
+        sub = subscription_service.get_or_create_subscription(user_id)
+        plan = req.plan or sub.get("plan", "FREE")
+        limit = sub.get("daily_ai_limit", FREE_DAILY_LIMIT if plan == "FREE" else PREMIUM_DAILY_LIMIT)
+        used = sub.get("daily_ai_used", 0)
+
+        intent_info = route_question_intent(query)
+        question_intent = intent_info["intent"]
+
+        if used >= limit:
+            limit_str = f"{used}/{limit}"
+            err_msg = (
+                f"⚠️ You have used up your {limit_str} free AI interactions for today!\nPlease upgrade to ✨ AI Tutor PRO to continue analyzing."
+                if is_en else
+                f"⚠️ Bạn đã sử dụng hết {limit_str} lượt tương tác AI miễn phí hôm nay!\nVui lòng nâng cấp lên gói ✨ AI Tutor PRO để tiếp tục phân tích."
+            )
+            err_payload = {
+                "type": "error",
+                "message": err_msg,
+                "guardrailTriggered": "QUOTA_EXCEEDED",
+                "remainingToday": 0,
+                "plan": plan
+            }
+            yield f"data: {json.dumps(err_payload, ensure_ascii=False)}\n\n"
+            return
+
+        # 1. Kích hoạt Strict Signal Guardrail
+        strict_guard = check_strict_signal_guardrail(query, req.symbol, lang=lang)
+        if strict_guard:
+            err_payload = {
+                "type": "error",
+                "message": strict_guard.get("answer", ""),
+                "guardrailTriggered": strict_guard.get("guardrailTriggered", "NO_BUY_SELL_SIGNAL"),
+                "plan": plan
+            }
+            yield f"data: {json.dumps(err_payload, ensure_ascii=False)}\n\n"
+            return
+
+        # Static Guardrail for Buy/Sell signals (khi không có LLM)
+        if not llm_client.is_configured() and self.is_asking_for_signal(query):
+            symbol = req.symbol or ("this asset" if is_en else "cổ phiếu này")
+            if is_en:
+                msg = (
+                    f"⚠️ **System Policy**: The AI functions as an Educational Assistant & Independent Analytical Tutor, "
+                    f"strictly avoiding direct Buy/Sell calls or trade execution recommendations for {symbol}.\n\n"
+                    f"Instead, I can help you dissect key technical factors supporting or contradicting "
+                    f"a position based on Price Action or ICT/SMC principles so you make your own independent decisions."
+                )
+            else:
+                msg = (
+                    f"⚠️ **Nguyên tắc hệ thống**: AI hoạt động như một Trợ lý Giáo dục & Phân tích Độc lập, "
+                    f"tuyệt đối không đưa ra khuyến nghị Mua (Buy) / Bán (Sell) hay phím lệnh giao dịch cho {symbol}.\n\n"
+                    f"Thay vào đó, tôi có thể hỗ trợ bạn bóc tách các yếu tố kỹ thuật đang ủng hộ hoặc phản đối "
+                    f"một vị thế dựa trên phương pháp Price Action hoặc ICT/SMC để bạn tự đưa ra quyết định độc lập."
+                )
+            err_payload = {
+                "type": "error",
+                "message": msg,
+                "guardrailTriggered": "NO_BUY_SELL_SIGNAL",
+                "plan": plan
+            }
+            yield f"data: {json.dumps(err_payload, ensure_ascii=False)}\n\n"
+            return
+
+        # 2. Retrieve relevant verified knowledge documents
+        results: List[RetrievalResult] = retriever.retrieve(
+            query=query,
+            framework=req.framework,
+            top_k=3
+        )
+
+        citations = []
+        if results:
+            for r in results:
+                citations.append({
+                    "title": r.document.title,
+                    "concept": r.document.concept,
+                    "framework": r.document.framework,
+                    "source": r.document.source,
+                    "sourceUrl": r.document.sourceUrl,
+                    "author": r.document.author,
+                    "sourceType": r.document.sourceType,
+                    "score": r.score
+                })
+
+        trade_intent = extract_trade_intent(query, active_symbol=req.symbol)
+        risk_eval = evaluate_prop_firm_risk(trade_intent, req.userData or {}) if trade_intent else None
+        time_ctx = get_current_time_context()
+
+        # If LLM is configured, run streaming
+        if llm_client.is_configured():
+            reserved, updated_sub = subscription_service.reserve_quota_slot(user_id)
+            if not reserved:
+                err_payload = {
+                    "type": "error",
+                    "message": f"⚠️ Bạn đã sử dụng hết {limit}/{limit} lượt tương tác AI miễn phí hôm nay!\nVui lòng nâng cấp lên gói ✨ AI Tutor PRO để tiếp tục phân tích.",
+                    "guardrailTriggered": "QUOTA_EXCEEDED",
+                    "remainingToday": 0,
+                    "plan": plan
+                }
+                yield f"data: {json.dumps(err_payload, ensure_ascii=False)}\n\n"
+                return
+
+            active_method = route_query_to_method(
+                query,
+                has_positions=bool(req.userData and req.userData.get("positions"))
+            )
+            intent_guidance = active_method.to_prompt_text()
+
+            risk_tool_instruction = ""
+            if risk_eval:
+                risk_tool_instruction = (
+                    "\n\n==================================================\n"
+                    "⚡ FUNCTION CALLING: KẾT QUẢ ĐO LƯỜNG VỊ THẾ & RỦI RO QUỸ (PROP FIRM RISK TOOL)\n"
+                    "==================================================\n"
+                    "Hệ thống đã tự động chạy Function Calling / Risk Tool tính toán vị thế của học viên với kết quả sau:\n"
+                    f"- Mã: {risk_eval['symbol']} | Lệnh: {risk_eval['side']} | Entry: ${risk_eval['entry']:,.2f} | SL: ${risk_eval['sl']:,.2f}\n"
+                    f"- Khoảng cách SL: {risk_eval['sl_distance']:,.2f} giá\n"
+                    f"- Khối lượng dự kiến: {risk_eval['volume']} lot\n"
+                    f"- Thua lỗ ước tính nếu dính SL: ${risk_eval['estimated_loss']:,.2f}\n"
+                    f"- Giới hạn Daily Loss còn lại trong ngày: ${risk_eval['remaining_daily_loss']:,.2f} (Số dư ví: ${risk_eval['account_balance']:,.2f})\n"
+                    f"- Có vi phạm luật quỹ (Hard Breach) không: {'CÓ (NGUY HIỂM CỰC ĐỘ - TRƯỢT QUỸ NGAY LẬP TỨC)' if risk_eval['is_hard_breach'] else 'KHÔNG'}\n"
+                    f"- Khối lượng tối đa cho phép để không vi phạm quỹ: {risk_eval['max_safe_lot']} lot\n"
+                    f"- Khối lượng khuyến nghị chuẩn 1% rủi ro: {risk_eval['recommended_1pct_lot']} lot\n\n"
+                    "QUY TẮC BẮT BUỘC KHI CÓ KẾT QUẢ RỦI RO:\n"
+                    "1. KHÔNG nói đạo lý chung chung 'hãy quản lý vốn 1%'. Phải dùng chính xác các con số cụ thể đã tính toán ở trên.\n"
+                    "2. Nếu có vi phạm luật quỹ (is_hard_breach = True), BẮT BUỘC đưa khối cảnh báo to rõ lên ngay ĐẦU TIÊN của câu trả lời:\n"
+                    "   🔴 **CẢNH BÁO VI PHẠM LUẬT QUỸ (HARD BREACH RISK)**\n"
+                    f"   - Đi {risk_eval['volume']} lot với SL này, nếu thua bạn mất ${risk_eval['estimated_loss']:,.2f}.\n"
+                    f"   - Daily Drawdown còn lại hôm nay của bạn chỉ là ${risk_eval['remaining_daily_loss']:,.2f}. Lệnh này dính SL đồng nghĩa **TRƯỢT QUỸ NGAY LẬP TỨC**.\n"
+                    f"   - Khối lượng tối đa cho phép vào: **Không quá {risk_eval['max_safe_lot']} lot**.\n"
+                    "3. Sau đó phân tích ngắn gọn lý do kỹ thuật hoặc hướng dẫn đặt lệnh kỷ luật theo quy định quỹ."
+                )
+
+            time_prompt_section = (
+                "\n\n==================================================\n"
+                "🕒 THỜI GIAN THỰC TẾ HỆ THỐNG & PHIÊN GIAO DỊCH (REAL-TIME CLOCK):\n"
+                "==================================================\n"
+                f"- Giờ Việt Nam (Chuẩn chính hệ thống): {time_ctx['vn_time']}\n"
+                f"- Giờ Quốc tế (UTC): {time_ctx['utc_time']}\n"
+                f"- Giờ New York (Wall Street): {time_ctx['ny_time']}\n"
+                f"- Phiên thị trường hiện tại: {time_ctx['active_session']}\n"
+                f"- Trạng thái Killzone ICT: {time_ctx['active_killzone']}"
+            )
+
+            if plan == "PREMIUM":
+                tiered_prompt_section = (
+                    "\n\n==================================================\n"
+                    "✨ CẤU HÌNH PHẢN HỒI CHUYÊN SÂU [TIER: PREMIUM AI TUTOR PRO]\n"
+                    "==================================================\n"
+                    "Học viên đang sử dụng gói PREMIUM AI TUTOR PRO. Cung cấp phân tích chuyên sâu đa chiều khi dữ liệu thị trường hỗ trợ:\n"
+                    "1. Phân tích đa khung thời gian: HTF -> MTF -> LTF.\n"
+                    "2. Cấu trúc thị trường & Dòng tiền thông minh (Market Structure, BOS, CHoCH, MSS).\n"
+                    "3. Quét thanh khoản (Liquidity Pools, BSL/SSL Sweep).\n"
+                    "4. Xung lực giá (Displacement), POI, Fair Value Gap (FVG), Order Block (OB).\n"
+                    "5. Bối cảnh mở vị thế, điểm vô hiệu hóa, mục tiêu và R:R.\n"
+                    "6. Đánh giá rủi ro dựa trên số liệu thực tế.\n"
+                    "Giữ phong thái sắc sảo, kỷ luật của một Senior Prop Firm Funded Trader."
+                )
+            else:
+                tiered_prompt_section = (
+                    "\n\n==================================================\n"
+                    "🎯 CẤU HÌNH PHẢN HỒI GÓI TIÊU CHUẨN [TIER: FREE USER PLAN]\n"
+                    "==================================================\n"
+                    "Học viên đang sử dụng gói FREE.\n"
+                    "Quy chuẩn phản hồi: Ngắn gọn, cô đọng khoảng 2-3 đoạn văn.\n"
+                    "Tập trung chính vào:\n"
+                    f"- Ý định câu hỏi: [{question_intent}]\n"
+                    "- Bằng chứng then chốt (Main Evidence) & Lý do quan trọng nhất.\n"
+                    "- Vùng POI / FVG / Mốc thanh khoản chính.\n"
+                    "- Điểm vô hiệu hóa (Main Invalidation).\n"
+                    "- Đúng 1 câu hỏi dẫn dắt tư duy.\n"
+                    "Tránh giải thích quá dài dòng hoặc lan man."
+                )
+
+            if question_intent in ["BAR_REPLAY", "BACKTEST_HISTORICAL"]:
+                tiered_prompt_section += (
+                    "\n\n==================================================\n"
+                    "⏳ QUY TẮC PHÂN TÍCH REPLAY & BACKTEST (CHỐNG THIÊN KIẾN TƯƠNG LAI):\n"
+                    "==================================================\n"
+                    "- Tuyệt đối KHÔNG sử dụng thông tin hay diễn biến của nến tương lai để phân tích quyết định tại mốc lịch sử.\n"
+                    "- Chỉ sử dụng dữ liệu có sẵn tại đúng thời điểm đó để đánh giá logic vào lệnh."
+                )
+
+            sys_prompt = (
+                "Bạn là Senior Prop Firm Funded Trader & AI Trading Coach của nền tảng StockSim.\n"
+                "Bạn phân tích thị trường với tư duy của một trader chuyên nghiệp theo phương pháp ICT, SMC (Smart Money Concepts) và Price Action thuần túy.\n\n"
+                "Bạn có quyền truy cập ĐẦY ĐỦ VÀO DATABASE HỆ THỐNG gồm:\n"
+                "1. Bảng giá thời gian thực của các mã tài sản trên hệ thống liên quan đến câu hỏi.\n"
+                "2. Toàn bộ dữ liệu tài khoản của học viên trong Database.\n\n"
+                f"{intent_guidance}\n\n"
+                f"{tiered_prompt_section}\n\n"
+                "YÊU CẦU BẮT BUỘC:\n"
+                "1. Tuân thủ nghiêm ngặt phương pháp trên.\n"
+                "2. Tra cứu giá thực và biến động 24h từ dữ liệu cung cấp.\n"
+                "3. Tuyệt đối KHÔNG đưa ra tín hiệu Mua/Bán/Phím lệnh cụ thể (No Buy/Sell signal).\n"
+                "4. TRẢ LỜI NGẮN GỌN, CÔ ĐỌNG, ĐI THẲNG VÀO TRỌNG TÂM, in đậm các mốc giá và POI quan trọng.\n"
+                "5. DUY TRÌ MẠCH HỘI THOẠI LIÊN TIẾP.\n"
+                f"{time_prompt_section}"
+                f"{risk_tool_instruction}\n\n"
+                "QUY TẮC TRẢ LỜI CHỐNG NÓI CHUNG CHUNG:\n"
+                "Cung cấp CÁI GÌ, Ở ĐÂU, TẠI SAO, BẰNG CHỨNG, ĐIỀU GÌ VÔ HIỆU HÓA.\n\n"
+                "==================================================\n"
+                "🌐 LANGUAGE REQUIREMENT (ƯU TIÊN TUYỆT ĐỐI / HIGHEST PRIORITY):\n"
+                "==================================================\n"
+                + (
+                    "The user is using the ENGLISH interface.\n"
+                    "You MUST respond 100% in natural, fluent, professional ENGLISH. Translate all analysis and terms into English."
+                    if is_en else
+                    "Giao diện người dùng đang đặt là TIẾNG VIỆT.\n"
+                    "Bạn BẮT BUỘC phải trả lời 100% bằng TIẾNG VIỆT tự nhiên, chuẩn mực tài chính và thân thiện."
+                )
+            )
+
+            chat_history_str = ""
+            if req.chatHistory and len(req.chatHistory) > 0:
+                history_lines = []
+                for turn in req.chatHistory[-6:]:
+                    sender = turn.get("sender") or turn.get("role")
+                    role_label = "Học viên" if sender == "user" else "AI Tutor"
+                    msg_text = str(turn.get("text", "")).strip()
+                    if msg_text:
+                        if len(msg_text) > 400:
+                            msg_text = msg_text[:400] + "..."
+                        history_lines.append(f"{role_label}: {msg_text}")
+                    if history_lines:
+                        chat_history_str = "\n\n💬 [LỊCH SỬ HỘI THOẠI GẦN ĐÂY ĐỂ TRẢ LỜI LIÊN TIẾP]:\n" + "\n".join(history_lines)
+
+            current_chart_str = ""
+            if req.symbol or req.currentPrice is not None:
+                market_lines = []
+                if req.symbol:
+                    market_lines.append(f"- Mã tài sản đang mở biểu đồ: {req.symbol}")
+                if req.currentPrice is not None:
+                    formatted_p = f"{req.currentPrice:,.4f}".rstrip('0').rstrip('.') if req.currentPrice < 1 else f"{req.currentPrice:,.2f}"
+                    market_lines.append(f"- Giá thị trường thực tế: ${formatted_p}")
+                if req.timeframe:
+                    market_lines.append(f"- Khung thời gian: {req.timeframe}")
+                if req.marketContext:
+                    mc = req.marketContext
+                    if mc.get("change24h") is not None:
+                        market_lines.append(f"- Biến động 24h: {mc.get('change24h')}%")
+                    if mc.get("exchange"):
+                        market_lines.append(f"- Sàn giao dịch: {mc.get('exchange')}")
+                current_chart_str = "\n\n📊 [BIỂU ĐỒ ĐANG XEM]:\n" + "\n".join(market_lines)
+
+            all_stocks_str = ""
+            relevant_stocks = extract_relevant_stocks(
+                query=query,
+                chat_history=req.chatHistory,
+                active_symbol=req.symbol,
+                all_stocks=req.allStocks
+            )
+            if relevant_stocks:
+                stock_lines = []
+                for s in relevant_stocks:
+                    sym = s.get("symbol", "")
+                    name = s.get("name", sym)
+                    p = s.get("price")
+                    pct = s.get("percent")
+                    exch = s.get("exchange", "")
+                    mkt = s.get("market", "")
+                    if sym and p is not None:
+                        p_fmt = f"${p:,.4f}".rstrip('0').rstrip('.') if p < 1 else f"${p:,.2f}"
+                        pct_fmt = f" ({pct:+.2f}%)" if pct is not None else ""
+                        stock_lines.append(f"• {sym} ({name} - {exch} [{mkt}]): {p_fmt}{pct_fmt}")
+                if stock_lines:
+                    all_stocks_str = "\n\n📈 [BẢNG GIÁ THỊ TRƯỜNG LIÊN QUAN]:\n" + "\n".join(stock_lines)
+
+            user_data_str = ""
+            if req.userData:
+                ud = req.userData
+                ud_lines = []
+                wallet = ud.get("wallet", {})
+                if wallet:
+                    ud_lines.append(f"- Ví tiền: Tổng số dư ${wallet.get('balance', 0):,.2f} | Khả dụng: ${wallet.get('availableBalance', 0):,.2f}")
+                positions = ud.get("positions", [])
+                if positions:
+                    pos_items = []
+                    for pos in positions:
+                        pos_items.append(f"{pos.get('side')} {pos.get('symbol')} (Entry: ${pos.get('entryPrice')}, x{pos.get('leverage')}, Qty: {pos.get('quantity')})")
+                    ud_lines.append(f"- Vị thế đang mở: " + "; ".join(pos_items))
+                challenge = ud.get("challenge")
+                if challenge:
+                    ud_lines.append(f"- Thử thách Quỹ: Cấp {challenge.get('level')}, Trạng thái: {challenge.get('status')}")
+                if ud_lines:
+                    user_data_str = "\n\n👤 [DỮ LIỆU TÀI KHOẢN HỌC VIÊN]:\n" + "\n".join(ud_lines)
+
+            risk_context = ""
+            if risk_eval:
+                risk_context = f"\n\n🚨 [KẾT QUẢ ĐO LƯỜNG VỊ THẾ TỰ ĐỘNG - RISK TOOL]:\n{risk_eval['alert_markdown']}"
+
+            kb_context = ""
+            if results:
+                kb_context = "\n\nTài liệu tham khảo đối chiếu từ Knowledge Base:\n" + "\n---\n".join([
+                    f"• {r.document.title} [{r.document.sourceType}] ({r.document.author}): {r.document.content}"
+                    for r in results
+                ])
+
+            if is_time_query(query):
+                user_p = (
+                    f"{chat_history_str}\n\n"
+                    f"Câu hỏi của học viên: {query}\n\n"
+                    f"🕒 [DỮ LIỆU ĐỒNG HỒ HỆ THỐNG]:\n"
+                    f"- Giờ Việt Nam (UTC+7): {time_ctx['vn_time']}\n"
+                    f"- Giờ Quốc tế: {time_ctx['utc_time']}\n"
+                    f"- Giờ New York: {time_ctx['ny_time']}\n"
+                    f"- Phiên: {time_ctx['active_session']}\n"
+                    f"- Killzone ICT: {time_ctx['active_killzone']}\n\n"
+                    "Trả lời trực tiếp và thân thiện cho học viên."
+                )
+            else:
+                user_p = (
+                    f"{chat_history_str}\n\n"
+                    f"Câu hỏi của học viên: {query}"
+                    f"{risk_context}"
+                    f"{current_chart_str}"
+                    f"{all_stocks_str}"
+                    f"{user_data_str}"
+                    f"{kb_context}\n\n"
+                    "Hãy trả lời súc tích, hoàn chỉnh, chuyên nghiệp và chuẩn xác dựa trên dữ liệu trên."
+                )
+
+            concept_val = results[0].document.concept if results else ("Session Timing & Real-time Clock" if is_time_query(query) else ("Prop Firm Risk Management" if risk_eval else "AI Trading Tutor"))
+            framework_val = results[0].document.framework if results else "VIP_LLM"
+            new_used = updated_sub.get("daily_ai_used", used + 1)
+            remaining = max(0, limit - new_used)
+
+            meta_data = {
+                "type": "meta",
+                "intent": question_intent,
+                "plan": plan,
+                "dailyAiUsed": new_used,
+                "dailyAiLimit": limit,
+                "remainingToday": remaining,
+                "concept": concept_val,
+                "framework": framework_val,
+                "sources": citations
+            }
+            yield f"data: {json.dumps(meta_data, ensure_ascii=False)}\n\n"
+
+            # If Hard Breach risk detected, stream warning banner first
+            if risk_eval and risk_eval.get("is_hard_breach"):
+                hard_breach_header = f"{risk_eval['alert_markdown']}\n\n---\n\n"
+                yield f"data: {json.dumps({'type': 'token', 'token': hard_breach_header}, ensure_ascii=False)}\n\n"
+
+            streamed_tokens = []
+            max_out = 2000 if plan == "PREMIUM" else 750
+            try:
+                for token in llm_client.stream_text(sys_prompt, user_p, max_tokens=max_out):
+                    if token:
+                        streamed_tokens.append(token)
+                        yield f"data: {json.dumps({'type': 'token', 'token': token}, ensure_ascii=False)}\n\n"
+            except Exception as stream_err:
+                print(f"Error during stream generation: {stream_err}")
+
+            # If stream produced no tokens, fallback to regular generate_text
+            if not streamed_tokens:
+                fallback_text = llm_client.generate_text(sys_prompt, user_p, max_tokens=max_out)
+                if fallback_text:
+                    streamed_tokens.append(fallback_text)
+                    yield f"data: {json.dumps({'type': 'token', 'token': fallback_text}, ensure_ascii=False)}\n\n"
+                else:
+                    subscription_service.rollback_quota_slot(user_id)
+                    yield f"data: {json.dumps({'type': 'error', 'message': 'Không thể kết nối tới mô hình AI. Vui lòng thử lại.'}, ensure_ascii=False)}\n\n"
+                    return
+
+            full_answer = "".join(streamed_tokens)
+            done_payload = {
+                "type": "done",
+                "answer": full_answer,
+                "concept": concept_val,
+                "framework": framework_val,
+                "sources": citations,
+                "socraticQuestions": []
+            }
+            yield f"data: {json.dumps(done_payload, ensure_ascii=False)}\n\n"
+            return
+
+        # 4. Fallback when LLM is offline: Call static answer_question and stream it as a single chunk
+        offline_res = self.answer_question(req)
+        ans = offline_res.get("answer", "")
+        meta_data = {
+            "type": "meta",
+            "intent": offline_res.get("intent", question_intent),
+            "plan": offline_res.get("plan", plan),
+            "dailyAiUsed": offline_res.get("dailyAiUsed", used),
+            "dailyAiLimit": limit,
+            "remainingToday": offline_res.get("remainingToday", max(0, limit - used)),
+            "concept": offline_res.get("concept", "AI Trading Tutor"),
+            "framework": offline_res.get("framework", "OFFLINE"),
+            "sources": offline_res.get("sources", citations)
+        }
+        yield f"data: {json.dumps(meta_data, ensure_ascii=False)}\n\n"
+        if ans:
+            yield f"data: {json.dumps({'type': 'token', 'token': ans}, ensure_ascii=False)}\n\n"
+        done_payload = {
+            "type": "done",
+            "answer": ans,
+            "concept": offline_res.get("concept"),
+            "framework": offline_res.get("framework"),
+            "sources": offline_res.get("sources", []),
+            "socraticQuestions": offline_res.get("socraticQuestions", [])
+        }
+        yield f"data: {json.dumps(done_payload, ensure_ascii=False)}\n\n"
 
     def inspect_chart_vision(
         self,
@@ -831,13 +1332,15 @@ class AiTutorService:
         symbol: Optional[str] = None,
         timeframe: Optional[str] = None,
         user_notes: str = "",
-        user_id: Optional[str] = None
+        user_id: Optional[str] = None,
+        lang: str = "vi"
     ) -> Dict[str, Any]:
         """
         Pure Data Analysis of User Chart Drawings + Real KLine Data.
         Evaluates coordinates, prices, and candle patterns (ICT / SMC) directly
         without requiring screenshots.
         """
+        is_en = lang == "en"
         remaining_today = PREMIUM_DAILY_LIMIT
         is_premium = False
         if user_id:
@@ -851,8 +1354,9 @@ class AiTutorService:
                         "success": False,
                         "quotaExceeded": True,
                         "message": (
-                            f"Bạn đã sử dụng hết hạn mức AI hôm nay ({used}/{daily_limit} lượt). "
-                            "Hãy nâng cấp lên gói PRO để mở khóa 500 lượt soi chart mỗi ngày!"
+                            f"You have reached your daily AI quota ({used}/{daily_limit}). Upgrade to PRO to unlock 500 chart evaluations per day!"
+                            if is_en else
+                            f"Bạn đã sử dụng hết hạn mức AI hôm nay ({used}/{daily_limit} lượt). Hãy nâng cấp lên gói PRO để mở khóa 500 lượt soi chart mỗi ngày!"
                         )
                     }
                 subscription_service.increment_ai_usage(user_id)
@@ -868,6 +1372,8 @@ class AiTutorService:
             p_low = d.get("priceLow")
             pts = d.get("points", [])
             drawings_summary.append(
+                f"- Figure {idx} ({name}): Price range from {p_low} to {p_high}, with {len(pts)} anchor points."
+                if is_en else
                 f"- Hình {idx} ({name}): Vùng giá từ {p_low} đến {p_high}, gồm {len(pts)} điểm neo."
             )
         drawings_str = "\n".join(drawings_summary)
@@ -884,44 +1390,168 @@ class AiTutorService:
             klines_summary.append(f"O:{o} H:{h} L:{l} C:{c} (t:{t})")
         klines_str = "; ".join(klines_summary)
 
-        # Calculate wave extrema
+        # Calculate wave extrema & price context
         highs = [k.get("high") for k in recent_klines if isinstance(k.get("high"), (int, float))]
         lows = [k.get("low") for k in recent_klines if isinstance(k.get("low"), (int, float))]
         wave_max = max(highs) if highs else 0
         wave_min = min(lows) if lows else 0
 
-        system_prompt = (
-            "Bạn là Chuyên gia Cao cấp Đào tạo Phân tích Kỹ thuật và Huấn luyện viên Chiến lược Thực chiến "
-            "(Senior Quantitative & Technical Analyst Tutor, chuyên sâu về Price Action, ICT - Inner Circle Trader, SMC - Smart Money Concepts).\n"
-            "Nhiệm vụ của bạn là kiểm tra trực tiếp DỮ LIỆU TỌA ĐỘ VÙNG VẼ HỌC VIÊN ĐÃ VẼ TRÊN BIỂU ĐỒ đối chiếu với DỮ LIỆU NẾN THẬT (OHLCV).\n\n"
-            "Hãy trả lời theo cấu trúc Markdown rõ ràng, chuẩn sư phạm, truyền cảm hứng và sắc sảo như sau:\n\n"
-            "### 1. Đánh giá sơ bộ về hình thức lý thuyết\n"
-            "- Kết luận rõ ràng: Về mặt hình thức lý thuyết, bạn vẽ **ĐÚNG** hay **SAI / CHƯA CHUẨN**?\n"
-            "- Nhận diện đúng học viên đã khoanh vùng mức giá nào (ví dụ: cây nến tăng cuối cùng trước khi nhịp sập Bearish Displacement diễn ra, hoặc vùng FVG).\n\n"
-            "### 2. Lăng kính thực chiến chuyên sâu (Độ tin cậy & Xác suất)\n"
-            "- **Phân loại vùng:** Đây là vùng Tiếp diễn (Continuation OB/FVG) hay vùng Cực trị / Gốc (Extreme / Original OB)?\n"
-            "- **Chất lượng sóng đẩy:** Nhịp Displacement có đủ mạnh không? Có tạo FVG (Imbalance) đi kèm không?\n"
-            "- **Thanh khoản & Bẫy giá:** Có hiện tượng Quét thanh khoản (Liquidity Sweep) không? Cảnh báo nguy cơ bẫy Smart Money Trap (SMT) hoặc thanh khoản dụ dỗ (Inducement).\n\n"
-            "### 3. Vùng chuẩn xác nhất theo Smart Money\n"
-            "- Chỉ rõ mức giá đỉnh/đáy cực trị và vùng nến chuẩn nhất của con sóng này.\n\n"
-            "### 4. 💡 Bài học thực chiến cốt lõi\n"
-            "- Lời khuyên hành động thực chiến ngắn gọn giúp học viên không bị bẫy thị trường.\n\n"
-            "### 5. Điểm số đánh giá\n"
-            "- Cho điểm theo thang điểm 100 (Ví dụ: **Điểm đánh giá: 85/100**)."
-        )
+        # Identify student drawing zone relative to wave (upper swing high or lower swing low)
+        first_draw = drawings[0] if drawings else {}
+        user_p_high = first_draw.get("priceHigh") or wave_max
+        user_p_low = first_draw.get("priceLow") or wave_min
+        user_mid = (user_p_high + user_p_low) / 2 if (user_p_high and user_p_low) else wave_max
+        wave_mid = (wave_max + wave_min) / 2 if (wave_max and wave_min) else user_mid
+        is_upper_zone = user_mid >= wave_mid
 
-        user_prompt = (
-            f"Mã tài sản: {symbol or 'N/A'}, Khung thời gian: {timeframe or 'N/A'}.\n"
-            f"DỮ LIỆU HÌNH VẼ CỦA HỌC VIÊN TRÊN BIỂU ĐỒ:\n{drawings_str}\n\n"
-            f"CHUỖI NẾN THỰC TẾ TRÊN BIỂU ĐỒ (OHLCV):\n{klines_str}\n"
-            f"Đỉnh cao nhất của sóng: {wave_max}, Đáy thấp nhất: {wave_min}.\n"
-        )
-        if user_notes:
-            user_prompt += f"\nGhi chú học viên: {user_notes}\n"
+        if is_en:
+            system_prompt = (
+                "You are a Senior Quantitative & Technical Analyst Tutor specializing in Price Action, ICT, and Smart Money Concepts (SMC).\n"
+                "Your objective is to inspect direct COORDINATE DRAWING DATA drawn by the trader on the chart against REAL OHLCV CANDLESTICK DATA.\n\n"
+                "IMPORTANT INSTRUCTIONS:\n"
+                "1. Be crisp, concise, pedagogical, and highly structured (about 300-450 words). DO NOT ramble to ensure all 5 sections and the concluding JSON block complete cleanly without truncation.\n"
+                "2. Provide your feedback in clean Markdown using EXACTLY these 5 sections:\n\n"
+                "### 1. Theoretical Accuracy Assessment\n"
+                "- **Conclusion:** Clearly state if the drawing is **CORRECT**, **PARTIALLY CORRECT**, or **INCORRECT**.\n"
+                "- **Drawing Analysis:** Explain what zone the trader marked (Order Block, FVG, or Supply/Demand) and compare their coordinates against actual candle wicks and bodies.\n\n"
+                "### 2. Deep Practical Market Lens (Reliability & Probability)\n"
+                "- **Zone classification:** Is this a Continuation or an Extreme Origin zone?\n"
+                "- **Displacement & Traps:** Evaluate impulse displacement strength, liquidity sweep, and warn against Smart Money Traps (SMT) or Inducement.\n\n"
+                "### 3. Optimal Smart Money Zone\n"
+                "- Clearly identify the ideal institutional mitigation zone for this swing (high-low price range) and explain why.\n\n"
+                "### 4. 💡 Core Trading Takeaway\n"
+                "- 1-2 actionable practical execution rules to avoid stop hunts.\n\n"
+                "### 5. Final Evaluation Score\n"
+                "- **Evaluation Score: [X]/100** (objective score from 0 to 100).\n\n"
+                "AT THE VERY END, YOU MUST OUTPUT THIS JSON BLOCK ENCLOSED IN ```json:zone ... ``` FOR THE SYSTEM TO PLOT THE OPTIMAL ZONE ON CHART:\n"
+                "```json:zone\n"
+                "{\n"
+                '  "type": "Order Block (OB)",\n'
+                '  "name": "Bearish Order Block",\n'
+                '  "label": "AI: Bearish Order Block",\n'
+                '  "priceHigh": 4440.0,\n'
+                '  "priceLow": 4425.0,\n'
+                '  "explanation": "Last up-candle before strong bearish displacement"\n'
+                "}\n"
+                "```"
+            )
+            user_prompt = (
+                f"Asset: {symbol or 'N/A'}, Timeframe: {timeframe or 'N/A'}.\n"
+                f"STUDENT CHART DRAWINGS DATA:\n{drawings_str}\n\n"
+                f"REAL CANDLESTICK DATA (OHLCV):\n{klines_str}\n"
+                f"Swing High: {wave_max}, Swing Low: {wave_min}.\n"
+            )
+            if user_notes:
+                user_prompt += f"\nTrader's notes: {user_notes}\n"
+            user_prompt += "\nPlease evaluate and grade this drawing now in English."
+        else:
+            system_prompt = (
+                "Bạn là Chuyên gia Cao cấp Đào tạo Phân tích Kỹ thuật và Huấn luyện viên Chiến lược Thực chiến "
+                "(Price Action, ICT - Inner Circle Trader, SMC - Smart Money Concepts).\n"
+                "Nhiệm vụ của bạn là kiểm tra trực tiếp DỮ LIỆU TỌA ĐỘ VÙNG VẼ HỌC VIÊN ĐÃ VẼ TRÊN BIỂU ĐỒ đối chiếu với DỮ LIỆU NẾN THẬT (OHLCV).\n\n"
+                "YÊU CẦU QUAN TRỌNG ĐỂ KHÔNG BỊ CẮT CHỮ (TRUNCATION):\n"
+                "1. Viết súc tích, sắc bén, chuẩn sư phạm (khoảng 300 - 450 từ). Tuyệt đối KHÔNG viết dông dài để đảm bảo hoàn thành trọn vẹn cả 5 mục và khối JSON cuối cùng.\n"
+                "2. Trình bày bài chấm theo đúng 5 mục cấu trúc Markdown sau:\n\n"
+                "### 1. Đánh giá sơ bộ về hình thức lý thuyết\n"
+                "- **Kết luận:** Nêu rõ học viên vẽ **ĐÚNG**, **ĐÚNG MỘT PHẦN** hay **CHƯA ĐÚNG**?\n"
+                "- **Nhận diện vùng vẽ:** Xác định học viên đang vẽ vùng gì (Order Block, FVG, hay Vùng Cung/Cầu). Tọa độ vùng vẽ của học viên so với râu nến và thân nến thực tế lệch hay chuẩn ở đâu?\n\n"
+                "### 2. Lăng kính thực chiến chuyên sâu (Độ tin cậy & Xác suất)\n"
+                "- **Phân loại vùng:** Vùng Tiếp diễn (Continuation) hay Cực trị (Extreme)?\n"
+                "- **Chất lượng sóng đẩy & Bẫy giá:** Nhịp Displacement có đủ mạnh không? Có tạo FVG không? Cảnh báo nguy cơ Quét thanh khoản (Liquidity Sweep) và Bẫy Smart Money (SMT / Inducement).\n\n"
+                "### 3. Vùng chuẩn xác nhất theo Smart Money\n"
+                "- Chỉ rõ tên vùng chuẩn, khoảng giá nến chuẩn (từ giá thấp đến giá cao) và lý giải ngắn gọn vì sao vùng này mới là tối ưu.\n\n"
+                "### 4. 💡 Bài học thực chiến cốt lõi\n"
+                "- 1-2 lời khuyên đắt giá giúp học viên vào lệnh chuẩn, tránh bị quét Stop Loss oan uổng.\n\n"
+                "### 5. Điểm số đánh giá\n"
+                "- **Điểm đánh giá: [X]/100** (cho điểm khách quan từ 0 đến 100).\n\n"
+                "Ở CUỐI CÙNG, BẮT BUỘC CUNG CẤP KHỐI DỮ LIỆU JSON ĐỂ HỆ THỐNG VẼ LẠI VÙNG CHUẨN LÊN BIỂU ĐỒ:\n"
+                "```json:zone\n"
+                "{\n"
+                '  "type": "Order Block (OB)",\n'
+                '  "name": "Order Block (OB) Kháng Cự",\n'
+                '  "label": "AI: Bearish Order Block",\n'
+                '  "priceHigh": 4440.0,\n'
+                '  "priceLow": 4425.0,\n'
+                '  "explanation": "Vùng nến tăng cuối cùng trước cú sập mạnh Displacement"\n'
+                "}\n"
+                "```"
+            )
+            user_prompt = (
+                f"Mã tài sản: {symbol or 'N/A'}, Khung thời gian: {timeframe or 'N/A'}.\n"
+                f"DỮ LIỆU HÌNH VẼ CỦA HỌC VIÊN TRÊN BIỂU ĐỒ:\n{drawings_str}\n\n"
+                f"CHUỖI NẾN THỰC TẾ TRÊN BIỂU ĐỒ (OHLCV):\n{klines_str}\n\n"
+                f"Đỉnh cao nhất của sóng: {wave_max}, Đáy thấp nhất: {wave_min}.\n"
+            )
+            if user_notes:
+                user_prompt += f"\nGhi chú học viên: {user_notes}\n"
 
-        analysis = llm_client.generate_text(system_prompt, user_prompt, max_tokens=2000)
+        analysis = llm_client.generate_text(system_prompt, user_prompt, max_tokens=4000)
         if not analysis:
-            analysis = "Không thể phân tích dữ liệu lúc này. Vui lòng thử lại sau."
+            analysis = (
+                "Unable to analyze data at this time. Please try again later."
+                if is_en else
+                "Không thể phân tích dữ liệu lúc này. Vui lòng thử lại sau."
+            )
+
+        # 1. Parse JSON zone block if generated by LLM
+        suggested_zone = None
+        zone_match = re.search(r'```(?:json:zone|json)?\s*(\{[\s\S]*?\})\s*```', analysis)
+        if zone_match:
+            try:
+                raw_zone = json.loads(zone_match.group(1))
+                if isinstance(raw_zone, dict) and "priceHigh" in raw_zone and "priceLow" in raw_zone:
+                    z_high = float(raw_zone.get("priceHigh", 0))
+                    z_low = float(raw_zone.get("priceLow", 0))
+                    if z_high > 0 and z_low > 0 and z_high >= z_low:
+                        suggested_zone = {
+                            "type": raw_zone.get("type", "Order Block (OB)"),
+                            "name": raw_zone.get("name", raw_zone.get("type", "Order Block")),
+                            "label": raw_zone.get("label", f"AI: {raw_zone.get('name', 'Order Block')}"),
+                            "priceHigh": round(z_high, 4),
+                            "priceLow": round(z_low, 4),
+                            "explanation": raw_zone.get("explanation", "")
+                        }
+                # Clean JSON block from analysis text so UI displays pure clean markdown
+                analysis = analysis[:zone_match.start()].strip()
+            except Exception as e:
+                print(f"Error parsing AI suggested zone JSON: {e}")
+
+        # 2. Intelligent candle-based algorithmic fallback if JSON was missing or malformed
+        if not suggested_zone and wave_max > 0:
+            if is_upper_zone:
+                # Find swing high candle
+                high_candle = next((k for k in reversed(recent_klines) if k.get("high") == wave_max), recent_klines[-1] if recent_klines else {})
+                c_open = float(high_candle.get("open") or wave_max)
+                c_close = float(high_candle.get("close") or wave_max)
+                c_low = float(high_candle.get("low") or wave_max * 0.995)
+                # Order block bottom: body low or high candle low
+                ob_low = min(c_open, c_close)
+                if ob_low >= wave_max or ob_low <= 0:
+                    ob_low = wave_max * 0.993
+                suggested_zone = {
+                    "type": "Order Block (OB)",
+                    "name": "Bearish Extreme Order Block" if is_en else "Order Block (OB) Giảm Giá - Cực Trị",
+                    "label": "AI: Bearish Order Block" if is_en else "AI: Order Block (OB) Kháng Cự",
+                    "priceHigh": round(wave_max, 4),
+                    "priceLow": round(ob_low, 4),
+                    "explanation": "Extreme institutional mitigation zone at wave high" if is_en else "Vùng nến đảo chiều cực trị tại đỉnh sóng có thanh khoản phe bán"
+                }
+            else:
+                # Find swing low candle
+                low_candle = next((k for k in reversed(recent_klines) if k.get("low") == wave_min), recent_klines[-1] if recent_klines else {})
+                c_open = float(low_candle.get("open") or wave_min)
+                c_close = float(low_candle.get("close") or wave_min)
+                ob_high = max(c_open, c_close)
+                if ob_high <= wave_min or ob_high <= 0:
+                    ob_high = wave_min * 1.007
+                suggested_zone = {
+                    "type": "Order Block (OB)",
+                    "name": "Bullish Extreme Order Block" if is_en else "Order Block (OB) Tăng Giá - Cực Trị",
+                    "label": "AI: Bullish Order Block" if is_en else "AI: Order Block (OB) Hỗ Trợ",
+                    "priceHigh": round(ob_high, 4),
+                    "priceLow": round(wave_min, 4),
+                    "explanation": "Extreme institutional mitigation zone at wave low" if is_en else "Vùng nến tích lũy cực trị tại đáy sóng có thanh khoản phe mua"
+                }
 
         score = 80
         score_match = re.search(r'(?:Điểm\s*(?:đánh giá|số)?|Score)[:\s*]+(\d{1,3})\s*(?:/\s*100)?', analysis, re.IGNORECASE)
@@ -931,19 +1561,12 @@ class AiTutorService:
             except:
                 pass
 
-        verdict = "CORRECT" if "ĐÚNG" in analysis.upper() and "SAI" not in analysis[:300].upper() else "PARTIALLY_CORRECT"
+        if is_en:
+            verdict = "CORRECT" if ("CORRECT" in analysis.upper() and "INCORRECT" not in analysis[:300].upper()) else ("INCORRECT" if "INCORRECT" in analysis[:300].upper() else "PARTIALLY_CORRECT")
+        else:
+            verdict = "CORRECT" if "ĐÚNG" in analysis.upper() and "SAI" not in analysis[:300].upper() else "PARTIALLY_CORRECT"
         if "CHƯA ĐÚNG" in analysis[:300].upper() or "SAI" in analysis[:300].upper():
             verdict = "INCORRECT"
-
-        # AI suggested correction zone
-        suggested_zone = None
-        if wave_max > 0:
-            suggested_zone = {
-                "name": "Original Bearish OB",
-                "priceHigh": round(wave_max, 4),
-                "priceLow": round(wave_max * 0.992, 4),
-                "label": f"Extreme OB ({round(wave_max, 2)})"
-            }
 
         return {
             "success": True,

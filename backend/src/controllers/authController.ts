@@ -374,10 +374,11 @@ export const emailLogin = async (req: Request, res: Response) => {
  */
 export const googleLogin = async (req: Request, res: Response) => {
   try {
-    const { access_token, captchaToken } = req.body;
+    const { access_token, credential, id_token, captchaToken } = req.body;
+    const incomingToken = access_token || credential || id_token;
 
-    if (!access_token) {
-      return res.status(400).json({ message: 'Access token is required' });
+    if (!incomingToken) {
+      return res.status(400).json({ message: 'Access token hoặc Credential là bắt buộc' });
     }
 
     // Verify reCAPTCHA v3 token (nếu có, ghi log nhưng không chặn đăng nhập vì Google OAuth token đã tự xác thực người dùng)
@@ -388,17 +389,45 @@ export const googleLogin = async (req: Request, res: Response) => {
       }
     }
 
-    // Lấy thông tin user từ Google API
-    const googleRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${access_token}` },
-    });
+    let email = '';
+    let name = '';
+    let picture = '';
+    let googleId = '';
 
-    if (!googleRes.ok) {
-      return res.status(401).json({ message: 'Invalid Google access token' });
+    if (access_token) {
+      // Lấy thông tin user từ Google API với access_token
+      const googleRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${access_token}` },
+      });
+
+      if (!googleRes.ok) {
+        return res.status(401).json({ message: 'Invalid Google access token' });
+      }
+
+      const googleData = await googleRes.json();
+      email = googleData.email;
+      name = googleData.name;
+      picture = googleData.picture;
+      googleId = googleData.sub;
+    } else {
+      // Xác thực Google ID Token / Credential
+      const targetIdToken = credential || id_token;
+      const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${targetIdToken}`);
+
+      if (!googleRes.ok) {
+        return res.status(401).json({ message: 'Invalid Google ID token / credential' });
+      }
+
+      const googleData = await googleRes.json();
+      email = googleData.email;
+      name = googleData.name;
+      picture = googleData.picture;
+      googleId = googleData.sub;
     }
 
-    const googleData = await googleRes.json();
-    const { email, name, picture, sub: googleId } = googleData;
+    if (!email) {
+      return res.status(400).json({ message: 'Không thể xác định Email từ tài khoản Google.' });
+    }
 
     // Tìm user trong Database
     let user = await User.findOne({ email });

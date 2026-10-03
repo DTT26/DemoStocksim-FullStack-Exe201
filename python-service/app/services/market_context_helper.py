@@ -66,29 +66,47 @@ STRICT_SIGNAL_PATTERNS = [
     r"buy\s*or\s*sell\s*now"
 ]
 
-def check_strict_signal_guardrail(query: str, symbol: Optional[str] = None) -> Optional[Dict[str, Any]]:
+def check_strict_signal_guardrail(query: str, symbol: Optional[str] = None, lang: str = "vi") -> Optional[Dict[str, Any]]:
     """
     Kiểm tra và ngăn chặn các yêu cầu phím kèo / tín hiệu tài chính tuyệt đối (Prompt Injection).
     """
     lower = query.lower()
+    is_en = str(lang).lower().startswith("en")
     for pattern in STRICT_SIGNAL_PATTERNS:
         if re.search(pattern, lower):
-            target = symbol or "mã này"
-            return {
-                "answer": (
-                    f"⚠️ **Nguyên tắc hệ thống**: AI hoạt động như một Trợ lý Giáo dục & Phân tích Độc lập, "
-                    f"tuyệt đối không đưa ra khuyến nghị Mua (Buy) / Bán (Sell) hay phím lệnh giao dịch trực tiếp cho {target}.\n\n"
-                    f"Thay vào đó, tôi có thể hỗ trợ bạn bóc tách các yếu tố kỹ thuật (HTF Context, Liquidity Sweep, FVG/OB) "
-                    f"để bạn tự thẩm định và đưa ra quyết định độc lập."
-                ),
-                "reasoning": "Quyết định vào lệnh phải do chính trader chịu trách nhiệm dựa trên kế hoạch và tỷ lệ rủi ro định trước.",
-                "sources": [],
-                "socraticQuestions": [
-                    "Bạn đã xác định được điểm dừng lỗ (Invalidation level) nếu thị trường đi ngược lại chưa?",
-                    "Tỷ lệ Risk:Reward (R:R) tối thiểu trong kế hoạch của bạn là bao nhiêu?"
-                ],
-                "guardrailTriggered": "NO_BUY_SELL_SIGNAL"
-            }
+            target = symbol or ("this asset" if is_en else "mã này")
+            if is_en:
+                return {
+                    "answer": (
+                        f"⚠️ **System Policy**: The AI functions as an Educational Assistant & Independent Analytical Tutor, "
+                        f"strictly avoiding direct Buy/Sell calls or trade execution recommendations for {target}.\n\n"
+                        f"Instead, I can help you dissect key technical factors (HTF Context, Liquidity Sweeps, FVG/OB) "
+                        f"so you can make your own independent and disciplined trading decision."
+                    ),
+                    "reasoning": "Trade execution decisions must be owned by the trader based on an objective plan and predefined risk.",
+                    "sources": [],
+                    "socraticQuestions": [
+                        "Have you identified your technical Invalidation Level (Stop Loss) if the market moves against you?",
+                        "What is the minimum Risk:Reward (R:R) ratio required by your strategy checklist?"
+                    ],
+                    "guardrailTriggered": "NO_BUY_SELL_SIGNAL"
+                }
+            else:
+                return {
+                    "answer": (
+                        f"⚠️ **Nguyên tắc hệ thống**: AI hoạt động như một Trợ lý Giáo dục & Phân tích Độc lập, "
+                        f"tuyệt đối không đưa ra khuyến nghị Mua (Buy) / Bán (Sell) hay phím lệnh giao dịch trực tiếp cho {target}.\n\n"
+                        f"Thay vào đó, tôi có thể hỗ trợ bạn bóc tách các yếu tố kỹ thuật (HTF Context, Liquidity Sweep, FVG/OB) "
+                        f"để bạn tự thẩm định và đưa ra quyết định độc lập."
+                    ),
+                    "reasoning": "Quyết định vào lệnh phải do chính trader chịu trách nhiệm dựa trên kế hoạch và tỷ lệ rủi ro định trước.",
+                    "sources": [],
+                    "socraticQuestions": [
+                        "Bạn đã xác định được điểm dừng lỗ (Invalidation level) nếu thị trường đi ngược lại chưa?",
+                        "Tỷ lệ Risk:Reward (R:R) tối thiểu trong kế hoạch của bạn là bao nhiêu?"
+                    ],
+                    "guardrailTriggered": "NO_BUY_SELL_SIGNAL"
+                }
     return None
 
 # ==========================================
