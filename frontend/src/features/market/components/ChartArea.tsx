@@ -5118,9 +5118,19 @@ export const ChartArea = ({
     pendingOrderOverlayIdsRef.current = [];
 
     // Determine TP and SL to draw
-    const tpToDraw = (previewTPSL?.enabled && previewTPSL.tp) ? previewTPSL.tp : activePosition?.tp;
-    const slToDraw = (previewTPSL?.enabled && previewTPSL.sl) ? previewTPSL.sl : activePosition?.sl;
-    const orderToDraw = (previewTPSL?.enabled && previewTPSL.orderPrice) ? previewTPSL.orderPrice : (activePosition?.averagePrice || selectedStock.price);
+    const activeSimPos = simulatorPositions?.find((p: any) => p.symbol?.toUpperCase() === selectedStock.symbol?.toUpperCase());
+    const effectiveActivePos = (activePosition && activePosition.quantity > 0) ? activePosition : (activeSimPos ? {
+      quantity: activeSimPos.lot || activeSimPos.quantity || 0,
+      averagePrice: activeSimPos.entryPrice || activeSimPos.averagePrice || 0,
+      side: activeSimPos.side || 'LONG',
+      leverage: activeSimPos.leverage || 1,
+      tp: activeSimPos.tp,
+      sl: activeSimPos.sl
+    } : undefined);
+
+    const tpToDraw = (previewTPSL?.enabled && previewTPSL.tp) ? previewTPSL.tp : effectiveActivePos?.tp;
+    const slToDraw = (previewTPSL?.enabled && previewTPSL.sl) ? previewTPSL.sl : effectiveActivePos?.sl;
+    const orderToDraw = (previewTPSL?.enabled && previewTPSL.orderPrice) ? previewTPSL.orderPrice : (effectiveActivePos?.averagePrice || selectedStock.price);
 
     currentTpRef.current = tpToDraw;
     currentSlRef.current = slToDraw;
@@ -5291,7 +5301,7 @@ export const ChartArea = ({
 
     // 2. Draw Take Profit line (TP) - Draggable
     if (tpToDraw) {
-      const isPreview = previewTPSL?.enabled && previewTPSL.tp;
+      const isPreview = previewTPSL?.enabled && previewTPSL.tp && (!effectiveActivePos || effectiveActivePos.quantity <= 0);
       const overlayProps = {
         name: 'horizontalStraightLine',
         lock: false,
@@ -5324,7 +5334,7 @@ export const ChartArea = ({
             weight: 'bold',
           },
         },
-        extendData: `TP (Chốt lời) @ $${tpToDraw.toLocaleString('en-US')} ↕ Kéo`,
+        extendData: `${isPreview ? 'TP (Xem trước)' : 'TP (Chốt lời)'} @ $${tpToDraw.toLocaleString('en-US')} ↕ Kéo`,
         onPressedMoveStart: () => {
           isDraggingRef.current = true;
         },
@@ -5388,7 +5398,7 @@ export const ChartArea = ({
 
     // 3. Draw Stop Loss line (SL) - Draggable
     if (slToDraw) {
-      const isPreview = previewTPSL?.enabled && previewTPSL.sl;
+      const isPreview = previewTPSL?.enabled && previewTPSL.sl && (!effectiveActivePos || effectiveActivePos.quantity <= 0);
       const overlayProps = {
         name: 'horizontalStraightLine',
         lock: false,
@@ -5421,7 +5431,7 @@ export const ChartArea = ({
             weight: 'bold',
           },
         },
-        extendData: `SL (Cắt lỗ) @ $${slToDraw.toLocaleString('en-US')} ↕ Kéo`,
+        extendData: `${isPreview ? 'SL (Xem trước)' : 'SL (Cắt lỗ)'} @ $${slToDraw.toLocaleString('en-US')} ↕ Kéo`,
         onPressedMoveStart: () => {
           isDraggingRef.current = true;
         },
@@ -5521,7 +5531,7 @@ export const ChartArea = ({
         pendingOrderOverlayIdsRef.current.push(overlayId);
       });
     }
-  }, [activePosition, simulatorPositions, pendingOrders, isReplaying, replayTime, selectedStock, previewTPSL]);
+  }, [activePosition, simulatorPositions, pendingOrders, isReplaying, replayTime, replayPrice, replayStepTrigger, selectedStock, previewTPSL]);
 
   // Handle Alt + Drag to draw Rectangle (Khối lượng/Vùng hỗ trợ kháng cự)
   useEffect(() => {
