@@ -120,14 +120,14 @@ export const STOCKS: Stock[] = [
   // ==========================================
   // 6. CHỈ SỐ TOÀN CẦU & DOLLAR INDEX (CME, ICE, EUREX)
   // ==========================================
-  { symbol: 'DXY', name: 'US Dollar Index (Sức mạnh USD)', price: 100.80, change: 0.32, percent: 0.32, type: 'up', market: 'Chỉ số', exchange: 'ICE / BINGX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 25_000_000_000 },
-  { symbol: 'SPX', name: 'S&P 500 Index', price: 7711.70, change: 35.40, percent: 0.46, type: 'up', market: 'Chỉ số', exchange: 'CME / BINGX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 45_000_000_000 },
-  { symbol: 'NDX', name: 'Nasdaq 100 Index', price: 30355.49, change: 180.50, percent: 0.60, type: 'up', market: 'Chỉ số', exchange: 'CME / BINGX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 38_000_000_000 },
-  { symbol: 'DJI', name: 'Dow Jones Industrial', price: 51632.40, change: 120.20, percent: 0.23, type: 'up', market: 'Chỉ số', exchange: 'CBOT / BINGX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 22_000_000_000 },
-  { symbol: 'JP225', name: 'Nikkei 225 (Nhật Bản)', price: 39450.00, change: 280.00, percent: 0.71, type: 'up', market: 'Chỉ số', exchange: 'OSE / BINGX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 18_000_000_000 },
-  { symbol: 'UK100', name: 'FTSE 100 (Anh Quốc)', price: 8420.50, change: -15.20, percent: -0.18, type: 'down', market: 'Chỉ số', exchange: 'LSE / BINGX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 14_000_000_000 },
-  { symbol: 'EU50', name: 'Euro Stoxx 50 (Châu Âu)', price: 5045.20, change: 18.40, percent: 0.37, type: 'up', market: 'Chỉ số', exchange: 'EUREX / BINGX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 16_000_000_000 },
-  { symbol: 'US2000', name: 'Russell 2000 (Small Cap)', price: 2315.80, change: 12.60, percent: 0.55, type: 'up', market: 'Chỉ số', exchange: 'CME / BINGX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 12_000_000_000 },
+  { symbol: 'DXY', name: 'US Dollar Index (Sức mạnh USD)', price: 101.93, change: 0.15, percent: 0.15, type: 'up', market: 'Chỉ số', exchange: 'ICE', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 25_000_000_000 },
+  { symbol: 'SPX', name: 'S&P 500 Index', price: 7722.72, change: 35.40, percent: 0.46, type: 'up', market: 'Chỉ số', exchange: 'CME', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 45_000_000_000 },
+  { symbol: 'NDX', name: 'Nasdaq 100 Index', price: 27190.86, change: 180.50, percent: 0.67, type: 'up', market: 'Chỉ số', exchange: 'CME', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 38_000_000_000 },
+  { symbol: 'DJI', name: 'Dow Jones Industrial', price: 51176.96, change: 120.20, percent: 0.24, type: 'up', market: 'Chỉ số', exchange: 'CBOT', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 22_000_000_000 },
+  { symbol: 'JP225', name: 'Nikkei 225 (Nhật Bản)', price: 68309.46, change: 280.00, percent: 0.41, type: 'up', market: 'Chỉ số', exchange: 'OSE', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 18_000_000_000 },
+  { symbol: 'UK100', name: 'FTSE 100 (Anh Quốc)', price: 10462.00, change: -15.20, percent: -0.15, type: 'down', market: 'Chỉ số', exchange: 'LSE', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 14_000_000_000 },
+  { symbol: 'EU50', name: 'Euro Stoxx 50 (Châu Âu)', price: 6238.50, change: 18.40, percent: 0.30, type: 'up', market: 'Chỉ số', exchange: 'EUREX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 16_000_000_000 },
+  { symbol: 'US2000', name: 'Russell 2000 (Small Cap)', price: 2832.90, change: 12.60, percent: 0.45, type: 'up', market: 'Chỉ số', exchange: 'CME', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 12_000_000_000 },
 ];
 
 

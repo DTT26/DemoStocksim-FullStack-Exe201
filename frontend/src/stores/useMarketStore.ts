@@ -135,13 +135,15 @@ export const useMarketStore = create<MarketState>((set, get) => ({
         }
       }
 
-      // 4. Parse Backend Quotes (Fallback cho Chỉ số DJI, DXY, JP225, UK100, EU50, US2000 & Forex)
+      // 4. Parse Backend Quotes (Chỉ số chuẩn sở giao dịch CME, ICE, CBOT, JPX, LSE, Eurex & Fallback Forex/Hàng hóa)
       if (backendRes && backendRes.ok) {
         try {
           const bJson = await backendRes.json();
           if (bJson.success && bJson.data) {
+            const indexSymbols = ['SPX', 'NDX', 'DJI', 'DXY', 'JP225', 'UK100', 'EU50', 'US2000'];
             Object.values(bJson.data).forEach((item: any) => {
-              if (item && item.symbol && (!tickerMap[item.symbol] || tickerMap[item.symbol].price <= 0)) {
+              const isOfficialIndex = indexSymbols.includes(item?.symbol);
+              if (item && item.symbol && (isOfficialIndex || !tickerMap[item.symbol] || tickerMap[item.symbol].price <= 0)) {
                 tickerMap[item.symbol] = {
                   symbol: item.symbol,
                   price: item.price,

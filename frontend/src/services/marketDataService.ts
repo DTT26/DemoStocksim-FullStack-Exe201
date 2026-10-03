@@ -43,17 +43,10 @@ export const BINGX_SYMBOL_MAP: Record<string, string> = {
   'ORCL': 'NCSKORCL2USD-USDT',
   'KO': 'NCSKKO2USD-USDT',
   'JNJ': 'NCSKJNJ2USD-USDT',
-
-  // Chỉ số toàn cầu & Sức mạnh USD (Global Indices & DXY)
-  'SPX': 'NCSISP5002USD-USDT',
-  'NDX': 'NCSINASDAQ1002USD-USDT',
-  'DJI': 'NCSIDOWJONES2USD-USDT',
-  'DXY': 'NCSIDXY2USD-USDT',
-  'JP225': 'NCSINIKKEI2252USD-USDT',
-  'UK100': 'NCSIUK2USD-USDT',
-  'EU50': 'NCSIEUSTX2USD-USDT',
-  'US2000': 'NCSIRUSSELL20002USD-USDT',
 };
+
+// Danh sách các Chỉ số Toàn cầu chính thức (lấy trực tiếp từ Sở giao dịch gốc: CME, ICE, CBOT, JPX, LSE, EUREX)
+export const OFFICIAL_INDICES = ['SPX', 'NDX', 'DJI', 'DXY', 'JP225', 'UK100', 'EU50', 'US2000'];
 
 // Bản đồ ngược từ mã BingX sang mã chuẩn của hệ thống
 export const BINGX_REVERSE_MAP: Record<string, string> = Object.entries(BINGX_SYMBOL_MAP).reduce(
@@ -180,7 +173,21 @@ export const fetchUnifiedKlines = async (params: FetchMarketKlinesParams): Promi
   const { symbol, timeframe, limit = 500, isFutures, startTime, endTime } = params;
   const upperSym = symbol.toUpperCase();
 
-  // 1. Nếu là mã nằm trong danh mục TradFi của BingX (Vàng XAUUSD, Dầu, Ngoại hối, Cổ phiếu Mỹ, Chỉ số)
+  // 1. Nếu là Chỉ số toàn cầu (SPX, NDX, DJI, DXY, JP225, UK100, EU50, US2000)
+  // Luôn lấy nến chuẩn từ sở giao dịch gốc (CME, ICE, CBOT, JPX, LSE, EUREX) qua Backend Yahoo Finance
+  if (OFFICIAL_INDICES.includes(upperSym)) {
+    try {
+      const backendRes = await fetch(`/api/market/klines?symbol=${encodeURIComponent(upperSym)}&timeframe=${encodeURIComponent(timeframe)}&limit=${limit}`);
+      if (backendRes.ok) {
+        const json = await backendRes.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          return json.data;
+        }
+      }
+    } catch (_) {}
+  }
+
+  // 2. Nếu là mã nằm trong danh mục TradFi của BingX (Vàng XAUUSD, Dầu, Ngoại hối, Cổ phiếu Mỹ)
   if (BINGX_SYMBOL_MAP[upperSym]) {
     const bingxData = await fetchBingXKlines({ symbol: upperSym, timeframe, limit, startTime, endTime });
     if (bingxData && bingxData.length > 0) {
@@ -271,7 +278,30 @@ export const subscribeUnifiedBar = (
 ): (() => void) => {
   const upperSym = symbol.toUpperCase();
 
-  // Kênh BingX (Vàng, Dầu, Forex, Cổ phiếu, Chỉ số)
+  // Kênh Chỉ số chuẩn từ Sở giao dịch gốc (CME, ICE, CBOT, JPX, LSE, EUREX)
+  if (OFFICIAL_INDICES.includes(upperSym)) {
+    let isActive = true;
+    const pollIndex = async () => {
+      if (!isActive) return;
+      try {
+        const bRes = await fetch(`/api/market/klines?symbol=${encodeURIComponent(upperSym)}&timeframe=${encodeURIComponent(timeframe)}&limit=1`);
+        if (bRes && bRes.ok && isActive) {
+          const bJson = await bRes.json();
+          if (bJson.success && Array.isArray(bJson.data) && bJson.data.length > 0) {
+            onUpdate(bJson.data[bJson.data.length - 1]);
+          }
+        }
+      } catch (_) {}
+    };
+    pollIndex();
+    const timerId = setInterval(pollIndex, 3000);
+    return () => {
+      isActive = false;
+      clearInterval(timerId);
+    };
+  }
+
+  // Kênh BingX (Vàng, Dầu, Forex, Cổ phiếu)
   if (BINGX_SYMBOL_MAP[upperSym]) {
     const bingxSymbol = BINGX_SYMBOL_MAP[upperSym];
     const bingxInterval = mapTimeframeToBingX(timeframe);
