@@ -3612,9 +3612,11 @@ interface ChartAreaProps {
   activeTimeframe: string;
   isReplaying: boolean;
   replayTime?: number | null;
+  replayPrice?: number | null;
   replayStepTrigger?: number;
   replayReloadTrigger?: number;
   onReplayTimeChange?: (time: number) => void;
+  onReplayPriceChange?: (price: number) => void;
   tradeOrders: TradeOrder[];
   chartSettings: ChartSettings;
   pendingOrders?: any[];
@@ -3623,7 +3625,7 @@ interface ChartAreaProps {
   onPriceChange?: (price: number) => void;
   onPriceUpdate?: (price: number, timestamp?: number) => void;
   isSelectingReplayStart?: boolean;
-  onSelectReplayStart?: (timestamp: number) => void;
+  onSelectReplayStart?: (timestamp: number, price?: number) => void;
   goToRealtimeTrigger?: number;
   onDataLoaded?: (count: number) => void;
   onToolSelect?: (tool: string) => void;
@@ -3662,9 +3664,11 @@ export const ChartArea = ({
   activeTimeframe,
   isReplaying,
   replayTime,
+  replayPrice,
   replayStepTrigger,
   replayReloadTrigger,
   onReplayTimeChange,
+  onReplayPriceChange,
   tradeOrders,
   chartSettings,
   pendingOrders,
@@ -3694,8 +3698,12 @@ export const ChartArea = ({
   onSelectReplayStartRef.current = onSelectReplayStart;
   const replayTimeRef = useRef<number | null | undefined>(replayTime);
   replayTimeRef.current = replayTime;
+  const replayPriceRef = useRef<number | null | undefined>(replayPrice);
+  replayPriceRef.current = replayPrice;
   const onReplayTimeChangeRef = useRef(onReplayTimeChange);
   onReplayTimeChangeRef.current = onReplayTimeChange;
+  const onReplayPriceChangeRef = useRef(onReplayPriceChange);
+  onReplayPriceChangeRef.current = onReplayPriceChange;
   const crosshairIndexRef = useRef<number | null>(null);
   const subscriberCallbackRef = useRef<((data: KLineData) => void) | null>(null);
 
@@ -3884,8 +3892,16 @@ export const ChartArea = ({
   }, [replayTime]);
 
   useEffect(() => {
+    replayPriceRef.current = replayPrice;
+  }, [replayPrice]);
+
+  useEffect(() => {
     onReplayTimeChangeRef.current = onReplayTimeChange;
   }, [onReplayTimeChange]);
+
+  useEffect(() => {
+    onReplayPriceChangeRef.current = onReplayPriceChange;
+  }, [onReplayPriceChange]);
 
   useEffect(() => {
     if (goToRealtimeTrigger && goToRealtimeTrigger > 0 && chartRef.current) {
@@ -4402,9 +4418,14 @@ export const ChartArea = ({
       setChartContextMenu(null);
       if (isSelectingReplayStartRef.current && crosshairIndexRef.current !== null) {
         const list = chartRef.current?.getDataList();
-        const ts = list?.[crosshairIndexRef.current]?.timestamp;
+        const selCandle = list?.[crosshairIndexRef.current];
+        const ts = selCandle?.timestamp;
+        const p = selCandle?.close;
         if (ts) {
-          onSelectReplayStartRef.current?.(ts);
+          if (p && !isNaN(p)) {
+            replayPriceRef.current = p;
+          }
+          onSelectReplayStartRef.current?.(ts, p);
         }
       }
     };
@@ -4711,8 +4732,10 @@ export const ChartArea = ({
       if (subscriberCallbackRef.current) {
         subscriberCallbackRef.current(nextBar);
       }
-      if (onPriceUpdate) onPriceUpdate(nextBar.close, nextBar.timestamp);
       replayTimeRef.current = nextBar.timestamp;
+      replayPriceRef.current = nextBar.close;
+      onReplayPriceChangeRef.current?.(nextBar.close);
+      if (onPriceUpdate) onPriceUpdate(nextBar.close, nextBar.timestamp);
       onReplayTimeChangeRef.current?.(nextBar.timestamp);
     }
   }, [replayStepTrigger]);
@@ -4806,7 +4829,28 @@ export const ChartArea = ({
       if (isReplaying && visibleData.length > 0) {
         const lastCandle = visibleData[visibleData.length - 1];
         const effectiveTime = currentReplayTime || lastCandle.timestamp;
-        if (onPriceUpdate) onPriceUpdate(lastCandle.close, effectiveTime);
+
+        // Neo mức giá chuẩn (currentReplayPrice) khi chuyển khung thời gian
+        const targetPrice = (replayPriceRef.current && !isNaN(replayPriceRef.current))
+          ? replayPriceRef.current
+          : lastCandle.close;
+
+        // Đồng bộ nến cuối cùng để nó không chứa giá tương lai của khung lớn
+        if (targetPrice && targetPrice !== lastCandle.close) {
+          const lastIdx = visibleData.length - 1;
+          const orig = visibleData[lastIdx];
+          visibleData[lastIdx] = {
+            ...orig,
+            close: targetPrice,
+            high: Math.max(orig.open, targetPrice, orig.high >= targetPrice ? orig.high : targetPrice),
+            low: Math.min(orig.open, targetPrice, orig.low <= targetPrice ? orig.low : targetPrice),
+          };
+        } else if (!replayPriceRef.current && lastCandle.close) {
+          replayPriceRef.current = lastCandle.close;
+          onReplayPriceChangeRef.current?.(lastCandle.close);
+        }
+
+        if (onPriceUpdate) onPriceUpdate(targetPrice, effectiveTime);
       } else if (!isReplaying && allData.length > 0 && onPriceUpdate) {
         onPriceUpdate(allData[allData.length - 1].close, allData[allData.length - 1].timestamp);
       }

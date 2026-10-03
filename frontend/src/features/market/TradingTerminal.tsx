@@ -310,6 +310,7 @@ export const TradingTerminal = () => {
   const [isReplaying, setIsReplaying] = useState(false);
   const [isSelectingReplayStart, setIsSelectingReplayStart] = useState(false);
   const [replayTime, setReplayTime] = useState<number | null>(null);
+  const [replayPrice, setReplayPrice] = useState<number | null>(null);
   const [replayStepTrigger, setReplayStepTrigger] = useState(0);
   const [replayReloadTrigger, setReplayReloadTrigger] = useState(0);
   const [totalBars, setTotalBars] = useState(1000);
@@ -969,14 +970,25 @@ export const TradingTerminal = () => {
     setIsSelectingReplayStart(false);
   };
 
-  const handleConfirmReplayStart = (timestamp: number) => {
+  const handleConfirmReplayStart = (timestamp: number, price?: number) => {
     setReplayTime(timestamp);
+    if (price && !isNaN(price)) {
+      setReplayPrice(price);
+      setSelectedStock(prev => {
+        const curTicker = useMarketStore.getState().tickers[prev.symbol];
+        const openPrice = curTicker?.openPrice;
+        const change = openPrice ? (price - openPrice) : (curTicker ? curTicker.change : prev.change);
+        const percent = openPrice ? ((price - openPrice) / openPrice) * 100 : (curTicker ? curTicker.percent : prev.percent);
+        return { ...prev, price, change, percent, type: change >= 0 ? 'up' : 'down' };
+      });
+      handlePriceChange(price);
+    }
     setIsSelectingReplayStart(false);
     setIsReplaying(true);
     setReplayReloadTrigger(t => t + 1);
     if (store.isActive && store.session) {
       const isoTime = new Date(timestamp).toISOString();
-      store.tick(selectedStock.price, isoTime);
+      store.tick(price || selectedStock.price, isoTime);
     }
   };
 
@@ -1016,6 +1028,7 @@ export const TradingTerminal = () => {
       setIsReplaying(false);
       setIsSelectingReplayStart(false);
       setReplayTime(null);
+      setReplayPrice(null);
     }
     setGoToRealtimeTrigger(t => t + 1);
   };
@@ -1036,6 +1049,7 @@ export const TradingTerminal = () => {
     setIsReplaying(false);
     setIsSelectingReplayStart(false);
     setReplayTime(null);
+    setReplayPrice(null);
     setToast(null); // clear any lingering toast immediately
   };
 
@@ -1262,9 +1276,11 @@ export const TradingTerminal = () => {
                   isSelectingReplayStart={isSelectingReplayStart}
                   onSelectReplayStart={handleConfirmReplayStart}
                   replayTime={replayTime}
+                  replayPrice={replayPrice}
                   replayStepTrigger={replayStepTrigger}
                   replayReloadTrigger={replayReloadTrigger}
                   onReplayTimeChange={setReplayTime}
+                  onReplayPriceChange={setReplayPrice}
                   goToRealtimeTrigger={goToRealtimeTrigger}
                   onDataLoaded={setTotalBars}
                   tradeOrders={tradeOrders.filter(o => o.symbol === selectedStock.symbol)}
@@ -1290,6 +1306,9 @@ export const TradingTerminal = () => {
                   onUndoRedoChange={setUndoRedoState}
                   chartSettings={chartSettings}
                   onPriceUpdate={(price, timestamp) => {
+                    if (isReplaying) {
+                      setReplayPrice(price);
+                    }
                     setSelectedStock(prev => {
                       if (prev.price === price) return prev;
                       const curTicker = useMarketStore.getState().tickers[prev.symbol];

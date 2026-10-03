@@ -72,13 +72,13 @@ export const STOCKS: Stock[] = [
   // ==========================================
   // 3. HÀNG HÓA & NĂNG LƯỢNG (BingX, OANDA, NYMEX)
   // ==========================================
-  { symbol: 'XAUUSD', name: 'Vàng (Gold / USD)', price: 4124.50, change: -160.80, percent: -3.75, type: 'down', market: 'Hàng hóa', exchange: 'BINGX / OANDA', leverageInfo: { max: 200, marks: [50, 100, 150, 200] }, volume24h: 35_000_000_000 },
-  { symbol: 'XAGUSD', name: 'Bạc (Silver / USD)', price: 61.68, change: 0.85, percent: 1.40, type: 'up', market: 'Hàng hóa', exchange: 'BINGX / OANDA', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 8_500_000_000 },
-  { symbol: 'USOIL', name: 'Dầu thô WTI (Crude Oil)', price: 94.40, change: -1.10, percent: -1.15, type: 'down', market: 'Hàng hóa', exchange: 'BINGX / NYMEX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 18_000_000_000 },
-  { symbol: 'BRENT', name: 'Dầu thô Brent (Brent Oil)', price: 97.69, change: -0.95, percent: -0.96, type: 'down', market: 'Hàng hóa', exchange: 'BINGX / ICE', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 14_000_000_000 },
-  { symbol: 'NGAS', name: 'Khí tự nhiên (Natural Gas)', price: 3.12, change: 0.08, percent: 2.63, type: 'up', market: 'Hàng hóa', exchange: 'BINGX / NYMEX', leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 5_200_000_000 },
-  { symbol: 'COPPER', name: 'Đồng (Copper)', price: 5.48, change: 0.05, percent: 0.92, type: 'up', market: 'Hàng hóa', exchange: 'BINGX / COMEX', leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 4_100_000_000 },
-  { symbol: 'PLATINUM', name: 'Bạch kim (Platinum)', price: 1080.50, change: -12.40, percent: -1.13, type: 'down', market: 'Hàng hóa', exchange: 'BINGX / NYMEX', leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 2_300_000_000 },
+  { symbol: 'XAUUSD', name: 'Vàng (Gold / USD)', price: 4143.40, change: 11.08, percent: 0.27, type: 'up', market: 'Hàng hóa', exchange: 'BINGX / OANDA', leverageInfo: { max: 200, marks: [50, 100, 150, 200] }, volume24h: 35_000_000_000 },
+  { symbol: 'XAGUSD', name: 'Bạc (Silver / USD)', price: 60.45, change: 0.63, percent: 1.05, type: 'up', market: 'Hàng hóa', exchange: 'BINGX / OANDA', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 8_500_000_000 },
+  { symbol: 'USOIL', name: 'Dầu thô WTI (Crude Oil)', price: 91.15, change: 0.30, percent: 0.33, type: 'up', market: 'Hàng hóa', exchange: 'BINGX / NYMEX', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 18_000_000_000 },
+  { symbol: 'BRENT', name: 'Dầu thô Brent (Brent Oil)', price: 102.30, change: 1.00, percent: 0.99, type: 'up', market: 'Hàng hóa', exchange: 'BINGX / ICE', leverageInfo: { max: 100, marks: [25, 50, 75, 100] }, volume24h: 14_000_000_000 },
+  { symbol: 'NGAS', name: 'Khí tự nhiên (Natural Gas)', price: 3.035, change: 0.035, percent: 1.17, type: 'up', market: 'Hàng hóa', exchange: 'BINGX / NYMEX', leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 5_200_000_000 },
+  { symbol: 'COPPER', name: 'Đồng (Copper)', price: 6.593, change: 0.036, percent: 0.55, type: 'up', market: 'Hàng hóa', exchange: 'BINGX / COMEX', leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 4_100_000_000 },
+  { symbol: 'PLATINUM', name: 'Bạch kim (Platinum)', price: 1705.50, change: 23.14, percent: 1.38, type: 'up', market: 'Hàng hóa', exchange: 'BINGX / NYMEX', leverageInfo: { max: 50, marks: [10, 25, 50] }, volume24h: 2_300_000_000 },
 
   // ==========================================
   // 4. NGOẠI HỐI - FOREX (BingX, OANDA, Forex.com)
@@ -252,7 +252,10 @@ export const generateOHLCV = (basePrice: number, count = 200, timeframe = 'D', e
  * - Forex chuẩn (EURUSD, GBPUSD...): 100,000 đơn vị tiền tệ
  * - XAUUSD (Vàng): 100 oz / lot
  * - XAGUSD (Bạc): 5,000 oz / lot
- * - USOIL (Dầu): 1,000 thùng / lot
+ * - USOIL, BRENT (Dầu thô): 1,000 thùng / lot
+ * - PLATINUM (Bạch kim): 50 oz / lot
+ * - COPPER (Đồng): 1,000 lbs / lot
+ * - NGAS (Khí tự nhiên): 1,000 MMBtu / lot
  * - Crypto (BTC, ETH...): 1 coin / lot
  * - Cổ phiếu / Chỉ số: 1 CP / HĐ / lot
  */
@@ -264,7 +267,9 @@ export const getContractMultiplier = (symbolOrStock?: string | Stock): number =>
     if (stock.market === 'Ngoại hối (Forex)') return 100000;
     if (stock.symbol === 'XAUUSD') return 100;
     if (stock.symbol === 'XAGUSD') return 5000;
-    if (stock.symbol === 'USOIL') return 1000;
+    if (stock.symbol === 'USOIL' || stock.symbol === 'BRENT') return 1000;
+    if (stock.symbol === 'PLATINUM') return 50;
+    if (stock.symbol === 'COPPER' || stock.symbol === 'NGAS') return 1000;
     if (stock.market === 'Tiền điện tử (Crypto)') return 1;
     if (stock.market === 'Cổ phiếu') return 1;
     if (stock.market === 'Chỉ số') return 1;
@@ -274,14 +279,18 @@ export const getContractMultiplier = (symbolOrStock?: string | Stock): number =>
   const sym = symbolOrStock.toUpperCase().trim();
   if (sym === 'XAUUSD') return 100;
   if (sym === 'XAGUSD') return 5000;
-  if (sym === 'USOIL') return 1000;
+  if (sym === 'USOIL' || sym === 'BRENT') return 1000;
+  if (sym === 'PLATINUM') return 50;
+  if (sym === 'COPPER' || sym === 'NGAS') return 1000;
 
   const found = STOCKS.find(s => s.symbol.toUpperCase() === sym);
   if (found) {
     if (found.market === 'Ngoại hối (Forex)') return 100000;
     if (found.symbol === 'XAUUSD') return 100;
     if (found.symbol === 'XAGUSD') return 5000;
-    if (found.symbol === 'USOIL') return 1000;
+    if (found.symbol === 'USOIL' || found.symbol === 'BRENT') return 1000;
+    if (found.symbol === 'PLATINUM') return 50;
+    if (found.symbol === 'COPPER' || found.symbol === 'NGAS') return 1000;
     return 1;
   }
 
@@ -298,8 +307,10 @@ export const getContractMultiplier = (symbolOrStock?: string | Stock): number =>
 /**
  * Trả về đơn vị của tài sản tương ứng:
  * - Crypto: BTC, ETH, SOL...
- * - Vàng/Bạc: oz
- * - Dầu: thùng
+ * - Vàng/Bạc/Bạch kim: oz
+ * - Dầu thô: thùng
+ * - Khí gas: MMBtu
+ * - Đồng: lbs
  * - Forex: Lot
  * - Cổ phiếu: CP
  * - Chỉ số: HĐ
@@ -309,8 +320,10 @@ export const getAssetUnit = (symbolOrStock?: string | Stock): string => {
   const sym = typeof symbolOrStock === 'string' ? symbolOrStock.toUpperCase().trim() : symbolOrStock.symbol.toUpperCase().trim();
   const market = typeof symbolOrStock !== 'string' ? symbolOrStock.market : STOCKS.find(s => s.symbol.toUpperCase() === sym)?.market;
 
-  if (sym === 'XAUUSD' || sym === 'XAGUSD') return 'oz';
-  if (sym === 'USOIL') return 'thùng';
+  if (sym === 'XAUUSD' || sym === 'XAGUSD' || sym === 'PLATINUM') return 'oz';
+  if (sym === 'USOIL' || sym === 'BRENT') return 'thùng';
+  if (sym === 'NGAS') return 'MMBtu';
+  if (sym === 'COPPER') return 'lbs';
   if (market === 'Ngoại hối (Forex)' || ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCHF', 'NZDUSD', 'USDCAD', 'EURJPY', 'GBPJPY'].includes(sym)) {
     return 'Lot';
   }

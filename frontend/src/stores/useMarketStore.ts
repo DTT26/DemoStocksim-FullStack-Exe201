@@ -34,10 +34,11 @@ export const useMarketStore = create<MarketState>((set, get) => ({
 
   fetchMarketData: async () => {
     try {
-      const [spotRes, futRes, bingxRes] = await Promise.all([
+      const [spotRes, futRes, bingxRes, backendRes] = await Promise.all([
         fetch('https://api.binance.com/api/v3/ticker/24hr').catch(() => null),
         fetch('https://fapi.binance.com/fapi/v1/ticker/24hr').catch(() => null),
-        fetch('https://open-api.bingx.com/openApi/swap/v2/quote/ticker').catch(() => null),
+        fetch('/api/market/bingx/ticker').catch(() => fetch('https://open-api.bingx.com/openApi/swap/v2/quote/ticker').catch(() => null)),
+        fetch('/api/market/quotes').catch(() => null),
       ]);
 
       const tickerMap: Record<string, LiveTickerData> = {};
@@ -132,6 +133,31 @@ export const useMarketStore = create<MarketState>((set, get) => ({
             }
           });
         }
+      }
+
+      // 4. Parse Backend Quotes (Fallback cho Chỉ số DJI, DXY, JP225, UK100, EU50, US2000 & Forex)
+      if (backendRes && backendRes.ok) {
+        try {
+          const bJson = await backendRes.json();
+          if (bJson.success && bJson.data) {
+            Object.values(bJson.data).forEach((item: any) => {
+              if (item && item.symbol && (!tickerMap[item.symbol] || tickerMap[item.symbol].price <= 0)) {
+                tickerMap[item.symbol] = {
+                  symbol: item.symbol,
+                  price: item.price,
+                  change: item.change,
+                  percent: item.percent,
+                  type: item.type,
+                  high24h: item.high24h,
+                  low24h: item.low24h,
+                  volume24h: item.volume24h,
+                  quoteVolume24h: item.quoteVolume24h,
+                  openPrice: item.openPrice,
+                };
+              }
+            });
+          }
+        } catch (_) {}
       }
 
       // Cập nhật stocks - QUAN TRỌNG: KHÔNG mutation object gốc, luôn spread để

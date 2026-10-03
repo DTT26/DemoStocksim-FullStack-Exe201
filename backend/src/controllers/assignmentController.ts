@@ -477,7 +477,9 @@ export async function fetchStudentTradingEvidence(studentId: string, assignment:
       const s = sym.toUpperCase().trim();
       if (s === 'XAUUSD') return 100;
       if (s === 'XAGUSD') return 5000;
-      if (s === 'USOIL') return 1000;
+      if (s === 'USOIL' || s === 'BRENT') return 1000;
+      if (s === 'PLATINUM') return 50;
+      if (s === 'COPPER' || s === 'NGAS') return 1000;
       const forexPairs = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCHF', 'NZDUSD', 'USDCAD', 'EURJPY', 'GBPJPY'];
       if (forexPairs.includes(s)) return 100000;
       return 1;
